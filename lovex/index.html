@@ -1888,6 +1888,55 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   padding:6px 10px;cursor:pointer}
 .dy-ask-btns button[data-r="ok"]{color:var(--primary);font-weight:600}
 
+/* ===== P25 报备（手账黑白风·竖排单边时间线） ===== */
+.rp-actions{display:flex;gap:10px;padding:12px 14px}
+.rp-actions button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  border:1.5px solid var(--line);background:none;color:var(--t1);font-size:14px;
+  padding:11px 0;border-radius:12px;cursor:pointer}
+.rp-actions button:active{background:var(--bg)}
+.rp-now{padding:13px 15px;border-left:3px solid var(--primary)}
+.rp-now-line{font-size:14.5px;color:var(--t1);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rp-now-line b{font-weight:600}
+.rp-now-line i{font-style:normal;font-size:12px;color:var(--t2);
+  border:1px solid var(--line);border-radius:8px;padding:1px 7px}
+.rp-now small{display:block;margin-top:4px;color:var(--t2);font-size:12px}
+.rp-list{padding:6px 18px 30px}
+.rp-day{text-align:center;color:var(--t2);font-size:12px;margin:16px 0 10px;
+  letter-spacing:.08em}
+.rp-item{position:relative;padding:0 0 14px 20px}
+.rp-item::before{content:'';position:absolute;left:5px;top:16px;bottom:-2px;
+  width:1.5px;background:var(--line)}
+.rp-item:last-child::before{display:none}
+.rp-dot{position:absolute;left:1px;top:6px;width:9px;height:9px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--primary)}
+.rp-card-rp{background:var(--card);border:1.5px solid var(--line);border-radius:12px 3px 12px 3px;
+  padding:10px 13px}
+.rp-head{display:flex;align-items:baseline;gap:8px;font-size:13.5px}
+.rp-head b{color:var(--t1)}
+.rp-head span{color:var(--t2);font-size:12.5px}
+.rp-head time{margin-left:auto;color:var(--t2);font-size:12px}
+.rp-body{margin-top:5px;font-size:14.5px;color:var(--t1);line-height:1.55}
+.rp-mood{display:inline-block;font-style:normal;font-size:12px;color:var(--t2);
+  border:1px solid var(--line);border-radius:8px;padding:1px 7px;margin-left:7px}
+.rp-empty{text-align:center;color:var(--t2);padding:60px 0;font-size:14px;line-height:2}
+.rp-empty small{font-size:12px}
+/* 报备表单弹层 */
+.rp-f-row{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.rp-f-row span{width:64px;color:var(--t2);font-size:14px;flex:none}
+.rp-f-row input{flex:1;border:1.5px solid var(--line);border-radius:10px;background:var(--card);
+  color:var(--t1);font-size:14.5px;padding:9px 12px;outline:none}
+.rp-f-moods{align-items:flex-start}
+.rp-f-moods .chip-row{flex-wrap:wrap}
+.rp-f-ok{margin-top:8px}
+/* 查岗卡片消息 */
+.bubble-ck .ck-card{display:flex;align-items:center;gap:10px;min-width:170px}
+.ck-card .ck-ico{flex:none;width:34px;height:34px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  border:1.5px solid currentColor}
+.ck-card .ck-mid{display:flex;flex-direction:column;gap:2px}
+.ck-card .ck-mid b{font-size:14px}
+.ck-card .ck-mid small{font-size:12px;opacity:.75}
+
 </style>
 </head>
 <body>
@@ -2113,6 +2162,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="more-tile" data-more="letter"><span class="tile-ico"><i data-icon="mail" data-size="20"></i></span><span>写信</span></button>
       <button class="more-tile" data-more="redpacket"><span class="tile-ico"><i data-icon="hongbao" data-size="20"></i></span><span>红包</span></button>
       <button class="more-tile" data-more="diary"><span class="tile-ico"><i data-icon="book" data-size="20"></i></span><span>心事簿</span></button>
+<button class="more-tile" data-more="report"><span class="tile-ico"><i data-icon="compass" data-size="20"></i></span><span>报备</span></button>
     </div>
     <!-- 表情抽屉：长在输入栏下方往下展开，与＋号面板同侧（清然 2026-08-23） -->
     <div class="emoji-drawer" id="emoji-drawer" hidden>
@@ -2157,6 +2207,22 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="hist-type" data-ht="date"><span class="ht-ico"><i data-icon="clock" data-size="22"></i></span>日期</button>
       </div>
       <div class="hist-result" id="hist-result"></div>
+    </div>
+  </section>
+
+  <!-- ===== 页面：报备（P25 竖排单边时间线·互相报备+查岗） ===== -->
+  <section class="page" id="page-report">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+      <div class="navbar-title" id="rp-title">报备</div>
+    </header>
+    <div class="page-body">
+      <div class="rp-actions card">
+        <button id="rp-add"><i data-icon="brush" data-size="18"></i>记一笔报备</button>
+        <button id="rp-ask"><i data-icon="compass" data-size="18"></i>查岗问 TA</button>
+      </div>
+      <div class="rp-now card" id="rp-now" hidden></div>
+      <div class="rp-list" id="rp-list"></div>
     </div>
   </section>
 
@@ -2213,6 +2279,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
           <label class="adv-item"><span>主动发消息间隔</span><em><input type="number" id="pf-promin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-promax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>主动发红包概率</span><em><input type="number" id="pf-redgift" min="0" max="100"> %</em></label>
+<label class="adv-item"><span>自动报备概率</span><em><input type="number" id="pf-reprate" min="0" max="100"> %</em></label>
+<label class="adv-item"><span>报备持续时长</span><em><input type="number" id="pf-repmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-repmax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
+<label class="adv-item"><span>查岗概率</span><em><input type="number" id="pf-chkrate" min="0" max="100"> %</em></label>
+<label class="adv-item"><span>查岗间隔</span><em><input type="number" id="pf-chkmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-chkmax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>来信概率</span><em><input type="number" id="pf-letterrate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>通话时长</span><em>
             <input type="number" id="pf-calllo" min="0" step="0.5" style="width:52px"> - <input type="number" id="pf-callhi" min="0" step="0.5" style="width:52px">
@@ -2322,7 +2392,14 @@ const DB = (function () {
         customPrimary: '#6F94B8',      // 自定义主题主色（决策记录#5）
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
         diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
-notify: false                 // P17 系统消息通知开关（授权成功才置 true）
+        notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
+      },
+      reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
+      repPlans: {},                    // P25 报备当日计划（计划时刻制）：contactId -> {day,autoAt,autoDur,autoDone,chkAt,chkDone,askAt,askDone}
+      reportLib: {                     // P25 TA 报备语料库（她口供：地点库+动作词，偶尔随机带情绪词）
+        places: ['图书馆', '教室', '宿舍', '食堂', '健身房', '超市', '操场', '咖啡店', '实验室', '回家路上'],
+        doings: ['上自习', '上课', '吃饭', '锻炼', '买东西', '跑步', '复习功课', '散步', '赶作业', '休息一会儿'],
+        moods: ['心情愉悦', '有点难过', '有点暴躁', '很平静', '超级开心', '好累啊']
       },
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
       contacts: [],                    // AI联系人（P2）：{id,name,remark,avatar,sign,status,params...}
@@ -2573,7 +2650,6 @@ notify: false                 // P17 系统消息通知开关（授权成功才�
 var Notify = (function () {
 
   function supported() { return typeof Notification !== 'undefined'; }
-  function swOK() { return swOK_(); }
   function swOK_() {
     return typeof navigator !== 'undefined' && 'serviceWorker' in navigator
       && location.protocol === 'https:';
@@ -2674,6 +2750,313 @@ var Notify = (function () {
   }
 
   return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow };
+})();
+
+/* ============================================================
+ * Report — P25 报备板块（她 08-25 18:56 口述 + 参考截图）
+ * 情侣互相报备：正在做什么、地点、开始时间、持续时长、偶尔内心情绪词。
+ *
+ * 口径（她的原话）：
+ * - 「他和我都会和对方互相报备正在做什么、开始时间、持续时长、
+ *    地点、内心独白（角色小情绪）等等」
+ * - AI 自动报备：每天到点自动生成，概率默认 80%，最短最长时间她设置，
+ *   初始默认为零（=不启用）；支持小数但不写出来
+ * - TA 查岗我：同样 80% + 最短最长间隔设置默认零；查岗卡片点开应答
+ * - 我主动报备：填地点/在做什么/偶尔夹情绪词，时间跟当时不用填
+ * - 我也可查岗 → TA 报备用特定报备库（地点库+动作词）+ 偶尔情绪词
+ * - 入口：聊天界面＋号展开栏下（群聊没有）
+ *
+ * 铁律遵守：
+ * - 时间戳禁止随机回填：TA 一切行为计划时刻制——settle 预生成当日计划
+ *   存档 repPlans，advance 到点落库，时间戳 = 应答时刻
+ * - 视图：竖排单边时间线打底（垫底方案，她可随时改款）
+ * ============================================================ */
+var Report = (function () {
+
+  let curCid = null;              // 报备页当前联系人
+
+  /* ---------------- 工具 ---------------- */
+  function lib() {
+    const l = DB.state.reportLib;
+    ['places', 'doings', 'moods'].forEach(k => { if (!Array.isArray(l[k])) l[k] = []; });
+    return l;
+  }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function randI(lo, hi) { return Math.floor(Math.random() * (hi - lo + 1)) + lo; }
+  function recs(cid) { return (DB.state.reports[cid] = DB.state.reports[cid] || []); }
+  function plans() { return (DB.state.repPlans = DB.state.repPlans || {}); }
+  function planOf(cid) { return plans()[cid] = plans()[cid] || {}; }
+  function convOf(ct) { return DB.state.convs.find(v => v.type === 'single' && v.peerId === ct.id); }
+  function hhmm(ts) {
+    const d = new Date(ts);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  /* 当天 8:00~22:00 随机时刻（与心事簿同窗口） */
+  function randTsOfDay() {
+    const d = new Date();
+    const base = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return +base + randI(8 * 60, 22 * 60 - 1) * 60000;
+  }
+
+  /* 时长人话：「45分钟」「1.5小时」 */
+  function durHuman(ms) {
+    const m = Math.round(ms / 60000);
+    if (m < 60) return m + '分钟';
+    return (Math.round(m / 6) / 10) + '小时';
+  }
+
+  /* TA 报备文本：报备库组合+30% 夹情绪词（「偶尔」落地值 30%，决策记录#P25 待她调） */
+  function genText(withMood) {
+    const l = lib();
+    const place = pick(l.places), doing = pick(l.doings);
+    let mood = '';
+    if (withMood && l.moods.length && Math.random() < 0.3) mood = pick(l.moods);
+    return { text: '我在' + place + doing + (mood ? '，' + mood : ''), place, doing, mood };
+  }
+
+  /* 我方消息落库（不经 pushRaw：自己的消息不能给自己挂未读/横幅） */
+  function pushMeMsg(conv, text, ts) {
+    const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
+    const m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: 'me', type: 'text', text: text, ts: ts || Date.now() };
+    let i = arr.length; while (i > 0 && arr[i - 1].ts > m.ts) i--;
+    arr.splice(i, 0, m);
+    conv.lastMsg = text; conv.lastTime = m.ts;
+    DB.save();
+    const visPage = document.querySelector('.page.active');
+    if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
+    Home.render();
+    return m;
+  }
+
+  /* ---------------- 计划时刻制：settle / advance ---------------- */
+  function settle(ct) {
+    if (!ct || ct.isGroup) return;
+    const p = ct.params || {};
+    const today = new Date().toDateString();
+    const pl = planOf(ct.id);
+    if (pl.day !== today) {           // 跨天重排
+      pl.day = today;
+      pl.autoAt = 0; pl.autoDur = 0; pl.autoDone = false;
+      pl.chkAt = 0; pl.chkDone = false;
+      pl.askAt = 0; pl.askDone = false;
+    }
+    const rate = v => Math.min(100, Math.max(0, isFinite(+v) ? +v : 0));
+    /* TA 自动报备：每天至多一条，掷 repRate%，持续 repMin~repMax 分钟（>0 才启用） */
+    const repLo = Math.max(0, +p.repMin || 0), repHi = Math.max(0, +p.repMax || 0);
+    if (!pl.autoAt && !pl.autoDone && repHi > 0 && Math.random() < rate(p.repRate ?? 80) / 100) {
+      pl.autoAt = Math.max(Date.now() + 60000, randTsOfDay());   // 至少 1 分钟后
+      pl.autoDur = Math.round((repLo + Math.random() * (repHi - repLo)) * 60000);
+    }
+    /* TA 查岗我：chkMin~chkMax 分钟间隔语义——上次查岗/排程后隔一段再来；
+       简化第一版：每天掷 chkRate% 排一个时刻，到点发查岗卡片 */
+    const chkLo = Math.max(0, +p.chkMin || 0), chkHi = Math.max(0, +p.chkMax || 0);
+    if (!pl.chkAt && !pl.chkDone && chkHi > 0 && Math.random() < rate(p.chkRate ?? 80) / 100) {
+      pl.chkAt = Math.max(Date.now() + 60000, randTsOfDay());
+      pl.chkGap = Math.round((chkLo + Math.random() * (chkHi - chkLo)) * 60000); // 记录间隔口径供展示
+    }
+    advance(ct);
+  }
+
+  /* 到点落库（打开网页/运行中都会被调用；幂等） */
+  function advance(ct) {
+    const pl = (DB.state.repPlans || {})[ct.id];
+    if (!pl) return;
+    const now = Date.now();
+    if (pl.autoAt && !pl.autoDone && now >= pl.autoAt) {
+      pl.autoDone = true;
+      taReport(ct, { ts: pl.autoAt, dur: pl.autoDur, how: 'auto' });
+    }
+    if (pl.askAt && !pl.askDone && now >= pl.askAt) {   // 我查岗→TA 回报备
+      pl.askDone = true;
+      taReport(ct, { ts: pl.askAt, dur: 0, how: 'asked' });
+    }
+    if (pl.chkAt && !pl.chkDone && now >= pl.chkAt) {   // TA 查岗我
+      pl.chkDone = true;
+      const conv = convOf(ct);
+      if (conv) Engine.pushRaw(conv, {
+        id: 'ck' + pl.chkAt.toString(36), from: 'ta', type: 'checkin',
+        text: '在干嘛呢？', ts: pl.chkAt, answered: false
+      });
+    }
+    DB.save();
+    if (curCid) try { render(); } catch (e) {}   // 报备页开着就跟手刷新
+  }
+
+  /* TA 报备落记录+聊天消息 */
+  function taReport(ct, opt) {
+    const conv = convOf(ct);
+    if (!conv) return;
+    const g = genText(true);
+    let text = g.text;
+    if (opt.dur > 0) text += '，大概' + durHuman(opt.dur);
+    recs(ct.id).push({
+      id: 'r' + opt.ts.toString(36), who: 'ta', how: opt.how,
+      place: g.place, doing: g.doing, mood: g.mood,
+      startTs: opt.ts, endTs: opt.dur > 0 ? opt.ts + opt.dur : null, ts: opt.ts, text: text
+    });
+    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ta', type: 'text', text: text, ts: opt.ts });
+  }
+
+  /* ---------------- 我的动作 ---------------- */
+  /* 我主动报备（表单提交）：时间跟当时，不填时长 */
+  function saveMine(place, doing, mood) {
+    const ct = Home.contactById(curCid);
+    if (!ct || !doing) return false;
+    const now = Date.now();
+    const text = '我在' + (place || '') + doing + (mood ? '，' + mood : '');
+    recs(curCid).push({
+      id: 'r' + now.toString(36), who: 'me', how: 'manual',
+      place: place || '', doing: doing, mood: mood || '',
+      startTs: now, endTs: null, ts: now, text: text
+    });
+    const conv = convOf(ct);
+    if (conv) pushMeMsg(conv, text, now);
+    render();
+    return true;
+  }
+
+  /* 我查岗 TA → 排 TA 应答回报备（延迟复用聊天回复秒区间，计划时刻制存档） */
+  function askTa(cid) {
+    const ct = Home.contactById(cid);
+    if (!ct) return;
+    const p = ct.params || {};
+    const lo = Math.max(1, Math.round(+p.minSec || 3)), hi = Math.max(lo, Math.round(+p.maxSec || 15));
+    const pl = planOf(cid);
+    pl.askAt = Date.now() + randI(lo, hi) * 1000;
+    pl.askDone = false;
+    DB.save();
+    UI.toast('去问问 TA～');
+    const ct2 = ct;
+    setTimeout(() => { try { advance(ct2); } catch (e) {} }, (hi + 2) * 1000);
+  }
+
+  /* 应答查岗卡片：卡片翻面+我的报备落记录+聊天回文本 */
+  function answerCheckin(convId, msgId, place, doing, mood) {
+    const arr = DB.state.msgs[convId] || [];
+    const m = arr.find(x => x.id === msgId);
+    if (m) m.answered = true;
+    const now = Date.now();
+    const text = '我在' + (place || '') + doing + (mood ? '，' + mood : '');
+    const conv = DB.state.convs.find(v => v.id === convId);
+    if (conv) {
+      const peer = conv.peerId;
+      recs(peer).push({
+        id: 'r' + now.toString(36), who: 'me', how: 'checkin',
+        place: place || '', doing: doing, mood: mood || '',
+        startTs: now, endTs: null, ts: now, text: text
+      });
+      DB.save();
+    }
+    return text;
+  }
+
+  /* ---------------- 报备页 ---------------- */
+  function open(cid) {
+    curCid = cid;
+    Router.go('report');
+    render();
+  }
+
+  function render() {
+    const box = document.getElementById('rp-list');
+    if (!box || !curCid) return;
+    const ct = Home.contactById(curCid);
+    document.getElementById('rp-title').textContent = ct ? (Home.displayName(ct) + ' · 报备') : '报备';
+
+    /* 进行中状态卡：最新一条带未来 endTs 的记录 */
+    const hero = document.getElementById('rp-now');
+    const all = recs(curCid);
+    const now = Date.now();
+    const live = [...all].reverse().find(r => r.endTs && r.endTs > now);
+    if (live) {
+      const who = live.who === 'me' ? '你正在' : (Home.displayName(ct) || 'TA') + '正在';
+      hero.hidden = false;
+      hero.innerHTML =
+        '<div class="rp-now-line"><b>' + UI.escapeHtml(who) + '</b>' +
+        UI.escapeHtml((live.place || '') + live.doing) +
+        (live.mood ? '<i>' + UI.escapeHtml(live.mood) + '</i>' : '') + '</div>' +
+        '<small>' + hhmm(live.startTs) + ' 开始 · 还剩约 ' + durHuman(live.endTs - now) + '</small>';
+    } else { hero.hidden = true; hero.innerHTML = ''; }
+
+    /* 竖排单边时间线（倒序+日期分隔条） */
+    const list = [...all].sort((a, b) => b.startTs - a.startTs);
+    if (!list.length) {
+      box.innerHTML = '<div class="rp-empty">还没有报备记录<br><small>记一笔，或者戳上面的按钮试试</small></div>';
+      return;
+    }
+    let html = '', lastDay = '';
+    list.forEach(r => {
+      const d = new Date(r.startTs);
+      const dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+      if (dayKey !== lastDay) {
+        lastDay = dayKey;
+        const todayStr = new Date().toDateString() === d.toDateString()
+          ? '今天' : (new Date(Date.now() - 86400000).toDateString() === d.toDateString() ? '昨天'
+            : (d.getMonth() + 1) + '月' + d.getDate() + '日');
+        html += '<div class="rp-day">' + todayStr + '</div>';
+      }
+      const whoName = r.who === 'me' ? '我' : Home.displayName(ct) || 'TA';
+      const actTxt = r.how === 'checkin' ? '应答了查岗' : r.how === 'manual' ? '报备了' : '报备了';
+      const span = r.endTs ? hhmm(r.startTs) + ' ~ ' + hhmm(r.endTs) : hhmm(r.startTs);
+      html +=
+        '<div class="rp-item"><span class="rp-dot"></span>' +
+        '<div class="rp-card-rp">' +
+        '<div class="rp-head"><b>' + UI.escapeHtml(whoName) + '</b><span>' + actTxt + '</span><time>' + span + '</time></div>' +
+        '<div class="rp-body">' + UI.escapeHtml((r.place || '') + r.doing) +
+        (r.mood ? '<i class="rp-mood">' + UI.escapeHtml(r.mood) + '</i>' : '') + '</div>' +
+        '</div></div>';
+    });
+    box.innerHTML = html;
+  }
+
+  /* 表单弹层（sheet-mask 模式）：mode='mine' 我报备 / mode='answer' 应答查岗 */
+  function openForm(mode, onOk) {
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';   // P24 教训：弹层走双类防被压层
+    mask.innerHTML =
+      '<div class="sheet sheet-scroll"><div class="sheet-title">' + (mode === 'answer' ? '回应查岗' : '记一笔报备') + '</div>' +
+      '<label class="rp-f-row"><span>地点</span><input id="rp-f-place" type="text" maxlength="12" placeholder="在哪呢"></label>' +
+      '<label class="rp-f-row"><span>在做什么</span><input id="rp-f-doing" type="text" maxlength="16" placeholder="比如：上自习"></label>' +
+      '<div class="rp-f-row rp-f-moods"><span>心情</span><div class="chip-row" id="rp-f-chips"></div></div>' +
+      '<button class="sheet-cancel rp-f-ok">好了</button></div>';
+    const chips = mask.querySelector('#rp-f-chips');
+    chips.innerHTML = '<button class="grp-chip" data-m="">不说</button>' +
+      lib().moods.map(m => '<button class="grp-chip" data-m="' + UI.escapeHtml(m) + '">' + UI.escapeHtml(m) + '</button>').join('');
+    chips.addEventListener('click', e => {
+      const b = e.target.closest('.grp-chip'); if (!b) return;
+      chips.querySelectorAll('.grp-chip').forEach(x => x.classList.toggle('on', x === b));
+    });
+    mask.querySelector('.rp-f-ok').addEventListener('click', () => {
+      const place = mask.querySelector('#rp-f-place').value.trim();
+      const doing = mask.querySelector('#rp-f-doing').value.trim();
+      if (!doing) { UI.toast('说说在做什么呀'); return; }
+      const sel = chips.querySelector('.grp-chip.on');
+      const mood = sel ? sel.dataset.m : '';
+      mask.remove();
+      onOk(place, doing, mood === '不说' ? '' : mood);
+    });
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask);
+    setTimeout(() => mask.querySelector(mode === 'answer' ? '#rp-f-doing' : '#rp-f-place')?.focus(), 80);
+  }
+
+  /* ---------------- init：页面按钮接线 ---------------- */
+  function init() {
+    document.getElementById('rp-add').addEventListener('click', () => {
+      openForm('mine', (place, doing, mood) => { saveMine(place, doing, mood); UI.toast('记好啦'); });
+    });
+    document.getElementById('rp-ask').addEventListener('click', async () => {
+      const ok = await UI.confirmBox({
+        title: '查岗', text: '要问问 ' + (Home.displayName(Home.contactById(curCid)) || 'TA') + ' 现在在做什么吗？',
+        okText: '问问'
+      });
+      if (ok) askTa(curCid);
+    });
+  }
+
+  return { init, open, render, settle, advance, answerCheckin, askTa, openForm };
 })();
 
 /* =====================================================
@@ -4623,6 +5006,22 @@ const Chat = (function () {
         '</div>';
       bub.querySelector('.rp-note-txt').textContent = rp ? rp.note : '红包';
       bub.addEventListener('click', () => { if (typeof Redpacket !== 'undefined') Redpacket.openOpen(m.rpId); });
+    } else if (m.type === 'checkin') {
+      /* P25 查岗卡片：TA 来查岗，点开应答；已答后翻灰 */
+      bub.classList.add('bubble-ck');
+      bub.innerHTML =
+        '<div class="ck-card' + (m.answered ? ' done' : '') + '">' +
+          '<span class="ck-ico"><i data-icon="compass" data-size="18"></i></span>' +
+          '<span class="ck-mid"><b>' + (m.answered ? '已回应查岗' : 'TA 来查岗啦') + '</b><small>' + (m.answered ? esc('点开看看你当时的回答') : esc(m.text)) + '</small></span>' +
+        '</div>';
+      bub.addEventListener('click', () => {
+        if (m.answered) { UI.toast('已经回应过啦，往上看你的回复'); return; }
+        Report.openForm('answer', (place, doing, mood) => {
+          const text = Report.answerCheckin(cur.id, m.id, place, doing, mood);
+          pushMine({ type: 'text', text });
+          UI.toast('回应好啦');
+        });
+      });
     } else if (m.type === 'letter') {
       /* 信件卡片（P8）：米白信纸风，点击看全文 */
       bub.classList.add('bubble-letter');
@@ -5581,6 +5980,10 @@ const Chat = (function () {
       else if (k === 'diary') {   /* P21：心事簿（清然 09:54 定位置：聊天底栏＋号展开栏） */
         if (cur.type !== 'single') UI.toast('心事簿是两个人之间的，群聊没有哦');
         else { Diary.openBook(cur.peerId); updatePokeDot(); }  /* P22：进本清亮点 */
+      }
+      else if (k === 'report') {  /* P25：报备（她定：入口在加号展开栏下；群聊拦截） */
+        if (cur.type !== 'single') UI.toast('报备是两个人之间的事，群聊没有哦');
+        else Report.open(cur.peerId);
       }
     });
 
@@ -9663,7 +10066,7 @@ const Profile = (function () {
     el('pf-calllo').value = pc.callLo;
     el('pf-callhi').value = pc.callHi;
     el('pf-callunit').value = pc.callUnit;
-    const pa = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0 }, c.params || {});
+    const pa = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0, repRate: 80, repMin: 0, repMax: 0, chkRate: 80, chkMin: 0, chkMax: 0 }, c.params || {});
     el('pf-imgmode').value = pa.imgMode;
     el('pf-imgprob').value = pa.imgProb;
     el('pf-letterrate').value = pa.letterRate;
@@ -9678,6 +10081,12 @@ const Profile = (function () {
     el('pf-promin').value = pa.proMin;
     el('pf-promax').value = pa.proMax;
     el('pf-redgift').value = (pa.giftRedRate ?? 2);
+    el('pf-reprate').value = (pa.repRate ?? 80);
+    el('pf-repmin').value = (pa.repMin ?? 0);
+    el('pf-repmax').value = (pa.repMax ?? 0);
+    el('pf-chkrate').value = (pa.chkRate ?? 80);
+    el('pf-chkmin').value = (pa.chkMin ?? 0);
+    el('pf-chkmax').value = (pa.chkMax ?? 0);
     el('pf-ltr-min').value = pa.ltrMinH;
     el('pf-ltr-max').value = pa.ltrMaxH;
     Router.go('profile');
@@ -9837,7 +10246,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift', 'pf-reprate', 'pf-repmin', 'pf-repmax', 'pf-chkrate', 'pf-chkmin', 'pf-chkmax'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, callLo: '', callHi: '', callUnit: 'min', cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0 }, c.params || {});
@@ -9866,6 +10275,17 @@ const Profile = (function () {
         /* 主动发红包概率：自由输入%（默认2，她02:05定），用户改了就按用户的 */
         p.giftRedRate = Math.min(100, Math.max(0, Math.round(+el('pf-redgift').value)));
         if (!isFinite(p.giftRedRate)) p.giftRedRate = 0;
+        /* P25 报备：概率默认 80；时长/间隔支持小数但不写出来（她的规矩），默认 0=不启用 */
+        p.repRate = Math.min(100, Math.max(0, parseFloat(el('pf-reprate').value) || 0));
+        if (!isFinite(p.repRate)) p.repRate = 80;
+        p.repMin = Math.max(0, parseFloat(el('pf-repmin').value) || 0);
+        p.repMax = parseFloat(el('pf-repmax').value);
+        if (!isFinite(p.repMax) || p.repMax < p.repMin) p.repMax = p.repMin;
+        p.chkRate = Math.min(100, Math.max(0, parseFloat(el('pf-chkrate').value) || 0));
+        if (!isFinite(p.chkRate)) p.chkRate = 80;
+        p.chkMin = Math.max(0, parseFloat(el('pf-chkmin').value) || 0);
+        p.chkMax = parseFloat(el('pf-chkmax').value);
+        if (!isFinite(p.chkMax) || p.chkMax < p.chkMin) p.chkMax = p.chkMin;
         p.ltrMinH = Math.max(0, +el('pf-ltr-min').value || 0);
         p.ltrMaxH = Math.max(p.ltrMinH, +el('pf-ltr-max').value || 0);
         /* 通话时长：留空=默认随机20~90秒；两格按所选单位（分钟/小时）存，支持小数 */
@@ -11516,6 +11936,9 @@ const History = (function () {
     /* 心事簿引擎结算（P22）：生成今日计划+落库到点计划+戳戳链，幂等；
        挂在启动而非 openBook，戳戳②的聊天消息离簿也能送达 */
     DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
+    /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
+    DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
+    Report.init();   /* P25 报备页按钮接线 */
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
        （充值后钱包旧值/导入后会话空/删联系人残留等，back 落地页面即重渲） */
     Router.register('home', () => Home.render());
@@ -11525,6 +11948,7 @@ const History = (function () {
     Router.register('stats', () => Wallet.renderStats());
     Router.register('chat', () => Chat.rerender());
     Router.register('diary', () => { if (document.getElementById('dy-body')) Diary.render(); });
+Router.register('report', () => Report.render());   /* P25 */
     Home.init();
     Chat.init();
     Profile.init();
