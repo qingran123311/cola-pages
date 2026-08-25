@@ -564,6 +564,7 @@ body.in-stack #tabbar{display:none}
   font-family:inherit;text-align:left;cursor:pointer}
 .cell-group .cell + .cell{border-top:1px solid var(--line)}
 .cell-text{flex:1;min-width:0}
+.cell-ext{font-size:13px;color:var(--t2)} /* P17：行尾状态小字（新消息通知 已开启/未开启） */
 .cell-danger .cell-text{color:var(--danger)}
 /* 查找聊天内容（微信式分类查找） */
 .hist-search{padding:10px 14px 4px}
@@ -1960,6 +1961,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="cell-group card">
         <button class="cell" id="my-wallet-row"><span class="cell-icon"><i data-icon="wallet"></i></span><span class="cell-text">钱包</span><span class="chevron">›</span></button>
         <button class="cell" data-go="settings"><span class="cell-icon"><i data-icon="settings"></i></span><span class="cell-text">前往个人中心</span><span class="chevron">›</span></button>
+        <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
       </div>
     </div>
   </section>
@@ -2319,7 +2321,8 @@ const DB = (function () {
         theme: 'gray',                 // gray | wechat | glass | custom
         customPrimary: '#6F94B8',      // 自定义主题主色（决策记录#5）
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
-        diaryRates: { diary: 80, comment: 80, reply: 80 }  // 心事簿三概率（P21，她口供默认 80，可调）
+        diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
+notify: false                 // P17 系统消息通知开关（授权成功才置 true）
       },
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
       contacts: [],                    // AI联系人（P2）：{id,name,remark,avatar,sign,status,params...}
@@ -2551,6 +2554,126 @@ const DB = (function () {
     recoverFromBackup,
     set onQuota(fn) { onQuota = fn; }
   };
+})();
+
+/* ============================================================
+ * Notify — P17 系统级消息通知（二期需求原文 L36 第五条）
+ * 「我把它挂在后台，当前应用是抖音，对方发来消息时我就会看到
+ *   消息弹窗，点一下就可以直接跳转过去回复」
+ *
+ * 口径（微信行为）：
+ * - 页面在前台：站内横幅（P10 已做），不重复弹系统通知
+ * - 页面在后台（切标签/锁屏亮屏/切到其他 App 但网页进程还活着）：
+ *   弹系统通知，点通知回到页面并跳进对应会话
+ * 物理边界（如实告知）：纯前端离线无服务器，页面进程被系统杀掉后
+ * 无法推送——这是所有无后台网页的共同限制；网页开着就有通知。
+ * Android Chrome 弹系统通知必须经 Service Worker，故配套 sw.js；
+ * file:// 本地打开自动降级为 Notification 构造器（可用性随浏览器）。
+ * ============================================================ */
+var Notify = (function () {
+
+  function supported() { return typeof Notification !== 'undefined'; }
+  function swOK() { return swOK_(); }
+  function swOK_() {
+    return typeof navigator !== 'undefined' && 'serviceWorker' in navigator
+      && location.protocol === 'https:';
+  }
+
+  /* 注册通知中转 SW（仅 HTTPS 有意义；失败静默，走构造器降级） */
+  function registerSW() {
+    if (!swOK_()) return;
+    try {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    } catch (e) {}
+  }
+
+  /* 我的页「新消息通知」开关：点=请求权限并开启 / 再点关闭 */
+  function toggle() {
+    if (!supported()) { UI.toast('这个浏览器不支持系统通知'); return false; }
+    if (!DB.state.settings.notify) {
+      var after = function (p) {
+        if (p === 'granted') {
+          DB.state.settings.notify = true; DB.save();
+          UI.toast('新消息通知已开启');
+        } else if (p === 'denied') {
+          UI.toast('通知权限被浏览器拒绝了，要去浏览器设置里允许');
+        } else {
+          UI.toast('还没有授权，再点一次试试');
+        }
+        return p === 'granted';
+      };
+      try {
+        var r = Notification.requestPermission(function (p) { after(p); refreshRow(); });
+        if (r && r.then) r.then(function (p) { after(p); refreshRow(); });
+      } catch (e) { UI.toast('无法发起授权'); }
+      return false;
+    }
+    DB.state.settings.notify = false; DB.save();
+    UI.toast('新消息通知已关闭');
+    return true;
+  }
+
+  /* pushRaw 非 viewing 分支调用（engine 传入拼好的标题/摘要）
+     hidden 才弹：前台已有微信式横幅，别双份轰炸 */
+  function maybeSys(conv, m, title, body) {
+    try {
+      if (!DB.state.settings.notify || !supported()) return;
+      if (!document.hidden) return;
+      if (Notification.permission !== 'granted') return;
+      var peer = conv.type === 'group' ? null : Home.contactById(conv.peerId);
+      var icon = peer && peer.avatar ? peer.avatar : undefined;
+      var opt = {
+        body: body,
+        icon: icon,
+        tag: 'lovex-' + conv.id,          // 同会话连发只顶一条，不刷屏
+        data: { convId: conv.id }
+      };
+      if (swOK_() && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) reg.showNotification(title, opt);
+          else fallback(title, opt);
+        }).catch(function () { fallback(title, opt); });
+      } else {
+        fallback(title, opt);
+      }
+    } catch (e) {}
+  }
+
+  /* 构造器降级（桌面/file://）：点击聚焦并跳进会话 */
+  function fallback(title, opt) {
+    try {
+      var n = new Notification(title, opt);
+      n.onclick = function () {
+        try { window.focus(); Home.openConv(opt.data.convId); } catch (e) {}
+        n.close();
+      };
+    } catch (e) {}
+  }
+
+  /* SW 通知点击回页：接住 sw.js postMessage，跳进对应会话 */
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      navigator.serviceWorker.addEventListener('message', function (e) {
+        var d = e.data || {};
+        if (d.type === 'lovex-notify-open' && d.convId) {
+          try { Home.openConv(d.convId); } catch (err) {}
+        }
+      });
+    } catch (e) {}
+  }
+
+  /* mine 页行文案 */
+  function rowText() {
+    if (!supported()) return '不支持';
+    if (DB.state.settings.notify && Notification.permission === 'granted') return '已开启';
+    return '未开启';
+  }
+  function refreshRow() {
+    var el = document.getElementById('notify-state');
+    if (el) el.textContent = rowText();
+  }
+
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow };
 })();
 
 /* =====================================================
@@ -5835,6 +5958,16 @@ const Engine = (function () {
     } else {
       conv.unread = (conv.unread || 0) + 1;       // 不在页面→未读红点
       if (Home.msgBanner) Home.msgBanner(conv, m); // 二期P10 微信式站内横幅
+      /* P17 系统通知：仅页面在后台（document.hidden）时弹，前台横幅不重复（微信口径） */
+      if (m.from !== 'me' && window.Notify) {
+        var nTitle = conv.type === 'group'
+          ? (Home.displayName(Home.contactById(conv.peerId)) || '群聊')
+          : Home.displayName(Home.contactById(conv.peerId));
+        var nBody = conv.type === 'group'
+          ? authorNameIn(conv, m) + '：' + snippetIn(m)
+          : snippetIn(m);
+        Notify.maybeSys(conv, m, nTitle, nBody);
+      }
     }
     DB.save();
     Home.render();
@@ -11402,6 +11535,7 @@ const History = (function () {
   Wallet.init();   /* 钱包：零钱/充值/查看人/账单/收支统计（二期P14） */
   Kinship.init();  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
   Redpacket.init();/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
+Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
     document.getElementById('btn-side').addEventListener('click', () => Router.go('mine'));
@@ -11536,6 +11670,12 @@ const History = (function () {
 
     /* --- 主题设置：底部上滑弹窗，实时预览可连续试（决策记录#12） --- */
     document.getElementById('cell-theme').addEventListener('click', openThemeSheet);
+
+    /* --- P17 新消息通知：点=请求权限并开启 / 再点关闭；行尾同步状态文案 --- */
+    document.getElementById('my-notify-row').addEventListener('click', () => {
+      Notify.toggle();
+      setTimeout(() => { const s = document.getElementById('notify-state'); if (s) s.textContent = Notify.rowText(); }, 800);
+    });
 
     /* --- 全局聊天背景（策划七-2 模式一；单聊可在资料卡单独覆盖） --- */
     document.getElementById('cell-chatbg').addEventListener('click', async () => {
