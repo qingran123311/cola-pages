@@ -2043,6 +2043,68 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   border-radius:10px;font-size:13px;padding:8px;display:flex;align-items:center;
   justify-content:center;gap:5px}
 
+/* ===== P34 续：聊天题卡/记录卡（她 16:57 三连） ===== */
+.bubble-qz{background:none !important;padding:0 !important}
+.qz-card{background:var(--card);border:1.5px solid var(--line);border-radius:14px 4px 14px 14px;
+  padding:11px 13px;min-width:200px;max-width:270px}
+.qz-card.done{border-style:solid;background:var(--bg)}
+.qz-card-gone{font-size:12.5px;color:var(--t2);padding:6px 2px}
+.qz-card-head{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2);
+  padding-bottom:7px;border-bottom:1px dashed var(--line);margin-bottom:8px}
+.qz-card-head b{flex:1;color:var(--t1);font-size:13.5px}
+.qz-card-q{display:flex;align-items:baseline;gap:6px;font-size:14px;color:var(--t1);
+  line-height:1.55;margin-top:7px}
+.qz-no{font-style:normal;font-size:10.5px;color:var(--t2);flex:none;
+  border:1px solid var(--line);border-radius:50%;width:17px;height:17px;
+  display:inline-flex;align-items:center;justify-content:center;transform:translateY(2px)}
+.qz-card-ans{margin:6px 0 0 23px;font-size:13.5px;color:var(--primary);line-height:1.5;
+  padding-left:8px;border-left:3px solid var(--primary);word-break:break-all}
+.qz-card-hint{margin:6px 0 0 23px;font-size:13px;color:var(--t3)}
+.qz-paper-card{display:flex;align-items:center;gap:10px;min-width:190px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:14px 4px 14px 14px;
+  padding:11px 13px}
+.qz-pc-ico{flex:none;width:34px;height:34px;border-radius:9px;display:flex;
+  align-items:center;justify-content:center;border:1.5px solid currentColor;color:var(--t1)}
+.qz-pc-mid{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.qz-pc-mid b{font-size:14px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qz-pc-mid small{font-size:12px;color:var(--t2)}
+.qz-pc-arrow{color:var(--t2);display:flex}
+.qz-pc-done .qz-pc-ico{color:#2e7d32}
+.theme-dark .qz-pc-done .qz-pc-ico{color:#7bc47f}
+
+/* ===== P34 详情页重做（她 16:57“有点简陋”）：卷头 hero+题号圆标+引用条答案 ===== */
+.qzv-hero{padding:16px 16px 13px}
+.qzv-hero-title{font-size:18px;font-weight:700;color:var(--t1);line-height:1.4;
+  letter-spacing:.5px}
+.qzv-hero-meta{margin-top:9px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--t2)}
+.qzv-dots{display:inline-flex;gap:4px}
+.qzv-dots i{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--line);display:inline-block}
+.qzv-dots i.on{background:var(--primary);border-color:var(--primary)}
+.qzv-hero-meta em{margin-left:auto;font-style:normal;font-size:11.5px}
+.qzv-paper{margin-top:10px;padding:13px 15px}
+.qzv-name{display:flex;align-items:center;gap:8px}
+.qzv-name .avatar-sm{width:26px;height:26px;font-size:12px;flex:none}
+.qzv-name b{font-size:14.5px;color:var(--t1)}
+.qzv-name time{margin-left:auto;font-size:11.5px;color:var(--t2)}
+.qzv-waiting{padding:20px 0;text-align:center;color:var(--t2);font-size:13px}
+.qz-breath{display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:var(--primary);margin-right:7px;animation:qzBreath 1.6s ease-in-out infinite;
+  transform:translateY(-1px)}
+@keyframes qzBreath{0%,100%{opacity:.25}50%{opacity:1}}
+.qzv-q{margin-top:15px;padding-top:12px;border-top:1px dashed var(--line)}
+.qzv-q-t{font-size:14.5px;color:var(--t1);line-height:1.6;display:flex;
+  align-items:baseline;gap:7px}
+.qzv-q-t .qz-no{transform:translateY(-1px)}
+.qzv-q-t em{font-style:normal;font-size:10.5px;color:var(--t2);border:1px solid var(--line);
+  border-radius:6px;padding:1px 5px;flex:none}
+.qzv-a{margin-top:8px;margin-left:24px;font-size:14.5px;line-height:1.65;color:var(--t1);
+  background:var(--bg);border-left:3px solid var(--primary);border-radius:0 10px 10px 0;
+  padding:8px 12px;word-break:break-all}
+.qzv-comment{margin-top:15px;font-size:13.5px;color:var(--t1);border:1.5px dashed var(--line);
+  border-radius:12px 3px 12px 3px;padding:10px 12px;line-height:1.65}
+.qzv-comment span{display:flex;align-items:center;gap:4px;font-size:11.5px;
+  color:var(--t2);margin-bottom:4px}
+
 </style>
 </head>
 <body>
@@ -3476,7 +3538,8 @@ var Quiz = (function () {
       const at = picked.indexOf(id);
       if (at >= 0) picked.splice(at, 1); else picked.push(id);
       it.classList.toggle('on', at < 0);
-      mask.querySelector('#qz-c-count').textContent = '已选 ' + picked.length + ' 题';
+      mask.querySelector('#qz-c-count').textContent =
+        '已选 ' + picked.length + ' 题 · ' + (picked.length <= 2 ? '将以聊天卡片发送' : '将以正式问卷发送');
     });
 
     mask.querySelector('.qz-f-ok').addEventListener('click', () => {
@@ -3492,18 +3555,34 @@ var Quiz = (function () {
     setTimeout(() => mask.classList.add('show'), 80);
   }
 
-  /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现 */
+  /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现。
+     她 16:57 三连：①短卷（≤2题）不搞交卷流程，直接以聊天题卡呈现；
+     ②发卷要在聊天里有一条记录；③别再说“答完啦”这种话 */
   function sendQuiz(title, delayMin, targetIds, qids) {
     const now = Date.now();
-    DB.state.quizzes.unshift({
-      id: uid(), title, mode: 'normal',
+    const style = qids.length <= 2 ? 'card' : 'paper';   // 自动分流：短卷=聊天题卡，长卷=正式问卷
+    const z = {
+      id: uid(), title, mode: 'normal', style,
       qids, targets: targetIds, delayMin,
       status: 'sent', ts: now,
       pending: targetIds.map(ct => ({ ctId: ct, at: now + Math.round(delayMin * 60000) })),
       answers: {}, rating: ''
+    };
+    DB.state.quizzes.unshift(z);
+    /* 发卷落聊天记录：自己的消息不走 Engine.pushRaw（不挂未读/横幅，同 Report.pushMeMsg 语义） */
+    targetIds.forEach(ct => {
+      const conv = convOf(ct);
+      if (!conv) return;
+      const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
+      const m = { id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5), from: 'me', type: 'quiz', quizId: z.id, ts: now };
+      let i = arr.length; while (i > 0 && arr[i - 1].ts > m.ts) i--;
+      arr.splice(i, 0, m);
+      conv.lastMsg = '[灵魂拷问] ' + title; conv.lastTime = m.ts;
+      const visPage = document.querySelector('.page.active');
+      if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
     });
     DB.save();
-    UI.toast('卷子已出，等 TA 来交');
+    UI.toast(style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交');
     render();
   }
 
@@ -3544,11 +3623,21 @@ var Quiz = (function () {
         q.qids.forEach(id => { const t = qById(id); if (t) per[id] = genByType(t, p.ctId); });
         q.answers[p.ctId] = { per, comment: genComment(p.ctId), ts: p.at };
         const conv = convOf(p.ctId);
-        if (conv) Engine.pushRaw(conv, {
-          id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5),
-          from: 'ai', type: 'text',
-          text: '你的「' + q.title + '」答完啦，快去批卷', ts: p.at
-        });
+        if (conv) {
+          /* 她 16:57：不再发“答完啦”文本——交卷本身就是一张卡片消息（未读/横幅照常） */
+          Engine.pushRaw(conv, {
+            id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+            from: 'ai', type: 'quiz', quizId: q.id, ts: p.at
+          });
+          /* 卡片模式下评论紧随其后作普通气泡，就是她要的“接话不用了顶多留评论” */
+          const cmt = q.answers[p.ctId].comment;
+          if (q.style === 'card' && cmt) {
+            Engine.pushRaw(conv, {
+              id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 6),
+              from: 'ai', type: 'text', text: cmt, ts: p.at + 1
+            });
+          }
+        }
         dirty = true;
       }
       if (!pd.length && q.status === 'sent') { q.status = 'done'; dirty = true; }
@@ -3609,23 +3698,35 @@ var Quiz = (function () {
     if (!box || !z) return;
     document.getElementById('qzv-title').textContent = z.title;
 
-    let html = '<div class="card qzv-meta"><span>' + fmtDay(z.ts) + ' · 共 ' + z.qids.length + ' 题</span></div>';
+    /* 她 16:57：详情页重做——卷头 hero+进度点，答卷改“题号圆标+引用条答案”手账风 */
+    const doneN = z.targets.filter(t => z.answers[t]).length;
+    let html =
+      '<div class="card qzv-hero"><div class="qzv-hero-title">' + esc(z.title) + '</div>' +
+      '<div class="qzv-hero-meta"><span>' + fmtDay(z.ts) + '</span><span>共 ' + z.qids.length + ' 题</span>' +
+      '<span class="qzv-dots">' + z.targets.map(t => '<i class="' + (z.answers[t] ? 'on' : '') + '"></i>').join('') + '</span>' +
+      '<em>' + (doneN === z.targets.length ? '已全部交卷' : '等 ' + (z.targets.length - doneN) + ' 人交卷') + '</em></div></div>';
+
     z.targets.forEach(ctId => {
       const ct = Home.contactById(ctId);
       const ans = z.answers[ctId];
       html += '<div class="card qzv-paper"><div class="qzv-name">' +
-        (ct ? I('user', 13) + ' ' + esc(Home.displayName(ct)) : '(联系人缺失)') + '</div>';
+        '<span class="avatar avatar-sm"><span class="ava-txt">' + esc((ct ? Home.displayName(ct) : '?').slice(0, 1)) + '</span></span>' +
+        '<b>' + esc(ct ? Home.displayName(ct) : '(联系人缺失)') + '</b>' +
+        '<time>' + (ans ? fmtDay(ans.ts) + ' 交' : '还没交卷') + '</time></div>';
       if (!ans) {
-        html += '<div class="qzv-waiting"><small>' + (I('clock', 12)) + ' 还没交卷，再等等</small></div>';
+        html += '<div class="qzv-waiting"><small><i class="qz-breath"></i>还在路上，再等等</small></div>';
       } else {
-        html += '<small class="qzv-ts">' + fmtDay(ans.ts) + ' 交</small>';
+        let no = 0;
         z.qids.forEach(id => {
           const t = qById(id); if (!t) return;
-          html += '<div class="qzv-q"><div class="qzv-q-t">' + esc(t.title) +
+          no++;
+          const a = ans.per[id];
+          html += '<div class="qzv-q">' +
+            '<div class="qzv-q-t"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) +
             ' <em>' + typeName(t.type) + '</em></div>' +
-            '<div class="qzv-q-a">' + esc(ansText(t, ans.per[id])) + '</div></div>';
+            '<div class="qzv-a">' + esc(ansText(t, a)) + '</div></div>';
         });
-        if (ans.comment) html += '<div class="qzv-comment"><span>TA 的评论</span>' + esc(ans.comment) + '</div>';
+        if (ans.comment) html += '<div class="qzv-comment"><span>' + I('brush', 11) + ' TA 的评论</span>' + esc(ans.comment) + '</div>';
       }
       html += '</div>';
     });
@@ -3939,7 +4040,7 @@ var Quiz = (function () {
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz };
+  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow };
 })();
 
 /* =====================================================
@@ -5760,7 +5861,7 @@ const Chat = (function () {
   function snippetOf(m) {
     return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
-      : m.type === 'redpacket' ? '[红包]' : (m.text || '');
+      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : (m.text || '');
   }
 
   function appendOne(listEl, m) {
@@ -5964,6 +6065,59 @@ const Chat = (function () {
           UI.toast('回应好啦');
         });
       });
+    } else if (m.type === 'quiz') {
+      /* P34 灵魂拷问卡（她 16:57 三连）：短卷=题卡本体，长卷=发卷记录/交卷提醒；
+       状态实时从 quizzes 读（像红包已领取），永不弹“答完啦”文本 */
+      bub.classList.add('bubble-qz');
+      const z = (DB.state.quizzes || []).find(x => x.id === m.quizId);
+      if (!z) {
+        bub.innerHTML = '<div class="qz-card qz-card-gone">问卷已不存在</div>';
+      } else if (z.style === 'card') {
+        /* 短卷题卡：from me=待答态；from ai=TA 的作答展示 */
+        const isMine = m.from === 'me';
+        const ans = !isMine ? z.answers[cur.peerId] : null;
+        let inner = '<div class="qz-card-head">' + I('quiz', 13) + '<b>' + esc(z.title) + '</b><span>' +
+          (isMine ? '等 TA 接招' : '已接招') + '</span></div>';
+        let no = 0;
+        z.qids.forEach(id => {
+          const t = Quiz.qById(id); if (!t) return; no++;
+          inner += '<div class="qz-card-q"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) + '</div>';
+          const a = ans ? ans.per[id] : null;
+          if (t.type === 'rate' && a != null) {
+            inner += '<div class="qz-card-ans on">' + Quiz.starRow(a) + '</div>';
+          } else if (a != null && Array.isArray(a)) {
+            inner += a.map(x => '<div class="qz-card-ans on">' + esc(x) + '</div>').join('');
+          } else if (a != null) {
+            inner += '<div class="qz-card-ans on">' + esc(String(a)) + '</div>';
+          } else {
+            inner += '<div class="qz-card-hint">……</div>';
+          }
+        });
+        bub.innerHTML = '<div class="qz-card' + (isMine ? '' : ' done') + '">' + inner + '</div>';
+        bub.addEventListener('click', () => { UI.toast(isMine ? '等 TA 作答呀' : '往上看 TA 的回答'); });
+      } else {
+        /* 长卷：me=发卷封面记录卡；ai=交卷提醒条；都点开详情页 */
+        const isMine = m.from === 'me';
+        if (isMine) {
+          const doneN = z.targets.filter(t => z.answers[t]).length;
+          bub.innerHTML =
+            '<div class="qz-paper-card">' +
+              '<span class="qz-pc-ico"><i data-icon="quiz" data-size="19"></i></span>' +
+              '<span class="qz-pc-mid"><b></b><small>共 ' + z.qids.length + ' 题 · ' + doneN + '/' + z.targets.length + ' 已交</small></span>' +
+              '<i class="qz-pc-arrow"><i data-icon="chevron-right" data-size="14"></i></i>' +
+            '</div>';
+          bub.querySelector('.qz-pc-mid b').textContent = z.title;
+          mountIcons(bub);
+        } else {
+          bub.innerHTML =
+            '<div class="qz-paper-card qz-pc-done">' +
+              '<span class="qz-pc-ico"><i data-icon="check" data-size="16"></i></span>' +
+              '<span class="qz-pc-mid"><b>交卷了</b><small>点开批卷</small></span>' +
+            '</div>';
+          mountIcons(bub);
+        }
+        bub.addEventListener('click', () => { Quiz.viewQuiz(z.id); });
+      }
     } else if (m.type === 'letter') {
       /* 信件卡片（P8）：米白信纸风，点击看全文 */
       bub.classList.add('bubble-letter');
@@ -6105,6 +6259,7 @@ const Chat = (function () {
                 : m.type === 'img' ? '[图片]'
                 : m.type === 'kinship' ? '[亲属卡]'
                 : m.type === 'redpacket' ? '[红包]'
+                : m.type === 'quiz' ? '[灵魂拷问]'
                 : '[语音]';
     cur.lastTime = m.ts;
     DB.save();
@@ -7318,7 +7473,7 @@ const Engine = (function () {
   function snippetIn(m) {
     return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
-      : m.type === 'redpacket' ? '[红包]' : (m.text || '');
+      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : (m.text || '');
   }
   function authorNameIn(conv, m) {
     if (m.from === 'me') return DB.state.profile.name || '我';
