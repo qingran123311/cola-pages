@@ -2105,6 +2105,24 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qzv-comment span{display:flex;align-items:center;gap:4px;font-size:11.5px;
   color:var(--t2);margin-bottom:4px}
 
+/* ===== P34 三轮：选项全列 + 重填小胶囊（她 17:11） ===== */
+.qz-opts{margin-top:8px;margin-left:24px;display:flex;flex-direction:column;gap:6px}
+.qz-opt{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--t3);
+  border:1.5px solid var(--line);border-radius:10px;padding:7px 11px;line-height:1.4;
+  background:var(--card)}
+.qz-opt svg{flex:none;opacity:.9}
+.qz-opt i{font-style:normal;flex:none;width:16px;height:16px;border-radius:50%;
+  background:var(--primary);color:#fff;font-size:10.5px;display:inline-flex;
+  align-items:center;justify-content:center;font-weight:600}
+.qz-opt.on{color:var(--primary);border-color:var(--primary);background:var(--card);
+  font-weight:600}
+.qzv-a.stars{letter-spacing:2px;color:var(--primary)}
+.qz-card .qz-opt{padding:5px 9px;font-size:12.5px;border-radius:8px;margin-top:5px}
+.qz-refill{flex:none;display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--primary);
+  color:var(--primary);background:none;border-radius:999px;font-size:12.5px;font-weight:600;
+  padding:6px 13px;margin-left:auto}
+.qz-refill:active{opacity:.7}
+
 </style>
 </head>
 <body>
@@ -3684,6 +3702,24 @@ var Quiz = (function () {
     Router.go('quizview');
     renderView();
   }
+  /* 她 17:11：选项要看全——单选/多选列全部选项、TA 选中的点亮；排序带名次；打分画星；填空引用块 */
+  function ansBlock(t, a) {
+    if (a == null || a === '') return '<div class="qzv-a">（空）</div>';
+    if (t.type === 'rate') return '<div class="qzv-a stars">' + starRow(a) + '</div>';
+    if (t.type === 'text') return '<div class="qzv-a">' + esc(String(a)) + '</div>';
+    if (t.type === 'sort') {
+      const arr = Array.isArray(a) ? a : [a];
+      return '<div class="qz-opts">' + (t.options || []).map(o => {
+        const rank = arr.indexOf(o);
+        return '<span class="qz-opt' + (rank >= 0 ? ' on' : '') + '">' +
+          (rank >= 0 ? '<i>' + (rank + 1) + '</i>' : '') + esc(o) + '</span>';
+      }).join('') + '</div>';
+    }
+    const sel = Array.isArray(a) ? a : [a];
+    return '<div class="qz-opts">' + (t.options || []).map(o =>
+      '<span class="qz-opt' + (sel.includes(o) ? ' on' : '') + '">' +
+      (sel.includes(o) ? I('check', 10) : '') + esc(o) + '</span>').join('') + '</div>';
+  }
   function starRow(n) { n = Math.max(1, Math.min(5, n | 0)); return '★'.repeat(n) + '☆'.repeat(5 - n); }
   function ansText(t, a) {
     if (a == null) return '';
@@ -3724,17 +3760,17 @@ var Quiz = (function () {
           html += '<div class="qzv-q">' +
             '<div class="qzv-q-t"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) +
             ' <em>' + typeName(t.type) + '</em></div>' +
-            '<div class="qzv-a">' + esc(ansText(t, a)) + '</div></div>';
+            ansBlock(t, a) + '</div>';
         });
         if (ans.comment) html += '<div class="qzv-comment"><span>' + I('brush', 11) + ' TA 的评论</span>' + esc(ans.comment) + '</div>';
       }
       html += '</div>';
     });
 
-    /* 我的评价（三档，她拍板"评价也行"）：存卷级 rating */
+    /* 我的评价（三档）+ 重填收进行尾小胶囊（她 17:11“按钮不好看，换一下”） */
     html += '<div class="card qzv-rate"><span>我的评价：</span><div class="chip-row">' +
       ['不行', '良好', '优秀'].map(r => '<button class="grp-chip' + (z.rating === r ? ' on' : '') + '" data-rate="' + r + '">' + r + '</button>').join('') +
-      '</div><button class="qz-refill" id="qzv-refill">' + I('flip', 13) + ' 要求重填</button></div>';
+      '</div><button class="qz-refill" id="qzv-refill">' + I('flip', 12) + '重填</button></div>';
 
     box.innerHTML = html;
 
@@ -6083,14 +6119,19 @@ const Chat = (function () {
           const t = Quiz.qById(id); if (!t) return; no++;
           inner += '<div class="qz-card-q"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) + '</div>';
           const a = ans ? ans.per[id] : null;
-          if (t.type === 'rate' && a != null) {
-            inner += '<div class="qz-card-ans on">' + Quiz.starRow(a) + '</div>';
-          } else if (a != null && Array.isArray(a)) {
-            inner += a.map(x => '<div class="qz-card-ans on">' + esc(x) + '</div>').join('');
-          } else if (a != null) {
-            inner += '<div class="qz-card-ans on">' + esc(String(a)) + '</div>';
+          /* 她 17:11：选项要看全——卡上也列全部选项，TA 选中的点亮 */
+          if (t.type === 'rate') {
+            inner += a != null ? '<div class="qz-card-ans on">' + Quiz.starRow(a) + '</div>' : '<div class="qz-card-hint">……</div>';
+          } else if (t.type === 'text') {
+            inner += a != null ? '<div class="qz-card-ans on">' + esc(String(a)) + '</div>' : '<div class="qz-card-hint">……</div>';
           } else {
-            inner += '<div class="qz-card-hint">……</div>';
+            const sel = Array.isArray(a) ? a : (a != null ? [a] : []);
+            const ordered = t.type === 'sort' && Array.isArray(a) ? a.concat((t.options || []).filter(o => !a.includes(o))) : (t.options || []);
+            inner += ordered.map(o => {
+              const rank = t.type === 'sort' && sel.includes(o) ? sel.indexOf(o) : -1;
+              return '<div class="qz-opt' + (sel.includes(o) ? ' on' : '') + '">' +
+                (rank >= 0 ? '<i>' + (rank + 1) + '</i>' : (sel.includes(o) ? I('check', 10) : '')) + esc(o) + '</div>';
+            }).join('');
           }
         });
         bub.innerHTML = '<div class="qz-card' + (isMine ? '' : ' done') + '">' + inner + '</div>';
