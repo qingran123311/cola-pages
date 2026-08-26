@@ -2191,6 +2191,37 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-arch-row em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--t2);flex:none}
 .qz-arch-none{display:block;margin-top:8px;font-size:12px;color:var(--t2)}
 
+/* ===== P34 V3.5 默契挑战：挑战卡 + 单卷双色对照（清然 19:02：只显示一份卷，不同人不同色高亮） ===== */
+/* 聊天里的挑战书卡：紫心图标，完成态转绿 */
+.qz-pc-duet .qz-pc-ico{color:#a259c4}
+.theme-dark .qz-pc-duet .qz-pc-ico{color:#d3a5e8}
+.qz-pc-duet.qz-pc-done .qz-pc-ico{color:#2e7d32}
+.theme-dark .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#7bc47f}
+/* 单卷双色：TA=主题色实线描边（原有 .on），我=紫色虚线+「我」小标；双标同现即默契 */
+.qz-opt.mine{border-style:dashed;border-color:#a259c4;color:#8a3fa8}
+.theme-dark .qz-opt.mine{border-color:#9a63b4;color:#d3a5e8}
+.qz-opt .qz-mine-tag{text-decoration:none;margin-left:auto;flex:none;font-size:10px;line-height:1;
+  padding:2.5px 6px;border-radius:999px;color:#fff;background:#a259c4;font-weight:600}
+.theme-dark .qz-opt .qz-mine-tag{background:#7a4b8f}
+.qz-opt.on.mine{border-color:#a259c4}
+/* 图例：卷头右侧 你/TA 色点说明 */
+.qz-duo-legend{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
+.qz-duo-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin:0 1px 0 4px}
+.qz-duo-legend .lg-me{background:#a259c4;margin-left:0}
+.qz-duo-legend .lg-ta{background:var(--primary)}
+/* 打分/填空的上下两行答案 */
+.qz-duo-line{display:flex;align-items:baseline;gap:8px;margin-top:7px;font-size:14px;line-height:1.45;
+  border-radius:9px;padding:6px 9px;letter-spacing:.3px}
+.qz-duo-line span{flex:none;font-size:11px;line-height:1;padding:3px 7px;border-radius:999px;color:#fff;font-weight:600}
+.qz-duo-line.me{background:rgba(162,89,196,.07)}
+.qz-duo-line.me span{background:#a259c4}
+.qz-duo-line.ta{background:var(--primary-ultra)}
+.qz-duo-line.ta span{background:var(--primary)}
+.theme-dark .qz-duo-line.me{background:rgba(211,165,232,.09)}
+.qzv-q .qz-hit{display:block;margin-top:6px}
+/* 应战按钮（详情页待作答态） */
+#qzv-goanswer{width:100%;justify-content:center;margin-top:11px;padding:9px}
+
 </style>
 </head>
 <body>
@@ -3630,7 +3661,7 @@ var Quiz = (function () {
       const b = e.target.closest('[data-mode]'); if (!b) return;
       composeMode = b.dataset.mode;
       mask.querySelectorAll('#qz-c-mode .grp-chip').forEach(x => x.classList.toggle('on', x === b));
-      if (composeMode === 'duet') UI.toast('默契挑战：你先答，TA 再答，然后对照');
+      if (composeMode === 'duet') UI.toast('默契挑战：发出去后点卡片写下你的答案');
     });
     /* 模板：套用 / 存为 */
     const tplBtn = mask.querySelector('#qz-c-tpl');
@@ -3682,10 +3713,9 @@ var Quiz = (function () {
       const delay = Math.max(0.1, parseFloat(mask.querySelector('#qz-c-delay').value) || 1);
       if (!picked.length) { UI.toast('一道题都不选，考什么呀'); return; }
       const tIds = targets.slice(), pids = picked.slice(), mode = composeMode;
-      mask.remove();   // 先关出卷器再弹答题 sheet（两个 ui-modal 叠加会跨 mask 点错按钮——历史坑）
-      const go = myPer => sendQuiz(title || '未命名问卷', delay, tIds, pids, mode, myPer);
-      if (mode === 'duet') answerMySheet(pids, go);
-      else go(null);
+      mask.remove();
+      /* V3.5（她 19:02）：duet 不再当场弹答题 sheet——先落「发起默契挑战」卡，点卡片再作答 */
+      sendQuiz(title || '未命名问卷', delay, tIds, pids, mode, null);
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
@@ -3707,6 +3737,7 @@ var Quiz = (function () {
       answers: {}, rating: ''
     };
     if (myPer) z.myDuet = { per: myPer, ts: now };
+    if (z.mode === 'duet') z.by = 'me';   // V3.5：记录发起方，卡片文案「XX向XX」用
     DB.state.quizzes.unshift(z);
     /* 发卷落聊天记录：自己的消息不走 Engine.pushRaw（不挂未读/横幅，同 Report.pushMeMsg 语义） */
     targetIds.forEach(ct => {
@@ -3721,15 +3752,14 @@ var Quiz = (function () {
       if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
     });
     DB.save();
-    UI.toast(mode === 'duet' ? '默契挑战发出，等 TA 来对答案' : (z.style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交'));
+    UI.toast(mode === 'duet' ? '挑战书已发出，点聊天里的卡片写下你的答案' : (z.style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交'));
     render();
   }
 
   /* ---------------- 我自己答题的 sheet（默契挑战第一步） ----------------
      五题型逐题交互；排序用上移/下移箭头（拖拽在手机上易误触） */
-    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
   function answerMySheet(qids, onDone) {
-    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());    const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
     mask.className = 'sheet-mask ui-modal';
     mask.innerHTML = '<div class="sheet sheet-scroll qz-sheet"><div class="sheet-title">先写下你的答案</div>' +
@@ -3905,6 +3935,51 @@ var Quiz = (function () {
     return true;
   }
 
+  /* ---------------- V3.5：TA 主动发起默契挑战（她 18:07 定） ----------------
+     quizDuetRate 出厂默认 0（同 quizRate 先例：概率类不主动开，等她定数值）；
+     与 maybeAsk 同链互斥（engine 里先掷挑战、中了就跳过抽题），一批回复不蹦俩事件。
+     TA 发起＝TA 已答好：立即落库但详情页对我隐藏，等我点卡应战后揭晓对照。
+     同一联系人还有没打完的挑战就不开新的；一次只考一道题（同 quizask 节奏，数量等她定）。 */
+  function maybeDuet(conv, ct) {
+    const rate = Math.min(100, Math.max(0, isFinite(+(ct.params || {}).quizDuetRate) ? +(ct.params || {}).quizDuetRate : 0));
+    if (rate <= 0) return false;
+    if (Math.random() * 100 >= rate) return false;
+    const busy = (DB.state.quizzes || []).some(z => z.mode === 'duet' && z.targets.includes(ct.id) && !(z.myDuet && z.answers[ct.id]));
+    if (busy) return false;
+    const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
+    if (!pool.length) return false;
+    const t = pick(pool);
+    const now = Date.now();
+    const z = {
+      id: uid(), title: '默契挑战', mode: 'duet', style: 'paper', by: 'ta',
+      qids: [t.id], targets: [ct.id], delayMin: 1,
+      status: 'sent', ts: now, pending: [], answers: {}, rating: ''
+    };
+    z.answers[ct.id] = { per: { [t.id]: genByType(t, ct.id) }, comment: '', ts: now };
+    DB.state.quizzes.unshift(z);
+    Engine.pushRaw(conv, {
+      id: 'qd' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+      from: 'ai', type: 'quiz', quizId: z.id, ts: now
+    });
+    DB.save();
+    return true;
+  }
+
+  /* 我应战提交：存 myDuet→开详情页揭晓（by='ta' 直接看双色对照；by='me' 看进度） */
+  function submitDuet(zid, per) {
+    const z = quizById(zid); if (!z) return;
+    z.myDuet = { per, ts: Date.now() };
+    DB.save(); render();
+    viewQuiz(zid);
+  }
+
+  /* 聊天挑战卡点击路由：没写过答案→弹答题 sheet；写过了→直接看进度/对照 */
+  function openDuetCard(z) {
+    if (!z) return;
+    if (!z.myDuet) answerMySheet(z.qids, per => submitDuet(z.id, per));
+    else viewQuiz(z.id);
+  }
+
   /* ---------------- 主页：试卷列表 / 档案室（V3） ---------------- */
   let homeTab = 'list';   // list=试卷 | arch=档案室
   function open(cid) { curCid = cid; Router.go('quiz'); homeTab = 'list'; render(); }
@@ -3927,9 +4002,12 @@ var Quiz = (function () {
       box.innerHTML = tabs + list.map(z => {
         const doneN = z.targets.filter(t => z.answers[t]).length;
         const all = z.targets.length;
-        const st = z.status === 'done'
-          ? '<b class="qz-st ok">' + I('check', 11) + '已回答</b>'
-          : '<b class="qz-st wait">' + I('clock', 11) + '等待回答</b>';
+        const duoOk = z.mode === 'duet' && !!(z.myDuet && all && z.answers[z.targets[0]]);
+        const st = (z.mode === 'duet'
+          ? (duoOk ? '<b class="qz-st ok">' + I('check', 11) + '已完成</b>' : '<b class="qz-st wait">' + I('clock', 11) + '进行中</b>')
+          : (z.status === 'done'
+            ? '<b class="qz-st ok">' + I('check', 11) + '已回答</b>'
+            : '<b class="qz-st wait">' + I('clock', 11) + '等待回答</b>'));
         return '<button class="qz-item card" data-qz="' + z.id + '">' +
           '<div class="qz-item-head"><b>' + esc(z.title) + '</b>' +
           (z.mode === 'duet' ? '<i class="qz-mini-duet">默契</i>' : '') + st + '</div>' +
@@ -4051,12 +4129,19 @@ var Quiz = (function () {
 
     /* 她 16:57：详情页重做——卷头 hero+进度点，答卷改“题号圆标+引用条答案”手账风 */
     const doneN = z.targets.filter(t => z.answers[t]).length;
+    const duoDone = !!(z.myDuet && z.targets.every(t => z.answers[t]));
     let html =
       '<div class="card qzv-hero"><div class="qzv-hero-title">' + esc(z.title) + '</div>' +
       '<div class="qzv-hero-meta"><span>' + fmtDay(z.ts) + '</span><span>共 ' + z.qids.length + ' 题</span>' +
-      '<span class="qzv-dots">' + z.targets.map(t => '<i class="' + (z.answers[t] ? 'on' : '') + '"></i>').join('') + '</span>' +
-      '<em>' + (doneN === z.targets.length ? '已全部交卷' : '等 ' + (z.targets.length - doneN) + ' 人交卷') + '</em></div></div>';
+      '<span class="qzv-dots">' + z.targets.map(t => '<i class="' + (z.answers[t] || (z.mode === 'duet' && z.myDuet) ? 'on' : '') + '"></i>').join('') + '</span>' +
+      '<em>' + (z.mode === 'duet'
+        ? (duoDone ? '已完成' : (z.myDuet ? '等 TA 作答' : '等你应战'))
+        : (doneN === z.targets.length ? '已全部交卷' : '等 ' + (z.targets.length - doneN) + ' 人交卷')) + '</em></div></div>';
 
+    if (z.mode === 'duet') {
+      /* V3.5（她 19:02 定）：默契挑战只渲染一份卷、双方不同色高亮，不再另出对照卡 */
+      html += renderDuetView(z);
+    } else {
     z.targets.forEach(ctId => {
       const ct = Home.contactById(ctId);
       const ans = z.answers[ctId];
@@ -4082,23 +4167,6 @@ var Quiz = (function () {
       html += '</div>';
     });
 
-    /* 默契挑战：双方都交卷后追加对照区（一致项高亮，她拍板的核心玩法） */
-    if (z.mode === 'duet' && z.myDuet && z.targets.every(t => z.answers[t])) {
-      let same = 0, tot = 0;
-      let cmp = '<div class="card qzv-paper qz-duet"><div class="qzv-name">' + I('heart', 13) + '<b>默契对照</b></div>';
-      z.qids.forEach(id => {
-        const t = qById(id); if (!t) return;
-        const mine = z.myDuet.per[id];
-        const ta = z.answers[z.targets[0]].per[id];
-        const hit = sameAns(t, mine, ta);
-        if (hit) same++; tot++;
-        cmp += '<div class="qzv-q duet-row' + (hit ? ' hit' : '') + '">' +
-          '<div class="qz-duet-line"><span>你</span>' + esc(plainOf(t, mine)) + '</div>' +
-          '<div class="qz-duet-line ta"><span>' + esc(Home.displayName(Home.contactById(z.targets[0])) || 'TA') + '</span>' + esc(plainOf(t, ta)) + '</div>' +
-          (hit ? '<i class="qz-hit">心有灵犀</i>' : '') + '</div>';
-      });
-      cmp += '<div class="qz-duet-sum">默契值 ' + (tot ? Math.round(same / tot * 100) : 0) + '%（' + same + '/' + tot + ' 题一致）</div></div>';
-      html += cmp;
     }
 
     /* 我的评价（三档）+ 重填收进行尾小胶囊（她 17:11“按钮不好看，换一下”） */
@@ -4107,6 +4175,9 @@ var Quiz = (function () {
       '</div><button class="qz-refill" id="qzv-refill">' + I('flip', 12) + '重填</button></div>';
 
     box.innerHTML = html;
+
+    const goAns = document.getElementById('qzv-goanswer');
+    if (goAns) goAns.addEventListener('click', () => answerMySheet(z.qids, per => submitDuet(z.id, per)));
 
     box.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => {
       z.rating = z.rating === b.dataset.rate ? '' : b.dataset.rate;
@@ -4120,11 +4191,72 @@ var Quiz = (function () {
       if (!ok) return;
       z.status = 'sent';
       z.pending = z.targets.map(ct => ({ ctId: ct, at: Date.now() + Math.round((z.delayMin || 1) * 60000) }));
-      /* 重填保留旧答案做对照没意义（V1 无对照视图），直接清掉重新攒 */
+      /* 重填保留旧答案做对照没意义，直接清掉重新攒；duet 连我的答案一起清（她 19:02 单卷对照语义） */
       z.answers = {};
+      if (z.mode === 'duet') z.myDuet = null;
       DB.save(); renderView(); render();
       UI.toast('已要求重填，等 TA 重新交卷');
     });
+  }
+
+  /* V3.5（她 19:02 定）：默契挑战单卷双色——同一份卷，TA 选中＝主题色描边，
+     我选中＝紫色虚线描边+「我」小标；都选中的行双标同现即默契。
+     打分/填空没有选项可标，用上下两行彩色标签行；一致项打「心有灵犀」小徽章。 */
+  function renderDuetView(z) {
+    const ct = Home.contactById(z.targets[0]);
+    const taName = ct ? Home.displayName(ct) : 'TA';
+    const ans = z.answers[z.targets[0]];
+    const mine = z.myDuet;
+    const done = !!(ans && mine);
+    let same = 0, tot = 0;
+    let h = '<div class="card qzv-paper qz-duet"><div class="qzv-name">' +
+      '<span class="avatar avatar-sm"><span class="ava-txt">' + esc((ct ? Home.displayName(ct) : '?').slice(0, 1)) + '</span></span>' +
+      '<b>' + esc(taName) + '</b>' +
+      '<time>' + (done ? fmtDay(Math.max(ans.ts, mine.ts)) + ' 完成' : '进行中') + '</time>' +
+      '<span class="qz-duo-legend"><i class="lg-me"></i>你 <i class="lg-ta"></i>' + esc(taName) + '</span></div>';
+    let no = 0;
+    z.qids.forEach(id => {
+      const t = qById(id); if (!t) return;
+      no++;
+      const a = ans ? ans.per[id] : null;
+      const m = mine ? mine.per[id] : null;
+      const hit = done && sameAns(t, m, a);
+      if (done) { tot++; if (hit) same++; }
+      h += '<div class="qzv-q"><div class="qzv-q-t"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) +
+        ' <em>' + typeName(t.type) + '</em></div>';
+      if (t.type === 'single' || t.type === 'multi' || t.type === 'sort') {
+        const selTa = a && !a.__supp ? (Array.isArray(a) ? a : [a]) : [];
+        const selMe = m && !m.__supp ? (Array.isArray(m) ? m : [m]) : [];
+        const ordered = t.type === 'sort' && Array.isArray(a) ? a.concat((t.options || []).filter(o => !a.includes(o))) : (t.options || []);
+        h += '<div class="qz-opts">' + ordered.map(o => {
+          const taOn = selTa.includes(o), meOn = selMe.includes(o);
+          const rank = t.type === 'sort' && taOn ? selTa.indexOf(o) : -1;
+          return '<span class="qz-opt' + (taOn ? ' on' : '') + (meOn ? ' mine' : '') + '">' +
+            (rank >= 0 ? '<i>' + (rank + 1) + '</i>' : (taOn ? I('check', 10) : '')) + esc(o) +
+            (meOn ? '<u class="qz-mine-tag">我</u>' : '') + '</span>';
+        }).join('') + '</div>';
+        if (a && a.__supp) h += '<div class="qz-duo-line ta"><span>' + esc(taName) + '</span><i class="qz-supp-tag">补</i>' + esc(a.text) + '</div>';
+        if (m && m.__supp) h += '<div class="qz-duo-line me"><span>你</span><i class="qz-supp-tag">补</i>' + esc(m.text) + '</div>';
+      } else if (t.type === 'rate') {
+        h += '<div class="qz-duo-line me"><span>你</span>' + (m != null ? starRow(+m) : '……') + '</div>' +
+             '<div class="qz-duo-line ta"><span>' + esc(taName) + '</span>' + (a != null ? starRow(+a) : '……') + '</div>';
+      } else {
+        const fmt = v => v == null || v === '' ? '……' : ((v && v.__supp) ? '<i class="qz-supp-tag">补</i>' + esc(v.text) : esc(String(v)));
+        h += '<div class="qz-duo-line me"><span>你</span>' + fmt(m) + '</div>' +
+             '<div class="qz-duo-line ta"><span>' + esc(taName) + '</span>' + fmt(a) + '</div>';
+      }
+      if (hit) h += '<i class="qz-hit">心有灵犀</i>';
+      h += '</div>';
+    });
+    if (done) {
+      h += '<div class="qz-duet-sum">默契值 ' + (tot ? Math.round(same / tot * 100) : 0) + '%（' + same + '/' + tot + ' 题一致）</div>';
+      if (ans.comment) h += '<div class="qzv-comment"><span>' + I('brush', 11) + ' TA 的评论</span>' + esc(ans.comment) + '</div>';
+    } else {
+      h += '<div class="qzv-waiting"><small><i class="qz-breath"></i>' + (!mine ? '你的答案还没写，点下面按钮应战' : 'TA 还在路上，再等等') + '</small></div>';
+      if (!mine) h += '<button class="qz-refill" id="qzv-goanswer">' + I('quiz', 12) + '应战，写下我的答案</button>';
+    }
+    h += '</div>';
+    return h;
   }
 
   /* ---------------- 题库页 ---------------- */
@@ -4249,9 +4381,8 @@ var Quiz = (function () {
   }
 
   /* 加题/改题 sheet：分组 chips + 题型 chips + 题干 + 选项动态增减 */
-    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
   function editSheet(editQ) {
-    const l = lib(); defGroup();
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());    const l = lib(); defGroup();
     const isNew = !editQ;
     const q = editQ || { id: uid(), gid: (libFilter && !String(libFilter).startsWith('g:') ? libFilter : '') || defGroup().id, type: 'single', title: '', options: [] };
     if (!q.gid) q.gid = defGroup().id;
@@ -4345,9 +4476,8 @@ var Quiz = (function () {
     });
     return out.filter(x => x.title);
   }
-    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
   function importSheet() {
-    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());    const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
     mask.className = 'sheet-mask ui-modal';
     mask.innerHTML =
@@ -4396,11 +4526,13 @@ var Quiz = (function () {
       '<div class="dy-set-t">灵魂拷问 · ' + esc(ct ? Home.displayName(ct) : '') + '</div>' +
       '<div class="dy-rate-row"><span>TA 聊天中突然考你的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-rate" value="' + (p.quizRate ?? 0) + '"> %</em></div>' +
       '<div class="dy-rate-row"><span>TA 觉得选项没心仪的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-supp" value="' + (p.quizSuppRate ?? 10) + '"> %</em></div>' +
-      '<div class="dy-rate-note">第一个默认 0 就是不主动考；第二个是答卷时“都不选、自己写一句”的频率</div>';
+      '<div class="dy-rate-row"><span>TA 主动发起默契挑战的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-duet" value="' + (p.quizDuetRate ?? 0) + '"> %</em></div>' +
+      '<div class="dy-rate-note">第一个默认 0 就是不主动考；第二个是答卷时“都不选、自己写一句”的频率；第三个默认 0 就是不主动发起挑战，开了 TA 答好一题等你应战</div>';
     const saveC = () => {
       const c = Home.contactById(curCid); if (!c) return;
       (c.params = c.params || {}).quizRate = clampPct(panel.querySelector('#qz-cfg-rate').value);
       c.params.quizSuppRate = clampPct(panel.querySelector('#qz-cfg-supp').value);
+      c.params.quizDuetRate = clampPct(panel.querySelector('#qz-cfg-duet').value);
       DB.save();
     };
     panel.querySelector('#qz-cfg-rate').addEventListener('change', saveC);
@@ -4417,7 +4549,7 @@ var Quiz = (function () {
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName };
+  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, maybeDuet, openDuetCard, sameAns };
 })();
 
 /* =====================================================
@@ -6449,6 +6581,31 @@ const Chat = (function () {
       const z = (DB.state.quizzes || []).find(x => x.id === m.quizId);
       if (!z) {
         bub.innerHTML = '<div class="qz-card qz-card-gone">问卷已不存在</div>';
+      } else if (z.mode === 'duet') {
+        /* V3.5 挑战卡（她 19:02 定）：「XX向XX发起默契挑战」，状态实时读；点击→没答过弹答题 sheet，答过看对照 */
+        const byMe = z.by !== 'ta';
+        const ctD = Home.contactById(cur.peerId);
+        const nm = ctD ? Home.displayName(ctD) : 'TA';
+        const chal = byMe ? '我' : nm, acc = byMe ? nm : '我';
+        const duoDone = !!(z.myDuet && z.answers[cur.peerId]);
+        let stat;
+        if (duoDone) {
+          let s = 0, t2 = 0;
+          z.qids.forEach(id => {
+            const t = Quiz.qById(id); if (!t) return; t2++;
+            if (Quiz.sameAns(t, z.myDuet.per[id], z.answers[cur.peerId].per[id])) s++;
+          });
+          stat = '已完成 · 默契值 ' + (t2 ? Math.round(s / t2 * 100) : 0) + '%';
+        } else stat = !z.myDuet ? (byMe ? '等你写下答案' : '向你发起挑战') : '等 ' + nm + ' 作答';
+        bub.innerHTML =
+          '<div class="qz-paper-card qz-pc-duet' + (duoDone ? ' qz-pc-done' : '') + '">' +
+            '<span class="qz-pc-ico"><i data-icon="heart" data-size="16"></i></span>' +
+            '<span class="qz-pc-mid"><b></b><small>' + esc(chal) + ' 向 ' + esc(acc) + ' 发起默契挑战 · ' + esc(stat) + '</small></span>' +
+            '<i class="qz-pc-arrow"><i data-icon="chevron-right" data-size="14"></i></i>' +
+          '</div>';
+        bub.querySelector('.qz-pc-mid b').textContent = z.title;
+        mountIcons(bub);
+        bub.addEventListener('click', () => { Quiz.openDuetCard(z); });
       } else if (z.style === 'card') {
         /* 短卷题卡：from me=待答态；from ai=TA 的作答展示 */
         const isMine = m.from === 'me';
@@ -7829,12 +7986,22 @@ const Engine = (function () {
             localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
       }
-      /* 灵魂拷问（二期P34）：params.quizRate 开启后 TA 聊着聊着突然甩一道题卡；同一钩子链 */
-      if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
-        try { Quiz.maybeAsk(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
+      /* 灵魂拷问（二期P34）：quizRate 抽题考你 + V3.5 quizDuetRate 默契挑战——同批互斥先掷挑战，一批回复不蹦俩事件 */
+      if (conv.type === 'single' && typeof Quiz !== 'undefined') {
+        let quizFired = false;
+        if (Quiz.maybeDuet) {
+          try { quizFired = !!Quiz.maybeDuet(conv, ct); } catch (e) {
+            try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+              a.push({ t: Date.now(), msg: 'quiz.duet: ' + (e && e.message) });
+              localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
+          }
+        }
+        if (!quizFired && Quiz.maybeAsk) {
+          try { Quiz.maybeAsk(conv, ct); } catch (e) {
+            try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+              a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
+              localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
+          }
         }
       }
       if (r < 15) {
