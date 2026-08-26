@@ -1960,6 +1960,89 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .ck-card .ck-mid b{font-size:14px}
 .ck-card .ck-mid small{font-size:12px;opacity:.75}
 
+/* ===== P34 灵魂拷问（问卷/默契挑战） ===== */
+.qz-list{display:flex;flex-direction:column;gap:10px}
+.qz-item{text-align:left;border:none;width:100%;cursor:pointer;padding:12px 14px}
+.qz-item-head{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--t1)}
+.qz-item small{display:block;margin-top:4px;color:var(--t2);font-size:12px}
+.qz-st{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:11.5px;
+  border-radius:8px;padding:2px 8px;flex:none}
+.qz-st svg{flex:none}
+.qz-st.ok{color:#2e7d32;background:rgba(46,125,50,.1)}
+.qz-st.wait{color:#b26a00;background:rgba(179,106,0,.1)}
+.theme-dark .qz-st.ok{color:#7bc47f}.theme-dark .qz-st.wait{color:#e0b45f}
+/* 出卷 sheet 内部 */
+.qz-sheet{max-height:82vh}
+.qz-pick-t{padding:12px 16px 4px;font-size:13px;color:var(--t2);display:flex;align-items:baseline}
+.qz-pick-t em{margin-left:auto;font-style:normal;font-size:12px}
+.qz-pick-list{max-height:34vh;overflow-y:auto;padding:4px 16px 6px}
+.qz-pick-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:none;
+  background:none;padding:9px 2px;border-bottom:1px dashed var(--line);color:var(--t1);font-size:14px}
+.qz-pick-type{flex:none;font-size:11px;color:var(--t2);border:1px solid var(--line);
+  border-radius:6px;padding:1px 5px}
+.qz-pick-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qz-pick-check{flex:none;width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:transparent}
+.qz-pick-item.on .qz-pick-check{background:var(--primary);border-color:var(--primary);color:#fff}
+/* 题库页 */
+.chip-row.qz-grp-row{flex-wrap:wrap;gap:7px;padding:12px 2px}
+.qz-import-row{display:flex;justify-content:flex-end;padding:2px 0 10px}
+.qz-mini-btn{border:1.5px dashed var(--line);background:none;color:var(--t2);border-radius:10px;
+  font-size:12.5px;padding:6px 11px;display:inline-flex;align-items:center;gap:5px}
+.qz-qitem{padding:11px 13px;margin-bottom:10px}
+.qz-q-head{display:flex;align-items:center;gap:8px}
+.qz-q-type{flex:none;font-size:11px;font-weight:600;color:var(--t2);border:1px solid var(--line);
+  border-radius:6px;padding:1px 6px}
+.qz-q-grp{font-size:11.5px;color:var(--t2)}
+.qz-q-del{margin-left:auto;opacity:.45;display:flex;cursor:pointer}
+.qz-q-del:active{opacity:1}
+.qz-q-title{margin-top:6px;font-size:14.5px;color:var(--t1);line-height:1.5}
+.qz-q-opts{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
+.qz-q-opts span{font-size:12px;color:var(--t2);border:1px dashed var(--line);border-radius:8px;padding:2px 8px}
+/* 加题表单：选项行动态增减 */
+.rp-f-row.qz-e-opts-row{align-items:flex-start}
+#qz-e-opts{flex:1;display:flex;flex-direction:column;gap:7px}
+.qz-opt-line{display:flex;gap:7px;align-items:center}
+.qz-opt-line input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;
+  background:var(--card);color:var(--t1);font-size:13.5px;padding:7px 10px;outline:none}
+.qz-opt-del{opacity:.45;display:flex;cursor:pointer;flex:none}
+.qz-opt-add{border:none;background:none;color:var(--primary);font-size:13px;font-weight:600;
+  padding:8px 0 0 76px;display:inline-flex;align-items:center;gap:4px}
+/* 批量导入 */
+.qz-imp-note{padding:2px 16px 8px;font-size:12.5px;color:var(--t2);line-height:1.7}
+#qz-imp-text{display:block;width:calc(100% - 32px);margin:0 auto;box-sizing:border-box;
+  border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--t1);
+  font-size:13.5px;line-height:1.7;padding:10px 12px;outline:none;resize:vertical}
+#qz-imp-text:focus{border-color:var(--primary)}
+#qz-imp-preview{max-height:24vh;overflow-y:auto;padding:8px 16px 2px}
+.qz-imp-count{font-size:12.5px;color:var(--t2);margin-bottom:6px}
+.qz-imp-item{font-size:13.5px;color:var(--t1);padding:6px 0;border-bottom:1px dashed var(--line)}
+.qz-imp-item b{font-size:11px;color:var(--t2);border:1px solid var(--line);border-radius:6px;
+  padding:1px 5px;margin-right:7px;font-weight:600}
+.qz-imp-item small{float:right;color:var(--t2);font-size:11.5px}
+#qz-imp-ok:disabled{opacity:.4}
+/* 卷详情页 */
+.qzv-meta{padding:10px 14px;font-size:12.5px;color:var(--t2)}
+.qzv-paper{margin-top:10px;padding:12px 14px}
+.qzv-name{display:flex;align-items:center;gap:6px;font-size:14.5px;color:var(--t1);font-weight:600}
+.qzv-ts{display:block;margin-top:2px;color:var(--t2);font-size:11.5px}
+.qzv-waiting{padding:18px 0;text-align:center;color:var(--t2);font-size:13px}
+.qzv-q{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.qzv-q-t{font-size:14px;color:var(--t1);line-height:1.55}
+.qzv-q-t em{font-style:normal;font-size:11px;color:var(--t2);border:1px solid var(--line);
+  border-radius:6px;padding:1px 5px;margin-left:5px}
+.qzv-q-a{margin-top:6px;font-size:14.5px;color:var(--primary);line-height:1.6;
+  padding-left:9px;border-left:3px solid var(--primary);word-break:break-all}
+.qzv-comment{margin-top:12px;font-size:13.5px;color:var(--t1);background:var(--bg);
+  border-radius:10px;padding:9px 12px;line-height:1.6}
+.qzv-comment span{display:block;font-size:11.5px;color:var(--t2);margin-bottom:3px}
+.qzv-rate{margin-top:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.qzv-rate>span{font-size:13.5px;color:var(--t2);flex:none}
+.qzv-rate .chip-row{flex:1}
+.qz-refill{flex-basis:100%;border:1.5px dashed var(--line);background:none;color:var(--t2);
+  border-radius:10px;font-size:13px;padding:8px;display:flex;align-items:center;
+  justify-content:center;gap:5px}
+
 </style>
 </head>
 <body>
@@ -2188,6 +2271,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="more-tile" data-more="redpacket"><span class="tile-ico"><i data-icon="hongbao" data-size="20"></i></span><span>红包</span></button>
       <button class="more-tile" data-more="diary"><span class="tile-ico"><i data-icon="book" data-size="20"></i></span><span>心事簿</span></button>
 <button class="more-tile" data-more="report"><span class="tile-ico"><i data-icon="compass" data-size="20"></i></span><span>报备</span></button>
+<button class="more-tile" data-more="quiz"><span class="tile-ico"><i data-icon="quiz" data-size="20"></i></span><span>灵魂拷问</span></button>
     </div>
     <!-- 表情抽屉：长在输入栏下方往下展开，与＋号面板同侧（清然 2026-08-23） -->
     <div class="emoji-drawer" id="emoji-drawer" hidden>
@@ -2250,6 +2334,47 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="card dy-set dy-sketch" id="rp-cfg-panel" hidden></div>
       <div class="rp-now card" id="rp-now" hidden></div>
       <div class="rp-list" id="rp-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== 页面：灵魂拷问·主页（P34，她 08-26 逐条拍板） ===== -->
+  <section class="page" id="page-quiz">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+      <div class="navbar-title">灵魂拷问</div>
+      <button class="navbar-act" id="qz-cfg" aria-label="设置"><i data-icon="settings" data-size="19"></i></button>
+    </header>
+    <div class="page-body">
+      <div class="qz-cfg card dy-set dy-sketch" id="qz-cfg-panel" hidden></div>
+      <div class="rp-actions card">
+        <button id="qz-new"><i data-icon="brush" data-size="18"></i>出卷</button>
+        <button id="qz-lib"><i data-icon="quiz" data-size="18"></i>题库</button>
+      </div>
+      <div class="qz-list" id="qz-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== 页面：灵魂拷问·题库 ===== -->
+  <section class="page" id="page-quizlib">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+      <div class="navbar-title">题库</div>
+      <button class="navbar-act" id="qz-lib-add" aria-label="加题"><i data-icon="plus" data-size="20"></i></button>
+    </header>
+    <div class="page-body">
+      <div class="chip-row qz-grp-row" id="qz-lib-groups"></div>
+      <div class="qz-qlist" id="qz-lib-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== 页面：灵魂拷问·卷详情/答卷 ===== -->
+  <section class="page" id="page-quizview">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
+      <div class="navbar-title" id="qzv-title">试卷</div>
+    </header>
+    <div class="page-body">
+      <div id="qzv-body"></div>
     </div>
   </section>
 
@@ -2426,6 +2551,9 @@ const DB = (function () {
         doings: ['上自习', '上课', '吃饭', '锻炼', '买东西', '跑步', '复习功课', '散步', '赶作业', '休息一会儿'],
         moods: ['心情愉悦', '有点难过', '有点暴躁', '很平静', '超级开心', '好累啊']
       },
+      quizLib: { groups: [], questions: [] },   // P34 灵魂拷问题库：groups[{id,name}]；questions[{id,gid,type:'single'|'multi'|'sort'|'rate'|'text',title,options[],ts}]
+      quizzes: [],                     // P34 试卷：[{id,title,mode:'normal'|'duet',qids[],targets[],delayMin,status,pending[],answers{},rating,ts}]
+      quizTpls: [],                    // P34 出卷模板（V3）：结构同 quizzes 去 answers/status
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
       contacts: [],                    // AI联系人（P2）：{id,name,remark,avatar,sign,status,params...}
       groups: [],                      // 群聊（P2）
@@ -3254,6 +3382,566 @@ var Report = (function () {
   return { init, open, render, settle, advance, answerCheckin, askTa, openForm };
 })();
 
+/* ============================================================
+ * Quiz — P34 灵魂拷问（问卷/默契挑战系统）
+ * 她 08-26 逐条拍板，规格见 docs/P34灵魂拷问-需求与方案.md：
+ * - 我出卷（单选/多选/排序/打分/填空）给 TA 答；TA 按交卷延迟（默认1分钟，
+ *   出卷人可调）到点交卷并附评论（抽字卡1~3条）
+ * - 我可打评价（不行/良好/优秀）、可要求重填
+ * - TA 抽题考我（聊天题卡+quizRate%）在 V2 接入；本模块先落参数
+ * - 默契挑战（duet）/模板/档案室统计 V3；入口=聊天＋号展开栏（她定）
+ *
+ * 铁律遵守：
+ * - TA 一切行为计划时刻制：pending[{ctId,at}] 存档，advanceAll 到点落库，
+ *   时间戳=应答时刻，禁止随机回填（P22 铁律同源）
+ * - 分组兜底锚点用位置/「默认」组对象，不用名字（P27 铁律）
+ * - 弹层一律 sheet 显隐三件套：mask + rAF show + setTimeout 80ms 兜底（P30 红线）
+ * ============================================================ */
+var Quiz = (function () {
+
+  let curCid = null;        // 进入时的联系人（默认接收人、参数面板对象）
+  let libFilter = '';       // 题库分组过滤：''=全部；'g:xx'=某组
+  let viewQuizId = null;    // 详情页当前试卷
+
+  /* ---------------- 工具 ---------------- */
+  function uid() { return 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function lib() {
+    const q = DB.state.quizLib;
+    if (!Array.isArray(q.groups)) q.groups = [];
+    if (!Array.isArray(q.questions)) q.questions = [];
+    return q;
+  }
+  function defGroup() {          // 「默认」组兜底：删组回流、无组题归属（P27 同款语义）
+    return lib().groups.find(g => g.name === '默认') ||
+      (lib().groups.unshift({ id: uid(), name: '默认' }), lib().groups[0]);
+  }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function randI(lo, hi) { lo = Math.ceil(lo); hi = Math.floor(hi); return Math.floor(Math.random() * (hi - lo + 1)) + lo; }
+  function shuffle(a) { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = randI(0, i);[r[i], r[j]] = [r[j], r[i]]; } return r; }
+  function esc(s) { return UI.escapeHtml(String(s == null ? '' : s)); }
+  function qById(id) { return lib().questions.find(q => q.id === id); }
+  function quizById(id) { return (DB.state.quizzes || []).find(z => z.id === id); }
+  function convOf(ctId) { return DB.state.convs.find(v => v.type === 'single' && v.peerId === ctId); }
+  function typeName(t) { return { single: '单选', multi: '多选', sort: '排序', rate: '打分', text: '填空' }[t] || t; }
+
+  /* ---------------- 出卷 sheet ---------------- */
+  function openComposer() {
+    /* P34 防御（自测抓到）：curCid 未初始化时会把 null 当收件人发废卷——
+       无联系人直接拦下，有则兕底第一个 */
+    if (!DB.state.contacts.length) { UI.toast('先去加个联系人，不然考谁呀'); return; }
+    if (!curCid) curCid = DB.state.contacts[0].id;
+    if (!lib().questions.length) {
+      UI.toast('题库还是空的，先去加几道题');
+      Router.go('quizlib');
+      renderLib();
+      return;
+    }
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';
+    mask.innerHTML =
+      '<div class="sheet sheet-scroll qz-sheet">' +
+      '<div class="sheet-title">出一份卷子</div>' +
+      '<label class="rp-f-row"><span>卷名</span><input id="qz-c-title" type="text" maxlength="20" placeholder="给这份卷子起个名"></label>' +
+      '<label class="rp-f-row"><span>交卷延迟（分钟）</span><input id="qz-c-delay" type="number" min="1" step="0.1" value="1"></label>' +
+      '<div class="rp-f-row"><span>问谁</span><div class="chip-row" id="qz-c-targets"></div></div>' +
+      '<div class="qz-pick-t">选题 <em id="qz-c-count">已选 0 题</em></div>' +
+      '<div class="qz-pick-list" id="qz-c-qlist"></div>' +
+      '<button class="sheet-cancel qz-f-ok">发出去了</button></div>';
+
+    /* 接收人 chips：当前联系人默认选中，可多选 */
+    let targets = [curCid];
+    const tbox = mask.querySelector('#qz-c-targets');
+    tbox.innerHTML = DB.state.contacts.map(c =>
+      '<button class="grp-chip' + (c.id === curCid ? ' on' : '') + '" data-ct="' + c.id + '">' + esc(Home.displayName(c)) + '</button>').join('');
+    tbox.addEventListener('click', e => {
+      const b = e.target.closest('[data-ct]'); if (!b) return;
+      const id = b.dataset.ct;
+      if (targets.includes(id)) {
+        if (targets.length === 1) { UI.toast('至少要问一个人'); return; }
+        targets = targets.filter(x => x !== id);
+      } else targets.push(id);
+      tbox.querySelectorAll('[data-ct]').forEach(x => x.classList.toggle('on', targets.includes(x.dataset.ct)));
+    });
+
+    /* 选题列表：点击勾选 */
+    const picked = [];
+    const qlist = mask.querySelector('#qz-c-qlist');
+    qlist.innerHTML = lib().questions.slice().reverse().map(q =>
+      '<button class="qz-pick-item" data-q="' + q.id + '"><span class="qz-pick-type">' + typeName(q.type) + '</span>' +
+      '<span class="qz-pick-title">' + esc(q.title) + '</span><i class="qz-pick-check"></i></button>').join('');
+    qlist.addEventListener('click', e => {
+      const it = e.target.closest('.qz-pick-item'); if (!it) return;
+      const id = it.dataset.q;
+      const at = picked.indexOf(id);
+      if (at >= 0) picked.splice(at, 1); else picked.push(id);
+      it.classList.toggle('on', at < 0);
+      mask.querySelector('#qz-c-count').textContent = '已选 ' + picked.length + ' 题';
+    });
+
+    mask.querySelector('.qz-f-ok').addEventListener('click', () => {
+      const title = mask.querySelector('#qz-c-title').value.trim();
+      const delay = Math.max(0.1, parseFloat(mask.querySelector('#qz-c-delay').value) || 1);
+      if (!picked.length) { UI.toast('一道题都不选，考什么呀'); return; }
+      sendQuiz(title || '未命名问卷', delay, targets.slice(), picked.slice());
+      mask.remove();
+    });
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask);
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);
+  }
+
+  /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现 */
+  function sendQuiz(title, delayMin, targetIds, qids) {
+    const now = Date.now();
+    DB.state.quizzes.unshift({
+      id: uid(), title, mode: 'normal',
+      qids, targets: targetIds, delayMin,
+      status: 'sent', ts: now,
+      pending: targetIds.map(ct => ({ ctId: ct, at: now + Math.round(delayMin * 60000) })),
+      answers: {}, rating: ''
+    });
+    DB.save();
+    UI.toast('卷子已出，等 TA 来交');
+    render();
+  }
+
+  /* ---------------- TA 作答生成（本地规则随机，非 AI 理解——已向她言明） ---------------- */
+  function cardPool(ctId) {
+    try { const p = Library.usableCardPool ? Library.usableCardPool(ctId) : []; if (p && p.length) return p; } catch (e) {}
+    return (DB.state.libs.globalCards.items || []).filter(i => !i.blocked && i.text).map(i => i.text);
+  }
+  function genByType(t, ctId) {
+    const opts = t.options || [];
+    switch (t.type) {
+      case 'single': return pick(opts);
+      case 'multi': { const k = randI(1, opts.length); return shuffle(opts).slice(0, k); }
+      case 'sort': return shuffle(opts);
+      case 'rate': { const w = [1, 2, 3, 2, 1]; let s = 0; w.forEach(x => s += x); let r = Math.random() * s; for (let i = 0; i < 5; i++) { r -= w[i]; if (r < 0) return i + 1; } return 3; }
+      case 'text': { const cards = cardPool(ctId); if (!cards.length) return '……'; const n = Math.min(randI(1, 3), cards.length); return shuffle(cards).slice(0, n).join(''); }
+      default: return '';
+    }
+  }
+  function genComment(ctId) {
+    const cards = cardPool(ctId);
+    if (!cards.length) return '';
+    return shuffle(cards).slice(0, Math.min(randI(1, 3), cards.length)).join('');
+  }
+
+  /* ---------------- 计划时刻制：到点交卷（心跳+启动双入口，幂等） ---------------- */
+  function advanceAll() {
+    const list = DB.state.quizzes || [];
+    const now = Date.now();
+    let dirty = false;
+    list.forEach(q => {
+      const pd = q.pending || [];
+      for (let i = pd.length - 1; i >= 0; i--) {
+        const p = pd[i];
+        if (now < p.at) continue;
+        pd.splice(i, 1);
+        const per = {};
+        q.qids.forEach(id => { const t = qById(id); if (t) per[id] = genByType(t, p.ctId); });
+        q.answers[p.ctId] = { per, comment: genComment(p.ctId), ts: p.at };
+        const conv = convOf(p.ctId);
+        if (conv) Engine.pushRaw(conv, {
+          id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+          from: 'ai', type: 'text',
+          text: '你的「' + q.title + '」答完啦，快去批卷', ts: p.at
+        });
+        dirty = true;
+      }
+      if (!pd.length && q.status === 'sent') { q.status = 'done'; dirty = true; }
+    });
+    if (dirty) { DB.save(); render(); }
+  }
+
+  /* ---------------- 主页：试卷列表 ---------------- */
+  function open(cid) { curCid = cid; Router.go('quiz'); render(); }
+  function render() {
+    const box = document.getElementById('qz-list');
+    if (!box) return;
+    const list = DB.state.quizzes || [];
+    if (!list.length) {
+      box.innerHTML = '<div class="rp-empty">还没有卷子<br><small>点上面的「出卷」发一份试试</small></div>';
+      return;
+    }
+    box.innerHTML = list.map(z => {
+      const doneN = z.targets.filter(t => z.answers[t]).length;
+      const all = z.targets.length;
+      const st = z.status === 'done'
+        ? '<b class="qz-st ok">' + I('check', 11) + '已回答</b>'
+        : '<b class="qz-st wait">' + I('clock', 11) + '等待回答</b>';
+      return '<button class="qz-item card" data-qz="' + z.id + '">' +
+        '<div class="qz-item-head"><b>' + esc(z.title) + '</b>' + st + '</div>' +
+        '<small>共 ' + z.qids.length + ' 题 · ' + doneN + '/' + all + ' 已交 · ' +
+        fmtDay(z.ts) + '</small></button>';
+    }).join('');
+    box.onclick = e => {
+      const it = e.target.closest('[data-qz]');
+      if (it) viewQuiz(it.dataset.qz);
+    };
+  }
+  function fmtDay(ts) {
+    const d = new Date(ts), n = new Date();
+    const sameDay = d.toDateString() === n.toDateString();
+    return (sameDay ? '今天 ' : (d.getMonth() + 1) + '月' + d.getDate() + '日 ') +
+      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  /* ---------------- 详情页：答卷对照 + 评论 + 我的评价 ---------------- */
+  function viewQuiz(qid) {
+    viewQuizId = qid;
+    Router.go('quizview');
+    renderView();
+  }
+  function starRow(n) { n = Math.max(1, Math.min(5, n | 0)); return '★'.repeat(n) + '☆'.repeat(5 - n); }
+  function ansText(t, a) {
+    if (a == null) return '';
+    if (t.type === 'rate') return starRow(a);
+    if (t.type === 'multi') return Array.isArray(a) ? a.join('、') : String(a);
+    if (t.type === 'sort') return Array.isArray(a) ? a.join(' → ') : String(a);
+    return String(a);
+  }
+  function renderView() {
+    const box = document.getElementById('qzv-body');
+    const z = quizById(viewQuizId);
+    if (!box || !z) return;
+    document.getElementById('qzv-title').textContent = z.title;
+
+    let html = '<div class="card qzv-meta"><span>' + fmtDay(z.ts) + ' · 共 ' + z.qids.length + ' 题</span></div>';
+    z.targets.forEach(ctId => {
+      const ct = Home.contactById(ctId);
+      const ans = z.answers[ctId];
+      html += '<div class="card qzv-paper"><div class="qzv-name">' +
+        (ct ? I('user', 13) + ' ' + esc(Home.displayName(ct)) : '(联系人缺失)') + '</div>';
+      if (!ans) {
+        html += '<div class="qzv-waiting"><small>' + (I('clock', 12)) + ' 还没交卷，再等等</small></div>';
+      } else {
+        html += '<small class="qzv-ts">' + fmtDay(ans.ts) + ' 交</small>';
+        z.qids.forEach(id => {
+          const t = qById(id); if (!t) return;
+          html += '<div class="qzv-q"><div class="qzv-q-t">' + esc(t.title) +
+            ' <em>' + typeName(t.type) + '</em></div>' +
+            '<div class="qzv-q-a">' + esc(ansText(t, ans.per[id])) + '</div></div>';
+        });
+        if (ans.comment) html += '<div class="qzv-comment"><span>TA 的评论</span>' + esc(ans.comment) + '</div>';
+      }
+      html += '</div>';
+    });
+
+    /* 我的评价（三档，她拍板"评价也行"）：存卷级 rating */
+    html += '<div class="card qzv-rate"><span>我的评价：</span><div class="chip-row">' +
+      ['不行', '良好', '优秀'].map(r => '<button class="grp-chip' + (z.rating === r ? ' on' : '') + '" data-rate="' + r + '">' + r + '</button>').join('') +
+      '</div><button class="qz-refill" id="qzv-refill">' + I('flip', 13) + ' 要求重填</button></div>';
+
+    box.innerHTML = html;
+
+    box.querySelectorAll('[data-rate]').forEach(b => b.addEventListener('click', () => {
+      z.rating = z.rating === b.dataset.rate ? '' : b.dataset.rate;
+      DB.save(); renderView();
+    }));
+    const refill = document.getElementById('qzv-refill');
+    refill.addEventListener('click', async () => {
+      const waiting = z.targets.filter(t => !z.answers[t]);
+      if (waiting.length) { UI.toast('还有人没交呢，不急'); return; }
+      const ok = await UI.confirmBox({ title: '要求重填', text: '让 TA 把这份卷子重新答一遍？', okText: '重填' });
+      if (!ok) return;
+      z.status = 'sent';
+      z.pending = z.targets.map(ct => ({ ctId: ct, at: Date.now() + Math.round((z.delayMin || 1) * 60000) }));
+      /* 重填保留旧答案做对照没意义（V1 无对照视图），直接清掉重新攒 */
+      z.answers = {};
+      DB.save(); renderView(); render();
+      UI.toast('已要求重填，等 TA 重新交卷');
+    });
+  }
+
+  /* ---------------- 题库页 ---------------- */
+  function openLibPage() { Router.go('quizlib'); renderLib(); }
+  function renderLib() {
+    const l = lib();
+    defGroup();                                  // 保证「默认」组永远存在
+    const gbox = document.getElementById('qz-lib-groups');
+    const countIn = gid => l.questions.filter(q => q.gid === gid).length;
+    let gh = '<button class="grp-chip' + (libFilter === '' ? ' on' : '') + '" data-g="">全部 <em>' + l.questions.length + '</em></button>';
+    l.groups.forEach(g => {
+      gh += '<button class="grp-chip' + (libFilter === g.id ? ' on' : '') + '" data-g="' + g.id + '">' + esc(g.name) + ' <em>' + countIn(g.id) + '</em></button>';
+    });
+    gh += '<button class="grp-chip add" id="qz-addgroup">＋</button>';
+    gbox.innerHTML = gh;
+
+    gbox.querySelectorAll('.grp-chip[data-g]').forEach(chip => {
+      const gv = chip.dataset.g;
+      let timer = null;
+      const start = () => { timer = setTimeout(() => { timer = null; chip._lp = true; const g = l.groups.find(x => x.id === gv); if (g) groupMenu(g); }, 480); };
+      const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      chip.addEventListener('touchstart', start, { passive: true });
+      chip.addEventListener('touchend', cancel);
+      chip.addEventListener('touchmove', cancel);
+      chip.addEventListener('contextmenu', e => { e.preventDefault(); const g = l.groups.find(x => x.id === gv); if (g) groupMenu(g); });
+      chip.addEventListener('click', () => {
+        if (timer === null && chip._lp) { chip._lp = false; return; }
+        cancel();
+        libFilter = gv;
+        renderLib();
+      });
+    });
+    gbox.querySelector('#qz-addgroup').addEventListener('click', () => {
+      Home.openForm({
+        title: '新建分组',
+        fields: [{ key: 'n', label: '分组名', placeholder: '例如：感情 / 日常 / 趣味', maxlength: 12 }],
+        okText: '建好',
+        onSubmit(v) {
+          const name = (v.n || '').trim();
+          if (!name) return '分组名不能为空';
+          if (l.groups.some(g => g.name === name)) return '已有同名分组';
+          l.groups.push({ id: uid(), name });
+          DB.save(); renderLib();
+        }
+      });
+    });
+
+    /* 题目列表（倒序） */
+    const listEl = document.getElementById('qz-lib-list');
+    const list = l.questions.filter(q => !libFilter || q.gid === libFilter).slice().reverse();
+    if (!list.length) {
+      listEl.innerHTML = '<div class="rp-empty">这里还没有题<br><small>右上角 ＋ 加一道，或批量导入</small></div>';
+      bindListOps(listEl, []);
+      return;
+    }
+    listEl.innerHTML =
+      '<div class="qz-import-row"><button id="qz-batch" class="qz-mini-btn">' + I('upload', 13) + ' 批量导入</button></div>' +
+      list.map(q => {
+        const gname = (l.groups.find(g => g.id === q.gid) || {}).name || '默认';
+        return '<div class="qz-qitem card" data-q="' + q.id + '">' +
+          '<div class="qz-q-head"><b class="qz-q-type">' + typeName(q.type) + '</b><span class="qz-q-grp">' + esc(gname) + '</span>' +
+          '<i class="qz-q-del" data-del="' + q.id + '">' + I('x', 11) + '</i></div>' +
+          '<div class="qz-q-title">' + esc(q.title) + '</div>' +
+          ((q.options || []).length ? '<div class="qz-q-opts">' + q.options.map(o => '<span>' + esc(o) + '</span>').join('') + '</div>' : '') +
+          '</div>';
+      }).join('');
+    bindListOps(listEl, list);
+
+    function bindListOps(box2, list2) {
+      box2.onclick = async e => {
+        const del = e.target.closest('[data-del]');
+        if (del) {
+          const ok = await UI.confirmBox({ title: '删除题目', text: '删了就找不回来了。已有试卷里这道题会显示为空。', danger: true, okText: '删除' });
+          if (!ok) return;
+          const l2 = lib();
+          const idx = l2.questions.findIndex(q => q.id === del.dataset.del);
+          if (idx >= 0) l2.questions.splice(idx, 1);
+          DB.save(); renderLib();
+          return;
+        }
+        if (e.target.closest('#qz-batch')) { importSheet(); return; }
+        const item = e.target.closest('.qz-qitem');
+        if (item) editSheet(qById(item.dataset.q));
+      };
+    }
+  }
+
+  async function groupMenu(g) {
+    const l = lib();
+    const opts = [{ key: 'edit', label: '重命名' }];
+    if (g.name !== '默认') opts.push({ key: 'del', label: '删除分组', danger: true });
+    const k = await UI.actionSheet('「' + g.name + '」· 共 ' +
+      l.questions.filter(q => q.gid === g.id).length + ' 题', opts);
+    if (!k) return;
+    if (k === 'edit') {
+      Home.openForm({
+        title: '重命名分组',
+        fields: [{ key: 'n', label: '分组名', maxlength: 12 }],
+        okText: '保存',
+        onSubmit(v) {
+          const name = (v.n || '').trim();
+          if (!name) return '分组名不能为空';
+          if (l.groups.some(x => x !== g && x.name === name)) return '已有同名分组';
+          g.name = name;
+          DB.save(); renderLib();
+        }
+      });
+    } else if (k === 'del') {
+      const cnt = l.questions.filter(q => q.gid === g.id).length;
+      const ok = await UI.confirmBox({
+        title: '删除分组',
+        text: '「' + g.name + '」里的 ' + cnt + ' 道题将移入「默认」分组。',
+        danger: true, okText: '删除分组'
+      });
+      if (!ok) return;
+      const def = defGroup();
+      l.questions.forEach(q => { if (q.gid === g.id) q.gid = def.id; });
+      l.groups = l.groups.filter(x => x !== g);
+      if (libFilter === g.id) libFilter = '';
+      DB.save(); renderLib();
+    }
+  }
+
+  /* 加题/改题 sheet：分组 chips + 题型 chips + 题干 + 选项动态增减 */
+  function editSheet(editQ) {
+    const l = lib(); defGroup();
+    const isNew = !editQ;
+    const q = editQ || { id: uid(), gid: (libFilter && !String(libFilter).startsWith('g:') ? libFilter : '') || defGroup().id, type: 'single', title: '', options: [] };
+    if (!q.gid) q.gid = defGroup().id;
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';
+    mask.innerHTML =
+      '<div class="sheet sheet-scroll qz-sheet">' +
+      '<div class="sheet-title">' + (isNew ? '加一道题' : '改这道题') + '</div>' +
+      '<div class="rp-f-row"><span>分组</span><div class="chip-row" id="qz-e-groups">' +
+      l.groups.map(g => '<button class="grp-chip' + (q.gid === g.id ? ' on' : '') + '" data-g="' + g.id + '">' + esc(g.name) + '</button>').join('') + '</div></div>' +
+      '<div class="rp-f-row"><span>题型</span><div class="chip-row" id="qz-e-types">' +
+      ['single', 'multi', 'sort', 'rate', 'text'].map(t => '<button class="grp-chip' + (q.type === t ? ' on' : '') + '" data-t="' + t + '">' + typeName(t) + '</button>').join('') + '</div></div>' +
+      '<label class="rp-f-row"><span>题目</span><input id="qz-e-title" type="text" maxlength="60" placeholder="想问什么？" value="' + esc(q.title) + '"></label>' +
+      '<div class="rp-f-row qz-e-opts-row" id="qz-e-opts-row"><span>选项</span><div id="qz-e-opts"></div>' +
+      '<button class="qz-opt-add" id="qz-e-optadd">' + I('plus', 12) + ' 加一个选项</button></div>' +
+      '<button class="sheet-cancel qz-f-ok">' + (isNew ? '收进题库' : '保存修改') + '</button></div>';
+
+    const optBox = mask.querySelector('#qz-e-opts');
+    function optRow(v) {
+      const div = document.createElement('div');
+      div.className = 'qz-opt-line';
+      div.innerHTML = '<input type="text" maxlength="40" placeholder="选项内容" value="' + esc(v || '') + '">' +
+        '<i class="qz-opt-del">' + I('x', 11) + '</i>';
+      div.querySelector('.qz-opt-del').addEventListener('click', () => {
+        if (optBox.children.length <= 1) { UI.toast('至少留一个选项框'); return; }
+        div.remove(); syncOptVis();
+      });
+      optBox.appendChild(div);
+    }
+    function syncOptVis() {
+      const needOpts = q.type !== 'rate' && q.type !== 'text';
+      mask.querySelector('#qz-e-opts-row').hidden = !needOpts;
+    }
+    (q.options && q.options.length ? q.options : ['', '']).forEach(optRow);
+    syncOptVis();
+
+    mask.querySelector('#qz-e-optadd').addEventListener('click', () => { optRow(''); const ips = optBox.querySelectorAll('input'); ips[ips.length - 1].focus(); });
+    mask.querySelector('#qz-e-groups').addEventListener('click', e => {
+      const b = e.target.closest('[data-g]'); if (!b) return;
+      q.gid = b.dataset.g;
+      mask.querySelectorAll('#qz-e-groups .grp-chip').forEach(x => x.classList.toggle('on', x === b));
+    });
+    mask.querySelector('#qz-e-types').addEventListener('click', e => {
+      const b = e.target.closest('[data-t]'); if (!b) return;
+      q.type = b.dataset.t;
+      mask.querySelectorAll('#qz-e-types .grp-chip').forEach(x => x.classList.toggle('on', x === b));
+      syncOptVis();
+    });
+
+    mask.querySelector('.qz-f-ok').addEventListener('click', () => {
+      const title = mask.querySelector('#qz-e-title').value.trim();
+      if (!title) { UI.toast('题目还没写呢'); return; }
+      const needOpts = q.type !== 'rate' && q.type !== 'text';
+      let opts = [];
+      if (needOpts) {
+        opts = [...optBox.querySelectorAll('input')].map(i => i.value.trim()).filter(Boolean);
+        if (opts.length < 2) { UI.toast('至少要两个选项'); return; }
+      }
+      q.title = title; q.options = opts; q.ts = Date.now();
+      if (isNew) lib().questions.push(q);
+      DB.save();
+      mask.remove();
+      renderLib();
+      UI.toast(isNew ? '收进题库啦' : '改好了');
+    });
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask);
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);
+    setTimeout(() => mask.querySelector('#qz-e-title').focus(), 80);
+  }
+
+  /* 批量导入 sheet：粘贴文本 → 解析预览 → 勾选入库
+     规则（她定）：第一行题目、后面行选项；空行分题；
+     智能识别层剥常见前缀（1. / Q1. / A. / - ）与题型标注（【多选】） */
+  function parseImport(text, gid) {
+    const out = [];
+    text.split(/\n\s*\n+/).forEach(segRaw => {
+      const lines = segRaw.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!lines.length) return;
+      let title = lines[0]
+        .replace(/^\s*\d+\s*[.、)．]\s*/, '')
+        .replace(/^\s*[Qq]\d+\s*[.、)．:：]\s*/, '')
+        .replace(/^[-—•·]\s*/, '');
+      let type = null;
+      const tm = title.match(/[【\[(（]\s*(单选|多选|排序|打分|填空)\s*[】\])）]\s*/);
+      if (tm) { type = { '单选': 'single', '多选': 'multi', '排序': 'sort', '打分': 'rate', '填空': 'text' }[tm[1]]; title = title.replace(tm[0], ''); }
+      const opts = lines.slice(1).map(s => s.replace(/^[A-Za-z]\s*[.、)．]\s*/, '').replace(/^[-•·]\s*/, '').trim()).filter(Boolean);
+      out.push({ gid, type: type || (opts.length >= 2 ? 'single' : 'text'), title: title.trim(), options: opts });
+    });
+    return out.filter(x => x.title);
+  }
+  function importSheet() {
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';
+    mask.innerHTML =
+      '<div class="sheet sheet-scroll qz-sheet">' +
+      '<div class="sheet-title">批量导入题目</div>' +
+      '<div class="qz-imp-note">一行题目，下面每行一个选项；<br>不同题之间空一行。带【多选】【填空】标注也能认。</div>' +
+      '<textarea id="qz-imp-text" rows="8" placeholder="例如：&#10;你最不能接受我们分开多久？【多选】&#10;一天&#10;三天&#10;一周&#10;&#10;今天想我了吗【填空】"></textarea>' +
+      '<div id="qz-imp-preview"></div>' +
+      '<button class="sheet-cancel qz-f-ok" id="qz-imp-ok">导入预览中的题</button></div>';
+    const ta = mask.querySelector('#qz-imp-text');
+    const prev = mask.querySelector('#qz-imp-preview');
+    let parsed = [];
+    ta.addEventListener('input', () => {
+      parsed = parseImport(ta.value, libFilter || defGroup().id);
+      prev.innerHTML = parsed.length
+        ? '<div class="qz-imp-count">认出 ' + parsed.length + ' 道：</div>' +
+          parsed.map(p => '<div class="qz-imp-item"><b>' + typeName(p.type) + '</b>' + esc(p.title) +
+            (p.options.length ? '<small>' + p.options.length + ' 个选项</small>' : '') + '</div>').join('')
+        : '';
+      mask.querySelector('#qz-imp-ok').disabled = !parsed.length;
+    });
+    mask.querySelector('#qz-imp-ok').addEventListener('click', () => {
+      if (!parsed.length) { UI.toast('先贴点内容进来'); return; }
+      parsed.forEach(p => { p.id = uid(); p.ts = Date.now(); lib().questions.push(p); });
+      DB.save();
+      mask.remove(); renderLib();
+      UI.toast('入库 ' + parsed.length + ' 道');
+    });
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask);
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);
+  }
+
+  /* ---------------- 设置齿轮：TA 抽题概率（V2 引擎消费，参数先行） ---------------- */
+  function toggleCfg() {
+    const panel = document.getElementById('qz-cfg-panel');
+    if (panel.hidden) { renderCfg(); panel.hidden = false; }
+    else panel.hidden = true;
+  }
+  function renderCfg() {
+    const ct = Home.contactById(curCid);
+    const p = (ct && ct.params) || {};
+    const panel = document.getElementById('qz-cfg-panel');
+    panel.innerHTML =
+      '<div class="dy-set-t">灵魂拷问 · ' + esc(ct ? Home.displayName(ct) : '') + '</div>' +
+      '<div class="dy-rate-row"><span>TA 聊天中突然考你的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-rate" value="' + (p.quizRate ?? 0) + '"> %</em></div>' +
+      '<div class="dy-rate-note">默认 0 就是不主动考；设了概率，TA 聊着聊着就可能甩你一道题（下一版生效）</div>';
+    panel.querySelector('#qz-cfg-rate').addEventListener('change', () => {
+      const c = Home.contactById(curCid); if (!c) return;
+      const v = parseFloat(panel.querySelector('#qz-cfg-rate').value);
+      (c.params = c.params || {}).quizRate = isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+      DB.save();
+    });
+  }
+
+  /* ---------------- init：按钮接线 ---------------- */
+  function init() {
+    document.getElementById('qz-new').addEventListener('click', openComposer);
+    document.getElementById('qz-lib').addEventListener('click', openLibPage);
+    document.getElementById('qz-cfg').addEventListener('click', toggleCfg);
+    document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
+  }
+
+  return { init, open, render, renderLib, advanceAll, viewQuiz };
+})();
+
 /* =====================================================
    LOVE♡X · theme.js —— 四主题切换引擎（M1）
    黑白灰(默认) / 仿微信 / 玻璃雾蓝 / 自定义
@@ -3540,7 +4228,8 @@ const ICONS = {
   'w-fog':         '<path d="M4.5 9.5h15M6.5 13.5h13M4.5 17.5h12"/>',
   'w-partsun':     '<circle cx="8.6" cy="8" r="3"/><path d="M8.6 2.8v1.5M3.9 4.7l1.1 1.1M13.3 4.7l-1.1 1.1"/><path d="M11 19.6a3.6 3.6 0 0 1-.4-7.2A5 5 0 0 1 20.2 10.8a3.9 3.9 0 0 1-.6 7.7z"/>',
   'w-storm':       '<path d="M7 13a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.2 3.5 4.3 4.3 0 0 1 16.5 12z"/><path d="M12.8 12.5L10.2 16.5h3.2L10.8 20.5"/>',
-  'heart-sketch':  '<path d="M12 20.2C6.6 15.8 3.4 12.1 3.5 8.8c.1-2.4 2-4.3 4.3-4.2 1.8.1 3.3 1.2 4.2 2.9.9-1.6 2.4-2.7 4.2-2.8 2.3-.1 4.2 1.9 4.3 4.3.1 3.2-3.1 6.9-8.5 11.2z"/><path d="M8 7.5c-1 .3-1.8 1.1-2 2.1"/>'
+  'heart-sketch':  '<path d="M12 20.2C6.6 15.8 3.4 12.1 3.5 8.8c.1-2.4 2-4.3 4.3-4.2 1.8.1 3.3 1.2 4.2 2.9.9-1.6 2.4-2.7 4.2-2.8 2.3-.1 4.2 1.9 4.3 4.3.1 3.2-3.1 6.9-8.5 11.2z"/><path d="M8 7.5c-1 .3-1.8 1.1-2 2.1"/>',
+  'quiz':          '<rect x="4.5" y="4" width="15" height="16.5" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.5 10.5h7M8.5 14h7M8.5 17.5h4"/>'
 };
 
 function I(name, size = 18) {
@@ -6304,6 +6993,10 @@ const Chat = (function () {
       else if (k === 'report') {  /* P25：报备（她定：入口在加号展开栏下；群聊拦截） */
         if (cur.type !== 'single') UI.toast('报备是两个人之间的事，群聊没有哦');
         else Report.open(cur.peerId);
+      }
+      else if (k === 'quiz') {    /* P34：灵魂拷问（她定：入口同在＋号展开栏；群聊拦截） */
+        if (cur.type !== 'single') UI.toast('灵魂拷问是两个人之间的事，群聊没有哦');
+        else Quiz.open(cur.peerId);
       }
     });
 
@@ -12313,10 +13006,14 @@ const History = (function () {
     /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
     DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
     Report.init();   /* P25 报备页按钮接线 */
+    Quiz.init();     /* P34 灵魂拷问：主页/题库/出卷按钮接线 */
+    /* P34 交卷引擎结算：启动时把到点的卷子落库（幂等，与心跳同源） */
+    try { Quiz.advanceAll(); } catch (e) {}
     /* P31（清然 12:57“设置了怎么没触发”）：运行中自驱落库——之前只在启动/回前台跑
        advance，网页一直开着时到点的报备/查岗会干等；30s 轻扫一次（纯内存比较，幂等） */
     setInterval(() => {
       DB.state.contacts.forEach(ct => { try { Report.advance(ct); } catch (e) {} });
+      try { Quiz.advanceAll(); } catch (e) {}   /* P34：到点的试卷交卷落库 */
     }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
@@ -12342,6 +13039,7 @@ const History = (function () {
       }
       DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
       DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
+      try { Quiz.advanceAll(); } catch (e) {}   /* P34：回前台补跑到点卷子 */
       Home.render();
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
@@ -12354,6 +13052,8 @@ const History = (function () {
     Router.register('chat', () => Chat.rerender());
     Router.register('diary', () => { if (document.getElementById('dy-body')) Diary.render(); });
 Router.register('report', () => Report.render());   /* P25 */
+    Router.register('quiz', () => Quiz.render());        /* P34 灵魂拷问主页 */
+    Router.register('quizlib', () => Quiz.renderLib());  /* P34 题库 */
     Home.init();
     Chat.init();
     Profile.init();
