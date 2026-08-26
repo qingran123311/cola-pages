@@ -2199,8 +2199,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .theme-dark .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#7bc47f}
 /* 单卷双色：TA=主题色实线描边（原有 .on），我=墨色虚线+「我」小标；双标同现即默契 */
 .qz-opt.mine{border-style:dashed;border-color:var(--qz-me);color:var(--qz-me)}
-.qz-opt .qz-mine-tag{text-decoration:none;margin-left:auto;flex:none;font-size:10px;line-height:1;
-  padding:2.5px 6px;border-radius:999px;color:#fff;background:var(--qz-me);font-weight:600}
+.qz-opt .qz-mine-tag,.qz-opt .qz-ta-tag{text-decoration:none;margin-left:0;flex:none;font-size:10px;line-height:1;
+  padding:2.5px 6px;border-radius:999px;color:#fff;font-weight:600}
+.qz-opt .qz-mine-tag{background:var(--qz-me)}
+.qz-opt .qz-ta-tag{background:var(--primary)}   /* TA 色块：名字首字（清然 20:01 同选并排更明确） */
+.qz-opt .qz-push{margin-left:auto}   /* 行尾第一个色块把整组推到最右，「我」永远压轴 */
 .qz-opt.on.mine{border-color:var(--qz-me)}
 /* 图例：卷头右侧 你/TA 色点说明 */
 .qz-duo-legend{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
@@ -4228,9 +4231,13 @@ var Quiz = (function () {
         h += '<div class="qz-opts">' + ordered.map(o => {
           const taOn = selTa.includes(o), meOn = selMe.includes(o);
           const rank = t.type === 'sort' && taOn ? selTa.indexOf(o) : -1;
+          /* V3.8（她 20:01）：每个选中者都有自己的色块——TA=主题色块（名字首字），我=雾蓝「我」块；
+             同选一项时两块并排 [TA][我]，默契直接看得见。首个块带 .push 推到行尾，「我」永远压轴最右 */
+          const taTag = taOn ? '<u class="qz-ta-tag qz-push">' + esc(taName.slice(0, 1)) + '</u>' : '';   /* TA 块在前，恒为行内首块负责推右 */
+          const meTag = meOn ? '<u class="qz-mine-tag' + (taOn ? '' : ' qz-push') + '">我</u>' : '';   /* 只有我没选时才由我块推右 */
           return '<span class="qz-opt' + (taOn ? ' on' : '') + (meOn ? ' mine' : '') + '">' +
             (rank >= 0 ? '<i>' + (rank + 1) + '</i>' : (taOn ? I('check', 10) : '')) + esc(o) +
-            (meOn ? '<u class="qz-mine-tag">我</u>' : '') + '</span>';
+            taTag + meTag + '</span>';
         }).join('') + '</div>';
         if (a && a.__supp) h += '<div class="qz-duo-line ta"><span>' + esc(taName) + '</span><i class="qz-supp-tag">补</i>' + esc(a.text) + '</div>';
         if (m && m.__supp) h += '<div class="qz-duo-line me"><span>你</span><i class="qz-supp-tag">补</i>' + esc(m.text) + '</div>';
