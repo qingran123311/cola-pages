@@ -2021,6 +2021,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       </div>
       <div class="cell-group card">
         <button class="cell" id="my-wallet-row"><span class="cell-icon"><i data-icon="wallet"></i></span><span class="cell-text">钱包</span><span class="chevron">›</span></button>
+        <button class="cell" id="my-moments-row"><span class="cell-icon"><i data-icon="camera"></i></span><span class="cell-text">我的朋友圈</span><span class="chevron">›</span></button>
         <button class="cell" data-go="settings"><span class="cell-icon"><i data-icon="settings"></i></span><span class="cell-text">前往个人中心</span><span class="chevron">›</span></button>
       </div>
     </div>
@@ -2227,12 +2228,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <header class="navbar">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
       <div class="navbar-title" id="rp-title">报备</div>
+      <button class="navbar-act" id="rp-cfg" aria-label="库与设置"><i data-icon="settings" data-size="19"></i></button>
     </header>
     <div class="page-body">
       <div class="rp-actions card">
-        <button id="rp-add"><i data-icon="brush" data-size="18"></i>记一笔报备</button>
-        <button id="rp-ask"><i data-icon="compass" data-size="18"></i>查岗问 TA</button>
-        <button id="rp-cfg"><i data-icon="settings" data-size="18"></i>库与设置</button>
+        <button id="rp-add"><i data-icon="brush" data-size="18"></i>报备</button>
+        <button id="rp-ask"><i data-icon="compass" data-size="18"></i>查岗</button>
       </div>
       <div class="card dy-set dy-sketch" id="rp-cfg-panel" hidden></div>
       <div class="rp-now card" id="rp-now" hidden></div>
@@ -3120,6 +3121,10 @@ var Report = (function () {
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
+    /* P30：显隐三件套（第三次同型教训）——sheet-mask opacity:0 起手，不补 show 就是隐形玻璃
+       （清然 12:13：“键盘弹出但选择界面没有”） */
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 后台 tab rAF 不跑的保底（P30）
     setTimeout(() => mask.querySelector(mode === 'answer' ? '#rp-f-doing' : '#rp-f-place')?.focus(), 80);
   }
 
@@ -3548,7 +3553,10 @@ const Diary = (function () {
     return {
       diary:   isFinite(r.diary)   ? r.diary   : 80,
       comment: isFinite(r.comment) ? r.comment : 80,
-      reply:   isFinite(r.reply)   ? r.reply   : 80
+      reply:   isFinite(r.reply)   ? r.reply   : 80,
+      /* P30（清然 12:13：“给缓冲时间在几分钟左右”）：首条留言回复的缓冲区间（分钟），设置里可调 */
+      replyMin: isFinite(r.replyMin) ? r.replyMin : 3,
+      replyMax: isFinite(r.replyMax) ? r.replyMax : 6
     };
   }
   function lib() {
@@ -3563,6 +3571,18 @@ const Diary = (function () {
     if (d.ai && !d.ais) { d.ais = [d.ai]; delete d.ai; }
     if (!Array.isArray(d.mine)) d.mine = d.mine ? [d.mine] : [];
     if (!Array.isArray(d.ais)) d.ais = d.ais ? [d.ais] : [];
+  }
+
+  /* P30 留言线程（幂等）：老档 myCmt/reply 单回合 → thread 追加式，支持连续对话 */
+  function ensureThread(d) {
+    if (!d.thread) {
+      d.thread = [];
+      if (d.myCmt) {
+        d.thread.push({ who: 'me', text: Array.isArray(d.myCmt.text) ? d.myCmt.text : [d.myCmt.text], ts: d.myCmt.ts });
+        if (d.reply) d.thread.push({ who: 'ta', text: Array.isArray(d.reply.text) ? d.reply.text : [d.reply.text], ts: d.reply.ts });
+      }
+    }
+    return d.thread;
   }
   function bookOf(ctId) {
     if (!DB.state.diary[ctId]) DB.state.diary[ctId] = { days: {}, visits: [] };
@@ -3671,12 +3691,12 @@ const Diary = (function () {
         if (pool.length) d.cmt = { text: pick(pool), ts: d.planCmt.at };
         d.planCmt.done = true;
       }
-      /* TA 回复我的留言 */
-      if (d.replyPlan && !d.replyPlan.done && now >= d.replyPlan.at && d.myCmt && !d.reply) {
+      /* TA 回复我的留言（P30：thread 追加式，支持连续对话） */
+      if (d.replyPlan && !d.replyPlan.done && now >= d.replyPlan.at && ensureThread(d).length) {
         const pool = poolOf(ct.id);
         if (pool.length) {
           const lines = Array.from({ length: randI(1, 3) }, () => pick(pool));
-          d.reply = { text: lines, ts: d.replyPlan.at };
+          d.thread.push({ who: 'ta', text: lines, ts: d.replyPlan.at });
         }
         d.replyPlan.done = true;
       }
@@ -3986,22 +4006,23 @@ const Diary = (function () {
         aiHtml += '<div class="dy-more-later"><i data-icon="feather" data-size="13"></i> TA 之后还会再写几笔…</div>' +
                   '<button class="dy-poke-btn" id="dy-poketa"><i data-icon="paw" data-size="17"></i>戳戳 ' + esc(displayName(cur)) + '</button>';
       }
-      /* 我给 TA 的留言 + TA 的回复：左右便利贴 */
-      if (rec.myCmt) {
-        aiHtml += '<div class="dy-sticky dy-sticky-me"><span class="dy-tape"></span>' +
-                  '<div class="dy-sticky-txt">' + esc(rec.myCmt.text) + '</div>' +
-                  '<div class="dy-sticky-t">' + fmtTs(rec.myCmt.ts) + '</div></div>';
-        aiHtml += rec.reply
-          ? '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
-            '<div class="dy-sticky-txt">' + rec.reply.text.map(l => esc(l)).join('<br>') + '</div>' +
-            '<div class="dy-sticky-t">' + fmtTs(rec.reply.ts) + '</div></div>'
-          : (rec.replyPlan && !rec.replyPlan.done
-              ? '<div class="dy-reply-wait">TA 正在想怎么回你…</div>'
-              : '<div class="dy-reply-wait">TA 可能会回你一句…</div>');
-      } else {
-        aiHtml += '<div class="dy-cmt-row"><input class="dy-cmt-ipt" id="dy-cmt-ipt" placeholder="给 TA 的这一页留句话" maxlength="100">' +
-                  '<button class="dy-cmt-go" id="dy-cmt-go">递给TA</button></div>';
+      /* 我给 TA 的留言线程（P30）：追加式连续对话，首条回复分钟级缓冲 */
+      const th = ensureThread(rec);
+      if (th.length) {
+        th.forEach(t => {
+          aiHtml += t.who === 'me'
+            ? '<div class="dy-sticky dy-sticky-me"><span class="dy-tape"></span>' +
+              '<div class="dy-sticky-txt">' + t.text.map(l => esc(l)).join('<br>') + '</div>' +
+              '<div class="dy-sticky-t">' + fmtTs(t.ts) + '</div></div>'
+            : '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
+              '<div class="dy-sticky-txt">' + t.text.map(l => esc(l)).join('<br>') + '</div>' +
+              '<div class="dy-sticky-t">' + fmtTs(t.ts) + '</div></div>';
+        });
+        aiHtml += (rec.replyPlan && !rec.replyPlan.done)
+          ? '<div class="dy-reply-wait">TA 正在想怎么回你…</div>' : '';
       }
+      aiHtml += '<div class="dy-cmt-row"><input class="dy-cmt-ipt" id="dy-cmt-ipt" placeholder="给 TA 的这一页留句话" maxlength="100">' +
+                '<button class="dy-cmt-go" id="dy-cmt-go">递给TA</button></div>';
     }
 
     return '' +
@@ -4139,7 +4160,7 @@ const Diary = (function () {
     });
   }
 
-  /* 我给 TA 留言：回复改为计划制（myCmt 时刻 + 聊天延迟），到点由 advance 落库 */
+  /* 我给 TA 留言（P30 线程制）：可连续递话；首条回复分钟级缓冲，后续按聊天秒延迟 */
   function sendComment() {
     const ipt = document.getElementById('dy-cmt-ipt');
     const text = ipt.value.trim();
@@ -4147,12 +4168,17 @@ const Diary = (function () {
     const bk = bookOf(cur.id);
     if (!bk.days[day]) bk.days[day] = {};
     migDay(bk.days[day]);
-    const d = bk.days[day];
-    if (d.myCmt) return;
-    d.myCmt = { text: text, ts: Date.now() };
-    if (roll(rates().reply)) {
-      const pool = poolOf(cur.id);
-      if (pool.length) d.replyPlan = { at: Date.now() + delaySecs(cur) * 1000, done: false };
+    const th = ensureThread(bk.days[day]);
+    const last = th[th.length - 1];
+    if (last && last.who === 'me' && Date.now() - last.ts < 1200) return;   // 防连点重复
+    th.push({ who: 'me', text: [text], ts: Date.now() });
+    const R = rates(), d = bk.days[day];
+    if ((!d.replyPlan || d.replyPlan.done) && roll(R.reply)) {
+      const myN = th.filter(t => t.who === 'me').length;
+      /* 清然 12:13：首条留言回复缓冲几分钟；之后像聊天一样接得上 */
+      d.replyPlan = { at: Date.now() + (myN === 1
+        ? randI(Math.min(R.replyMin, R.replyMax), Math.max(R.replyMin, R.replyMax)) * 60000
+        : delaySecs(cur) * 1000), done: false };
     }
     DB.save(); render();
   }
@@ -4195,7 +4221,8 @@ const Diary = (function () {
       '<div class="dy-set-t">TA 的习惯</div>' +
       '<div class="dy-rate-row"><span>每天写日记</span><em><input type="number" id="dy-r-diary" min="0" max="100" value="' + R.diary + '"> %</em></div>' +
       '<div class="dy-rate-row"><span>对我的记录回应</span><em><input type="number" id="dy-r-comment" min="0" max="100" value="' + R.comment + '"> %</em></div>' +
-      '<div class="dy-rate-row"><span>给我的留言回复</span><em><input type="number" id="dy-r-reply" min="0" max="100" value="' + R.reply + '"> %</em></div>' +
+      '<div class="dy-rate-row"><span>给我的留言回复</span><em><input type="number" id="dy-r-reply" min="0" max="100" step="1" value="' + R.reply + '"> %</em></div>' +
+      '<div class="dy-rate-row"><span>首条回复缓冲</span><em><input type="number" id="dy-r-replymin" min="0" step="0.1" value="' + R.replyMin + '"> - <input type="number" id="dy-r-replymax" min="0" step="0.1" value="' + R.replyMax + '"> 分钟</em></div>' +
       '<div class="dy-rate-note">TA 一天写 1~3 次 · 我记录后 TA 会在 1 小时内来看，再按聊天延迟留言</div>' +
     '</div>' +
     '<div class="dy-set dy-sketch"><div class="dy-set-t">我的词库</div>' +
@@ -4223,7 +4250,13 @@ const Diary = (function () {
     });
     document.getElementById('dy-set-save').onclick = () => {
       const num = id => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? Math.min(100, Math.max(0, v)) : 80; };
-      DB.state.settings.diaryRates = { diary: num('dy-r-diary'), comment: num('dy-r-comment'), reply: num('dy-r-reply') };
+      /* P30：首条留言回复缓冲（分钟）——清然“几分钟左右”，可调 */
+      const mn = v => { const x = parseFloat(document.getElementById(v).value); return isFinite(x) ? Math.max(0, x) : null; };
+      const rmin = mn('dy-r-replymin'), rmax = mn('dy-r-replymax');
+      DB.state.settings.diaryRates = {
+        diary: num('dy-r-diary'), comment: num('dy-r-comment'), reply: num('dy-r-reply'),
+        replyMin: rmin ?? 3, replyMax: Math.max(rmax ?? 6, rmin ?? 3)
+      };
       DB.save(); UI.toast('设置存好了');
     };
   }
@@ -10936,6 +10969,9 @@ const Call = (function () {
       if (e.target === mask) mask.remove();
     });
     layer.appendChild(mask);
+    /* P30：显隐三件套——同 report.openForm，缺 show 即隐形玻璃 */
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 后台 tab rAF 保底
   }
 
   /* ---------- 来电（AI 主动，engine 调用） ---------- */
@@ -12169,8 +12205,13 @@ const History = (function () {
       localStorage.setItem(ERRKEY, JSON.stringify(arr));
     } catch (e) {}
   }
-  window.addEventListener('error', e =>
-    logErr((e.message || '未知错误') + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
+  /* P30：外部脚本错误（浏览器插件/扩展注入，如 plug.js）标注来源，与 LOVEX 自身错误区分 */
+  window.addEventListener('error', e => {
+    const f = (e.filename || '');
+    const own = !f || f === location.href;
+    const tag = own ? '' : '[外部脚本·非LOVEX:' + f.split('/').pop() + '] ';
+    logErr(tag + (e.message || '未知错误') + (own ? ' @' + f.split('/').pop() + ':' + e.lineno : ''));
+  });
   window.addEventListener('unhandledrejection', e =>
     logErr('Promise: ' + (e.reason && e.reason.message || e.reason)));
 
@@ -12416,6 +12457,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const ok = await UI.confirmBox({ title: '通知诊断', text: Notify.diag(), okText: '发条测试' });
       if (ok) { Notify.test(); UI.toast('发了，看下系统通知栏'); }
     });
+
+    /* --- P30（清然 12:13）：我的页「我的朋友圈」——只看我发的动态 --- */
+    const myMo = document.getElementById('my-moments-row');
+    if (myMo) myMo.addEventListener('click', () => Moments.openUser('me'));
 
     /* --- 全局聊天背景（策划七-2 模式一；单聊可在资料卡单独覆盖） --- */
     document.getElementById('cell-chatbg').addEventListener('click', async () => {
