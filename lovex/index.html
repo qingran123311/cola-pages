@@ -74,6 +74,8 @@ body{
   --rp-msg-bg:#F4F4F6; --rp-msg-bd:#E2E2E6; --rp-msg-strong:#1A1A1F; --rp-msg-sub:#8A8A8F;
   --rp-ico-bg:#FFFFFF; --rp-ico-c:#1A1A1F;
   --rp-open-t1:#1A1A1F; --rp-open-t2:#8A8A8F; --rp-open-line:#D8D8D3;
+  /* 默契挑战双人分色（清然 19:37 定：墨灰主色下 t1 与 primary 同族不可用，改独立变量） */
+  --qz-me:#6F94B8; --qz-me-soft:#EDF3F8;   /* 我=雾蓝；TA 用各主题的 --primary */
 }
 
 /* =====================================================
@@ -100,6 +102,7 @@ body{
   --rp-msg-bg:#F5A04A; --rp-msg-bd:#F5A04A; --rp-msg-strong:#FFFFFF; --rp-msg-sub:rgba(255,255,255,.78);
   --rp-ico-bg:#E9594C; --rp-ico-c:#FFE9D2;
   --rp-open-t1:#FFFFFF; --rp-open-t2:rgba(255,255,255,.75); --rp-open-line:rgba(255,255,255,.35);
+  --qz-me:#6F94B8; --qz-me-soft:#EDF3F8;
 }
 
 /* =====================================================
@@ -127,6 +130,7 @@ body{
   --rp-msg-bg:rgba(111,148,184,.14); --rp-msg-bd:rgba(111,148,184,.30); --rp-msg-strong:#31435A; --rp-msg-sub:#7E93AA;
   --rp-ico-bg:#FFFFFF; --rp-ico-c:#31435A;
   --rp-open-t1:#FFFFFF; --rp-open-t2:rgba(255,255,255,.72); --rp-open-line:rgba(255,255,255,.30);
+  --qz-me:#B08968; --qz-me-soft:#F4EDE4;   /* 本主题 primary 即雾蓝，我的标记换暖驼避撞 */
 }
 
 /* =====================================================
@@ -992,8 +996,6 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
 .call-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .call-avatar.sm{width:64px;height:64px;font-size:24px}
 .call-avatar.big{width:96px;height:96px;margin:0 auto 14px}
-.breathe{animation:breathe 2.2s ease-in-out infinite}
-@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 .call-name{font-size:17px;font-weight:700}
 .call-name.dark{color:var(--t1)}
 .call-sub{font-size:13px;color:#b8bdc7;animation:blink 1.6s ease-in-out infinite}
@@ -1019,7 +1021,6 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
 .call-mini-av{width:40px;height:40px;border-radius:8px;overflow:hidden;background:#3a3f4a;
   display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:#cfd4dd}
 .call-mini-av img{width:100%;height:100%;object-fit:cover;display:block}
-.call-invitees .call-mini-av{animation:breathe 1.6s ease-in-out infinite}
 /* 顶部横条 */
 .call-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
   gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 10px;
@@ -1080,7 +1081,6 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
   font-size:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.55);padding:0 6px}
 /* 未接通成员：灰暗呼吸 + “等待中”小字（#39x） */
 .call-cell.wait{opacity:.45}
-.call-cell.wait .call-avatar{animation:breathe 1.6s ease-in-out infinite}
 .cell-name em{font-style:normal;font-size:10px;color:#9aa3af;display:block;margin-top:2px}
 /* 结束态 */
 .call-endline{font-size:15px;text-align:center;line-height:1.6;padding:0 30px}
@@ -2198,21 +2198,21 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#2e7d32}
 .theme-dark .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#7bc47f}
 /* 单卷双色：TA=主题色实线描边（原有 .on），我=墨色虚线+「我」小标；双标同现即默契 */
-.qz-opt.mine{border-style:dashed;border-color:var(--t1);color:var(--t1)}
+.qz-opt.mine{border-style:dashed;border-color:var(--qz-me);color:var(--qz-me)}
 .qz-opt .qz-mine-tag{text-decoration:none;margin-left:auto;flex:none;font-size:10px;line-height:1;
-  padding:2.5px 6px;border-radius:999px;color:var(--bg);background:var(--t1);font-weight:600}
-.qz-opt.on.mine{border-color:var(--t1)}
+  padding:2.5px 6px;border-radius:999px;color:#fff;background:var(--qz-me);font-weight:600}
+.qz-opt.on.mine{border-color:var(--qz-me)}
 /* 图例：卷头右侧 你/TA 色点说明 */
 .qz-duo-legend{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
 .qz-duo-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin:0 1px 0 4px}
-.qz-duo-legend .lg-me{background:var(--t1);margin-left:0}
+.qz-duo-legend .lg-me{background:var(--qz-me);margin-left:0}
 .qz-duo-legend .lg-ta{background:var(--primary)}
 /* 打分/填空的上下两行答案 */
 .qz-duo-line{display:flex;align-items:baseline;gap:8px;margin-top:7px;font-size:14px;line-height:1.45;
   border-radius:9px;padding:6px 9px;letter-spacing:.3px}
 .qz-duo-line span{flex:none;font-size:11px;line-height:1;padding:3px 7px;border-radius:999px;color:var(--bg);font-weight:600}
-.qz-duo-line.me{background:rgba(127,127,140,.09)}
-.qz-duo-line.me span{background:var(--t1)}
+.qz-duo-line.me{background:var(--qz-me-soft)}
+.qz-duo-line.me span{background:var(--qz-me)}
 .qz-duo-line.ta{background:var(--primary-ultra)}
 .qz-duo-line.ta span{background:var(--primary)}
 .qzv-q .qz-hit{display:block;margin-top:6px}
@@ -12670,7 +12670,7 @@ const Call = (function () {
     if (st.phase === 'outgoing' || st.phase === 'incoming') {
       const show = single ? peer : st.caller;
       mid = '<div class="call-center">' +
-        '<div class="call-avatar breathe">' + avatarHTML(show) + '</div>' +
+        '<div class="call-avatar">' + avatarHTML(show) + '</div>' +
         '<div class="call-name">' + esc(Home.displayName(show)) + '</div>' +
         /* #39y 策划L789：谁发起的——昵称下深色加粗一行 */
         '<div class="call-inv-line">' + esc(Home.displayName(show)) + '邀请你视频通话</div>' +
