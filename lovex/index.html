@@ -1978,6 +1978,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
       <div class="navbar-title" id="mo-nav-title">朋友圈</div>
       <button class="nav-act" id="mo-publish"><i data-icon="camera" data-size="20"></i></button>
+<button class="nav-act" id="mo-mutual" title="评论设置"><i data-icon="dots" data-size="20"></i></button>
     </header>
     <div class="page-body page-body-flush mo-body" id="mo-scroll">
       <div class="mo-cover" id="mo-cover">
@@ -2393,8 +2394,10 @@ const DB = (function () {
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
         diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
         notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
+        moMutual: false                // P26 朋友圈评论人开关：关=TA 的动态只有我能评赞；开=联系人互评+30%追评
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
+      kinshipAuto: {},                 // P26 亲属卡主动赠送限次计数：contactId -> 次数（一生最多2次，她 08-26 定）
       repPlans: {},                    // P25 报备当日计划（计划时刻制）：contactId -> {day,autoAt,autoDur,autoDone,chkAt,chkDone,askAt,askDone}
       reportLib: {                     // P25 TA 报备语料库（她口供：地点库+动作词，偶尔随机带情绪词）
         places: ['图书馆', '教室', '宿舍', '食堂', '健身房', '超市', '操场', '咖啡店', '实验室', '回家路上'],
@@ -2704,7 +2707,9 @@ var Notify = (function () {
         tag: 'lovex-' + conv.id,          // 同会话连发只顶一条，不刷屏
         data: { convId: conv.id }
       };
-      if (swOK_() && navigator.serviceWorker.controller) {
+      if (swOK_()) {
+        /* 安卓 Chrome 必须经 SW 弹；不依赖 controller（首次注册后要下次导航才有），
+           getRegistration 立即可用——她实测安卓弹不出来，这里是主嫌疑 */
         navigator.serviceWorker.getRegistration().then(function (reg) {
           if (reg) reg.showNotification(title, opt);
           else fallback(title, opt);
@@ -5344,7 +5349,7 @@ const Chat = (function () {
         opbar.hidden = false;
         const items = lib.items.filter(it => (it.img || it.text) && matchGrp(it));
         h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : 'g7') + '">' + items.map(it =>
-          '<button class="ed-cell' + (it.img ? ' ed-pic' : ' ed-txt') + (it.blocked ? ' off' : '') +
+          '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + (it.blocked ? ' off' : '') +
             (edSel.has(it.id) ? ' sel' : '') + '" data-id="' + it.id + '">' +
             (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
         if (!items.length)
@@ -5358,7 +5363,7 @@ const Chat = (function () {
       } else {
         const items = lib.items.filter(it => !it.blocked && (it.img || it.text) && matchGrp(it));
         h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : 'g7') + '">' + items.map(it =>
-          '<button class="ed-cell' + (it.img ? ' ed-pic' : ' ed-txt') + '" data-id="' + it.id + '"' +
+          '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + '" data-id="' + it.id + '"' +
             (it.img ? '' : ' data-v="' + esc(it.text) + '"') + '>' +
             (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
         if (!items.length)
@@ -6162,7 +6167,6 @@ const Engine = (function () {
   function fireBatch(conv, p, ct, n) {
     const cards = usableCards(ct);
     if (!cards.length) { hintNoCards(conv); return 0; }
-
     /* 拼字卡（二期P9）：命中组合概率时，本条回复由多条字卡拼接为一条消息；
        抽取条数走「拼卡条数」设置、发送时机走外层「回复延迟」，均按用户配置；
        间隔符逐位随机（逗号/句号/顿号/感叹号/问号/无），自然涌现半隔开半不隔开 */
@@ -6199,8 +6203,13 @@ const Engine = (function () {
     }
 
     let t = 0;
+    /* 她 08-26 定口径：条间隔=回复设置的秒区间逐条重新掷、累加——
+       首条在 minSec~maxSec 内随机，第二条在首条基础上再掷一段，第三条同理。
+       之前固定 600~1600ms 是错的（她抓到“只隔不到1秒”） */
+    const gapMin = Math.max(0, +p.minSec || 0);
+    const gapMax = Math.max(gapMin, +p.maxSec || gapMin);
     for (let i = 0; i < count; i++) {
-      t += (i === 0 ? 0 : rand(600, 1600));
+      t += (i === 0 ? 0 : rand(gapMin, gapMax) * 1000);
       const r = Math.random() * 100;
       let text = null, img = null;
       /* 语音回复（二期P12）：每个气泡位独立 6%，命中且池非空则本位发一条语音（格式同我方语音条） */
@@ -6241,10 +6250,11 @@ const Engine = (function () {
       }, t);
     }
 
-    /* 附带/混合模式：文本后随机追加一张图（独立概率，不合并气泡） */
+    /* 附带/混合模式：文本后随机追加一张图。
+       她 08-26：附加本质是附带发出的，不另加回复延迟；仅微错开防同毫秒乱序 */
     if ((imgMode === 'attach' || imgMode === 'mix') && imgProb > 0 &&
         Math.random() * 100 < imgProb && stickers.length) {
-      t += rand(600, 1600);
+      t += 300;
       const attachImg = pick(stickers);
       setTimeout(() => pushAiImg(conv, attachImg, ct), t);
     }
@@ -8458,7 +8468,8 @@ const Kinship = (function () {
 
   const CLAIM_RATE = 0.85;     // AI 被赠后的领取概率
   const GIFT_RATE = 2;         // AI 回复时主动赠送概率 %
-  const GIFT_LIMITS = [52.0, 99.0, 199.0, 520.0, 999.0];   // AI 送出的月上限档位（元）
+  /* 她 08-26：几百块太小——“我设置的对方都是富豪首富”，档位提到千~万级（具体数值待她校准） */
+  const GIFT_LIMITS = [520.0, 1314.0, 3344.0, 5200.0, 9999.0];   // AI 送出的月上限档位（元）
 
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function yuan(fen) { return Wallet.yuan(fen); }
@@ -8669,7 +8680,13 @@ const Kinship = (function () {
 
   /* ---------- AI 主动赠送（engine fireBatch 钩子，2%） ---------- */
   function maybeGift(conv, ct) {
+    /* 她 08-26：亲属卡是长久的东西（按月），主动送一生 1~2 次就够，
+       不再挂在回复链上无限出；之前“一直发亲属卡”就是这里没限次 */
+    const auto = (DB.state.kinshipAuto = DB.state.kinshipAuto || {});
+    if ((auto[ct.id] || 0) >= 2) return;
     if (Math.random() * 100 >= GIFT_RATE) return;
+    auto[ct.id] = (auto[ct.id] || 0) + 1;
+    DB.save();
     const limYuan = GIFT_LIMITS[Math.floor(Math.random() * GIFT_LIMITS.length)];
     deliverCard(ct.id, 'me', limYuan * 100);
   }
@@ -9373,6 +9390,7 @@ const Moments = (function () {
 
   /* ---------- 打开朋友圈 ---------- */
   function open() {
+    viewUid = null;               // 从发现页进=全部人，清掉可能残留的相册态
     pageLimit = 30;
     Router.go('moments');
     renderCover();
@@ -9403,30 +9421,49 @@ const Moments = (function () {
         setTimeout(() => { pageLimit += 30; renderList(); loadingPage = false; }, 120);
       }
     });
-    document.querySelector('.mo-me-name').textContent = DB.state.profile.name || '我';   // 昵称（清然 23:34 骂空名）
     document.getElementById('mo-publish').addEventListener('click', openPublish);
+    /* 她 08-26：评论人开关（朋友圈右上角）——关=TA 的动态只有我能评赞；开=联系人互评+30%追评 */
+    document.getElementById('mo-mutual').addEventListener('click', async () => {
+      const on = !!DB.state.settings.moMutual;
+      const v = await UI.actionSheet('评论人', [
+        { key: 'off', label: '只有我能评论 TA 的动态' + (on ? '' : ' ✓') },
+        { key: 'on', label: '联系人之间可以互评（30% 追评）' + (on ? ' ✓' : '') }
+      ]);
+      if (v === 'off') { DB.state.settings.moMutual = false; DB.save(); UI.toast('已关闭互评'); }
+      else if (v === 'on') { DB.state.settings.moMutual = true; DB.save(); UI.toast('已开启互评'); }
+    });
     document.getElementById('mo-me-ava').addEventListener('click', () => Router.go('mine'));
     document.getElementById('mo-cover').addEventListener('click', coverTap);
-  document.querySelector('#page-moments .nav-back').addEventListener('click', backOut);   // 相册态先回全部
   }
+  /* 她 08-26：TA 相册就是 TA 的页面，导航返回键由全局 data-back 统一处理（直接退页），
+     此处不再叠一层监听——之前双跳就是这里叠加导致的 */
 
-  /* 返回：个人相册态先回全部朋友圈，再退页面（L45） */
-  function backOut() {
-    if (viewUid) { viewUid = null; renderList(); return; }
-    Router.back();
+  /* ---------- 封面 ----------
+     她 08-26：资料卡进的是 TA 的朋友圈，封面/头像/昵称全用 TA 自己的，
+     与我的朋友圈完全独立；发现页进的才是我自己的门面 */
+  function coverOf() {
+    if (viewUid) return (store().covers.byContact || {})[viewUid] || null;
+    return store().covers.me || null;
   }
-
-  /* ---------- 封面 ---------- */
-  function coverOf() { return store().covers.me || null; }
   function renderCover() {
     const cv = coverOf();
     const img = document.getElementById('mo-cover-img');
     const vid = document.getElementById('mo-cover-video');
     const box = document.getElementById('mo-cover');
     img.hidden = true; vid.hidden = true;
-    /* 自己的头像实时读资料（骑跨封面区），与动态列表同源 */
+    /* 骑跨头像+昵称随态切换：全部朋友圈=我；TA 相册=TA */
     const meAva = document.getElementById('mo-me-ava');
-    if (meAva) meAva.innerHTML = DB.state.profile.avatar ? '<img src="' + DB.state.profile.avatar + '" alt="">' : '';
+    const nameEl = document.querySelector('.mo-me-name');
+    let ava = DB.state.profile.avatar;
+    let name = DB.state.profile.name || '我';
+    if (viewUid) {
+      const ct = Home.contactById(viewUid);
+      if (ct) { ava = ct.avatar; name = Home.displayName(ct); }
+    }
+    if (meAva) meAva.innerHTML = ava
+      ? '<img src="' + ava + '" alt="">'
+      : '<span class="ava-txt">' + UI.escapeHtml((name || '我').charAt(0)) + '</span>';
+    if (nameEl) nameEl.textContent = name;
     if (!cv) { box.classList.remove('has-img'); return; }
     box.classList.add('has-img');
     if (/^data:video/.test(cv)) { vid.src = cv; vid.hidden = false; }
@@ -9450,7 +9487,10 @@ function coverTap(e) {
       if (!f) return;
       try {
         const data = await readAsDataURL(f);
-        if (viewUid) store().covers.byContact[viewUid] = data;
+        if (viewUid) {
+          const bc = (store().covers.byContact = store().covers.byContact || {});
+          bc[viewUid] = data;
+        }
         else store().covers.me = data;
         DB.save(); renderCover();
         UI.toast('封面已更新');
@@ -9494,7 +9534,10 @@ function coverTap(e) {
     } catch (e) { return ''; }
   }
   /* 首次互动延迟=每人0~1分钟缓冲+各自聊天回复设置内等概率延迟（顺序无关）；追评不加缓冲 */
+  /* 她 08-26：评论人开关——关（默认）=TA 发的动态只有我能点赞评论（微信式）；
+     开=联系人之间互评，且 30% 动态主人会回一条评论 */
   function scheduleReactions(postId) {
+    if (!DB.state.settings.moMutual) return;   // 关闭互评：TA 的动态不排 TA 之间的互动
     const target = store().posts.find(x => x.id === postId);
     if (!target) return;
     contactsAll().forEach(ct => {
@@ -9538,6 +9581,22 @@ function coverTap(e) {
     }
     DB.save();
     renderList();
+    /* 她 08-26：互评开启时，动态主人 30% 会回复这条评论（楼中楼） */
+    const justCommented = post.comments.length && post.comments[post.comments.length - 1].uid === ct.id;
+    if (justCommented && post.uid !== 'me' && post.uid !== ct.id && Math.random() < 0.3) {
+      const owner = Home.contactById(post.uid);
+      const w2 = owner ? chatWindowOf(owner) : null;
+      const delayS = w2 ? rand(w2.minS, w2.maxS) : rand(3, 15);
+      setTimeout(() => {
+        const p2 = store().posts.find(x => x.id === postId);
+        if (!p2 || !owner) return;
+        const t2 = cardText(owner, 40);
+        if (!t2) return;
+        p2.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: post.uid, toUid: ct.id, text: t2, ts: Date.now() });
+        DB.save();
+        renderList();
+      }, delayS * 1000);
+    }
   }
   /* AI 自主发圈：掷发帖概率%（默认60%，资料卡可调），命中后在各自间隔区间内等概率取延迟落帖 */
   const postedOnce = {};
