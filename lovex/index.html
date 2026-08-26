@@ -1909,6 +1909,18 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .rp-item:last-child::before{display:none}
 .rp-dot{position:absolute;left:1px;top:6px;width:9px;height:9px;border-radius:50%;
   background:var(--bg);border:2px solid var(--primary)}
+/* P31 打磨：我实心 / TA 空心，一眼分清谁报的 */
+.rp-item.me .rp-dot{background:var(--primary)}
+.rp-item.ta .rp-dot{background:var(--card);border-color:var(--t3)}
+/* 进行中：呼吸圈 */
+.rp-item.live .rp-dot{border-color:var(--primary);background:var(--primary)}
+.rp-item.live .rp-dot::after{content:'';position:absolute;left:-5px;top:-5px;
+  width:15px;height:15px;border-radius:50%;border:1.5px solid var(--primary);
+  opacity:0;animation:rpBreath 1.8s ease-out infinite}
+@keyframes rpBreath{0%{transform:scale(.55);opacity:.75}70%{opacity:0}100%{transform:scale(1.25);opacity:0}}
+/* 我的卡片微缩进+灰底，与 TA 白卡分层（仍是同一根时间线） */
+.rp-item.me .rp-card-rp{margin-left:14px;background:var(--bg)}
+.rp-chk-ico{font-style:normal;color:var(--t2);align-self:center;display:flex}
 .rp-card-rp{background:var(--card);border:1.5px solid var(--line);border-radius:12px 3px 12px 3px;
   padding:10px 13px}
 .rp-head{display:flex;align-items:baseline;gap:8px;font-size:13.5px}
@@ -3079,12 +3091,16 @@ var Report = (function () {
         html += '<div class="rp-day">' + todayStr + '</div>';
       }
       const whoName = r.who === 'me' ? '我' : Home.displayName(ct) || 'TA';
-      const actTxt = r.how === 'checkin' ? '应答了查岗' : r.how === 'manual' ? '报备了' : '报备了';
-      const span = r.endTs ? hhmm(r.startTs) + ' ~ ' + hhmm(r.endTs) : hhmm(r.startTs);
+      const isChk = r.how === 'checkin';
+      const actTxt = isChk ? '应答了查岗' : '报备了';
+      /* P31：进行中的那条显示“~ 现在”+呼吸圆点；查岗应答带罗盘小标 */
+      const isLive = live && live.id === r.id;
+      const span = isLive ? hhmm(r.startTs) + ' ~ 现在' : (r.endTs ? hhmm(r.startTs) + ' ~ ' + hhmm(r.endTs) : hhmm(r.startTs));
       html +=
-        '<div class="rp-item"><span class="rp-dot"></span>' +
+        '<div class="rp-item ' + (r.who === 'me' ? 'me' : 'ta') + (isLive ? ' live' : '') + '"><span class="rp-dot"></span>' +
         '<div class="rp-card-rp">' +
-        '<div class="rp-head"><b>' + UI.escapeHtml(whoName) + '</b><span>' + actTxt + '</span><time>' + span + '</time></div>' +
+        '<div class="rp-head">' + (isChk ? '<i class="rp-chk-ico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2 6.3-6.4 2.1 2-6.3z"/></svg></i>' : '') +
+        '<b>' + UI.escapeHtml(whoName) + '</b><span>' + actTxt + '</span><time>' + span + '</time></div>' +
         '<div class="rp-body">' + UI.escapeHtml((r.place || '') + r.doing) +
         (r.mood ? '<i class="rp-mood">' + UI.escapeHtml(r.mood) + '</i>' : '') + '</div>' +
         '</div></div>';
