@@ -2139,6 +2139,58 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-supp-tag{font-style:normal;flex:none;background:var(--primary);color:#fff;
   border-radius:5px;font-size:10px;padding:1px 5px;font-weight:600}
 
+/* ===== P34 V3：默契挑战 + 模板 + 档案室 ===== */
+.qz-tabs{display:flex;gap:8px;padding:2px 0 10px}
+.qz-tab{border:1.5px solid var(--line);background:none;color:var(--t2);border-radius:999px;
+  font-size:13px;padding:6px 16px}
+.qz-tab.on{border-color:var(--primary);color:var(--primary);font-weight:600}
+.qz-mini-duet{font-style:normal;font-size:10.5px;font-weight:600;color:#a259c4;
+  border:1px solid #d9b3ea;border-radius:6px;padding:1px 6px;flex:none}
+.theme-dark .qz-mini-duet{color:#d3a5e8;border-color:#7a4b8f}
+.qz-c-btns{display:flex;align-items:center;gap:10px;margin-top:10px}
+.qz-mini2{border:none;background:none;color:var(--t2);font-size:12.5px;
+  display:inline-flex;align-items:center;gap:4px;flex:none}
+.qz-tpl-row{padding:0 16px 6px}
+.qz-tpl-row button{border:1.5px dashed var(--line);background:none;color:var(--t2);
+  border-radius:10px;font-size:12.5px;padding:6px 11px;display:inline-flex;
+  align-items:center;gap:5px}
+.qz-my-q{padding:11px 16px;border-bottom:1px dashed var(--line)}
+.qz-my-opts{flex-wrap:wrap;gap:7px;margin-top:8px}
+.qz-my-text{display:block;width:100%;box-sizing:border-box;margin-top:8px;
+  border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--t1);
+  font-size:14px;padding:9px 12px;outline:none}
+.qz-sort-line{display:flex;align-items:center;gap:9px;margin-top:6px;
+  border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;background:var(--card)}
+.qz-sort-line span{flex:1;font-size:13.5px;color:var(--t1)}
+.qz-sort-line em{font-style:normal;display:flex;gap:5px}
+.qz-sort-line b{width:26px;height:24px;border:1.5px solid var(--line);border-radius:7px;
+  display:inline-flex;align-items:center;justify-content:center;color:var(--t2);
+  font-weight:600;cursor:pointer}
+.qz-duet-tag{font-size:10.5px;font-weight:600;color:#a259c4;border:1px solid #d9b3ea;
+  border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:3px}
+.theme-dark .qz-duet-tag{color:#d3a5e8;border-color:#7a4b8f}
+.qzv-paper.qz-duet{margin-top:10px}
+.duet-row.hit{background:rgba(46,125,50,.06);border-radius:10px;padding:9px}
+.theme-dark .duet-row.hit{background:rgba(123,196,127,.08)}
+.qz-duet-line{display:flex;align-items:baseline;gap:8px;margin-top:7px;font-size:14px;
+  color:var(--t1);line-height:1.55}
+.qz-duet-line span{flex:none;font-size:11px;color:var(--t2);border:1px solid var(--line);
+  border-radius:6px;padding:1px 6px;transform:translateY(-1px)}
+.qz-duet-line.ta span{color:var(--primary);border-color:var(--primary)}
+.qz-hit{font-style:normal;display:inline-block;margin-top:6px;font-size:11.5px;
+  font-weight:600;color:#2e7d32}
+.theme-dark .qz-hit{color:#7bc47f}
+.qz-duet-sum{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);
+  font-size:13px;font-weight:700;color:var(--primary)}
+.qz-arch-card{margin-bottom:10px;padding:12px 14px}
+.qz-arch-stat{display:block;margin-top:7px;font-size:12px;color:var(--t2)}
+.qz-arch-row{display:flex;align-items:center;width:100%;text-align:left;border:none;
+  background:none;border-bottom:1px dashed var(--line);padding:8px 1px;
+  font-size:13.5px;color:var(--t1)}
+.qz-arch-row:last-child{border-bottom:none}
+.qz-arch-row em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--t2);flex:none}
+.qz-arch-none{display:block;margin-top:8px;font-size:12px;color:var(--t2)}
+
 </style>
 </head>
 <body>
@@ -3521,6 +3573,7 @@ var Quiz = (function () {
   function typeName(t) { return { single: '单选', multi: '多选', sort: '排序', rate: '打分', text: '填空' }[t] || t; }
 
   /* ---------------- 出卷 sheet ---------------- */
+  let composeMode = 'normal';   // normal | duet（她拍板：非默认，主动选才是双人）
   function openComposer() {
     /* P34 防御（自测抓到）：curCid 未初始化时会把 null 当收件人发废卷——
        无联系人直接拦下，有则兕底第一个 */
@@ -3532,20 +3585,28 @@ var Quiz = (function () {
       renderLib();
       return;
     }
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());   // 防叠层：重开前清掉残留（多 actionSheet 叠加会跨 mask 点错按钮）
+    composeMode = 'normal';
     const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
     mask.className = 'sheet-mask ui-modal';
     mask.innerHTML =
       '<div class="sheet sheet-scroll qz-sheet">' +
       '<div class="sheet-title">出一份卷子</div>' +
-      '<label class="rp-f-row"><span>卷名</span><input id="qz-c-title" type="text" maxlength="20" placeholder="给这份卷子起个名"></label>' +
+      (DB.state.quizTpls && DB.state.quizTpls.length
+        ? '<div class="qz-tpl-row"><button id="qz-c-tpl">' + I('stamp', 12) + ' 从模板套用</button></div>' : '') +
+      '<label class="rp-f-row"><span>卷名</span><input id="qz-c-title" type="text" maxlength="20" placeholder="给这份卷子起个名"></label>'
+      + '<div class="rp-f-row"><span>模式</span><div class="chip-row" id="qz-c-mode">' +
+        '<button class="grp-chip on" data-mode="normal">普通</button>' +
+        '<button class="grp-chip" data-mode="duet">默契挑战</button></div></div>' +
       '<label class="rp-f-row"><span>交卷延迟（分钟）</span><input id="qz-c-delay" type="number" min="1" step="0.1" value="1"></label>' +
       '<div class="rp-f-row"><span>问谁</span><div class="chip-row" id="qz-c-targets"></div></div>' +
       '<div class="qz-pick-t">选题 <em id="qz-c-count">已选 0 题</em></div>' +
       '<div class="qz-pick-list" id="qz-c-qlist"></div>' +
-      '<button class="sheet-cancel qz-f-ok">发出去了</button></div>';
+      '<div class="qz-c-btns"><button class="qz-mini2" id="qz-c-savetpl">' + I('download', 12) + ' 存为模板</button>' +
+      '<button class="sheet-cancel qz-f-ok">发出去了</button></div></div>';
 
-    /* 接收人 chips：当前联系人默认选中，可多选 */
+    /* 接收人 chips：当前联系人默认选中；duet 模式下单选（她拍板：双人对照只对一个人） */
     let targets = [curCid];
     const tbox = mask.querySelector('#qz-c-targets');
     tbox.innerHTML = DB.state.contacts.map(c =>
@@ -3553,11 +3614,51 @@ var Quiz = (function () {
     tbox.addEventListener('click', e => {
       const b = e.target.closest('[data-ct]'); if (!b) return;
       const id = b.dataset.ct;
+      if (composeMode === 'duet') {
+        targets = [id];
+        tbox.querySelectorAll('[data-ct]').forEach(x => x.classList.toggle('on', x.dataset.ct === id));
+        return;
+      }
       if (targets.includes(id)) {
         if (targets.length === 1) { UI.toast('至少要问一个人'); return; }
         targets = targets.filter(x => x !== id);
       } else targets.push(id);
       tbox.querySelectorAll('[data-ct]').forEach(x => x.classList.toggle('on', targets.includes(x.dataset.ct)));
+    });
+    /* 模式切换：duet 提示先自己答一遍 */
+    mask.querySelector('#qz-c-mode').addEventListener('click', e => {
+      const b = e.target.closest('[data-mode]'); if (!b) return;
+      composeMode = b.dataset.mode;
+      mask.querySelectorAll('#qz-c-mode .grp-chip').forEach(x => x.classList.toggle('on', x === b));
+      if (composeMode === 'duet') UI.toast('默契挑战：你先答，TA 再答，然后对照');
+    });
+    /* 模板：套用 / 存为 */
+    const tplBtn = mask.querySelector('#qz-c-tpl');
+    if (tplBtn) tplBtn.addEventListener('click', async () => {
+      const k = await UI.actionSheet('套用哪个模板？',
+        DB.state.quizTpls.map(t => ({ key: t.id, label: t.name + ' · ' + t.qids.length + ' 题' })));
+      const tp = k && DB.state.quizTpls.find(x => x.id === k);
+      if (!tp) return;
+      mask.querySelector('#qz-c-title').value = tp.name;
+      picked.length = 0;
+      tp.qids.forEach(id => { if (qById(id)) picked.push(id); });
+      qlist.querySelectorAll('.qz-pick-item').forEach(it => it.classList.toggle('on', picked.includes(it.dataset.q)));
+      mask.querySelector('#qz-c-count').textContent = '已选 ' + picked.length + ' 题 · 套用了「' + tp.name + '」';
+    });
+    mask.querySelector('#qz-c-savetpl').addEventListener('click', () => {
+      if (!picked.length) { UI.toast('先选几道题再存模板'); return; }
+      Home.openForm({
+        title: '存为模板',
+        fields: [{ key: 'n', label: '模板名', maxlength: 12 }],
+        okText: '存好',
+        onSubmit(v) {
+          const name = (v.n || '').trim();
+          if (!name) return '模板名不能为空';
+          DB.state.quizTpls.unshift({ id: uid(), name, qids: picked.slice(), delayMin: Math.max(0.1, parseFloat(mask.querySelector('#qz-c-delay').value) || 1), ts: Date.now() });
+          DB.save();
+          UI.toast('模板「' + name + '」存好了');
+        }
+      });
     });
 
     /* 选题列表：点击勾选 */
@@ -3580,8 +3681,11 @@ var Quiz = (function () {
       const title = mask.querySelector('#qz-c-title').value.trim();
       const delay = Math.max(0.1, parseFloat(mask.querySelector('#qz-c-delay').value) || 1);
       if (!picked.length) { UI.toast('一道题都不选，考什么呀'); return; }
-      sendQuiz(title || '未命名问卷', delay, targets.slice(), picked.slice());
-      mask.remove();
+      const tIds = targets.slice(), pids = picked.slice(), mode = composeMode;
+      mask.remove();   // 先关出卷器再弹答题 sheet（两个 ui-modal 叠加会跨 mask 点错按钮——历史坑）
+      const go = myPer => sendQuiz(title || '未命名问卷', delay, tIds, pids, mode, myPer);
+      if (mode === 'duet') answerMySheet(pids, go);
+      else go(null);
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
@@ -3590,18 +3694,19 @@ var Quiz = (function () {
   }
 
   /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现。
-     她 16:57 三连：①短卷（≤2题）不搞交卷流程，直接以聊天题卡呈现；
-     ②发卷要在聊天里有一条记录；③别再说“答完啦”这种话 */
-  function sendQuiz(title, delayMin, targetIds, qids) {
+     她 16:57 三连 + V3：duet 模式先存我自己的答卷（myDuet），TA 交卷后对照 */
+  function sendQuiz(title, delayMin, targetIds, qids, mode, myPer) {
     const now = Date.now();
     const style = qids.length <= 2 ? 'card' : 'paper';   // 自动分流：短卷=聊天题卡，长卷=正式问卷
     const z = {
-      id: uid(), title, mode: 'normal', style,
+      id: uid(), title, mode: mode || 'normal',
+      style: (mode === 'duet') ? 'paper' : style,        // 默契挑战走详情页对照，不进卡片流
       qids, targets: targetIds, delayMin,
       status: 'sent', ts: now,
       pending: targetIds.map(ct => ({ ctId: ct, at: now + Math.round(delayMin * 60000) })),
       answers: {}, rating: ''
     };
+    if (myPer) z.myDuet = { per: myPer, ts: now };
     DB.state.quizzes.unshift(z);
     /* 发卷落聊天记录：自己的消息不走 Engine.pushRaw（不挂未读/横幅，同 Report.pushMeMsg 语义） */
     targetIds.forEach(ct => {
@@ -3616,8 +3721,78 @@ var Quiz = (function () {
       if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
     });
     DB.save();
-    UI.toast(style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交');
+    UI.toast(mode === 'duet' ? '默契挑战发出，等 TA 来对答案' : (z.style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交'));
     render();
+  }
+
+  /* ---------------- 我自己答题的 sheet（默契挑战第一步） ----------------
+     五题型逐题交互；排序用上移/下移箭头（拖拽在手机上易误触） */
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
+  function answerMySheet(qids, onDone) {
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';
+    mask.innerHTML = '<div class="sheet sheet-scroll qz-sheet"><div class="sheet-title">先写下你的答案</div>' +
+      '<div id="qz-my-list"></div><button class="sheet-cancel qz-my-ok">答好了，发！</button></div>';
+    const box = mask.querySelector('#qz-my-list');
+    const state = {};
+    let no = 0;
+    qids.forEach(id => {
+      const t = qById(id); if (!t) return;
+      no++;
+      let h = '<div class="qz-my-q" data-q="' + id + '"><div class="qz-card-q"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) + '</div>';
+      if (t.type === 'single') {
+        h += '<div class="chip-row qz-my-opts">' + (t.options || []).map(o => '<button class="grp-chip" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
+      } else if (t.type === 'multi') {
+        h += '<div class="chip-row qz-my-opts multi">' + (t.options || []).map(o => '<button class="grp-chip" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
+      } else if (t.type === 'rate') {
+        h += '<div class="qz-rate-row">' + [1,2,3,4,5].map(n => '<button class="qz-star live" data-v="' + n + '">★</button>').join('') + '</div>';
+      } else if (t.type === 'text') {
+        h += '<input type="text" class="qz-my-text" maxlength="60" placeholder="写你的答案…">';
+      } else if (t.type === 'sort') {
+        h += '<div class="qz-my-sort">' + (t.options || []).map(o =>
+          '<div class="qz-sort-line" data-v="' + esc(o) + '"><span>' + esc(o) + '</span><em><b data-mv="-1">↑</b><b data-mv="1">↓</b></em></div>').join('') + '</div>';
+      }
+      h += '</div>';
+      box.insertAdjacentHTML('beforeend', h);
+    });
+    box.addEventListener('click', e => {
+      const row = e.target.closest('.qz-my-q'); if (!row) return;
+      const id = row.dataset.q; const t = qById(id);
+      const chip = e.target.closest('.grp-chip[data-v]');
+      if (chip && t.type === 'single') {
+        row.querySelectorAll('.grp-chip').forEach(x => x.classList.toggle('on', x === chip));
+        state[id] = chip.dataset.v;
+      } else if (chip && t.type === 'multi') {
+        chip.classList.toggle('on');
+        state[id] = [...row.querySelectorAll('.grp-chip.on')].map(x => x.dataset.v);
+      } else if (e.target.closest('.qz-star.live')) {
+        const v = +e.target.closest('.qz-star').dataset.v;
+        row.querySelectorAll('.qz-star').forEach(x => x.classList.toggle('on', +x.dataset.v <= v));
+        state[id] = v;
+      } else if (e.target.closest('[data-mv]')) {
+        const line = e.target.closest('.qz-sort-line');
+        const d = +e.target.closest('[data-mv]').dataset.mv;
+        if (d < 0 && line.previousElementSibling) row.querySelector('.qz-my-sort').insertBefore(line, line.previousElementSibling);
+        if (d > 0 && line.nextElementSibling) row.querySelector('.qz-my-sort').insertBefore(line.nextElementSibling, line);
+        state[id] = [...row.querySelectorAll('.qz-sort-line')].map(x => x.dataset.v);
+      }
+    });
+    box.addEventListener('input', e => {
+      const row = e.target.closest('.qz-my-q'); if (!row) return;
+      if (e.target.classList.contains('qz-my-text')) state[row.dataset.q] = e.target.value.trim();
+    });
+    mask.querySelector('.qz-my-ok').addEventListener('click', () => {
+      for (const id of qids) {
+        const t = qById(id); if (!t) continue;
+        const v = state[id];
+        if ((t.type === 'text' && !v) || (t.type === 'multi' && (!v || !v.length)) || (t.type !== 'text' && v == null)) { UI.toast('还有题没答完哦'); return; }
+      }
+      mask.remove(); onDone(state);
+    });
+    layer.appendChild(mask);
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);
   }
 
   /* ---------------- TA 作答生成（本地规则随机，非 AI 理解——已向她言明） ---------------- */
@@ -3730,26 +3905,72 @@ var Quiz = (function () {
     return true;
   }
 
-  /* ---------------- 主页：试卷列表 ---------------- */
-  function open(cid) { curCid = cid; Router.go('quiz'); render(); }
+  /* ---------------- 主页：试卷列表 / 档案室（V3） ---------------- */
+  let homeTab = 'list';   // list=试卷 | arch=档案室
+  function open(cid) { curCid = cid; Router.go('quiz'); homeTab = 'list'; render(); }
   function render() {
     const box = document.getElementById('qz-list');
     if (!box) return;
-    const list = DB.state.quizzes || [];
-    if (!list.length) {
-      box.innerHTML = '<div class="rp-empty">还没有卷子<br><small>点上面的「出卷」发一份试试</small></div>';
+    /* 切换条：试卷 | 档案 */
+    const tabs = '<div class="qz-tabs"><button class="qz-tab' + (homeTab === 'list' ? ' on' : '') + '" data-tab="list">试卷</button>' +
+      '<button class="qz-tab' + (homeTab === 'arch' ? ' on' : '') + '" data-tab="arch">档案室</button></div>';
+    if (homeTab === 'arch') {
+      box.innerHTML = tabs + '<div id="qz-arch"></div>';
+      box.querySelectorAll('.qz-tab').forEach(b => b.addEventListener('click', () => { homeTab = b.dataset.tab; render(); }));
+      renderArch();
       return;
     }
-    box.innerHTML = list.map(z => {
-      const doneN = z.targets.filter(t => z.answers[t]).length;
-      const all = z.targets.length;
-      const st = z.status === 'done'
-        ? '<b class="qz-st ok">' + I('check', 11) + '已回答</b>'
-        : '<b class="qz-st wait">' + I('clock', 11) + '等待回答</b>';
-      return '<button class="qz-item card" data-qz="' + z.id + '">' +
-        '<div class="qz-item-head"><b>' + esc(z.title) + '</b>' + st + '</div>' +
-        '<small>共 ' + z.qids.length + ' 题 · ' + doneN + '/' + all + ' 已交 · ' +
-        fmtDay(z.ts) + '</small></button>';
+    const list = DB.state.quizzes || [];
+    if (!list.length) {
+      box.innerHTML = tabs + '<div class="rp-empty">还没有卷子<br><small>点上面的「出卷」发一份试试</small></div>';
+    } else {
+      box.innerHTML = tabs + list.map(z => {
+        const doneN = z.targets.filter(t => z.answers[t]).length;
+        const all = z.targets.length;
+        const st = z.status === 'done'
+          ? '<b class="qz-st ok">' + I('check', 11) + '已回答</b>'
+          : '<b class="qz-st wait">' + I('clock', 11) + '等待回答</b>';
+        return '<button class="qz-item card" data-qz="' + z.id + '">' +
+          '<div class="qz-item-head"><b>' + esc(z.title) + '</b>' +
+          (z.mode === 'duet' ? '<i class="qz-mini-duet">默契</i>' : '') + st + '</div>' +
+          '<small>共 ' + z.qids.length + ' 题 · ' + doneN + '/' + all + ' 已交 · ' + fmtDay(z.ts) + '</small></button>';
+      }).join('');
+    }
+    box.querySelectorAll('.qz-tab').forEach(b => b.addEventListener('click', () => { homeTab = b.dataset.tab; render(); }));
+    const first = box.querySelector('[data-qz]');
+    if (first) box.onclick = e => {
+      const it = e.target.closest('[data-qz]');
+      if (it) viewQuiz(it.dataset.qz);
+    };
+  }
+  /* 档案室：按联系人归档——统计 + 该人的历史卷子（她拍板：不同联系人不同存储） */
+  function renderArch() {
+    const box = document.getElementById('qz-arch');
+    const all = DB.state.quizzes || [];
+    if (!DB.state.contacts.length) { box.innerHTML = '<div class="rp-empty">还没有联系人</div>'; return; }
+    box.innerHTML = DB.state.contacts.map(ct => {
+      const papers = all.filter(z => z.targets.includes(ct.id));
+      let askCnt = 0, lastAskTs = 0;
+      Object.keys(DB.state.msgs || {}).forEach(cid => {
+        (DB.state.msgs[cid] || []).forEach(m => {
+          if (m.type === 'quizask' && m.from === 'ai') {
+            const cv = DB.state.convs.find(v => v.id === cid);
+            if (cv && cv.peerId === ct.id) { askCnt++; lastAskTs = Math.max(lastAskTs, m.ts); }
+          }
+        });
+      });
+      const answered = papers.filter(z => z.answers[ct.id]).length;
+      const lastTs = Math.max(papers.reduce((m, z) => Math.max(m, z.ts), 0), lastAskTs);
+      const rows = papers.slice(0, 8).map(z => {
+        const okk = !!z.answers[ct.id];
+        return '<button class="qz-arch-row" data-qz="' + z.id + '"><span>' + esc(z.title) + '</span><em>' + (okk ? '已交' : '未交') + '</em></button>';
+      }).join('');
+      return '<div class="card qz-arch-card"><div class="qzv-name">' +
+        '<span class="avatar avatar-sm"><span class="ava-txt">' + esc((Home.displayName(ct) || '?').slice(0, 1)) + '</span></span>' +
+        '<b>' + esc(Home.displayName(ct)) + '</b></div>' +
+        '<small class="qz-arch-stat">考过 TA ' + papers.length + ' 卷 · 已交 ' + answered +
+        ' · TA 抽题考你 ' + askCnt + ' 次 · 最近 ' + (lastTs ? fmtDay(lastTs) : '—') + '</small>' +
+        (rows || '<small class="qz-arch-none">还没有来往，先出一份卷子吧</small>') + '</div>';
     }).join('');
     box.onclick = e => {
       const it = e.target.closest('[data-qz]');
@@ -3790,6 +4011,31 @@ var Quiz = (function () {
       (sel.includes(o) ? I('check', 10) : '') + esc(o) + '</span>').join('') + '</div>';
   }
   function starRow(n) { n = Math.max(1, Math.min(5, n | 0)); return '★'.repeat(n) + '☆'.repeat(5 - n); }
+  /* 默契对照用：把任意答案压成一行文本（supp/多选/排序/星星） */
+  function plainOf(t, a) {
+    if (a && a.__supp) return '补充：' + a.text;
+    if (a == null || a === '') return '（空）';
+    if (t.type === 'rate') return starRow(a);
+    if (Array.isArray(a)) return a.join(t.type === 'sort' ? ' → ' : '、');
+    return String(a);
+  }
+  function sameAns(t, a, b) {
+    const norm = v => {
+      if (v && v.__supp) return { k: 'supp', text: v.text };
+      if (v == null || v === '') return null;
+      if (t.type === 'rate') return { k: 'r', v: +v };
+      if (t.type === 'multi') return { k: 'm', set: (Array.isArray(v) ? v.slice().sort() : [String(v)].sort()).join('|') };
+      if (t.type === 'sort') return { k: 's', seq: (Array.isArray(v) ? v : [v]).join('→') };
+      return { k: 't', text: String(v).trim() };
+    };
+    const x = norm(a), y = norm(b);
+    if (!x || !y || x.k !== y.k) return false;
+    if (x.k === 'm') return x.set === y.set;
+    if (x.k === 's') return x.seq === y.seq;
+    if (x.k === 'r') return x.v === y.v;
+    if (x.k === 'supp') return false;   // 补充回答是自由发挥，不算默契
+    return x.text === y.text;
+  }
   function ansText(t, a) {
     if (a == null) return '';
     if (t.type === 'rate') return starRow(a);
@@ -3835,6 +4081,25 @@ var Quiz = (function () {
       }
       html += '</div>';
     });
+
+    /* 默契挑战：双方都交卷后追加对照区（一致项高亮，她拍板的核心玩法） */
+    if (z.mode === 'duet' && z.myDuet && z.targets.every(t => z.answers[t])) {
+      let same = 0, tot = 0;
+      let cmp = '<div class="card qzv-paper qz-duet"><div class="qzv-name">' + I('heart', 13) + '<b>默契对照</b></div>';
+      z.qids.forEach(id => {
+        const t = qById(id); if (!t) return;
+        const mine = z.myDuet.per[id];
+        const ta = z.answers[z.targets[0]].per[id];
+        const hit = sameAns(t, mine, ta);
+        if (hit) same++; tot++;
+        cmp += '<div class="qzv-q duet-row' + (hit ? ' hit' : '') + '">' +
+          '<div class="qz-duet-line"><span>你</span>' + esc(plainOf(t, mine)) + '</div>' +
+          '<div class="qz-duet-line ta"><span>' + esc(Home.displayName(Home.contactById(z.targets[0])) || 'TA') + '</span>' + esc(plainOf(t, ta)) + '</div>' +
+          (hit ? '<i class="qz-hit">心有灵犀</i>' : '') + '</div>';
+      });
+      cmp += '<div class="qz-duet-sum">默契值 ' + (tot ? Math.round(same / tot * 100) : 0) + '%（' + same + '/' + tot + ' 题一致）</div></div>';
+      html += cmp;
+    }
 
     /* 我的评价（三档）+ 重填收进行尾小胶囊（她 17:11“按钮不好看，换一下”） */
     html += '<div class="card qzv-rate"><span>我的评价：</span><div class="chip-row">' +
@@ -3984,6 +4249,7 @@ var Quiz = (function () {
   }
 
   /* 加题/改题 sheet：分组 chips + 题型 chips + 题干 + 选项动态增减 */
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
   function editSheet(editQ) {
     const l = lib(); defGroup();
     const isNew = !editQ;
@@ -4079,6 +4345,7 @@ var Quiz = (function () {
     });
     return out.filter(x => x.title);
   }
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
   function importSheet() {
     const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
