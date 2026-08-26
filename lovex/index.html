@@ -2920,17 +2920,15 @@ var Report = (function () {
     const pl = planOf(ct.id);
     if (pl.day !== today) {           // 跨天重排
       pl.day = today;
-      pl.autoAt = 0; pl.autoDur = 0; pl.autoDone = false;
+      pl.autoAt = 0; pl.autoDone = false;
       pl.chkAt = 0; pl.chkDone = false;
       pl.askAt = 0; pl.askDone = false;
     }
     const rate = v => Math.min(100, Math.max(0, isFinite(+v) ? +v : 0));
-    /* P31（清然 12:13“设置了怎么没触发”）：门槛改为只看概率>0，不再要求时长/间隔也填；
-       触发时刻从“全天随机”改为“近期随机”，设置完当天就能见到效果 */
-    const repLo = Math.max(0, +p.repMin || 0), repHi = Math.max(0, +p.repMax || 0);
+    /* P33（清然 13:48 口径）：repMin~repMax = TA 隔多久自动报备一次的间隔，
+       不是持续时长；首次报备在 15 分钟~4 小时内自然冒出，之后按间隔链式排 */
     if (!pl.autoAt && !pl.autoDone && rate(p.repRate) > 0 && Math.random() < rate(p.repRate ?? 80) / 100) {
-      pl.autoAt = Date.now() + randI(15, 240) * 60000;   // 15分钟~4小时内自然冒出来
-      pl.autoDur = (repLo + Math.random() * (repHi - repLo)) * 60000;
+      pl.autoAt = Date.now() + randI(15, 240) * 60000;
     }
     /* TA 查岗我：chkMin~chkMax 分钟 = 多久后来问（未填则默认 20~180 分钟） */
     const chkLo = Math.max(0, +p.chkMin || 0), chkHi = Math.max(0, +p.chkMax || 0);
@@ -2947,13 +2945,19 @@ var Report = (function () {
     const pl = (DB.state.repPlans || {})[ct.id];
     if (!pl) return;
     const now = Date.now();
+    const p = ct.params || {};
     if (pl.autoAt && !pl.autoDone && now >= pl.autoAt) {
-      pl.autoDone = true;
-      taReport(ct, { ts: pl.autoAt, dur: pl.autoDur, how: 'auto' });
+      taReport(ct, { ts: pl.autoAt, how: 'auto' });
+      /* P33：链式——隔 repMin~repMax 分钟再报下一条；间隔留空则每天一条 */
+      const repLo = Math.max(0, +p.repMin || 0), repHi = Math.max(0, +p.repMax || 0);
+      if (repHi > 0) {
+        pl.autoDone = false;
+        pl.autoAt = now + randI(Math.max(repLo, 1), repHi) * 60000;
+      } else pl.autoDone = true;
     }
     if (pl.askAt && !pl.askDone && now >= pl.askAt) {   // 我查岗→TA 回报备
       pl.askDone = true;
-      taReport(ct, { ts: pl.askAt, dur: 0, how: 'asked' });
+      taReport(ct, { ts: pl.askAt, how: 'asked' });
     }
     if (pl.chkAt && !pl.chkDone && now >= pl.chkAt) {   // TA 查岗我
       pl.chkDone = true;
@@ -2967,19 +2971,17 @@ var Report = (function () {
     if (curCid) try { render(); } catch (e) {}   // 报备页开着就跟手刷新
   }
 
-  /* TA 报备落记录+聊天消息 */
+  /* TA 报备落记录+聊天消息（P33：单点播报，无持续时段） */
   function taReport(ct, opt) {
     const conv = convOf(ct);
     if (!conv) return;
     const g = genText(true);
-    let text = g.text;
-    if (opt.dur > 0) text += '，大概' + durHuman(opt.dur);
     recs(ct.id).push({
       id: 'r' + opt.ts.toString(36), who: 'ta', how: opt.how,
       place: g.place, doing: g.doing, mood: g.mood,
-      startTs: opt.ts, endTs: opt.dur > 0 ? opt.ts + opt.dur : null, ts: opt.ts, text: text
+      startTs: opt.ts, endTs: null, ts: opt.ts, text: g.text
     });
-    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ai', type: 'text', text: text, ts: opt.ts });
+    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ai', type: 'text', text: g.text, ts: opt.ts });
   }
 
   /* ---------------- 我的动作 ---------------- */
@@ -3182,10 +3184,10 @@ var Report = (function () {
     panel.innerHTML =
       '<div class="dy-set-t">报备引擎 · ' + UI.escapeHtml(ct ? Home.displayName(ct) : '') + '</div>' +
       '<div class="dy-rate-row"><span>TA 自动报备概率</span><em>' + num('cfg-reprate', p.repRate ?? 0) + ' %</em></div>' +
-      '<div class="dy-rate-row"><span>报备持续时长（分钟）</span><em>' + num('cfg-repmin', p.repMin ?? 0) + ' - ' + num('cfg-repmax', p.repMax ?? 0) + '</em></div>' +
+      '<div class="dy-rate-row"><span>隔多久报一次（分钟）</span><em>' + num('cfg-repmin', p.repMin ?? 0) + ' - ' + num('cfg-repmax', p.repMax ?? 0) + '</em></div>' +
       '<div class="dy-rate-row"><span>TA 来查岗概率</span><em>' + num('cfg-chkrate', p.chkRate ?? 0) + ' %</em></div>' +
       '<div class="dy-rate-row"><span>多久后来查你（分钟）</span><em>' + num('cfg-chkmin', p.chkMin ?? 0) + ' - ' + num('cfg-chkmax', p.chkMax ?? 0) + '</em></div>' +
-      '<div class="dy-rate-note">填 0 就是不开启；只填概率也生效（时间随机）；改动即存</div>' +
+      '<div class="dy-rate-note">填 0 就是不开启；只填概率也生效；间隔留空则每天一条</div>' +
       '<div class="dy-set-t">TA 的报备库</div>' +
       libRow('places', '地点') + libRow('doings', '行动') + libRow('moods', '情绪词');
 
