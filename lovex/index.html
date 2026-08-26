@@ -1928,6 +1928,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .rp-f-moods{align-items:flex-start}
 .rp-f-moods .chip-row{flex-wrap:wrap}
 .rp-f-ok{margin-top:8px}
+/* P28 库与设置面板：参数行复用心事簿 dy-rate 风格，词库 chip 可删 */
+.rp-lib-row{margin-top:12px}
+.rp-lib-label{display:block;font-size:13px;color:var(--t2);margin-bottom:6px}
+.rp-lib-chips{flex-wrap:wrap;gap:6px}
+.rp-lib-chips .grp-chip{display:inline-flex;align-items:center;gap:4px}
+.rp-lib-del{display:inline-flex;align-items:center;opacity:.45;cursor:pointer}
+.rp-lib-del:active{opacity:1}
+.rp-lib-add{display:flex;gap:8px;margin-top:8px}
+.rp-lib-add input{flex:1;border:1.5px solid var(--line);border-radius:10px;background:var(--card);
+  color:var(--t1);font-size:13.5px;padding:7px 10px;outline:none;min-width:0}
+.rp-lib-add button{border:none;background:none;color:var(--primary);font-size:13.5px;font-weight:600;flex:none}
 /* 查岗卡片消息 */
 .bubble-ck .ck-card{display:flex;align-items:center;gap:10px;min-width:170px}
 .ck-card .ck-ico{flex:none;width:34px;height:34px;border-radius:8px;
@@ -2012,6 +2023,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="my-wallet-row"><span class="cell-icon"><i data-icon="wallet"></i></span><span class="cell-text">钱包</span><span class="chevron">›</span></button>
         <button class="cell" data-go="settings"><span class="cell-icon"><i data-icon="settings"></i></span><span class="cell-text">前往个人中心</span><span class="chevron">›</span></button>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
+        <button class="cell" id="my-storage-row"><span class="cell-icon"><i data-icon="database"></i></span><span class="cell-text">存储空间</span><span class="cell-ext" id="storage-state">-</span><span class="chevron">›</span></button>
       </div>
     </div>
   </section>
@@ -2221,7 +2233,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="rp-actions card">
         <button id="rp-add"><i data-icon="brush" data-size="18"></i>记一笔报备</button>
         <button id="rp-ask"><i data-icon="compass" data-size="18"></i>查岗问 TA</button>
+        <button id="rp-cfg"><i data-icon="settings" data-size="18"></i>库与设置</button>
       </div>
+      <div class="card dy-set dy-sketch" id="rp-cfg-panel" hidden></div>
       <div class="rp-now card" id="rp-now" hidden></div>
       <div class="rp-list" id="rp-list"></div>
     </div>
@@ -2280,10 +2294,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
           <label class="adv-item"><span>主动发消息间隔</span><em><input type="number" id="pf-promin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-promax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>主动发红包概率</span><em><input type="number" id="pf-redgift" min="0" max="100"> %</em></label>
-<label class="adv-item"><span>自动报备概率</span><em><input type="number" id="pf-reprate" min="0" max="100"> %</em></label>
-<label class="adv-item"><span>报备持续时长</span><em><input type="number" id="pf-repmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-repmax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
-<label class="adv-item"><span>查岗概率</span><em><input type="number" id="pf-chkrate" min="0" max="100"> %</em></label>
-<label class="adv-item"><span>查岗间隔</span><em><input type="number" id="pf-chkmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-chkmax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>来信概率</span><em><input type="number" id="pf-letterrate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>通话时长</span><em>
             <input type="number" id="pf-calllo" min="0" step="0.5" style="width:52px"> - <input type="number" id="pf-callhi" min="0" step="0.5" style="width:52px">
@@ -2973,6 +2983,17 @@ var Report = (function () {
     });
     const conv = convOf(ct);
     if (conv) pushMeMsg(conv, text, now);
+    /* P28（清然 11:39）：我主动报备同步给所有联系人——每人入库一条+各会话各收到同一条 */
+    DB.state.contacts.forEach(other => {
+      if (!other || other.id === curCid) return;
+      recs(other.id).push({
+        id: 'r' + now.toString(36) + other.id.slice(-3), who: 'me', how: 'manual',
+        place: place || '', doing: doing, mood: mood || '',
+        startTs: now, endTs: null, ts: now, text: text
+      });
+      const oc = convOf(other) || Home.ensureConv(other.id);
+      if (oc) pushMeMsg(oc, text, now);
+    });
     render();
     return true;
   }
@@ -3115,6 +3136,72 @@ var Report = (function () {
       });
       if (ok) askTa(curCid);
     });
+    /* P28（清然 11:26）：报备参数+报备库搬进报备页，资料卡不再竖一列拖到底 */
+    document.getElementById('rp-cfg').addEventListener('click', () => {
+      const panel = document.getElementById('rp-cfg-panel');
+      if (panel.hidden) { renderCfg(); panel.hidden = false; }
+      else panel.hidden = true;
+    });
+  }
+
+  /* ---------------- 库与设置面板 ----------------
+     上半：六参数（原资料卡搬来，字段不变 repRate/repMin/repMax/chkRate/chkMin/chkMax）
+     下半：三词库（地点/行动/情绪词），词条可删、底部输入可添 */
+  function renderCfg() {
+    const ct = Home.contactById(curCid);
+    const p = (ct && ct.params) || {};
+    const panel = document.getElementById('rp-cfg-panel');
+    const num = (id, v) => '<input type="number" min="0" step="0.1" id="' + id + '" value="' + (v ?? 0) + '">';
+    const libRow = (key, label) => {
+      const l = lib();
+      return '<div class="rp-lib-row"><span class="rp-lib-label">' + label + '</span><div class="chip-row rp-lib-chips" data-lib="' + key + '">' +
+        l[key].map((w, i) => '<span class="grp-chip">' + UI.escapeHtml(w) + '<i class="rp-lib-del" data-lib="' + key + '" data-i="' + i + '"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></i></span>').join('') +
+        '</div><div class="rp-lib-add"><input type="text" maxlength="12" placeholder="加一个「' + label + '」" data-libadd="' + key + '"><button data-libbtn="' + key + '">添加</button></div></div>';
+    };
+    panel.innerHTML =
+      '<div class="dy-set-t">报备引擎 · ' + UI.escapeHtml(ct ? Home.displayName(ct) : '') + '</div>' +
+      '<div class="dy-rate-row"><span>TA 自动报备概率</span><em>' + num('cfg-reprate', p.repRate ?? 0) + ' %</em></div>' +
+      '<div class="dy-rate-row"><span>报备持续时长（分钟）</span><em>' + num('cfg-repmin', p.repMin ?? 0) + ' - ' + num('cfg-repmax', p.repMax ?? 0) + '</em></div>' +
+      '<div class="dy-rate-row"><span>TA 来查岗概率</span><em>' + num('cfg-chkrate', p.chkRate ?? 0) + ' %</em></div>' +
+      '<div class="dy-rate-row"><span>查岗间隔（分钟）</span><em>' + num('cfg-chkmin', p.chkMin ?? 0) + ' - ' + num('cfg-chkmax', p.chkMax ?? 0) + '</em></div>' +
+      '<div class="dy-rate-note">填 0 就是不开启；时长/间隔支持小数；改动即存</div>' +
+      '<div class="dy-set-t">TA 的报备库</div>' +
+      libRow('places', '地点') + libRow('doings', '行动') + libRow('moods', '情绪词');
+
+    /* 参数：change 即存（同名字段与 P25 引擎消费点无缝） */
+    const saveP = () => {
+      const c = Home.contactById(curCid); if (!c) return;
+      const q = c.params = c.params || {};
+      const rd = id => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? Math.max(0, v) : 0; };
+      q.repRate = Math.min(100, rd('cfg-reprate'));
+      q.repMin = rd('cfg-repmin'); q.repMax = Math.max(q.repMin, rd('cfg-repmax'));
+      q.chkRate = Math.min(100, rd('cfg-chkrate'));
+      q.chkMin = rd('cfg-chkmin'); q.chkMax = Math.max(q.chkMin, rd('cfg-chkmax'));
+      DB.save();
+    };
+    ['cfg-reprate','cfg-repmin','cfg-repmax','cfg-chkrate','cfg-chkmin','cfg-chkmax'].forEach(id =>
+      document.getElementById(id).addEventListener('change', saveP));
+
+    /* 词库：删除＋添加（onclick 赋值式：renderCfg 重渲染不叠监听） */
+    panel.onclick = e => {
+      const del = e.target.closest('.rp-lib-del');
+      if (del) {
+        const l = lib();
+        l[del.dataset.lib].splice(+del.dataset.i, 1);
+        DB.save(); renderCfg();
+        return;
+      }
+      const btn = e.target.closest('[data-libbtn]');
+      if (btn) {
+        const ipt = panel.querySelector('[data-libadd="' + btn.dataset.libbtn + '"]');
+        const w = (ipt.value || '').trim();
+        if (!w) { UI.toast('先写个词'); return; }
+        const l = lib();
+        if (l[btn.dataset.libbtn].includes(w)) { UI.toast('已经有了'); return; }
+        l[btn.dataset.libbtn].push(w);
+        DB.save(); renderCfg();
+      }
+    };
   }
 
   return { init, open, render, settle, advance, answerCheckin, askTa, openForm };
@@ -10293,12 +10380,6 @@ const Profile = (function () {
     el('pf-promin').value = pa.proMin;
     el('pf-promax').value = pa.proMax;
     el('pf-redgift').value = (pa.giftRedRate ?? 2);
-    el('pf-reprate').value = (pa.repRate ?? 80);
-    el('pf-repmin').value = (pa.repMin ?? 0);
-    el('pf-repmax').value = (pa.repMax ?? 0);
-    el('pf-chkrate').value = (pa.chkRate ?? 80);
-    el('pf-chkmin').value = (pa.chkMin ?? 0);
-    el('pf-chkmax').value = (pa.chkMax ?? 0);
     el('pf-ltr-min').value = pa.ltrMinH;
     el('pf-ltr-max').value = pa.ltrMaxH;
     Router.go('profile');
@@ -10458,7 +10539,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift', 'pf-reprate', 'pf-repmin', 'pf-repmax', 'pf-chkrate', 'pf-chkmin', 'pf-chkmax'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, callLo: '', callHi: '', callUnit: 'min', cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0 }, c.params || {});
@@ -10487,17 +10568,7 @@ const Profile = (function () {
         /* 主动发红包概率：自由输入%（默认2，她02:05定），用户改了就按用户的 */
         p.giftRedRate = Math.min(100, Math.max(0, Math.round(+el('pf-redgift').value)));
         if (!isFinite(p.giftRedRate)) p.giftRedRate = 0;
-        /* P25 报备：概率默认 80；时长/间隔支持小数但不写出来（她的规矩），默认 0=不启用 */
-        p.repRate = Math.min(100, Math.max(0, parseFloat(el('pf-reprate').value) || 0));
-        if (!isFinite(p.repRate)) p.repRate = 80;
-        p.repMin = Math.max(0, parseFloat(el('pf-repmin').value) || 0);
-        p.repMax = parseFloat(el('pf-repmax').value);
-        if (!isFinite(p.repMax) || p.repMax < p.repMin) p.repMax = p.repMin;
-        p.chkRate = Math.min(100, Math.max(0, parseFloat(el('pf-chkrate').value) || 0));
-        if (!isFinite(p.chkRate)) p.chkRate = 80;
-        p.chkMin = Math.max(0, parseFloat(el('pf-chkmin').value) || 0);
-        p.chkMax = parseFloat(el('pf-chkmax').value);
-        if (!isFinite(p.chkMax) || p.chkMax < p.chkMin) p.chkMax = p.chkMin;
+        /* P28（清然 11:26）：报备六参数搬去报备页「库与设置」，资料卡不再重复 */
         p.ltrMinH = Math.max(0, +el('pf-ltr-min').value || 0);
         p.ltrMaxH = Math.max(p.ltrMinH, +el('pf-ltr-max').value || 0);
         /* 通话时长：留空=默认随机20~90秒；两格按所选单位（分钟/小时）存，支持小数 */
@@ -12105,7 +12176,9 @@ const History = (function () {
     logErr('Promise: ' + (e.reason && e.reason.message || e.reason)));
 
   DB.onQuota = function () {
-    UI.toast('本机存储空间不足：请先导出备份，再清理部分图片');
+    /* P28（清然 11:26）：存储不足也入黑匣子，个人中心「存储空间」可随时看占用 */
+    logErr('quota: 本机存储空间不足，建议导出备份后清理部分图片');
+    UI.toast('存储空间不足：去「我的 → 存储空间」导出备份，清理部分图片');
   };
 
   /* ---------------- 启动 ---------------- */
@@ -12180,7 +12253,33 @@ const History = (function () {
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
        （充值后钱包旧值/导入后会话空/删联系人残留等，back 落地页面即重渲） */
-    Router.register('home', () => Home.render());
+    Router.register('home', () => { Home.render(); refreshStorageRow(); });
+
+    /* P28（清然 11:26）：个人中心「存储空间」——占用一目了然，点开可导出备份/清错误记录 */
+    function storageUsage() {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('LOVEX') === 0) total += (localStorage.getItem(k) || '').length + k.length;
+      }
+      return total * 2;   // UTF-16 每字2字节近似
+    }
+    function refreshStorageRow() {
+      const el = document.getElementById('storage-state');
+      if (!el) return;
+      const mb = storageUsage() / 1048576;
+      el.textContent = mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(storageUsage() / 1024) + ' KB';
+    }
+    const storRow = document.getElementById('my-storage-row');
+    if (storRow) storRow.addEventListener('click', () => {
+      UI.actionSheet('存储空间 · ' + (storageUsage() / 1048576).toFixed(1) + ' MB', [
+        { key: 'export', label: '导出全部备份' },
+        { key: 'clearerr', label: '清空黑匣子错误记录' }
+      ]).then(k => {
+        if (k === 'export') exportAllData();
+        else if (k === 'clearerr') { localStorage.setItem(ERRKEY, '[]'); UI.toast('已清空'); }
+      });
+    });
     Router.register('wallet', () => Wallet.renderWallet());
     Router.register('cash', () => Wallet.renderCash());
     Router.register('bills', () => Wallet.renderBills());
