@@ -3198,6 +3198,11 @@ var Report = (function () {
       q.repMin = rd('cfg-repmin'); q.repMax = Math.max(q.repMin, rd('cfg-repmax'));
       q.chkRate = Math.min(100, rd('cfg-chkrate'));
       q.chkMin = rd('cfg-chkmin'); q.chkMax = Math.max(q.chkMin, rd('cfg-chkmax'));
+      /* P32（清然 13:34）：改完参数立即重排当日计划，不等下次回前台 */
+      const pl = (DB.state.repPlans || {})[curCid];
+      if (pl) pl.day = '';
+      const cc = Home.contactById(curCid);
+      if (cc) try { settle(cc); } catch (e) {}
       DB.save();
     };
     ['cfg-reprate','cfg-repmin','cfg-repmax','cfg-chkrate','cfg-chkmin','cfg-chkmax'].forEach(id =>
