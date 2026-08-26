@@ -2927,7 +2927,7 @@ var Report = (function () {
     if (pl.day !== today) {           // 跨天重排
       pl.day = today;
       pl.autoAt = 0;
-      pl.chkAt = 0; pl.chkDone = false;
+      pl.chkAt = 0;
       pl.askAt = 0; pl.askDone = false;
     }
     const rate = v => Math.min(100, Math.max(0, isFinite(+v) ? +v : 0));
@@ -2936,12 +2936,12 @@ var Report = (function () {
     if (!pl.autoAt && rate(p.repRate) > 0) {
       pl.autoAt = Date.now() + randI(15, 240) * 60000;
     }
-    /* TA 查岗我：chkMin~chkMax 分钟 = 多久后来问（未填则默认 20~180 分钟） */
-    const chkLo = Math.max(0, +p.chkMin || 0), chkHi = Math.max(0, +p.chkMax || 0);
-    if (!pl.chkAt && !pl.chkDone && rate(p.chkRate) > 0 && Math.random() < rate(p.chkRate ?? 80) / 100) {
+    /* TA 查岗我：同报备同构（清然 14:20 确认）——检查点只管节奏，到点掷 chkRate
+       决定这次查不查；没中就安静等下一轮。间隔留空默认 20~180 分钟 */
+    if (!pl.chkAt && rate(p.chkRate) > 0) {
+      const chkLo = Math.max(0, +p.chkMin || 0), chkHi = Math.max(0, +p.chkMax || 0);
       const lo = chkHi > 0 ? chkLo : 20, hi = chkHi > 0 ? Math.max(chkHi, chkLo) : 180;
       pl.chkAt = Date.now() + randI(Math.min(lo, hi), Math.max(lo, hi)) * 60000;
-      pl.chkGap = Math.round((chkLo + Math.random() * (chkHi - chkLo || 1)) * 60000);
     }
     advance(ct);
   }
@@ -2967,13 +2967,18 @@ var Report = (function () {
       closeOpenTa(ct.id, now);
       taReport(ct, { ts: pl.askAt, how: 'asked' });
     }
-    if (pl.chkAt && !pl.chkDone && now >= pl.chkAt) {   // TA 查岗我
-      pl.chkDone = true;
-      const conv = convOf(ct);
-      if (conv) Engine.pushRaw(conv, {
-        id: 'ck' + pl.chkAt.toString(36), from: 'ai', type: 'checkin',
-        text: '在干嘛呢？', ts: pl.chkAt, answered: false
-      });
+    if (pl.chkAt && now >= pl.chkAt) {   // 检查点到点：掷这次查不查，然后排下一轮
+      const p2 = ct.params || {};
+      const cLo = Math.max(0, +p2.chkMin || 0), cHi = Math.max(0, +p2.chkMax || 0);
+      const glo = cHi > 0 ? cLo : 20, ghi = cHi > 0 ? Math.max(cHi, cLo) : 180;
+      pl.chkAt = now + randI(Math.min(glo, ghi), Math.max(glo, ghi)) * 60000;
+      if (Math.random() * 100 < Math.min(100, Math.max(0, isFinite(+p2.chkRate) ? +p2.chkRate : 0))) {
+        const conv = convOf(ct);
+        if (conv) Engine.pushRaw(conv, {
+          id: 'ck' + now.toString(36), from: 'ai', type: 'checkin',
+          text: '在干嘛呢？', ts: now, answered: false
+        });
+      }   // 没中：不查，安静等下一轮
     }
     DB.save();
     if (curCid) try { render(); } catch (e) {}   // 报备页开着就跟手刷新
