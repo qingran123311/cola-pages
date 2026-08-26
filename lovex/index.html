@@ -2144,9 +2144,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-tab{border:1.5px solid var(--line);background:none;color:var(--t2);border-radius:999px;
   font-size:13px;padding:6px 16px}
 .qz-tab.on{border-color:var(--primary);color:var(--primary);font-weight:600}
-.qz-mini-duet{font-style:normal;font-size:10.5px;font-weight:600;color:#a259c4;
+.qz-mini-duet{font-style:normal;font-size:10.5px;font-weight:600;color:var(--t2);
   border:1px solid #d9b3ea;border-radius:6px;padding:1px 6px;flex:none}
-.theme-dark .qz-mini-duet{color:#d3a5e8;border-color:#7a4b8f}
 .qz-c-btns{display:flex;align-items:center;gap:10px;margin-top:10px}
 .qz-mini2{border:none;background:none;color:var(--t2);font-size:12.5px;
   display:inline-flex;align-items:center;gap:4px;flex:none}
@@ -2166,9 +2165,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-sort-line b{width:26px;height:24px;border:1.5px solid var(--line);border-radius:7px;
   display:inline-flex;align-items:center;justify-content:center;color:var(--t2);
   font-weight:600;cursor:pointer}
-.qz-duet-tag{font-size:10.5px;font-weight:600;color:#a259c4;border:1px solid #d9b3ea;
+.qz-duet-tag{font-size:10.5px;font-weight:600;color:var(--t2);border:1px solid var(--line);
   border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:3px}
-.theme-dark .qz-duet-tag{color:#d3a5e8;border-color:#7a4b8f}
+
 .qzv-paper.qz-duet{margin-top:10px}
 .duet-row.hit{background:rgba(46,125,50,.06);border-radius:10px;padding:9px}
 .theme-dark .duet-row.hit{background:rgba(123,196,127,.08)}
@@ -2191,33 +2190,31 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-arch-row em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--t2);flex:none}
 .qz-arch-none{display:block;margin-top:8px;font-size:12px;color:var(--t2)}
 
-/* ===== P34 V3.5 默契挑战：挑战卡 + 单卷双色对照（清然 19:02：只显示一份卷，不同人不同色高亮） ===== */
-/* 聊天里的挑战书卡：紫心图标，完成态转绿 */
-.qz-pc-duet .qz-pc-ico{color:#a259c4}
-.theme-dark .qz-pc-duet .qz-pc-ico{color:#d3a5e8}
+/* ===== P34 V3.5 默契挑战：挑战卡 + 单卷双色对照（清然 19:02：只显示一份卷，不同人不同色高亮）
+   V3.6 配色定稿（清然 19:29：紫色土、和网站不搭）：TA=主题色，我=墨色 var(--t1)，
+   全走主题变量，暗色模式自动反转 ===== */
+/* 聊天里的挑战书卡：墨色心形图标，完成态转绿 */
+.qz-pc-duet .qz-pc-ico{color:var(--t2)}
 .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#2e7d32}
 .theme-dark .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#7bc47f}
-/* 单卷双色：TA=主题色实线描边（原有 .on），我=紫色虚线+「我」小标；双标同现即默契 */
-.qz-opt.mine{border-style:dashed;border-color:#a259c4;color:#8a3fa8}
-.theme-dark .qz-opt.mine{border-color:#9a63b4;color:#d3a5e8}
+/* 单卷双色：TA=主题色实线描边（原有 .on），我=墨色虚线+「我」小标；双标同现即默契 */
+.qz-opt.mine{border-style:dashed;border-color:var(--t1);color:var(--t1)}
 .qz-opt .qz-mine-tag{text-decoration:none;margin-left:auto;flex:none;font-size:10px;line-height:1;
-  padding:2.5px 6px;border-radius:999px;color:#fff;background:#a259c4;font-weight:600}
-.theme-dark .qz-opt .qz-mine-tag{background:#7a4b8f}
-.qz-opt.on.mine{border-color:#a259c4}
+  padding:2.5px 6px;border-radius:999px;color:var(--bg);background:var(--t1);font-weight:600}
+.qz-opt.on.mine{border-color:var(--t1)}
 /* 图例：卷头右侧 你/TA 色点说明 */
 .qz-duo-legend{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
 .qz-duo-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin:0 1px 0 4px}
-.qz-duo-legend .lg-me{background:#a259c4;margin-left:0}
+.qz-duo-legend .lg-me{background:var(--t1);margin-left:0}
 .qz-duo-legend .lg-ta{background:var(--primary)}
 /* 打分/填空的上下两行答案 */
 .qz-duo-line{display:flex;align-items:baseline;gap:8px;margin-top:7px;font-size:14px;line-height:1.45;
   border-radius:9px;padding:6px 9px;letter-spacing:.3px}
-.qz-duo-line span{flex:none;font-size:11px;line-height:1;padding:3px 7px;border-radius:999px;color:#fff;font-weight:600}
-.qz-duo-line.me{background:rgba(162,89,196,.07)}
-.qz-duo-line.me span{background:#a259c4}
+.qz-duo-line span{flex:none;font-size:11px;line-height:1;padding:3px 7px;border-radius:999px;color:var(--bg);font-weight:600}
+.qz-duo-line.me{background:rgba(127,127,140,.09)}
+.qz-duo-line.me span{background:var(--t1)}
 .qz-duo-line.ta{background:var(--primary-ultra)}
 .qz-duo-line.ta span{background:var(--primary)}
-.theme-dark .qz-duo-line.me{background:rgba(211,165,232,.09)}
 .qzv-q .qz-hit{display:block;margin-top:6px}
 /* 应战按钮（详情页待作答态） */
 #qzv-goanswer{width:100%;justify-content:center;margin-top:11px;padding:9px}
@@ -3901,11 +3898,15 @@ var Quiz = (function () {
 
   /* ---------------- V2：TA 聊着聊着突然甩你一道题（她 16:03 定，quizRate 默认0） ----------------
      挂 engine fireBatch 钩子链；抽题池排除排序（卡片上排字交互不友好）。
-     题目存快照（q 字段），题库后续改动不影响已发出的卡；我点选作答→翻面+TA 评论跟进 */
+     题目存快照（q 字段），题库后续改动不影响已发出的卡；我点选作答→翻面+TA 评论跟进。
+     V3.6（她 19:29 定）：quizDuetRate 并入本参数——掷中后二次分流，单独试卷概率更大，
+     其余发起默契挑战；挑战发不出（有没打完的/题池空）自动落回单独试卷。 */
+  const QUIZ_DUET_SHARE = 30;   // 主动发问卷里默契挑战的占比%（她定“单独问卷概率更大”，具体比例待她调）
   function maybeAsk(conv, ct) {
     const rate = Math.min(100, Math.max(0, isFinite(+(ct.params || {}).quizRate) ? +(ct.params || {}).quizRate : 0));
     if (rate <= 0 || !lib().questions.length) return;
     if (Math.random() * 100 >= rate) return;
+    if (Math.random() * 100 < QUIZ_DUET_SHARE && tryDuet(conv, ct)) return;
     const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
     if (!pool.length) return;
     const t = pick(pool);
@@ -3936,14 +3937,10 @@ var Quiz = (function () {
   }
 
   /* ---------------- V3.5：TA 主动发起默契挑战（她 18:07 定） ----------------
-     quizDuetRate 出厂默认 0（同 quizRate 先例：概率类不主动开，等她定数值）；
-     与 maybeAsk 同链互斥（engine 里先掷挑战、中了就跳过抽题），一批回复不蹦俩事件。
-     TA 发起＝TA 已答好：立即落库但详情页对我隐藏，等我点卡应战后揭晓对照。
-     同一联系人还有没打完的挑战就不开新的；一次只考一道题（同 quizask 节奏，数量等她定）。 */
-  function maybeDuet(conv, ct) {
-    const rate = Math.min(100, Math.max(0, isFinite(+(ct.params || {}).quizDuetRate) ? +(ct.params || {}).quizDuetRate : 0));
-    if (rate <= 0) return false;
-    if (Math.random() * 100 >= rate) return false;
+     V3.6 起不再独立掷骰——由 maybeAsk 二段分流调入。同一联系人还有没打完的
+     挑战就不开新的；一次只考一道题（同 quizask 节奏，数量等她定）。
+     TA 发起＝TA 已答好：立即落库但详情页对我隐藏，等我点卡应战后揭晓对照。 */
+  function tryDuet(conv, ct) {
     const busy = (DB.state.quizzes || []).some(z => z.mode === 'duet' && z.targets.includes(ct.id) && !(z.myDuet && z.answers[ct.id]));
     if (busy) return false;
     const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
@@ -4526,13 +4523,11 @@ var Quiz = (function () {
       '<div class="dy-set-t">灵魂拷问 · ' + esc(ct ? Home.displayName(ct) : '') + '</div>' +
       '<div class="dy-rate-row"><span>TA 聊天中突然考你的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-rate" value="' + (p.quizRate ?? 0) + '"> %</em></div>' +
       '<div class="dy-rate-row"><span>TA 觉得选项没心仪的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-supp" value="' + (p.quizSuppRate ?? 10) + '"> %</em></div>' +
-      '<div class="dy-rate-row"><span>TA 主动发起默契挑战的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-duet" value="' + (p.quizDuetRate ?? 0) + '"> %</em></div>' +
-      '<div class="dy-rate-note">第一个默认 0 就是不主动考；第二个是答卷时“都不选、自己写一句”的频率；第三个默认 0 就是不主动发起挑战，开了 TA 答好一题等你应战</div>';
+      '<div class="dy-rate-note">第一个默认 0 就是不主动考；第二个是答卷时“都不选、自己写一句”的频率。第一个开了之后 TA 可能突然考你一道题，也可能发起默契挑战——考题的概率更大</div>';
     const saveC = () => {
       const c = Home.contactById(curCid); if (!c) return;
       (c.params = c.params || {}).quizRate = clampPct(panel.querySelector('#qz-cfg-rate').value);
       c.params.quizSuppRate = clampPct(panel.querySelector('#qz-cfg-supp').value);
-      c.params.quizDuetRate = clampPct(panel.querySelector('#qz-cfg-duet').value);
       DB.save();
     };
     panel.querySelector('#qz-cfg-rate').addEventListener('change', saveC);
@@ -4549,7 +4544,7 @@ var Quiz = (function () {
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, maybeDuet, openDuetCard, sameAns };
+  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, openDuetCard, sameAns };
 })();
 
 /* =====================================================
@@ -7986,22 +7981,13 @@ const Engine = (function () {
             localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
       }
-      /* 灵魂拷问（二期P34）：quizRate 抽题考你 + V3.5 quizDuetRate 默契挑战——同批互斥先掷挑战，一批回复不蹦俩事件 */
-      if (conv.type === 'single' && typeof Quiz !== 'undefined') {
-        let quizFired = false;
-        if (Quiz.maybeDuet) {
-          try { quizFired = !!Quiz.maybeDuet(conv, ct); } catch (e) {
-            try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-              a.push({ t: Date.now(), msg: 'quiz.duet: ' + (e && e.message) });
-              localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-          }
-        }
-        if (!quizFired && Quiz.maybeAsk) {
-          try { Quiz.maybeAsk(conv, ct); } catch (e) {
-            try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-              a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
-              localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-          }
+      /* 灵魂拷问（二期P34）：params.quizRate 开启后 TA 聊着聊着突然考你；
+         V3.6 起 quizDuetRate 已并入（她 19:29 定）：掷中后在 Quiz.maybeAsk 内部二段分流单独试卷/默契挑战 */
+      if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
+        try { Quiz.maybeAsk(conv, ct); } catch (e) {
+          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+            a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
+            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
       }
       if (r < 15) {
