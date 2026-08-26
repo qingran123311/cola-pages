@@ -2123,6 +2123,22 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   padding:6px 13px;margin-left:auto}
 .qz-refill:active{opacity:.7}
 
+/* ===== P34 V2：quizask 卡 + 补充回答徽章（她 17:24/17:28） ===== */
+.qz-rate-row{display:flex;gap:6px;margin:8px 0 2px 2px}
+.qz-star{border:none;background:none;font-size:22px;line-height:1;color:var(--line);
+  padding:0 2px;cursor:pointer}
+.qz-star.live{color:var(--t3)}
+.qz-star.live:hover,.qz-star.on{color:var(--primary)}
+.qz-multi-ok{display:block;width:calc(100% - 4px);margin-top:9px;border:none;
+  background:var(--primary);color:#fff;border-radius:9px;font-size:13px;font-weight:600;
+  padding:8px}
+.qz-opt.live{cursor:pointer}
+.qz-opt.live:active{border-color:var(--primary)}
+.qz-opt.pick{border-color:var(--primary);color:var(--primary)}
+.qz-supp{font-weight:600}
+.qz-supp-tag{font-style:normal;flex:none;background:var(--primary);color:#fff;
+  border-radius:5px;font-size:10px;padding:1px 5px;font-weight:600}
+
 </style>
 </head>
 <body>
@@ -3611,6 +3627,13 @@ var Quiz = (function () {
   }
   function genByType(t, ctId) {
     const opts = t.options || [];
+    /* P34（她 17:24 定）：单选/多选先掷“心动判定”（quizSuppRate 默认10%）——
+       没中＝选项里没有心仪的，不选，从字卡库抽 1~3 条当“补充回答” */
+    if ((t.type === 'single' || t.type === 'multi') && opts.length) {
+      const cp = (Home.contactById(ctId) || {}).params || {};
+      const suppRate = Math.min(100, Math.max(0, isFinite(+cp.quizSuppRate) ? +cp.quizSuppRate : 10));
+      if (Math.random() * 100 < suppRate) return { __supp: true, text: comboText(ctId) };
+    }
     switch (t.type) {
       case 'single': return pick(opts);
       case 'multi': { const k = randI(1, opts.length); return shuffle(opts).slice(0, k); }
@@ -3620,10 +3643,18 @@ var Quiz = (function () {
       default: return '';
     }
   }
-  function genComment(ctId) {
+  /* 字卡 1~3 条拼接+20% emoji/颜文字装饰（她 17:28 口径：评论类支持 EMOJI 拼接），与聊天字卡同管线 */
+  const QZ_SEPS = ['，', '。', '、', '', ''];
+  function comboText(ctId, lo, hi) {
     const cards = cardPool(ctId);
-    if (!cards.length) return '';
-    return shuffle(cards).slice(0, Math.min(randI(1, 3), cards.length)).join('');
+    if (!cards.length) return '……';
+    const n = Math.min(randI(lo || 1, hi || 3), cards.length);
+    let s = Engine.decorate(pick(cards));
+    for (let i = 1; i < n; i++) s += QZ_SEPS[randI(0, QZ_SEPS.length - 1)] + Engine.decorate(pick(cards));
+    return s;
+  }
+  function genComment(ctId) {
+    return comboText(ctId, 1, 3);
   }
 
   /* ---------------- 计划时刻制：到点交卷（心跳+启动双入口，幂等） ---------------- */
@@ -3661,6 +3692,42 @@ var Quiz = (function () {
       if (!pd.length && q.status === 'sent') { q.status = 'done'; dirty = true; }
     });
     if (dirty) { DB.save(); render(); }
+  }
+
+  /* ---------------- V2：TA 聊着聊着突然甩你一道题（她 16:03 定，quizRate 默认0） ----------------
+     挂 engine fireBatch 钩子链；抽题池排除排序（卡片上排字交互不友好）。
+     题目存快照（q 字段），题库后续改动不影响已发出的卡；我点选作答→翻面+TA 评论跟进 */
+  function maybeAsk(conv, ct) {
+    const rate = Math.min(100, Math.max(0, isFinite(+(ct.params || {}).quizRate) ? +(ct.params || {}).quizRate : 0));
+    if (rate <= 0 || !lib().questions.length) return;
+    if (Math.random() * 100 >= rate) return;
+    const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
+    if (!pool.length) return;
+    const t = pick(pool);
+    const now = Date.now();
+    Engine.pushRaw(conv, {
+      id: 'qa' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+      from: 'ai', type: 'quizask', ts: now,
+      q: { title: t.title, type: t.type, options: (t.options || []).slice() },
+      answered: false
+    });
+  }
+
+  /* 我答 TA 的抽题：消息翻面+TA 评论气泡跟进（1~3条字卡，emoji 同管线） */
+  function answerAsk(conv, m, val) {
+    m.answered = true;
+    m.myAns = val;
+    const ct = Home.contactById(conv.peerId);
+    const delay = 1200 + randI(0, 1800);
+    setTimeout(() => {
+      if (!ct) return;
+      Engine.pushRaw(conv, {
+        id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        from: 'ai', type: 'text', text: comboText(ct.id), ts: Date.now()
+      });
+    }, delay);
+    DB.save();
+    return true;
   }
 
   /* ---------------- 主页：试卷列表 ---------------- */
@@ -3702,8 +3769,10 @@ var Quiz = (function () {
     Router.go('quizview');
     renderView();
   }
-  /* 她 17:11：选项要看全——单选/多选列全部选项、TA 选中的点亮；排序带名次；打分画星；填空引用块 */
+  /* 她 17:11：选项要看全——单选/多选列全部选项、TA 选中的点亮；排序带名次；打分画星；填空引用块。
+     __supp 形态＝她 17:24 定的“选项没心仪的不硬选”，显示补充回答徽章+字卡文本 */
   function ansBlock(t, a) {
+    if (a && a.__supp) return '<div class="qz-opts"><span class="qz-opt on qz-supp"><i class="qz-supp-tag">补</i>' + esc(a.text) + '</span></div>';
     if (a == null || a === '') return '<div class="qzv-a">（空）</div>';
     if (t.type === 'rate') return '<div class="qzv-a stars">' + starRow(a) + '</div>';
     if (t.type === 'text') return '<div class="qzv-a">' + esc(String(a)) + '</div>';
@@ -4059,14 +4128,19 @@ var Quiz = (function () {
     panel.innerHTML =
       '<div class="dy-set-t">灵魂拷问 · ' + esc(ct ? Home.displayName(ct) : '') + '</div>' +
       '<div class="dy-rate-row"><span>TA 聊天中突然考你的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-rate" value="' + (p.quizRate ?? 0) + '"> %</em></div>' +
-      '<div class="dy-rate-note">默认 0 就是不主动考；设了概率，TA 聊着聊着就可能甩你一道题（下一版生效）</div>';
-    panel.querySelector('#qz-cfg-rate').addEventListener('change', () => {
+      '<div class="dy-rate-row"><span>TA 觉得选项没心仪的概率</span><em><input type="number" min="0" max="100" step="0.1" id="qz-cfg-supp" value="' + (p.quizSuppRate ?? 10) + '"> %</em></div>' +
+      '<div class="dy-rate-note">第一个默认 0 就是不主动考；第二个是答卷时“都不选、自己写一句”的频率</div>';
+    const saveC = () => {
       const c = Home.contactById(curCid); if (!c) return;
-      const v = parseFloat(panel.querySelector('#qz-cfg-rate').value);
-      (c.params = c.params || {}).quizRate = isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+      (c.params = c.params || {}).quizRate = clampPct(panel.querySelector('#qz-cfg-rate').value);
+      c.params.quizSuppRate = clampPct(panel.querySelector('#qz-cfg-supp').value);
       DB.save();
-    });
+    };
+    panel.querySelector('#qz-cfg-rate').addEventListener('change', saveC);
+    panel.querySelector('#qz-cfg-supp').addEventListener('change', saveC);
   }
+  function clampPct(v) { const n = parseFloat(v); return isFinite(n) ? Math.min(100, Math.max(0, n)) : 0; }
+
 
   /* ---------------- init：按钮接线 ---------------- */
   function init() {
@@ -4076,7 +4150,7 @@ var Quiz = (function () {
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow };
+  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName };
 })();
 
 /* =====================================================
@@ -6159,6 +6233,53 @@ const Chat = (function () {
         }
         bub.addEventListener('click', () => { Quiz.viewQuiz(z.id); });
       }
+    } else if (m.type === 'quizask') {
+      /* P34 V2：TA 突然考你（她 16:03 定，quizRate 触发）；点选项作答→翻面+TA 评论跟进 */
+      bub.classList.add('bubble-qz');
+      const q = m.q || {};
+      let inner = '<div class="qz-card-head">' + I('quiz', 13) + '<b>' + esc(q.title || '') + '</b><span>' +
+        (m.answered ? '已作答' : (Quiz.typeName(q.type) || '拷问')) + '</span></div>';
+      if (q.type === 'rate') {
+        inner += '<div class="qz-rate-row">' + [1, 2, 3, 4, 5].map(n =>
+          '<button class="qz-star' + (!m.answered ? ' live' : '') + (m.myAns >= n ? ' on' : '') + '" data-v="' + n + '">★</button>').join('') + '</div>';
+      } else if (q.type === 'text') {
+        inner += '<div class="qz-card-ans on">' + esc(m.myAns || (m.answered ? '' : '点击输入…')) + '</div>';
+      } else {
+        inner += (q.options || []).map(o => {
+          const sel = Array.isArray(m.myAns) ? m.myAns.includes(o) : m.myAns === o;
+          return '<div class="qz-opt' + (sel ? ' on' : '') + (!m.answered ? ' live' : '') + '" data-o="' + esc(o) + '">' +
+            (sel ? I('check', 10) : '') + esc(o) + '</div>';
+        }).join('');
+      }
+      bub.innerHTML = '<div class="qz-card' + (m.answered ? ' done' : '') + '">' + inner + '</div>';
+      if (!m.answered) {
+        const card = bub.querySelector('.qz-card');
+        card.addEventListener('click', async e => {
+          const star = e.target.closest('.qz-star');
+          const opt = e.target.closest('.qz-opt.live');
+          if (star) { Quiz.answerAsk(cur, m, +star.dataset.v); Chat.rerender(); }
+          else if (opt && q.type !== 'multi') { Quiz.answerAsk(cur, m, opt.dataset.o); Chat.rerender(); }
+          else if (opt && q.type === 'multi') { opt.classList.toggle('pick'); }   /* 多选先勾选，确认键统一提交 */
+          else if (q.type === 'text') {
+            Home.openForm({
+              title: q.title,
+              fields: [{ key: 'v', label: '回答', maxlength: 60 }],
+              okText: '交卷',
+              onSubmit(v) { if ((v.v || '').trim()) { Quiz.answerAsk(cur, m, v.v.trim()); Chat.rerender(); } }
+            });
+          }
+        });
+        if (q.type === 'multi') {
+          const bar = document.createElement('button');
+          bar.className = 'qz-multi-ok'; bar.textContent = '就这些';
+          bar.addEventListener('click', () => {
+            const picked = [...card.querySelectorAll('.qz-opt.pick')].map(x => x.dataset.o);
+            if (!picked.length) { UI.toast('至少挑一个呀'); return; }
+            Quiz.answerAsk(cur, m, picked); Chat.rerender();
+          });
+          card.appendChild(bar);
+        }
+      }
     } else if (m.type === 'letter') {
       /* 信件卡片（P8）：米白信纸风，点击看全文 */
       bub.classList.add('bubble-letter');
@@ -7441,6 +7562,14 @@ const Engine = (function () {
             localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
       }
+      /* 灵魂拷问（二期P34）：params.quizRate 开启后 TA 聊着聊着突然甩一道题卡；同一钩子链 */
+      if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
+        try { Quiz.maybeAsk(conv, ct); } catch (e) {
+          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+            a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
+            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
+        }
+      }
       if (r < 15) {
         text = pickDeco(Math.random() < 0.5 ? 'em' : 'kao');       // 单独emoji/颜文字
       } else if (r < 15 + imgProb && soloImgOK && stickers.length) {
@@ -7621,7 +7750,7 @@ const Engine = (function () {
     }
   }
 
-  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive };
+  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate };
 })();
 
 /* =====================================================
