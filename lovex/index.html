@@ -2925,18 +2925,19 @@ var Report = (function () {
       pl.askAt = 0; pl.askDone = false;
     }
     const rate = v => Math.min(100, Math.max(0, isFinite(+v) ? +v : 0));
-    /* TA 自动报备：每天至多一条，掷 repRate%，持续 repMin~repMax 分钟（>0 才启用） */
+    /* P31（清然 12:13“设置了怎么没触发”）：门槛改为只看概率>0，不再要求时长/间隔也填；
+       触发时刻从“全天随机”改为“近期随机”，设置完当天就能见到效果 */
     const repLo = Math.max(0, +p.repMin || 0), repHi = Math.max(0, +p.repMax || 0);
-    if (!pl.autoAt && !pl.autoDone && repHi > 0 && Math.random() < rate(p.repRate ?? 80) / 100) {
-      pl.autoAt = Math.max(Date.now() + 60000, randTsOfDay());   // 至少 1 分钟后
-      pl.autoDur = Math.round((repLo + Math.random() * (repHi - repLo)) * 60000);
+    if (!pl.autoAt && !pl.autoDone && rate(p.repRate) > 0 && Math.random() < rate(p.repRate ?? 80) / 100) {
+      pl.autoAt = Date.now() + randI(15, 240) * 60000;   // 15分钟~4小时内自然冒出来
+      pl.autoDur = (repLo + Math.random() * (repHi - repLo)) * 60000;
     }
-    /* TA 查岗我：chkMin~chkMax 分钟间隔语义——上次查岗/排程后隔一段再来；
-       简化第一版：每天掷 chkRate% 排一个时刻，到点发查岗卡片 */
+    /* TA 查岗我：chkMin~chkMax 分钟 = 多久后来问（未填则默认 20~180 分钟） */
     const chkLo = Math.max(0, +p.chkMin || 0), chkHi = Math.max(0, +p.chkMax || 0);
-    if (!pl.chkAt && !pl.chkDone && chkHi > 0 && Math.random() < rate(p.chkRate ?? 80) / 100) {
-      pl.chkAt = Math.max(Date.now() + 60000, randTsOfDay());
-      pl.chkGap = Math.round((chkLo + Math.random() * (chkHi - chkLo)) * 60000); // 记录间隔口径供展示
+    if (!pl.chkAt && !pl.chkDone && rate(p.chkRate) > 0 && Math.random() < rate(p.chkRate ?? 80) / 100) {
+      const lo = chkHi > 0 ? chkLo : 20, hi = chkHi > 0 ? Math.max(chkHi, chkLo) : 180;
+      pl.chkAt = Date.now() + randI(Math.min(lo, hi), Math.max(lo, hi)) * 60000;
+      pl.chkGap = Math.round((chkLo + Math.random() * (chkHi - chkLo || 1)) * 60000);
     }
     advance(ct);
   }
@@ -2958,7 +2959,7 @@ var Report = (function () {
       pl.chkDone = true;
       const conv = convOf(ct);
       if (conv) Engine.pushRaw(conv, {
-        id: 'ck' + pl.chkAt.toString(36), from: 'ta', type: 'checkin',
+        id: 'ck' + pl.chkAt.toString(36), from: 'ai', type: 'checkin',
         text: '在干嘛呢？', ts: pl.chkAt, answered: false
       });
     }
@@ -2978,7 +2979,7 @@ var Report = (function () {
       place: g.place, doing: g.doing, mood: g.mood,
       startTs: opt.ts, endTs: opt.dur > 0 ? opt.ts + opt.dur : null, ts: opt.ts, text: text
     });
-    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ta', type: 'text', text: text, ts: opt.ts });
+    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ai', type: 'text', text: text, ts: opt.ts });
   }
 
   /* ---------------- 我的动作 ---------------- */
@@ -3183,8 +3184,8 @@ var Report = (function () {
       '<div class="dy-rate-row"><span>TA 自动报备概率</span><em>' + num('cfg-reprate', p.repRate ?? 0) + ' %</em></div>' +
       '<div class="dy-rate-row"><span>报备持续时长（分钟）</span><em>' + num('cfg-repmin', p.repMin ?? 0) + ' - ' + num('cfg-repmax', p.repMax ?? 0) + '</em></div>' +
       '<div class="dy-rate-row"><span>TA 来查岗概率</span><em>' + num('cfg-chkrate', p.chkRate ?? 0) + ' %</em></div>' +
-      '<div class="dy-rate-row"><span>查岗间隔（分钟）</span><em>' + num('cfg-chkmin', p.chkMin ?? 0) + ' - ' + num('cfg-chkmax', p.chkMax ?? 0) + '</em></div>' +
-      '<div class="dy-rate-note">填 0 就是不开启；时长/间隔支持小数；改动即存</div>' +
+      '<div class="dy-rate-row"><span>多久后来查你（分钟）</span><em>' + num('cfg-chkmin', p.chkMin ?? 0) + ' - ' + num('cfg-chkmax', p.chkMax ?? 0) + '</em></div>' +
+      '<div class="dy-rate-note">填 0 就是不开启；只填概率也生效（时间随机）；改动即存</div>' +
       '<div class="dy-set-t">TA 的报备库</div>' +
       libRow('places', '地点') + libRow('doings', '行动') + libRow('moods', '情绪词');
 
@@ -12281,6 +12282,11 @@ const History = (function () {
     /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
     DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
     Report.init();   /* P25 报备页按钮接线 */
+    /* P31（清然 12:57“设置了怎么没触发”）：运行中自驱落库——之前只在启动/回前台跑
+       advance，网页一直开着时到点的报备/查岗会干等；30s 轻扫一次（纯内存比较，幂等） */
+    setInterval(() => {
+      DB.state.contacts.forEach(ct => { try { Report.advance(ct); } catch (e) {} });
+    }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
        系统通知交给 maybeSys 的旧站口径直发）。
