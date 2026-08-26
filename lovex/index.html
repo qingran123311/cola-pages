@@ -2022,8 +2022,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="cell-group card">
         <button class="cell" id="my-wallet-row"><span class="cell-icon"><i data-icon="wallet"></i></span><span class="cell-text">钱包</span><span class="chevron">›</span></button>
         <button class="cell" data-go="settings"><span class="cell-icon"><i data-icon="settings"></i></span><span class="cell-text">前往个人中心</span><span class="chevron">›</span></button>
-        <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
-        <button class="cell" id="my-storage-row"><span class="cell-icon"><i data-icon="database"></i></span><span class="cell-text">存储空间</span><span class="cell-ext" id="storage-state">-</span><span class="chevron">›</span></button>
       </div>
     </div>
   </section>
@@ -2137,6 +2135,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="cell-data"><span class="cell-icon"><i data-icon="download"></i></span><span class="cell-text">数据管理</span><span class="chevron">›</span></button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
+        <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-keepalive"><span class="cell-icon"><i data-icon="pulse"></i></span><span class="cell-text">后台保活</span><span class="cell-value" id="ka-val">关</span></button>
       </div>
       <p class="foot-note">所有数据仅保存在本机浏览器中，卸载或清缓存前记得导出备份</p>
@@ -12176,9 +12175,9 @@ const History = (function () {
     logErr('Promise: ' + (e.reason && e.reason.message || e.reason)));
 
   DB.onQuota = function () {
-    /* P28（清然 11:26）：存储不足也入黑匣子，个人中心「存储空间」可随时看占用 */
+    /* P28（清然 11:26）：存储不足也入黑匣子；管理入口在个人中心「存储管理」 */
     logErr('quota: 本机存储空间不足，建议导出备份后清理部分图片');
-    UI.toast('存储空间不足：去「我的 → 存储空间」导出备份，清理部分图片');
+    UI.toast('存储空间不足：去个人中心的存储管理清理或导出备份');
   };
 
   /* ---------------- 启动 ---------------- */
@@ -12253,33 +12252,7 @@ const History = (function () {
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
        （充值后钱包旧值/导入后会话空/删联系人残留等，back 落地页面即重渲） */
-    Router.register('home', () => { Home.render(); refreshStorageRow(); });
-
-    /* P28（清然 11:26）：个人中心「存储空间」——占用一目了然，点开可导出备份/清错误记录 */
-    function storageUsage() {
-      let total = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.indexOf('LOVEX') === 0) total += (localStorage.getItem(k) || '').length + k.length;
-      }
-      return total * 2;   // UTF-16 每字2字节近似
-    }
-    function refreshStorageRow() {
-      const el = document.getElementById('storage-state');
-      if (!el) return;
-      const mb = storageUsage() / 1048576;
-      el.textContent = mb >= 1 ? mb.toFixed(1) + ' MB' : Math.round(storageUsage() / 1024) + ' KB';
-    }
-    const storRow = document.getElementById('my-storage-row');
-    if (storRow) storRow.addEventListener('click', () => {
-      UI.actionSheet('存储空间 · ' + (storageUsage() / 1048576).toFixed(1) + ' MB', [
-        { key: 'export', label: '导出全部备份' },
-        { key: 'clearerr', label: '清空黑匣子错误记录' }
-      ]).then(k => {
-        if (k === 'export') exportAllData();
-        else if (k === 'clearerr') { localStorage.setItem(ERRKEY, '[]'); UI.toast('已清空'); }
-      });
-    });
+    Router.register('home', () => Home.render());
     Router.register('wallet', () => Wallet.renderWallet());
     Router.register('cash', () => Wallet.renderCash());
     Router.register('bills', () => Wallet.renderBills());
@@ -12472,6 +12445,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     });
 
     /* --- 存储管理：本地占用概览（策划页面3） --- */
+    /* 黑匣子错误计数（P28：quota 等系统级异常也入档，这里可见） */
+    function blackboxLine() {
+      try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+        return a.length ? '黑匣子错误 ' + a.length + ' 条（长按心事簿标题可看）\n' : ''; } catch (e) { return ''; }
+    }
     document.getElementById('cell-storage').addEventListener('click', () => {
       let bytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
@@ -12494,6 +12472,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           + 'AI 好友 ' + st.contacts.length + ' 位 · 群聊 ' + st.groups.length + ' 个\n'
           + '聊天消息 ' + msgN + ' 条 · 往来信件 ' + letterN + ' 封\n'
           + '图片表情 ' + stickerN + ' 张\n'
+          + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
       });
     });
