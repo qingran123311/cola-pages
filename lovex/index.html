@@ -2420,7 +2420,7 @@ const DB = (function () {
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
       kinshipAuto: {},                 // P26 亲属卡主动赠送限次计数：contactId -> 次数（一生最多2次，她 08-26 定）
-      repPlans: {},                    // P25 报备当日计划（计划时刻制）：contactId -> {day,autoAt,autoDur,autoDone,chkAt,chkDone,askAt,askDone}
+      repPlans: {},                    // P25/P33 报备当日计划（计划时刻制）：contactId -> {day, autoAt, chkAt, askAt, askDone}（P33 起 autoDone/chkDone/autoDur 退役：到点掷骰、循环不止）
       reportLib: {                     // P25 TA 报备语料库（她口供：地点库+动作词，偶尔随机带情绪词）
         places: ['图书馆', '教室', '宿舍', '食堂', '健身房', '超市', '操场', '咖啡店', '实验室', '回家路上'],
         doings: ['上自习', '上课', '吃饭', '锻炼', '买东西', '跑步', '复习功课', '散步', '赶作业', '休息一会儿'],
