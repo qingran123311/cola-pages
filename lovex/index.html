@@ -2706,28 +2706,8 @@ var Notify = (function () {
     try {
       var opt = { body: '能看见这条就通了～之后 TA 来消息也会这样弹', tag: 'lovex-test', data: {} };
       var t = 'LOVE♡X 通知打通了';
-      if (swOK_()) {
-        navigator.serviceWorker.getRegistration().then(function (reg) {
-          if (reg) reg.showNotification(t, opt);
-          else fallback(t, opt);
-        }).catch(function () { fallback(t, opt); });
-      } else fallback(t, opt);
-    } catch (e) {}
-  }
-
-  /* 错过补偿（她 09:36：切后台手机冻结页面，TA 引擎跟着睡，回来才解冻）：
-     回前台的瞬间若发现新未读，补弹一条系统摘要，通知栏留底可直达 */
-  function catchUp(n) {
-    try {
-      if (!supported() || Notification.permission !== 'granted' || !DB.state.settings.notify) return;
-      var opt = { body: '你不在的时候来了 ' + n + ' 条新消息，点开看', tag: 'lovex-catchup', data: {} };
-      var t = 'LOVE♡X · 新消息';
-      if (swOK_()) {
-        navigator.serviceWorker.getRegistration().then(function (reg) {
-          if (reg) reg.showNotification(t, opt);
-          else fallback(t, opt);
-        }).catch(function () { fallback(t, opt); });
-      } else fallback(t, opt);
+      try { direct(t, opt); }
+      catch (e) { swShow(t, opt); }
     } catch (e) {}
   }
 
@@ -2743,11 +2723,11 @@ var Notify = (function () {
   }
 
   /* pushRaw 非 viewing 分支调用（engine 传入拼好的标题/摘要）
-     hidden 才弹：前台已有微信式横幅，别双份轰炸 */
+     她 09:58 拍板学旧站口径：页面看得见且有焦点时不弹（应用内已有横幅），其余情况都弹 */
   function maybeSys(conv, m, title, body) {
     try {
       if (!DB.state.settings.notify || !supported()) return;
-      if (!document.hidden) return;
+      if (document.visibilityState === 'visible' && document.hasFocus()) return;
       if (Notification.permission !== 'granted') return;
       var peer = conv.type === 'group' ? null : Home.contactById(conv.peerId);
       var icon = peer && peer.avatar ? peer.avatar : undefined;
@@ -2757,28 +2737,28 @@ var Notify = (function () {
         tag: 'lovex-' + conv.id,          // 同会话连发只顶一条，不刷屏
         data: { convId: conv.id }
       };
-      if (swOK_()) {
-        /* 安卓 Chrome 必须经 SW 弹；不依赖 controller（首次注册后要下次导航才有），
-           getRegistration 立即可用——她实测安卓弹不出来，这里是主嫌疑 */
-        navigator.serviceWorker.getRegistration().then(function (reg) {
-          if (reg) reg.showNotification(title, opt);
-          else fallback(title, opt);
-        }).catch(function () { fallback(title, opt); });
-      } else {
-        fallback(title, opt);
-      }
+      /* 她 09:58 实证拍板：裸 Notification 直发优先（她的浏览器吃这套、后台 tab 不死），
+         标准安卓 Chrome 构造器非法会抛错——那时才降级 SW 通道（旧路径保留作备胎） */
+      try { direct(title, opt); }
+      catch (e) { swShow(title, opt); }
     } catch (e) {}
   }
 
-  /* 构造器降级（桌面/file://）：点击聚焦并跳进会话 */
-  function fallback(title, opt) {
-    try {
-      var n = new Notification(title, opt);
-      n.onclick = function () {
-        try { window.focus(); Home.openConv(opt.data.convId); } catch (e) {}
-        n.close();
-      };
-    } catch (e) {}
+  /* 裸构造器直发（旧站同款）：点击聚焦并跳进会话 */
+  function direct(title, opt) {
+    var n = new Notification(title, opt);
+    n.onclick = function () {
+      try { window.focus(); Home.openConv(opt.data.convId); } catch (e) {}
+      n.close();
+    };
+  }
+
+  /* SW 通道备胎：仅当直发抛错时走（标准安卓 Chrome） */
+  function swShow(title, opt) {
+    if (!swOK_()) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (reg) reg.showNotification(title, opt);
+    }).catch(function () {});
   }
 
   /* SW 通知点击回页：接住 sw.js postMessage，跳进对应会话 */
@@ -2804,7 +2784,7 @@ var Notify = (function () {
     if (el) el.textContent = rowText();
   }
 
-  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, diag: diag, test: test, catchUp: catchUp };
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, diag: diag, test: test };
 })();
 
 /* ============================================================
@@ -12049,19 +12029,13 @@ const History = (function () {
     DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
     Report.init();   /* P25 报备页按钮接线 */
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
-       把所有引擎补跑一遍，错过的消息立刻落库；600ms 后若发现新未读，
-       补弹一条系统摘要（通知栏留底）——后台实时推送需服务器，这是纯本地网页的天花板内能做到的最快 */
+       把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
+       系统通知交给 maybeSys 的旧站口径直发） */
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
-      const unread = () => DB.state.convs.reduce((s, v) => s + (v.unread || 0), 0);
-      const before = unread();
       DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
       DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
       Home.render();
-      setTimeout(() => {
-        const after = unread();
-        if (after > before) Notify.catchUp(after);
-      }, 600);
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
        （充值后钱包旧值/导入后会话空/删联系人残留等，back 落地页面即重渲） */
