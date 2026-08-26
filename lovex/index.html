@@ -2666,30 +2666,64 @@ var Notify = (function () {
     } catch (e) {}
   }
 
-  /* 我的页「新消息通知」开关：点=请求权限并开启 / 再点关闭 */
+  /* 我的页「新消息通知」开关：点=请求权限并开启 / 再点关闭。
+     她 08-26：安卓权限全开仍不弹——加三件套：开启成功当场发测试通知、
+     denied 给精确解锁路径、长按 cell 出诊断面板定位卡在哪一步 */
   function toggle() {
-    if (!supported()) { UI.toast('这个浏览器不支持系统通知'); return false; }
+    if (!supported()) { UI.toast('这个浏览器不支持系统通知，换 Chrome 打开试试'); return false; }
     if (!DB.state.settings.notify) {
+      if (Notification.permission === 'denied') {
+        UI.toast('浏览器记住了拒绝：地址栏左侧锁/叹号 → 通知 → 允许，再回来重开');
+        return false;
+      }
+      let done = false;
       var after = function (p) {
+        if (done) return; done = true;
         if (p === 'granted') {
           DB.state.settings.notify = true; DB.save();
-          UI.toast('新消息通知已开启');
+          test();
+          UI.toast('已开启，刚发了条测试通知，看看通知栏');
         } else if (p === 'denied') {
-          UI.toast('通知权限被浏览器拒绝了，要去浏览器设置里允许');
+          UI.toast('授权被拒了：地址栏左侧锁/叹号 → 通知 → 允许');
         } else {
-          UI.toast('还没有授权，再点一次试试');
+          UI.toast('没选允许，再点一次开关重试');
         }
-        return p === 'granted';
+        refreshRow();
       };
       try {
-        var r = Notification.requestPermission(function (p) { after(p); refreshRow(); });
-        if (r && r.then) r.then(function (p) { after(p); refreshRow(); });
+        var r = Notification.requestPermission(function (p) { after(p); });
+        if (r && r.then) r.then(function (p) { after(p); });
       } catch (e) { UI.toast('无法发起授权'); }
       return false;
     }
     DB.state.settings.notify = false; DB.save();
     UI.toast('新消息通知已关闭');
     return true;
+  }
+
+  /* 测试通知：开启后立刻验证链路通不通，不用等 TA 来消息 */
+  function test() {
+    try {
+      var opt = { body: '能看见这条就通了～之后 TA 来消息也会这样弹', tag: 'lovex-test', data: {} };
+      var t = 'LOVE♡X 通知打通了';
+      if (swOK_()) {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) reg.showNotification(t, opt);
+          else fallback(t, opt);
+        }).catch(function () { fallback(t, opt); });
+      } else fallback(t, opt);
+    } catch (e) {}
+  }
+
+  /* 诊断串（她截图发我，一步定位卡在哪）：协议/支持/权限/开关/SW */
+  function diag() {
+    var l = [];
+    l.push('打开方式: ' + location.protocol.replace(':', '') + (location.protocol === 'https:' ? '' : '(本地文件弹不了系统通知，要用线上网址)'));
+    l.push('通知API: ' + (supported() ? '支持' : '不支持(这个浏览器不行，用Chrome)'));
+    l.push('权限状态: ' + (supported() ? Notification.permission : '-'));
+    l.push('网站开关: ' + (DB.state.settings.notify ? '已开' : '未开'));
+    l.push('通知服务(SW): ' + (swOK_() ? 'HTTPS可用' : '此环境不可用'));
+    return l.join('\n');
   }
 
   /* pushRaw 非 viewing 分支调用（engine 传入拼好的标题/摘要）
@@ -2754,7 +2788,7 @@ var Notify = (function () {
     if (el) el.textContent = rowText();
   }
 
-  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow };
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, diag: diag, test: test };
 })();
 
 /* ============================================================
@@ -12158,6 +12192,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     document.getElementById('my-notify-row').addEventListener('click', () => {
       Notify.toggle();
       setTimeout(() => { const s = document.getElementById('notify-state'); if (s) s.textContent = Notify.rowText(); }, 800);
+    });
+    /* 长按通知行=诊断+手动测试（她安卓弹不出来时截图诊断面板给我定位） */
+    document.getElementById('my-notify-row').addEventListener('contextmenu', async () => {
+      const ok = await UI.confirmBox({ title: '通知诊断', text: Notify.diag(), okText: '发条测试' });
+      if (ok) { Notify.test(); UI.toast('发了，看下系统通知栏'); }
     });
 
     /* --- 全局聊天背景（策划七-2 模式一；单聊可在资料卡单独覆盖） --- */
