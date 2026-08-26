@@ -3064,7 +3064,7 @@ var Report = (function () {
     /* 竖排单边时间线（倒序+日期分隔条） */
     const list = [...all].sort((a, b) => b.startTs - a.startTs);
     if (!list.length) {
-      box.innerHTML = '<div class="rp-empty">还没有报备记录<br><small>记一笔，或者戳上面的按钮试试</small></div>';
+      box.innerHTML = '<div class="rp-empty">还没有报备记录<br><small>点上面的「报备」记一条试试</small></div>';
       return;
     }
     let html = '', lastDay = '';
