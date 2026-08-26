@@ -5490,6 +5490,36 @@ const Chat = (function () {
     });
   }
 
+  /* P27（清然 10:16：全 tab 都要能编辑分组和删除）：浏览态长按单张表情＝
+     移动分组/屏蔽/删除，emoji/颜文字/我的/专属/图片五栏一致，不用进管理模式 */
+  function edMoveOne(lib, it) {
+    const opts = lib.groups.filter(g => !g.blocked).map(g =>
+      ({ key: g.id, label: '移到「' + g.name + '」' }));
+    opts.push({ key: '__new', label: '新建分组…' });
+    UI.actionSheet('移动到分组', opts).then(k => {
+      if (!k) return;
+      const apply = (gid, gname) => { it.groupId = gid; DB.save(); renderEmojiDrawer(); UI.toast('已移到「' + gname + '」'); };
+      if (k === '__new') {
+        Home.openForm({
+          title: '新建分组', okText: '创建',
+          fields: [{ key: 'name', label: '分组名', required: true }],
+          onSubmit(v) {
+            const name = (v.name || '').trim();
+            if (!name) return '先输入分组名';
+            const dup = lib.groups.find(g => g.name === name);
+            if (dup) { apply(dup.id, dup.name); return; }
+            const ng = { id: gidLocal(), name, blocked: false };
+            lib.groups.push(ng);
+            apply(ng.id, name);
+          }
+        });
+        return;
+      }
+      const g = lib.groups.find(x => x.id === k);
+      apply(k, g ? g.name : '默认');
+    });
+  }
+
   /* ---------------- P6 双向拍一拍（策刓664-679/976-979） ---------------- */
   const PAT_CD = 3000;                 // 全局 3 秒冷却
   let patLastTs = 0;
@@ -5656,7 +5686,36 @@ const Chat = (function () {
       });
     });
 
+    /* P27：长按单张表情＝移动/屏蔽/删除菜单（浏览态）；长按后吞掉紧随的一次 click 防误发 */
+    let edSupp = false;
+    document.getElementById('ed-body').addEventListener('contextmenu', e => {
+      const cell = e.target.closest('.ed-cell[data-id]');
+      if (!cell || edManage || !cur) return;
+      e.preventDefault();
+      edSupp = true; setTimeout(() => { edSupp = false; }, 450);
+      const lib = stickerLib(edTab);
+      const it = lib.items.find(x => x.id === cell.dataset.id);
+      if (!it) return;
+      UI.actionSheet('这张表情', [
+        { key: 'move', label: '移动到分组…' },
+        { key: 'block', label: it.blocked ? '取消屏蔽' : '屏蔽（AI 不再发）' },
+        { key: 'del', label: '删除', danger: true }
+      ]).then(async k => {
+        if (k === 'move') edMoveOne(lib, it);
+        else if (k === 'block') {
+          it.blocked = !it.blocked; DB.save(); renderEmojiDrawer();
+          UI.toast(it.blocked ? '已屏蔽，AI 不会发这些了' : '已取消屏蔽');
+        } else if (k === 'del') {
+          const ok = await UI.confirmBox({ title: '删除表情', text: '删除这张？不可恢复。', danger: true, okText: '删除' });
+          if (!ok) return;
+          lib.items = lib.items.filter(x => x !== it);
+          DB.save(); renderEmojiDrawer();
+        }
+      });
+    });
+
     document.getElementById('ed-body').addEventListener('click', e => {
+      if (edSupp) { edSupp = false; return; }   // 长按菜单后的幽灵点击不发送
       const cell = e.target.closest('[data-id]');
       if (!cell) return;
       const lib = stickerLib(edTab);
@@ -5849,7 +5908,7 @@ const Chat = (function () {
     /* 管理模式操作栏 */
     document.getElementById('ed-op-all').addEventListener('click', () => {
       const shown = [...document.querySelectorAll('#ed-body .ed-cell[data-id]')];
-      const all = shown.length && shown.every(p => edSel.has(p.dataset.img));
+      const all = shown.length && shown.every(p => edSel.has(p.dataset.id));
       shown.forEach(p => all ? edSel.delete(p.dataset.img) : edSel.add(p.dataset.img));
       renderEmojiDrawer();
     });
