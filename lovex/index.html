@@ -12259,9 +12259,14 @@ const History = (function () {
     logErr('Promise: ' + (e.reason && e.reason.message || e.reason)));
 
   DB.onQuota = function () {
-    /* P28（清然 11:26）：存储不足也入黑匣子；管理入口在个人中心「存储管理」 */
+    /* P33（清然 14:44 拍板“很吵很麻烦烦死了”）：存储不足完全静默——连 toast 都不弹，
+       只记黑匣子；且同类错误连发时只记首条，别把其他错误挤出匣子。
+       查看口＝个人中心→存储管理（占用概览+黑匣子计数） */
+    try {
+      const arr = JSON.parse(localStorage.getItem(ERRKEY) || '[]');
+      if (arr.length && String(arr[arr.length - 1].msg || '').indexOf('quota:') === 0) return;
+    } catch (e) {}
     logErr('quota: 本机存储空间不足，建议导出备份后清理部分图片');
-    UI.toast('存储空间不足：去个人中心的存储管理清理或导出备份');
   };
 
   /* ---------------- 启动 ---------------- */
