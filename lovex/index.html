@@ -5305,7 +5305,8 @@ const Chat = (function () {
       if (!lib || !lib.items) return;
       const loose = lib.items.filter(it => (it.img || it.text) && !it.groupId);
       if (!loose.length) return;
-      let def = lib.groups.find(g => g.name === '默认');
+      /* P27：兑底组=第一个分组（id 锚点），名字可改名不再依赖「默认」字面 */
+      let def = lib.groups[0];
       if (!def) { def = { id: gidLocal(), name: '默认', blocked: false }; lib.groups.push(def); }
       loose.forEach(it => { it.groupId = def.id; });
     });
@@ -5316,10 +5317,10 @@ const Chat = (function () {
         ka.items.push({ id: 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           text: k, blocked: false, groupId: null });
     });
-    if (!em.groups.some(g => g.name === '默认'))
+    if (!em.groups.length)
       em.groups.push({ id: gidLocal(), name: '默认', blocked: false });
     if (!em.items.length) {
-      const def = em.groups.find(g => g.name === '默认');
+      const def = em.groups[0];
       EMOJI_PANEL.forEach(e => em.items.push(
         { id: 'se' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           text: e, blocked: false, groupId: def.id }));
@@ -5359,7 +5360,11 @@ const Chat = (function () {
     document.getElementById('ed-op-move').hidden = false;
     if (grouped) {
       /* 分组胶囊行：浏览与管理共用（清然 2026-08-23：不进管理也能切分组看） */
-      const defG = lib.groups.find(g => g.name === '默认' && !g.blocked);
+      /* P27：空库也保证有兑底组，长按改名入口全状态一致 */
+      if (!lib.groups.length) { lib.groups.push({ id: gidLocal(), name: '默认', blocked: false }); DB.save(); }
+      /* P27：兑底组=第一个分组（id 锚点），胶囊名随改名实时变 */
+      const g0 = lib.groups[0];
+      const defG = (g0 && !g0.blocked) ? g0 : null;
       const curGid = edGrp !== null ? edGrp : (defG ? defG.id : '__none__');
       /* 分组隔离（清然 2026-08-23）：默认视图=一切没分组的；点具体组只看本组 */
       const matchGrp = it => edGrp === null
@@ -5367,9 +5372,9 @@ const Chat = (function () {
         : (!!it.groupId && it.groupId === curGid);
       grps.hidden = false;
       grps.innerHTML = '<div class="chip-row">' +
-        '<button class="grp-chip' + (edGrp === null ? ' on' : '') + '" data-g="">默认<em>' +
+        '<button class="grp-chip' + (edGrp === null ? ' on' : '') + '" data-g="">' + esc(g0 ? g0.name : '默认') + '<em>' +
           lib.items.filter(it => !it.groupId || (defG && it.groupId === defG.id)).length + '</em></button>' +
-        lib.groups.filter(g => !g.blocked && g.name !== '默认').map(g =>
+        lib.groups.filter(g => !g.blocked && g !== g0).map(g =>
           '<button class="grp-chip' + (edGrp === g.id ? ' on' : '') + '" data-g="' + g.id + '">' +
             esc(g.name) + '<em>' + lib.items.filter(it => it.groupId === g.id).length + '</em></button>').join('') +
         '<button class="grp-chip add" data-gnew>＋新建</button></div>';
@@ -5651,10 +5656,12 @@ const Chat = (function () {
     /* P24（清然 20:08）：分组胶囊右键/长按＝重命名/删除，同字卡分组口径 */
     document.getElementById('ed-grps').addEventListener('contextmenu', e => {
       const chip = e.target.closest('.grp-chip[data-g]');
-      if (!chip || !chip.dataset.g) return;   // 默认胶囊不参与
+      /* P27（清然 10:33：分组名要能改名和删组，全 tab 一致）：
+         兑底组（原名「默认」）也开放重命名；仅不允许删到剩零个 */
+      if (!chip) return;
       e.preventDefault();
       const lib = stickerLib(edTab);
-      const g = lib.groups.find(x => x.id === chip.dataset.g);
+      const g = chip.dataset.g ? lib.groups.find(x => x.id === chip.dataset.g) : lib.groups[0];
       if (!g) return;
       UI.actionSheet('分组：' + g.name, [
         { key: 'rename', label: '重命名分组' },
@@ -5673,6 +5680,7 @@ const Chat = (function () {
             }
           });
         } else if (k === 'del') {
+          if (lib.groups.length <= 1) { UI.toast('至少要留一个分组哦'); return; }
           UI.confirmBox({ title: '删除分组', text: '「' + g.name + '」里的表情将回到未分组。', danger: true, okText: '删除' })
             .then(ok => {
               if (!ok) return;
@@ -5815,7 +5823,7 @@ const Chat = (function () {
     function addPanelTexts(arr) {
       const lib = stickerLib(edTab);
       const isEm = edTab === 'emoji';
-      let def = lib.groups.find(g => g.name === '默认');
+      let def = lib.groups[0];
       if (isEm && !def) { def = { id: gidLocal(), name: '默认', blocked: false }; lib.groups.push(def); }
       const prefix = isEm ? 'se' : edTab === 'pat' ? 'pa' : 'sk';
       let add = 0, dup = 0;
@@ -5856,7 +5864,7 @@ const Chat = (function () {
           lib = DB.state.libs.contactStickers[cidv] =
             DB.state.libs.contactStickers[cidv] || { groups: [], items: [] };
         } else lib = DB.state.libs[k];
-        if (!lib.groups.some(g => g.name === '默认'))
+        if (!lib.groups.length)
           lib.groups.push({ id: gidLocal(), name: '默认', blocked: false });
         pickGroup(lib, gid => {
           fileInput.dataset.target = k;
@@ -5881,10 +5889,10 @@ const Chat = (function () {
       } else {
         lib = DB.state.libs[target];
       }
-      if (!lib.groups.some(g => g.name === '默认'))
+      if (!lib.groups.length)
         lib.groups.push({ id: gidLocal(), name: '默认', blocked: false });
       const dest = lib.items && lib.groups.some(g => g.id === gid) ? gid
-        : lib.groups.find(g => g.name === '默认').id;
+        : lib.groups[0].id;
       let okN = 0, failMsg = '';
       for (const f of fs) {
         try {
