@@ -2719,6 +2719,17 @@ var Notify = (function () {
     l.push('权限状态: ' + (supported() ? Notification.permission : '-'));
     l.push('网站开关: ' + (DB.state.settings.notify ? '已开' : '未开'));
     l.push('通知服务(SW): ' + (swOK_() ? 'HTTPS可用' : '此环境不可用'));
+    /* P28：后台心跳结论——分钟数≈心跳数=引擎在跑；心跳远小于分钟数=后台被冻结 */
+    try {
+      var bg = JSON.parse(localStorage.getItem('LOVEX_BGPROBE') || 'null');
+      if (bg) {
+        var alive = bg.ticks >= bg.hideMin * 0.8;
+        l.push('后台心跳: 后台' + bg.hideMin + '分钟跳了' + bg.ticks + '次 → ' +
+          (alive ? '引擎在跑，不弹是通道问题' : '后台被冻结了，引擎在睡'));
+      } else {
+        l.push('后台心跳: 还没测过（切一次后台再回来看这行）');
+      }
+    } catch (e) {}
     return l.join('\n');
   }
 
@@ -2738,9 +2749,13 @@ var Notify = (function () {
         data: { convId: conv.id }
       };
       /* 她 09:58 实证拍板：裸 Notification 直发优先（她的浏览器吃这套、后台 tab 不死），
-         标准安卓 Chrome 构造器非法会抛错——那时才降级 SW 通道（旧路径保留作备胎） */
+         标准安卓 Chrome 构造器非法会抛错——那时才降级 SW 通道（旧路径保留作备胎）。
+         P28 取证：两条通道的失败都入黑匣子，不再静默吞（她 10:57 复测仍不弹） */
       try { direct(title, opt); }
-      catch (e) { swShow(title, opt); }
+      catch (e) {
+        elog('notify.direct: ' + (e && e.message));
+        swShow(title, opt);
+      }
     } catch (e) {}
   }
 
@@ -2753,12 +2768,23 @@ var Notify = (function () {
     };
   }
 
-  /* SW 通道备胎：仅当直发抛错时走（标准安卓 Chrome） */
+  /* SW 通道备胎：仅当直发抛错时走（标准安卓 Chrome）；无 SW/失败也入档 */
   function swShow(title, opt) {
-    if (!swOK_()) return;
+    if (!swOK_()) { elog('notify.sw: SW 不可用'); return; }
     navigator.serviceWorker.getRegistration().then(function (reg) {
-      if (reg) reg.showNotification(title, opt);
-    }).catch(function () {});
+      if (reg) return reg.showNotification(title, opt);
+      elog('notify.sw: 无注册');
+    }).catch(function (e) { elog('notify.sw: ' + (e && e.message)); });
+  }
+
+  /* P28 黑匣子写入（与 app.js logErr 同键同格式，精简版） */
+  function elog(msg) {
+    try {
+      var a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+      a.push({ t: Date.now(), msg: String(msg).slice(0, 300) });
+      while (a.length > 20) a.shift();
+      localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a));
+    } catch (e) {}
   }
 
   /* SW 通知点击回页：接住 sw.js postMessage，跳进对应会话 */
@@ -4004,6 +4030,8 @@ const Diary = (function () {
     return new Promise(resolve => {
       const mask = document.createElement('div');
       mask.className = 'dialog-mask ui-modal';
+      /* P28（清然 10:57：点自己填后卡死退不出去）：缺 show 类＝透明全屏挡板，
+         弹层内容 opacity:0 看不见却拦住所有点击；补 show＋点遮罩可关 */
       mask.innerHTML = '<div class="dy-ask dy-sketch"><div class="dy-ask-t">' + esc(title) + '</div>' +
         '<input class="dy-ask-ipt" maxlength="8"><div class="dy-ask-btns">' +
         '<button data-r="">算了</button><button data-r="ok">好</button></div></div>';
@@ -4011,6 +4039,7 @@ const Diary = (function () {
       const ipt = mask.querySelector('.dy-ask-ipt');
       ipt.focus();
       mask.addEventListener('click', e => {
+        if (e.target === mask) { mask.remove(); resolve(null); return; }   // 点遮罩空白＝取消
         const b = e.target.closest('button');
         if (!b) return;
         const v = ipt.value.trim();
@@ -4020,6 +4049,7 @@ const Diary = (function () {
       ipt.addEventListener('keydown', e => {
         if (e.key === 'Enter') { const v = ipt.value.trim(); mask.remove(); resolve(v || null); }
       });
+      requestAnimationFrame(() => mask.classList.add('show'));   // 与 openForm/confirmBox 同款淡入
     });
   }
 
@@ -4119,6 +4149,32 @@ const Diary = (function () {
     if (back) back.addEventListener('click', () => {
       if (view !== 'month') { view = 'month'; render(); }
       else Router.back();
+    });
+    /* P28 黑匣子读取口（她 10:57：心事簿一直报错，但报错内容只有她手机上有）：
+       长按标题＝看最近错误+后台心跳，可一键复制发我；平时不可见不碍审美 */
+    const title = document.getElementById('dy-title');
+    if (title) title.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      let errs = [];
+      try { errs = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]'); } catch (err) {}
+      let bg = null;
+      try { bg = JSON.parse(localStorage.getItem('LOVEX_BGPROBE') || 'null'); } catch (err) {}
+      const fmt = r => {
+        const d = new Date(r.t);
+        return '[' + (d.getMonth() + 1) + '-' + d.getDate() + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '] ' + r.msg;
+      };
+      const opts = [{ key: '__copy', label: '复制全部发给 Cola' }]
+        .concat(bg ? [{ key: '__bg', label: '后台心跳：' + bg.hideMin + '分钟里跳了' + bg.ticks + '次' }] : [])
+        .concat(errs.slice(-8).reverse().map((r, i) => ({ key: 'e' + i, label: fmt(r) })));
+      UI.actionSheet('黑匣子（最近记录）', opts).then(k => {
+        if (k !== '__copy') return;
+        const all = JSON.stringify({ errlog: errs, bgProbe: bg });
+        const done = () => UI.toast('已复制，直接粘贴发给 Cola');
+        if (navigator.clipboard && navigator.clipboard.writeText)
+          navigator.clipboard.writeText(all).then(done, () => UI.toast('复制失败，截图这几行发我就行'));
+        else UI.toast('复制失败，截图这几行发我就行');
+      });
     });
   }
 
@@ -12031,7 +12087,9 @@ const History = (function () {
    ===================================================== */
 (function () {
 
-  /* 全局错误黑匣子：任何脚本错误立即红字提示并入档，绝不静默（决策记录#14） */
+  /* 全局错误黑匣子：任何脚本错误立即入档（决策记录#14）。
+     P28（清然 10:57 拍板“一直弹出错了这个消息不要了吧”）：不再弹 toast 轰炸，
+     只进 LOVEX_ERRLOG；查看口＝长按心事簿标题 */
   const ERRKEY = 'LOVEX_ERRLOG';
   function logErr(msg) {
     try {
@@ -12040,7 +12098,6 @@ const History = (function () {
       while (arr.length > 20) arr.shift();
       localStorage.setItem(ERRKEY, JSON.stringify(arr));
     } catch (e) {}
-    try { UI.toast('出错了：' + String(msg).slice(0, 60), 4000); } catch (e) {}
   }
   window.addEventListener('error', e =>
     logErr((e.message || '未知错误') + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
@@ -12097,9 +12154,26 @@ const History = (function () {
     Report.init();   /* P25 报备页按钮接线 */
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
-       系统通知交给 maybeSys 的旧站口径直发） */
+       系统通知交给 maybeSys 的旧站口径直发）。
+       P28 后台探针：隐藏期间每 3s 跳一次心跳，回前台算心跳数——
+       心跳≈分钟数=引擎在跑（通知不弹是通道问题）；心跳远小于分钟数=冻结实锤 */
+    let bgHideAt = 0, bgTicks = [], bgTimer = null;
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible') {
+        bgHideAt = Date.now(); bgTicks = [Date.now()];
+        if (bgTimer) clearInterval(bgTimer);
+        bgTimer = setInterval(() => {
+          bgTicks.push(Date.now());
+          if (bgTicks.length > 3000) { clearInterval(bgTimer); bgTimer = null; }
+        }, 3000);
+        return;
+      }
+      if (bgTimer) { clearInterval(bgTimer); bgTimer = null; }
+      const mins = bgHideAt ? (Date.now() - bgHideAt) / 60000 : 0;
+      if (mins >= 0.5) {
+        try { localStorage.setItem('LOVEX_BGPROBE', JSON.stringify({
+          hideMin: Math.round(mins * 10) / 10, ticks: bgTicks.length, at: Date.now() })); } catch (e) {}
+      }
       DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
       DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
       Home.render();
