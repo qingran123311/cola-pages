@@ -6630,10 +6630,12 @@ const Chat = (function () {
         bub.addEventListener('click', () => UI.toast('（模拟语音，时长 ' + m.dur + ' 秒）'));
       }
     } else if (m.type === 'link' && m.link) {
-      /* P36 V2（她 08-27 定）：链接小屏卡 B 方案——点一下原地起播；嵌不了的跳出 */
+      /* P36 V2（她 08-27 定）：链接小屏卡 B 方案——点一下原地起播；嵌不了的跳出。
+         展开态存内存 Set（按消息 id，不进 localStorage——否则重开页会渲成无播放器的假展开） */
       bub.classList.add('bubble-card');
-      bub.innerHTML = linkCardHtml(m.link);
-      bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m.link); });
+      bub.innerHTML = linkCardHtml(m.link, lkPlaying.has(lkKey(m)));
+      if (m.link.embed && lkPlaying.has(lkKey(m))) lkMount(bub.querySelector('.lk-mini'), m.link);
+      bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
       bub.classList.add('bubble-kin');
@@ -7127,7 +7129,19 @@ const Chat = (function () {
     } catch (e) { logErr('lkMeta:' + (e && e.message)); }
     return null;
   }
-  function linkCardHtml(L) {
+  const lkPlaying = new Set();
+  const lkKey = m => m.id || ('ts' + m.ts);
+  function lkMount(mini, L) {
+    if (!mini || mini.querySelector('iframe')) return;
+    const el = document.createElement('iframe');
+    el.src = L.embed;
+    el.allowFullscreen = true;
+    el.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+    el.setAttribute('scrolling', 'no');
+    el.setAttribute('frameborder', '0');
+    mini.appendChild(el);
+  }
+  function linkCardHtml(L, playing) {
     if (!L.poster && !L.embed) {   /* 无封面且嵌不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
       return '<div class="lk-card">' +
         '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
@@ -7144,27 +7158,26 @@ const Chat = (function () {
       ? '<span class="lk-tri"></span>'
       : '<span class="lk-go">浏览器打开</span>';
     return '<div class="lk-card lk-big">' +
-      '<div class="lk-mini"><div class="lk-poster-ghost">' + esc(L.site || '链接') + '</div>' + poster + mask + '</div>' +
+      '<div class="lk-mini' + (playing ? ' lk-on' : '') + '"><div class="lk-poster-ghost">' + esc(L.site || '链接') + '</div>' + poster + mask + '</div>' +
       '<div class="lk-cap">' +
         (L.title ? '<div class="lk-title">' + esc(L.title) + '</div>' : '') +
         '<div class="lk-line">' + esc(L.site || '链接') + (L.vid ? ' · ' + esc(L.vid) : '') + '</div>' +
       '</div>' +
     '</div>';
   }
-  /* B 方案（她 08-27 选）：点小屏才原地展开播放器，不自动加载；嵌不了的点卡跳浏览器 */
-  function tapLinkCard(root, L) {
+  /* B 方案（她 08-27 选）：点小屏才挂播放器 iframe，不自动加载；再点小屏收起。
+     点标题/说明区不算「起播」，直接走原链接；嵌不了的整卡跳出 */
+  function tapLinkCard(root, m, e) {
+    const L = m.link;
     if (!L.embed) { if (L.url) window.open(L.url, '_blank', 'noopener'); return; }
     const mini = root.querySelector('.lk-mini');
-    if (!mini || mini.dataset.on) return;
-    mini.dataset.on = '1';
-    mini.classList.add('lk-on');
-    const f = document.createElement('iframe');
-    f.src = L.embed;
-    f.allowFullscreen = true;
-    f.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-    f.setAttribute('scrolling', 'no');
-    f.setAttribute('frameborder', '0');
-    mini.appendChild(f);
+    if (!mini) return;
+    if (e && !mini.contains(e.target)) { window.open(L.url, '_blank', 'noopener'); return; }  /* 点标题/说明区=直接跳原链接 */
+    const key = lkKey(m), on = !lkPlaying.has(key);
+    if (on) lkPlaying.add(key); else lkPlaying.delete(key);
+    mini.classList.toggle('lk-on', on);
+    const f = mini.querySelector('iframe');
+    if (on) lkMount(mini, L); else if (f) f.remove();
   }
   function openLink(L) {
     if (L && L.embed) openLinkPlayer(L);
