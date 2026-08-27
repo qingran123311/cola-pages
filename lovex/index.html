@@ -7170,6 +7170,12 @@ const Chat = (function () {
             };
             title = og('title').replace(/\s*-\s*小红书\s*$/, '');
             poster = og('image');
+            /* 页里第一个 og:image 是站点 logo 占位，真封面是 sns-webpic 域那个——全量抓按域挑（EdgeOne 实测 2026-08-27） */
+            if (poster && !/sns-webpic|xhscdn/.test(poster)) {
+              const all = html.match(/<meta[^>]*og:image[^>]*content=["']([^"']+)["']/gi) || [];
+              const real = all.map(s => (s.match(/content=["']([^"']+)/) || [])[1]).find(x => x && /sns-webpic|xhscdn/.test(x));
+              if (real) poster = real;
+            }
           } else {
             /* 抖音：Googlebot 视角 SSR 里正文图直挂在页（实测带 query 可热链 200）；头像/logo 排除，&amp; 实体必解 */
             const ims = html.match(/https:\/\/p\d[a-z0-9\-]*\.douyinpic\.com\/[^"'<>\\ ]+/g) || [];
