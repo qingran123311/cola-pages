@@ -915,6 +915,14 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .lkp-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:0 max(0px,calc(50vw - 430px))}
 .lkp-stage iframe{width:100%;aspect-ratio:16/9;max-height:78vh;border:0;border-radius:8px;background:#000}
 .lkp-tip{flex:none;text-align:center;font-size:11px;opacity:.55;padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
+/* V4.4 全屏看图（抖音/小红书实际内容，img 直挂中转，不走 fetch 所以不吃 CORS） */
+.lk-gal{position:fixed;inset:0;z-index:1260;background:rgba(0,0,0,.92);color:#fff;display:flex;flex-direction:column;opacity:0;transition:opacity .2s}
+.lk-gal.show{opacity:1}
+.lk-gal-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px 12px}
+.lk-gal-stage img{max-width:100%;max-height:100%;object-fit:contain;display:block;border-radius:6px;background:#111}
+.lk-gal-btns{flex:none;display:flex;justify-content:center;gap:44px;padding:2px 0 0}
+.lk-gal-btns button{border:none;background:none;color:#fff;font-size:14px;opacity:.9;cursor:pointer;font-family:inherit;padding:8px 6px}
+.lk-gal-btns button:disabled{opacity:.25;cursor:default}
 @keyframes moreDown{from{opacity:0}to{opacity:1}}
 @keyframes moreUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .more-tile{display:flex;flex-direction:column;align-items:center;gap:5px;
@@ -7139,6 +7147,11 @@ const Chat = (function () {
     return b;
   };
   const lkRelayOn = () => lkRelayFix(DB.state.settings.lkRelay);
+  /* V4.4 图片直挂中转（她 18:26："不要标题卡，我的第一志愿永远是小屏和实际内容"）：
+     <img> 子资源请求不受预览域名鉴权中间件与 CORS 的管（2026-08-27 实测：带/不带 token 都能 200 出图，只有 fetch 被卡），
+     所以抖音/小红书的封面与正文图一律走 中转?action=img&i=N 实时取图：不 fetch、不存 idb、不怕对方签名链过期 */
+  const lkImgMode = L => !L.poster && !!L.url && !!lkRelayOn() && (L.site === '抖音' || L.site === '小红书');
+  const lkImgUrl = (share, i) => { const b = lkRelayOn(); return b ? b + (b.indexOf('?') >= 0 ? '&' : '?') + 'action=img&url=' + encodeURIComponent(share) + (i ? '&i=' + i : '') : ''; };
   async function lkViaRelay(target) {
     const base = lkRelayOn();
     if (!base) return '';
@@ -7252,7 +7265,9 @@ const Chat = (function () {
     });
   }
   function linkCardHtml(L, playing) {
-    if (!L.poster && !lkCanPlay(L)) {   /* 无封面且播不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
+    const imgMode = lkImgMode(L);
+    const posterSrc = imgMode ? lkImgUrl(L.url, 0) : L.poster;
+    if (!posterSrc && !lkCanPlay(L)) {   /* 无封面且播不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
       return '<div class="lk-card">' +
         '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
         '<div class="lk-mid">' +
@@ -7261,12 +7276,12 @@ const Chat = (function () {
         '</div>' +
       '</div>';
     }
-    const poster = L.poster
-      ? '<img class="lk-poster"' + (lkIsIdb(L.poster) ? ' data-iref="1"' : ' src="' + esc(L.poster) + '"') + ' referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
+    const poster = posterSrc
+      ? '<img class="lk-poster"' + (lkIsIdb(posterSrc) ? ' data-iref="1"' : ' src="' + esc(posterSrc) + '"') + ' referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
       : '';
     const mask = lkCanPlay(L)
       ? '<span class="lk-tri"></span>'
-      : '<span class="lk-go">浏览器打开</span>';
+      : '<span class="lk-go">' + (imgMode ? '看图' : '浏览器打开') + '</span>';
     return '<div class="lk-card lk-big">' +
       '<div class="lk-mini' + (playing ? ' lk-on' : '') + '"><div class="lk-poster-ghost">' + esc(L.site || '链接') + '</div>' + poster + mask + '</div>' +
       '<div class="lk-cap">' +
@@ -7279,7 +7294,12 @@ const Chat = (function () {
      点标题/说明区→全屏播（可播的，她 09:13 定）/跳原链接（嵌不了的） */
   function tapLinkCard(root, m, e) {
     const L = m.link;
-    if (!lkCanPlay(L)) { if (L.url) window.open(L.url, '_blank', 'noopener'); return; }
+    if (!lkCanPlay(L)) {
+      /* 接了中转的抖音/小红书：点小卡=原地看实际内容（全屏看图，多图可翻），不跳浏览器 */
+      if (lkImgMode(L)) { lkOpenGallery(L); return; }
+      if (L.url) window.open(L.url, '_blank', 'noopener');
+      return;
+    }
     const mini = root.querySelector('.lk-mini');
     if (!mini) return;
     if (e && !mini.contains(e.target)) { openLinkPlayer(L); return; }
@@ -7291,8 +7311,51 @@ const Chat = (function () {
     else { if (f && f.pause) f.pause(); if (f) f.remove(); }
   }
   function openLink(L) {
+    if (L && lkImgMode(L)) { lkOpenGallery(L); return; }
     if (L && (L.embed || L.vsrc)) openLinkPlayer(L);
     else if (L && L.url) window.open(L.url, '_blank', 'noopener');
+  }
+  /* 全屏看图（V4.4，她要的是“小屏 + 实际内容”）：图经中转实时回源，不热链不存库；
+     多图靠“取下一张失败就定住总数”探边界，不多要一个接口；弹层显隐三件套同红线 */
+  function lkOpenGallery(L) {
+    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .lk-gal').forEach(x => x.remove());
+    const wrap = document.createElement('div');
+    wrap.className = 'lk-gal';
+    wrap.innerHTML =
+      '<div class="lkp-nav">' +
+        '<button class="lkp-x">' + I('x', 18) + '</button>' +
+        '<div class="lkp-t">' + esc(L.site || '链接') + ' · 第 <b class="lk-gal-n">1</b> 张</div>' +
+        '<button class="lkp-ext">去浏览器</button>' +
+      '</div>' +
+      '<div class="lk-gal-stage"><img alt="" referrerpolicy="no-referrer"></div>' +
+      '<div class="lk-gal-btns"><button class="lk-gal-p">‹ 上一张</button><button class="lk-gal-nx">下一张 ›</button></div>' +
+      '<div class="lkp-tip">图由你的中转实时取回；中转断了就只剩标题，点右上角去浏览器</div>';
+    const img = wrap.querySelector('img');
+    const numEl = wrap.querySelector('.lk-gal-n');
+    const tipEl = wrap.querySelector('.lkp-tip');
+    const prev = wrap.querySelector('.lk-gal-p');
+    const next = wrap.querySelector('.lk-gal-nx');
+    let i = 0, total = 0;   /* total=探到的张数（0=未知） */
+    const show = () => {
+      numEl.textContent = String(i + 1);
+      prev.disabled = i === 0;
+      next.disabled = !!total && i >= total - 1;
+      img.src = lkImgUrl(L.url, i);
+    };
+    img.onerror = () => {
+      if (i > 0) { total = i; i--; show(); return; }   /* 越界：退回上一张，从此封住下一张 */
+      tipEl.textContent = '中转没回图：去「个人中心 → 分享封面中转」看地址还能不能用';
+      img.remove();
+    };
+    prev.addEventListener('click', () => { if (i > 0) { i--; show(); } });
+    next.addEventListener('click', () => { if (!total || i + 1 < total) { i++; show(); } });
+    wrap.querySelector('.lkp-x').addEventListener('click', () => wrap.remove());
+    wrap.querySelector('.lkp-ext').addEventListener('click', () => window.open(L.url, '_blank', 'noopener'));
+    layer.appendChild(wrap);
+    show();
+    requestAnimationFrame(() => wrap.classList.add('show'));
+    setTimeout(() => wrap.classList.add('show'), 80);
   }
   /* 站内播放层：全屏弹层三件套红线同构（rAF show + 80ms 兜底）；右上角去浏览器逃生口。
      可嵌播→iframe；原生 mp4 直链(L.vsrc)→video；两者走同一全屏层 */
@@ -7350,11 +7413,12 @@ const Chat = (function () {
       parsed = parseLink(ta.value);
       meta = null;
       if (!parsed) { draw(); return; }
-      const relayOn = !!lkRelayOn();
-      const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid) || (relayOn && (parsed.site === '抖音' || parsed.site === '小红书'));
+      const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid);   /* V4.4：抖音/小红书不走 fetch（预览域名下 fetch 被 CORS 卡死会白转 20s），图由 img 标签直拉中转，标题从文案就地抠 */
       if (!fetchable) {   /* 抽不到页的站不白转 9s×2：文案抠到标题立即定，抠不到也立即定 */
         meta = parsed.titleGuess ? { title: parsed.titleGuess, poster: '', vsrc: '' } : null;
-        draw(meta ? '这站封面包在壳里抓不到，发标题卡' : '没从文案里认到标题，将发链接卡');
+        /* 接了中转的抖音/小红书：图由 img 标签直拉，不再说“抓不到” */
+        const imgOn = lkImgMode(Object.assign({}, parsed, meta || {}));
+        draw(meta ? (imgOn ? '' : '这站封面包在壳里抓不到，发标题卡') : '没从文案里认到标题，将发链接卡');
         return;
       }
       draw('正在抓封面…');
