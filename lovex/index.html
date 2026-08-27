@@ -7046,7 +7046,7 @@ const Chat = (function () {
     'bilibili.com': '哔哩哔哩', 'b23.tv': '哔哩哔哩',
     'youtube.com': 'YouTube', 'youtu.be': 'YouTube',
     'douyin.com': '抖音', 'iesdouyin.com': '抖音',
-    'xiaohongshu.com': '小红书', 'xhslink.com': '小红书',
+    'xiaohongshu.com': '小红书', 'xhslink.com': '小红书', 'xhslink.cn': '小红书',
     'weibo.com': '微博', 'weibo.cn': '微博',
     'mp.weixin.qq.com': '公众号', 'acfun.cn': 'AcFun',
     'music.163.com': '网易云音乐', 'kugou.com': '酷狗音乐', 'qq.com': 'QQ音乐',
@@ -7072,7 +7072,31 @@ const Chat = (function () {
     }
     const yt = url.match(/(?:v=|youtu\.be\/)([0-9A-Za-z_-]{11})/);
     if (site === 'YouTube' && yt) { out.vid = yt[1]; out.embed = 'https://www.youtube.com/embed/' + yt[1]; }
+    out.titleGuess = shareTitleGuess(raw, url, site);
     return out;
+  }
+  /* 分享文案就地抠标题（粘的是 App 整段文案，标题就在里面；本地解析零网络。抖音/小红书页面包在壳里抓不到封面，但文案救得了标题）。
+     只对这两站开——其它站正文噪声大，宁缺勿滥。实测格式：
+     抖音："复制打开抖音极速版，看看【墨淮的图文作品】😂# 叠纸# 恋与深空  https://v.douyin.com/.."
+     小红书："：：为什么不是这帧…… https://xhslink.cn/o/.. 存好口令，直达【小红书】瞅瞅~" */
+  function shareTitleGuess(raw, url, site) {
+    let t = (raw || '').replace(url || '', ' ').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    if (site === '抖音') {
+      const au = t.match(/【([^】]{1,20}?)的(?:图文|视频|音乐|直播)?作品】/);
+      const after = t.match(/】\s*([^【】]{2,80})/);
+      if (!au && !after) return '';                      /* 没括号锚点=纯裸链，不硬猜 */
+      let rest = after ? after[1].replace(/复制此?链接[\s\S]*$/, '').trim() : '';
+      const author = au ? au[1].replace(/\s/g, '') : '';
+      if (rest) return (author ? author + '：' + rest : rest).slice(0, 64);
+      return author ? author + '的作品' : '';
+    }
+    if (site === '小红书') {
+      t = t.replace(/^(?:[:：!！~。\.\s、…·]+)+/, '').slice(0, 64).trim();
+      t = t.replace(/\s*(?:复制这段话|存好口令|直达【|打开小红书|查看详情)[\s\S]{0,40}$/, '').trim();
+      return t;
+    }
+    return '';
   }
   /* 封面/标题抓取（仅发送/预览时拉一次，消息里存结果；代理全挂→返回 null 降级，不影响发送） */
   function lkViaProxy(target, asJson) {
@@ -7103,35 +7127,9 @@ const Chat = (function () {
         }
       } else if (L.site === 'YouTube' && L.vid) {
         return { title: '', up: '', poster: 'https://i.ytimg.com/vi/' + L.vid + '/hqdefault.jpg' };
-      } else {
-        const html = await lkViaProxy(L.url, false);
-        if (html && html.length > 400) {
-          const og = k => {
-            let m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']og:' + k + '["\'][^>]*content=["\']([^"\']+)["\']', 'i'));
-            if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*(?:property|name)=["\']og:' + k + '["\']', 'i'));
-            return m ? m[1].trim() : '';
-          };
-          let title = og('title'), poster = og('image'), vsrc = '';
-          if (!title || !poster) {
-            const rm = html.match(/window\._ROUTER_DATA\s*=\s*(\{[\s\S]*?\})\s*<\/script>/);
-            if (rm) try {
-              const j = JSON.parse(rm[1]);
-              const ld = j && j.loaderData;
-              const item = ld && Object.values(ld).map(v => v && v.videoInfoRes && v.videoInfoRes.item_list && v.videoInfoRes.item_list[0]).find(Boolean);
-              if (item) {
-                title = title || item.desc || '';
-                poster = poster || ((item.video && item.video.cover && ((item.video.cover.url_list || [])[0] || item.video.cover.url)) || '');
-                const pl = item.video && item.video.play_addr && (item.video.play_addr.url_list || []);
-                if (pl && pl.length) vsrc = pl[0];
-              }
-            } catch (_) {}
-          }
-          if (!title) { const t2 = html.match(/<title[^>]*>([^<]{2,120})<\/title>/i); title = t2 ? t2[1].trim() : ''; }
-          poster = String(poster || '').replace(/^http:/, 'https:');
-          vsrc = String(vsrc || '').replace(/^http:/, 'https:');
-          if (title || poster || vsrc) return { title, up: '', poster, vsrc };
-        }
       }
+      /* 其它站不再抓页 HTML（2026-08-27 实测）：抖音 share 页是客户端渲染空壳（_ROUTER_DATA 无数据），
+         抖音/小红书经公共代理 520/408 被拦死，白转 18s。标题改由分享文案就地抠（shareTitleGuess） */
     } catch (e) { logErr('lkMeta:' + (e && e.message)); }
     return null;
   }
@@ -7257,10 +7255,17 @@ const Chat = (function () {
       parsed = parseLink(ta.value);
       meta = null;
       if (!parsed) { draw(); return; }
+      const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid);
+      if (!fetchable) {   /* 抽不到页的站不白转 9s×2：文案抠到标题立即定，抠不到也立即定 */
+        meta = parsed.titleGuess ? { title: parsed.titleGuess, poster: '', vsrc: '' } : null;
+        draw(meta ? '这站封面包在壳里抓不到，发标题卡' : '没从文案里认到标题，将发链接卡');
+        return;
+      }
       draw('正在抓封面…');
       const my = ++seq, myUrl = parsed.url;
       fetchLinkMeta(parsed).then(mt => {
         if (my !== seq || !parsed || parsed.url !== myUrl) return;
+        if (mt && !mt.title && parsed.titleGuess) mt.title = parsed.titleGuess;
         meta = mt;
         draw(mt && (mt.title || mt.poster || mt.vsrc) ? '' : '这站抓不到封面，将发文字卡');
       });
@@ -7269,7 +7274,7 @@ const Chat = (function () {
       if (!parsed) { UI.toast('没识别到有效链接'); return; }
       mask.remove();
       const L = Object.assign({}, parsed, meta || {});
-      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed, vsrc: L.vsrc || '', title: L.title || '', poster: L.poster || '' } });
+      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed, vsrc: L.vsrc || '', title: L.title || parsed.titleGuess || '', poster: L.poster || '' } });
     });
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
