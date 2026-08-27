@@ -7119,17 +7119,36 @@ const Chat = (function () {
       })),
       Promise.resolve(''));
   }
-  /* 自建中转：用户在「个人中心→分享封面中转」接 Worker（docs/lk-relay-worker.js）；未接=不联网 */
-  const lkRelayOn = () => (DB.state.settings.lkRelay || '').trim();
+  /* 黑匣子写入必须永不抛错：logErr 住在 app.js 的 IIFE 里，跳模块直接调会 ReferenceError，
+     把“抓不到就降级成标题卡”的兼容分支本身炸掉（她 08-27“一直转圈没小屏”的真根因） */
+  const lkLog = m => { try { if (typeof logErr === 'function') logErr(m); } catch (_) {} };
+  /* 自建中转：用户在「个人中心→分享封面中转」接 Worker/EdgeOne 函数；未接=不联网 */
+  /* 地址容错：1）只粘到域名时自动补 /api/relay；2）EdgeOne 预览地址里的 eo_token/eo_time 必须剔掉——
+     带着它会被边缘返 302（无 CORS 头），浏览器 cors 模式直接 Failed to fetch（2026-08-27 实测），不带反而 200+ACAO:* */
+  const lkRelayFix = raw => {
+    let b = String(raw || '').trim().replace(/\/+$/, '');
+    if (!b) return '';
+    try {
+      const u = new URL(b);
+      if (u.searchParams.has('eo_token') || u.searchParams.has('eo_time')) {
+        u.searchParams.delete('eo_token'); u.searchParams.delete('eo_time');
+        b = u.origin + u.pathname + (u.searchParams.toString() ? '?' + u.searchParams.toString() : '');
+      }
+    } catch (_) {}
+    if (b.indexOf('/api/') < 0 && b.indexOf('?') < 0) b += '/api/relay';
+    return b;
+  };
+  const lkRelayOn = () => lkRelayFix(DB.state.settings.lkRelay);
   async function lkViaRelay(target) {
     const base = lkRelayOn();
     if (!base) return '';
     const ctl = new AbortController();
-    const tm = setTimeout(() => ctl.abort(), 10000);
+    /* 20s：EdgeOne 首次访问要冷启动函数实例，10s 容易误判“抓不到”（2026-08-27） */
+    const tm = setTimeout(() => ctl.abort(), 20000);
     try {
       const r = await fetch(base + (base.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(target), { signal: ctl.signal });
       return r.ok ? await r.text() : '';
-    } catch (e) { logErr('lkRelay:' + (e && e.message)); return ''; }
+    } catch (e) { lkLog('lkRelay:' + (e && e.message)); return ''; }
     finally { clearTimeout(tm); }
   }
   /* 图中转：经同一 Worker 拉图片字节（Worker 已改二进制透传）；拿不到回 null 不拦发送 */
@@ -7137,14 +7156,22 @@ const Chat = (function () {
     const base = lkRelayOn();
     if (!base) return null;
     const ctl = new AbortController();
-    const tm = setTimeout(() => ctl.abort(), 12000);
+    const tm = setTimeout(() => ctl.abort(), 20000);
     try {
       const r = await fetch(base + (base.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(target), { signal: ctl.signal });
       if (!r.ok) return null;
       const b = await r.blob();
       return (b && b.size > 1024) ? b : null;
-    } catch (e) { logErr('lkBlob:' + (e && e.message)); return null; }
+    } catch (e) { lkLog('lkBlob:' + (e && e.message)); return null; }
     finally { clearTimeout(tm); }
+  }
+  /* 中转自测：保存地址时跑一次，拿掉小白的“我接对了没”猜疑——返 'ok:字符数' 或错因串 */
+  async function lkRelayTest() {
+    const base = lkRelayOn();
+    if (!base) return 'none';
+    const html = await lkViaRelay('https://v.douyin.com/wvz7huFVcXY/');
+    if (!html) return 'fail';
+    return html.length > 400 ? 'ok:' + html.length : 'short:' + html.length;
   }
   async function fetchLinkMeta(L) {
     try {
@@ -7188,7 +7215,7 @@ const Chat = (function () {
       }
       /* 其它站不再抓页 HTML（2026-08-27 实测）：抖音 share 页是客户端渲染空壳（_ROUTER_DATA 无数据），
          抖音/小红书经公共代理 520/408 被拦死，白转 18s。标题改由分享文案就地抠（shareTitleGuess） */
-    } catch (e) { logErr('lkMeta:' + (e && e.message)); }
+    } catch (e) { lkLog('lkMeta:' + (e && e.message)); }
     return null;
   }
   const lkPlaying = new Set();
@@ -7334,9 +7361,11 @@ const Chat = (function () {
       const my = ++seq, myUrl = parsed.url;
       fetchLinkMeta(parsed).then(mt => {
         if (my !== seq || !parsed || parsed.url !== myUrl) return;
+        /* 中转挂了/超时也不能丢到嘴边的标题（V4.3）：降级到“文案抠标题”卡，绝不空转 */
+        if (!mt && parsed.titleGuess) mt = { title: parsed.titleGuess, up: '', poster: '', vsrc: '' };
         if (mt && !mt.title && parsed.titleGuess) mt.title = parsed.titleGuess;
         meta = mt;
-        draw(mt && (mt.title || mt.poster || mt.vsrc) ? '' : '这站抓不到封面，将发文字卡');
+        draw(mt && mt.poster ? '' : (mt && mt.title ? '没抓到封面图，先发标题卡' : '这站抓不到封面，将发文字卡'));
       });
     });
     mask.querySelector('.lk-send-card').addEventListener('click', async () => {
@@ -8280,7 +8309,7 @@ const Chat = (function () {
   function rerender() { if (!cur) return; refreshHeader(); renderMsgs(); }
 
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
-    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet,
+    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest,
     get conv() { return cur; } };
 })();
 /* =====================================================
@@ -14325,6 +14354,9 @@ const History = (function () {
       localStorage.setItem(ERRKEY, JSON.stringify(arr));
     } catch (e) {}
   }
+  /* 必须挂到全局：logErr 写在 app.js 的 IIFE 里，chat.js 等其仙模块直接调会 ReferenceError，
+     把“降级兼容”分支本身炸掉（2026-08-27 她“一直转圈”的真根因之一） */
+  window.logErr = logErr;
   /* P30：外部脚本错误（浏览器插件/扩展注入，如 plug.js）标注来源，与 LOVEX 自身错误区分 */
   window.addEventListener('error', e => {
     const f = (e.filename || '');
@@ -14332,8 +14364,16 @@ const History = (function () {
     const tag = own ? '' : '[外部脚本·非LOVEX:' + f.split('/').pop() + '] ';
     logErr(tag + (e.message || '未知错误') + (own ? ' @' + f.split('/').pop() + ':' + e.lineno : ''));
   });
-  window.addEventListener('unhandledrejection', e =>
-    logErr('Promise: ' + (e.reason && e.reason.message || e.reason)));
+  /* P36：rejection 值可能是无 message 的普通对象（控制台只显示 Object），老写法会存成 [object Object] 看不出所以然——
+     改成 JSON 序列化兜底，黑匣子里至少能看到到底是谁抛的什么东西 */
+  window.addEventListener('unhandledrejection', e => {
+    const r = e && e.reason;
+    let s = '';
+    try {
+      s = (r && (r.message || r.stack)) || (r && typeof r === 'object' ? JSON.stringify(r) : String(r));
+    } catch (_) { s = String(r); }
+    logErr('Promise: ' + s);
+  });
 
   DB.onQuota = function () {
     /* P33（清然 14:44 拍板“很吵很麻烦烦死了”）：存储不足完全静默——连 toast 都不弹，
@@ -14809,14 +14849,21 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     document.getElementById('cell-lkrelay').addEventListener('click', () => {
       Home.openForm({
         title: '分享封面中转',
-        fields: [{ key: 'v', label: '中转地址', placeholder: '粘贴 https://xxx.workers.dev（留空=关闭）', maxlength: 200, value: DB.state.settings.lkRelay || '' }],
-        okText: '保存',
+        fields: [{ key: 'v', label: '中转地址', placeholder: '整段粘贴 https://xxx.edgeone.dev/api/relay?eo_token=…（留空=关闭）', maxlength: 300, value: DB.state.settings.lkRelay || '' }],
+        okText: '保存并测试',
         onSubmit(v) {
           const s = (v.v || '').trim().replace(/\/+$/, '');
           if (s && !/^https:\/\/[^\s]{4,}$/i.test(s)) return '填完整 https:// 地址，或留空关闭';
           DB.state.settings.lkRelay = s;
           DB.save(); renderLkRelay();
-          UI.toast(s ? '已接上：抖音/小红书会抽真封面' : '已关闭：链接分享回标题卡模式');
+          if (!s) { UI.toast('已关闭：链接分享回标题卡模式'); return; }
+          /* 她 08-27“你确定都部署了吗，为啥一直在抓封面”：接没接上不能靠猜，保存即自测，成不成当场说清 */
+          UI.toast('已保存，正在自测中转…');
+          Chat.lkRelayTest().then(r => {
+            if (r.indexOf('ok:') === 0) UI.toast('中转已通：抓到真页面 ' + Math.round(parseInt(r.slice(3), 10) / 1000) + 'K 字符，去发链接试试');
+            else if (r === 'fail') UI.toast('中转不通：地址没粘全、预览地址过期、或函数未部署成功');
+            else UI.toast('中转有回包但没数据（' + r + '）：可能被平台鉴权页拦了');
+          });
         }
       });
     });
