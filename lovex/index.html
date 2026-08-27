@@ -6637,6 +6637,7 @@ const Chat = (function () {
       bub.classList.add('bubble-card');
       bub.innerHTML = linkCardHtml(m.link, lkPlaying.has(lkKey(m)));
       if (lkCanPlay(m.link) && lkPlaying.has(lkKey(m))) lkMount(bub.querySelector('.lk-mini'), m.link);
+      lkHydratePoster(bub, m.link);
       bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
@@ -7131,6 +7132,20 @@ const Chat = (function () {
     } catch (e) { logErr('lkRelay:' + (e && e.message)); return ''; }
     finally { clearTimeout(tm); }
   }
+  /* 图中转：经同一 Worker 拉图片字节（Worker 已改二进制透传）；拿不到回 null 不拦发送 */
+  async function lkRelayBlob(target) {
+    const base = lkRelayOn();
+    if (!base) return null;
+    const ctl = new AbortController();
+    const tm = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const r = await fetch(base + (base.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(target), { signal: ctl.signal });
+      if (!r.ok) return null;
+      const b = await r.blob();
+      return (b && b.size > 1024) ? b : null;
+    } catch (e) { logErr('lkBlob:' + (e && e.message)); return null; }
+    finally { clearTimeout(tm); }
+  }
   async function fetchLinkMeta(L) {
     try {
       if (L.site === '哔哩哔哩' && L.vid) {
@@ -7193,6 +7208,16 @@ const Chat = (function () {
     }
     mini.appendChild(el);
   }
+  const lkIsIdb = v => typeof MediaStore !== 'undefined' && MediaStore.isRef(v);
+  /* idb 存的封面：先占位后补水（src 不预设避免空src误触 onerror 提前摘图），拉不到→摘图露 ghost */
+  function lkHydratePoster(root, L) {
+    const img = root.querySelector('.lk-poster[data-iref]');
+    if (!img || typeof MediaStore === 'undefined') return;
+    MediaStore.src(L.poster).then(u => {
+      if (u) { img.removeAttribute('data-iref'); img.src = u; }
+      else img.remove();
+    });
+  }
   function linkCardHtml(L, playing) {
     if (!L.poster && !lkCanPlay(L)) {   /* 无封面且播不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
       return '<div class="lk-card">' +
@@ -7204,7 +7229,7 @@ const Chat = (function () {
       '</div>';
     }
     const poster = L.poster
-      ? '<img class="lk-poster" src="' + esc(L.poster) + '" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
+      ? '<img class="lk-poster"' + (lkIsIdb(L.poster) ? ' data-iref="1"' : ' src="' + esc(L.poster) + '"') + ' referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
       : '';
     const mask = lkCanPlay(L)
       ? '<span class="lk-tri"></span>'
@@ -7308,11 +7333,21 @@ const Chat = (function () {
         draw(mt && (mt.title || mt.poster || mt.vsrc) ? '' : '这站抓不到封面，将发文字卡');
       });
     });
-    mask.querySelector('.lk-send-card').addEventListener('click', () => {
+    mask.querySelector('.lk-send-card').addEventListener('click', async () => {
       if (!parsed) { UI.toast('没识别到有效链接'); return; }
       mask.remove();
       const L = Object.assign({}, parsed, meta || {});
-      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed, vsrc: L.vsrc || '', title: L.title || parsed.titleGuess || '', poster: L.poster || '' } });
+      let poster = L.poster || '';
+      /* 封面持久化（她 08-27"不能一直保存吗"）：接了中转就把图存进本机 IndexedDB，存档只留 'idb:' 引用，
+         离线永久可看；存不上就留热链，过期自动摘图退占位不报错 */
+      if (poster && /^https?:/i.test(poster) && lkRelayOn()) {
+        const blob = await lkRelayBlob(poster);
+        if (blob) {
+          const key = 'lk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          try { await MediaStore.put(key, blob); poster = 'idb:' + key; } catch (_) {}
+        }
+      }
+      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed, vsrc: L.vsrc || '', title: L.title || parsed.titleGuess || '', poster } });
     });
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
