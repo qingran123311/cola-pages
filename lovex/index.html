@@ -2464,6 +2464,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-keepalive"><span class="cell-icon"><i data-icon="pulse"></i></span><span class="cell-text">后台保活</span><span class="cell-value" id="ka-val">关</span></button>
+        <button class="cell" id="cell-lkrelay"><span class="cell-icon"><i data-icon="link" data-size="18"></i></span><span class="cell-text">分享封面中转</span><span class="cell-ext" id="lkrelay-state">未接</span><span class="chevron">›</span></button>
       </div>
       <p class="foot-note">所有数据仅保存在本机浏览器中，卸载或清缓存前记得导出备份</p>
     </div>
@@ -2782,7 +2783,8 @@ const DB = (function () {
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
         diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
         notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
-        moMutual: false                // P26 朋友圈评论人开关：关=TA 的动态只有我能评赞；开=联系人互评+30%追评
+        moMutual: false,               // P26 朋友圈评论人开关：关=TA 的动态只有我能评赞；开=联系人互评+30%追评
+        lkRelay: ''                    // P36 视频/图文中转（自建 Worker 地址）：空=关，抖音/小红书只发标题卡；填了才去抓真封面（docs/lk-relay-worker.js）
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
       kinshipAuto: {},                 // P26 亲属卡主动赠送限次计数：contactId -> 次数（一生最多2次，她 08-26 定）
@@ -7116,6 +7118,19 @@ const Chat = (function () {
       })),
       Promise.resolve(''));
   }
+  /* 自建中转：用户在「个人中心→分享封面中转」接 Worker（docs/lk-relay-worker.js）；未接=不联网 */
+  const lkRelayOn = () => (DB.state.settings.lkRelay || '').trim();
+  async function lkViaRelay(target) {
+    const base = lkRelayOn();
+    if (!base) return '';
+    const ctl = new AbortController();
+    const tm = setTimeout(() => ctl.abort(), 10000);
+    try {
+      const r = await fetch(base + (base.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(target), { signal: ctl.signal });
+      return r.ok ? await r.text() : '';
+    } catch (e) { logErr('lkRelay:' + (e && e.message)); return ''; }
+    finally { clearTimeout(tm); }
+  }
   async function fetchLinkMeta(L) {
     try {
       if (L.site === '哔哩哔哩' && L.vid) {
@@ -7127,6 +7142,28 @@ const Chat = (function () {
         }
       } else if (L.site === 'YouTube' && L.vid) {
         return { title: '', up: '', poster: 'https://i.ytimg.com/vi/' + L.vid + '/hqdefault.jpg' };
+      } else if ((L.site === '抖音' || L.site === '小红书') && lkRelayOn()) {
+        /* 自建中转（个人中心可接/可关）：Worker 替浏览器请求（能装爬虫 UA，绕开 CORS）；失败静默降级标题卡 */
+        const html = await lkViaRelay(L.url);
+        if (html && html.length > 400) {
+          let title = '', poster = '';
+          if (L.site === '小红书') {
+            const og = k => {
+              let m = html.match(new RegExp('<meta[^>]+property=["\']og:' + k + '["\'][^>]*content=["\']([^"\']+)', 'i'));
+              if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*property=["\']og:' + k, 'i'));
+              return m ? m[1].trim() : '';
+            };
+            title = og('title').replace(/\s*-\s*小红书\s*$/, '');
+            poster = og('image');
+          } else {
+            /* 抖音：Googlebot 视角 SSR 里正文图直挂在页（实测带 query 可热链 200）；头像/logo 排除，&amp; 实体必解 */
+            const ims = html.match(/https:\/\/p\d[a-z0-9\-]*\.douyinpic\.com\/[^"'<>\\ ]+/g) || [];
+            const pick = ims.find(s => !/avatar|logo|douyinstatic/.test(s));
+            if (pick) poster = pick.replace(/&amp;/g, '&');
+          }
+          poster = String(poster || '').replace(/^http:/, 'https:').replace(/^\/\//, 'https://');
+          if (title || poster) return { title, up: '', poster, vsrc: '' };
+        }
       }
       /* 其它站不再抓页 HTML（2026-08-27 实测）：抖音 share 页是客户端渲染空壳（_ROUTER_DATA 无数据），
          抖音/小红书经公共代理 520/408 被拦死，白转 18s。标题改由分享文案就地抠（shareTitleGuess） */
@@ -7255,7 +7292,8 @@ const Chat = (function () {
       parsed = parseLink(ta.value);
       meta = null;
       if (!parsed) { draw(); return; }
-      const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid);
+      const relayOn = !!lkRelayOn();
+      const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid) || (relayOn && (parsed.site === '抖音' || parsed.site === '小红书'));
       if (!fetchable) {   /* 抽不到页的站不白转 9s×2：文案抠到标题立即定，抠不到也立即定 */
         meta = parsed.titleGuess ? { title: parsed.titleGuess, poster: '', vsrc: '' } : null;
         draw(meta ? '这站封面包在壳里抓不到，发标题卡' : '没从文案里认到标题，将发链接卡');
@@ -14720,6 +14758,28 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       }
     });
     if (DB.state.settings.keepAlive) renderKaVal();
+
+    /* P36 分享封面中转（自建 Worker，她 08-27 拍板）：接上后抖音/小红书抽真封面小屏；不接=维持标题卡 */
+    function renderLkRelay() {
+      const el = document.getElementById('lkrelay-state');
+      if (!el) return;
+      el.textContent = (DB.state.settings.lkRelay || '').trim() ? '已接' : '未接';
+    }
+    document.getElementById('cell-lkrelay').addEventListener('click', () => {
+      Home.openForm({
+        title: '分享封面中转',
+        fields: [{ key: 'v', label: '中转地址', placeholder: '粘贴 https://xxx.workers.dev（留空=关闭）', maxlength: 200, value: DB.state.settings.lkRelay || '' }],
+        okText: '保存',
+        onSubmit(v) {
+          const s = (v.v || '').trim().replace(/\/+$/, '');
+          if (s && !/^https:\/\/[^\s]{4,}$/i.test(s)) return '填完整 https:// 地址，或留空关闭';
+          DB.state.settings.lkRelay = s;
+          DB.save(); renderLkRelay();
+          UI.toast(s ? '已接上：抖音/小红书会抽真封面' : '已关闭：链接分享回标题卡模式');
+        }
+      });
+    });
+    renderLkRelay();
 
 
     /* --- 导入恢复 --- */
