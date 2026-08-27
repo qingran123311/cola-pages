@@ -863,11 +863,48 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 /* ---- ＋更多面板（微信式宫格） ---- */
 /* ＋更多面板：微信式，长在输入栏下方、往下展开（文档流内，
    消息区自然收缩让位，无位移动画不抖动） */
-.chat-more-panel{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
-  padding:10px 10px calc(10px + env(safe-area-inset-bottom));
-  background:var(--nav-bg);
+.chat-more-panel{flex:none;background:var(--nav-bg);
   -webkit-backdrop-filter:var(--panel-blur);backdrop-filter:var(--panel-blur);
   border-top:1px solid var(--line);animation:moreDown .14s ease-out}
+/* P36a 微信式横向分页（她 08-27：8格一页，新的往右滑） */
+.cmp-pages{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cmp-pages::-webkit-scrollbar{display:none}
+.cmp-page{flex:0 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  padding:10px 10px 4px;scroll-snap-align:start}
+.cmp-dots{display:flex;justify-content:center;gap:5px;padding:2px 0 calc(8px + env(safe-area-inset-bottom))}
+.cmp-dots i{width:6px;height:6px;border-radius:50%;background:var(--line);transition:background .15s}
+.cmp-dots i.on{background:var(--t2)}
+
+/* ---- P36 链接分享卡（她 08-27 定：克制黑白，不抢文字） ---- */
+.bubble.bubble-card{background:none;padding:0;max-width:min(240px,66vw)}
+.lk-card{width:240px;max-width:100%;display:flex;align-items:center;gap:9px;
+  padding:10px 11px;border-radius:9px;background:var(--card);border:1px solid var(--line);cursor:pointer}
+.lk-card:active{opacity:.75}
+.lk-badge{flex:none;width:30px;height:30px;border-radius:8px;background:var(--t1);color:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.lk-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.lk-site{font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk-line{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk-play{flex:none;color:var(--t2);display:flex;align-items:center}
+.lk-sheet-body{padding:12px 14px 4px}
+.lk-sheet-body .lk-paste{width:100%;resize:none;font-size:13px;line-height:1.5}
+.lk-prev{margin-top:10px}
+.lk-prev-label{font-size:11px;color:var(--t2);margin:0 0 6px}
+.lk-prev .lk-card{width:100%;cursor:default}
+.lk-sheet-btns{display:flex;gap:10px;padding:12px 14px 4px}
+.lk-sheet-btns .btn{flex:1}
+/* 站内播放层：img-viewer 同族黑底全屏 */
+.lk-player{position:fixed;inset:0;z-index:1260;background:rgba(0,0,0,.92);color:#fff;
+  display:flex;flex-direction:column;opacity:0;transition:opacity .18s}
+.lk-player.show{opacity:1}
+.lkp-nav{flex:none;display:flex;align-items:center;gap:10px;height:46px;padding:0 12px}
+.lkp-nav button{border:none;background:none;color:#fff;cursor:pointer;font-family:inherit;display:flex;align-items:center}
+.lkp-nav .lkp-ext{font-size:12px;opacity:.85;padding:6px 2px}
+.lkp-t{flex:1;text-align:center;font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lkp-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:0 max(0px,calc(50vw - 430px))}
+.lkp-stage iframe{width:100%;aspect-ratio:16/9;max-height:78vh;border:0;border-radius:8px;background:#000}
+.lkp-tip{flex:none;text-align:center;font-size:11px;opacity:.55;padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 @keyframes moreDown{from{opacity:0}to{opacity:1}}
 @keyframes moreUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .more-tile{display:flex;flex-direction:column;align-items:center;gap:5px;
@@ -1623,6 +1660,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-item-imgs.n5,.mo-item-imgs.n6,.mo-item-imgs.n7,.mo-item-imgs.n8,.mo-item-imgs.n9{grid-template-columns:repeat(3,1fr)}
 .mo-thumb{aspect-ratio:1;border-radius:4px;cursor:pointer;overflow:hidden}
 .mo-vthumb video{width:100%;height:100%;object-fit:cover;display:block}
+/* P36d：视频文件不在本机（如换设备恢复备份）——降级灰底小字，严禁黑块 */
+.mo-vthumb.vid-lost video{display:none}
+.mo-vthumb.vid-lost{background:var(--fill)!important;display:flex;align-items:center;justify-content:center}
+.mo-vthumb.vid-lost::after{content:'视频不在本机';font-size:10px;color:var(--t2)}
+.mo-item-link{cursor:pointer}
 .mo-item-link{border-left:3px solid var(--line);background:var(--fill);padding:6px 10px;margin-bottom:6px;font-size:var(--fs-small);color:var(--primary);word-break:break-all}
 .mo-item-loc{font-size:var(--fs-small);color:var(--primary);margin-bottom:4px}
 .mo-item-meta{display:flex;align-items:center;gap:12px;font-size:var(--fs-small);color:var(--t3);margin-bottom:6px}
@@ -2443,6 +2485,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="btn btn-primary btn-send" id="btn-send">发送</button>
     </footer>
     <div class="chat-more-panel" id="chat-more-panel" hidden>
+      <div class="cmp-pages" id="cmp-pages">
+      <div class="cmp-page">
       <button class="more-tile" data-more="album"><span class="tile-ico"><i data-icon="image" data-size="20"></i></span><span>相册</span></button>
       <button class="more-tile" data-more="video"><span class="tile-ico"><i data-icon="video" data-size="20"></i></span><span>视频通话</span></button>
       <button class="more-tile" data-more="files"><span class="tile-ico"><i data-icon="folder" data-size="20"></i></span><span>文件管理</span></button>
@@ -2451,6 +2495,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="more-tile" data-more="diary"><span class="tile-ico"><i data-icon="book" data-size="20"></i></span><span>心事簿</span></button>
 <button class="more-tile" data-more="report"><span class="tile-ico"><i data-icon="compass" data-size="20"></i></span><span>报备</span></button>
 <button class="more-tile" data-more="quiz"><span class="tile-ico"><i data-icon="quiz" data-size="20"></i></span><span>灵魂拷问</span></button>
+      </div>
+      <!-- P36a（她 08-27 定：往右滑第2页，像微信） -->
+      <div class="cmp-page">
+        <button class="more-tile" data-more="link"><span class="tile-ico"><i data-icon="link" data-size="20"></i></span><span>链接</span></button>
+      </div>
+      </div>
+      <div class="cmp-dots" id="cmp-dots"><i class="on"></i><i></i></div>
     </div>
     <!-- 表情抽屉：长在输入栏下方往下展开，与＋号面板同侧（清然 2026-08-23） -->
     <div class="emoji-drawer" id="emoji-drawer" hidden>
@@ -2606,6 +2657,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>拼卡概率</span><em><input type="number" id="pf-comboprob" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
           <label class="adv-item"><span>主动发消息间隔</span><em><input type="number" id="pf-promin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-promax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
@@ -2625,7 +2677,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="pf-letterbook"><span class="cell-icon"><i data-icon="feather"></i></span><span class="cell-text">信件册 · 我们往来的信</span><span class="chevron">›</span></button>
       </div>
 
-      <button class="btn btn-danger pf-delete" id="pf-delete">删除该AI角色</button>
+      <button class="btn btn-danger pf-delete" id="pf-delete">删除好友</button>
     </div>
   </section>
 
@@ -4797,6 +4849,7 @@ const ICONS = {
   'image':         '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M4.5 16.5l4-4 3.5 3.5 2.5-2.5 4.5 4.5"/>',
   'video':         '<rect x="3" y="6.5" width="12.5" height="11" rx="2"/><path d="M15.5 10.5l5.5-3v9l-5.5-3"/>',
   'folder':        '<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  'link':          '<path d="M9.8 14.2a3.8 3.8 0 0 1 0-5.4l2.6-2.6a3.8 3.8 0 0 1 5.4 5.4l-1.3 1.3"/><path d="M14.2 9.8a3.8 3.8 0 0 1 0 5.4l-2.6 2.6a3.8 3.8 0 0 1-5.4-5.4l1.3-1.3"/>',
   'database':      '<ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-13M4.5 12c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3"/>',
   'mail':          '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7.5l8.5 6 8.5-6"/>',
   'heart':         '<path d="M12 20.5S4.5 16 3 11.5A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 9 4.5C19.5 16 12 20.5 12 20.5z"/>',
@@ -5738,6 +5791,62 @@ const Media = (function () {
   return { compressImage, VoiceRec };
 })();
 
+/* ---------------- P36d MediaStore：大文件媒体本体（她 08-27 定拆雷） ----------------
+   视频不进 localStorage（~5MB 上限，一条大视频让整次 DB.save 配额失败连带丢全部新改动）；
+   blob 本体存 IndexedDB，存档字段只留引用串 'idb:键'。消息/帖子体保持轻量。
+   file:// 下 IDB 可用且刷新持久已实测（docs/idb-probe.html，2026-08-27）。 */
+const MediaStore = (function () {
+  const DBN = 'LOVEX_MEDIA', ST = 'blobs';
+  const urls = new Map();   // key→objectURL 复用，避免反复建销
+  let dbP = null;
+  function db() {
+    if (dbP) return dbP;
+    dbP = new Promise((resolve, reject) => {
+      if (!window.indexedDB) { reject(new Error('no-idb')); return; }
+      const r = indexedDB.open(DBN, 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(ST)) r.result.createObjectStore(ST); };
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error || new Error('idb-open'));
+      r.onblocked = () => reject(new Error('idb-blocked'));
+    }).catch(e => { dbP = null; throw e; });
+    return dbP;
+  }
+  function run(mode, fn) {
+    return db().then(d => new Promise((resolve, reject) => {
+      const t = d.transaction(ST, mode);
+      const rq = fn(t.objectStore(ST));
+      t.oncomplete = () => resolve(rq ? rq.result : undefined);
+      t.onerror = t.onabort = () => reject(t.error || new Error('idb-tx'));
+    }));
+  }
+  return {
+    available() { return !!window.indexedDB; },
+    put(key, blob) { return run('readwrite', s => s.put(blob, key)); },
+    get(key) { return run('readonly', s => s.get(key)); },
+    del(key) {
+      const u = urls.get(key);
+      if (u) { try { URL.revokeObjectURL(u); } catch (_) {} urls.delete(key); }
+      return run('readwrite', s => s.delete(key));
+    },
+    /* 引用串判定：'idb:xxx' */
+    isRef(v) { return typeof v === 'string' && /^idb:/.test(v); },
+    /* 渲染就绪 URL：idb引用→objectURL；兼容旧存档的 dataURL 直返；丢了返空串由调用方降级 */
+    async src(v) {
+      if (!v) return '';
+      if (!this.isRef(v)) return v;               // 遗留 dataURL 直用
+      const key = v.slice(4);
+      if (urls.has(key)) return urls.get(key);
+      try {
+        const b = await this.get(key);
+        if (!b) return '';
+        const u = URL.createObjectURL(b);
+        urls.set(key, u);
+        return u;
+      } catch (e) { return ''; }
+    }
+  };
+})();
+
 /* =====================================================
    LOVE♡X · status.js —— AI状态自动轮换引擎（P5，决策#29）
    规则（源策划「AI状态体系【最终绝对定稿】」）：
@@ -6372,7 +6481,8 @@ const Chat = (function () {
   function snippetOf(m) {
     return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
-      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : (m.text || '');
+      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
+      : m.type === 'link' ? '[链接]' : (m.text || '');
   }
 
   function appendOne(listEl, m) {
@@ -6509,6 +6619,11 @@ const Chat = (function () {
       } else {
         bub.addEventListener('click', () => UI.toast('（模拟语音，时长 ' + m.dur + ' 秒）'));
       }
+    } else if (m.type === 'link' && m.link) {
+      /* P36b（她 08-27 定）：链接分享卡——纯本地解析零联网，点卡播放/跳出 */
+      bub.classList.add('bubble-card');
+      bub.innerHTML = linkCardHtml(m.link);
+      bub.addEventListener('click', e => { e.stopPropagation(); openLink(m.link); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
       bub.classList.add('bubble-kin');
@@ -6792,12 +6907,17 @@ const Chat = (function () {
   }
 
   async function showMsgActions(m) {
-    const key = await UI.actionSheet('消息操作', [
-      { key: 'quote', label: '引用回复' },
-      { key: 'del',   label: '删除', danger: true }
-    ]);
+    /* P35（她 20:17）：自己的文字/图片可撤回，不限时间不限群私聊；红包/亲属卡等资产类不提供 */
+    const revocable = m.from === 'me' && (m.type === 'text' || m.type === 'img' || m.type === 'link');
+    const items = [
+      { key: 'quote', label: '引用回复' }
+    ];
+    if (revocable) items.push({ key: 'revoke', label: '撤回' });
+    items.push({ key: 'del', label: '删除', danger: true });
+    const key = await UI.actionSheet('消息操作', items);
     if (!cur) return;
     if (key === 'quote') setQuote(m);
+    else if (key === 'revoke') revokeMine(m);
     else if (key === 'del') {
       const ok = await UI.confirmBox({ title: '删除消息', text: '删除后不可恢复。', danger: true, okText: '删除' });
       if (!ok) return;
@@ -6808,6 +6928,41 @@ const Chat = (function () {
       renderMsgs();
       Home.render();
     }
+  }
+
+  /* P35：我方撤回——原地变灰色系统行「你撤回了一条消息」，ts 不变位置不跳 */
+  function revokeMine(m) {
+    if (!cur) return;
+    const arr = DB.state.msgs[cur.id] || [];
+    const idx = arr.findIndex(x => x.id === m.id);
+    if (idx < 0) return;
+    arr[idx] = { id: m.id, type: 'sys', from: 'sys', ts: m.ts, text: '你撤回了一条消息' };
+    DB.save();
+    renderMsgs();
+    Home.render();
+    UI.toast('已撤回');
+  }
+
+  /* P35（她 20:17 定）：TA 以 revokeRate%（默认0）概率手滑撤回——
+   * 挂 engine fireBatch 钩子链（同 quizask 条件只限单聊）；
+   * 掷中后从会话最近七条消息里挑一条 TA 发的，隔 1~3.5 秒“反应过来”再撤，
+   * 原地替换成「XX 撤回了一条消息」系统行。没有可撤的就静默跳过。 */
+  function maybeRevoke(conv, ct) {
+    const rate = Math.min(100, Math.max(0, Math.round(+((ct.params || {}).revokeRate ?? 0))));
+    if (rate <= 0 || Math.random() * 100 >= rate) return;
+    const arr = DB.state.msgs[conv.id] || [];
+    const cands = arr.slice(-7).filter(m => m.from === 'ai' && m.type !== 'sys');
+    if (!cands.length) return;
+    const victim = cands[Math.floor(Math.random() * cands.length)];
+    setTimeout(() => {
+      const a2 = DB.state.msgs[conv.id] || [];
+      const i2 = a2.findIndex(x => x.id === victim.id);
+      if (i2 < 0) return;   // 这期间被删了就不动
+      a2[i2] = { id: victim.id, type: 'sys', from: 'sys', ts: victim.ts,
+        text: (Home.displayName(ct) || '对方') + ' 撤回了一条消息' };
+      DB.save();
+      if (cur && cur.id === conv.id) rerender();   // 正看着这个会话就当场变灰；不在则下次进入自然看到
+    }, 1200 + Math.floor(Math.random() * 2300));
   }
 
   function scrollBottom() {
@@ -6848,6 +7003,7 @@ const Chat = (function () {
                 : m.type === 'kinship' ? '[亲属卡]'
                 : m.type === 'redpacket' ? '[红包]'
                 : m.type === 'quiz' ? '[灵魂拷问]'
+                : m.type === 'link' ? '[链接]'
                 : '[语音]';
     cur.lastTime = m.ts;
     DB.save();
@@ -6869,6 +7025,125 @@ const Chat = (function () {
   function sendImage(dataUrl, sticker) { pushMine({ type: 'img', img: dataUrl, sticker: !!sticker }); }
   function sendVoice(dur, audio) { pushMine({ type: 'voice', dur, audio: audio || null }); }
   function sendRawText(text) { if (cur && text) pushMine({ type: 'text', text }); }
+
+  /* ---------------- P36 链接分享（她 08-27 定：分享其他 App 的链接；纯本地解析零联网，
+     不发任何后台请求；B站完整长链站内嵌播，短链/其它平台点开跳外部，永远不白屏） ---------------- */
+  const LINK_RE = /https?:\/\/[^\s\u3000\uff0c\u3002\uff01\u3001\uff1b"'<>\uff08\uff09\u3010\u3011]+/i;
+  const LINK_SITES = {
+    'bilibili.com': '哔哩哔哩', 'b23.tv': '哔哩哔哩',
+    'youtube.com': 'YouTube', 'youtu.be': 'YouTube',
+    'douyin.com': '抖音', 'iesdouyin.com': '抖音',
+    'xiaohongshu.com': '小红书', 'xhslink.com': '小红书',
+    'weibo.com': '微博', 'weibo.cn': '微博',
+    'mp.weixin.qq.com': '公众号', 'acfun.cn': 'AcFun',
+    'music.163.com': '网易云音乐', 'kugou.com': '酷狗音乐', 'qq.com': 'QQ音乐',
+    'zhihu.com': '知乎', 'bilibili.cn': '哔哩哔哩'
+  };
+  function parseLink(raw) {
+    const m = (raw || '').match(LINK_RE);
+    if (!m) return null;
+    const url = m[0].replace(/[\u3002.,;:\uff0c\uff1b\uff1a]+$/, '');
+    let host = '';
+    try { host = new URL(url).hostname.replace(/^www\./i, '').toLowerCase(); } catch (_) { return null; }
+    let site = '';
+    for (const k in LINK_SITES) {
+      if (host === k || host.endsWith('.' + k)) { site = LINK_SITES[k]; break; }
+    }
+    if (!site) site = host;
+    const out = { url, host, site, vid: '', embed: '' };
+    /* 嵌播只对带完整视频地址的长链生效（短链本地解不开跳转，降级为外跳，不骗用户不白屏） */
+    const bv = url.match(/\bBV[0-9A-Za-z]{10}\b/);
+    if (site === '哔哩哔哩' && bv) {
+      out.vid = bv[0];
+      out.embed = 'https://player.bilibili.com/player.html?bvid=' + bv[0] + '&page=1&danmaku=0&high_quality=1';
+    }
+    const yt = url.match(/(?:v=|youtu\.be\/)([0-9A-Za-z_-]{11})/);
+    if (site === 'YouTube' && yt) { out.vid = yt[1]; out.embed = 'https://www.youtube.com/embed/' + yt[1]; }
+    return out;
+  }
+  function linkCardHtml(L) {
+    return '<div class="lk-card">' +
+      '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
+      '<div class="lk-mid">' +
+        '<div class="lk-site">' + esc(L.site || '链接') + '</div>' +
+        '<div class="lk-line">' + esc(L.vid || L.host || '') + '</div>' +
+      '</div>' +
+      (L.embed ? '<span class="lk-play" title="站内播放">' + I('video', 14) + '</span>' : '') +
+    '</div>';
+  }
+  function openLink(L) {
+    if (L && L.embed) openLinkPlayer(L);
+    else if (L && L.url) window.open(L.url, '_blank', 'noopener');
+  }
+  /* 站内播放层：全屏弹层三件套红线同构（rAF show + 80ms 兜底）；右上角去浏览器逃生口 */
+  function openLinkPlayer(L) {
+    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .lk-player').forEach(x => x.remove());  /* 防叠层 */
+    const wrap = document.createElement('div');
+    wrap.className = 'lk-player';
+    wrap.innerHTML =
+      '<div class="lkp-nav">' +
+        '<button class="lkp-x">' + I('x', 18) + '</button>' +
+        '<div class="lkp-t">' + esc(L.site) + (L.vid ? ' · ' + esc(L.vid) : '') + '</div>' +
+        '<button class="lkp-ext">去浏览器</button>' +
+      '</div>' +
+      '<div class="lkp-stage"><iframe src="' + L.embed + '" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture" scrolling="no" frameborder="0"></iframe></div>' +
+      '<div class="lkp-tip">画面没出来（网络/权限问题）就点右上角去浏览器看</div>';
+    wrap.querySelector('.lkp-x').addEventListener('click', () => wrap.remove());
+    wrap.querySelector('.lkp-ext').addEventListener('click', () => window.open(L.url, '_blank', 'noopener'));
+    layer.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('show'));
+    setTimeout(() => wrap.classList.add('show'), 80);
+  }
+  /* 分享链接 sheet：粘贴→实时识别→卡片预览；发卡片/发纯文本两钮（微信心智：整段分享文案自动提链接） */
+  function openLinkSheet() {
+    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());  /* 防叠层 */
+    if (!cur) return;
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal';
+    mask.innerHTML =
+      '<div class="sheet">' +
+        '<div class="sheet-title">分享链接</div>' +
+        '<div class="lk-sheet-body">' +
+          '<textarea class="input lk-paste" rows="3" placeholder="粘贴链接（从其它 App 复制的整段分享文案也行，自动提取）"></textarea>' +
+          '<div class="lk-prev" hidden></div>' +
+        '</div>' +
+        '<div class="lk-sheet-btns">' +
+          '<button class="btn btn-secondary lk-send-text">发纯文本</button>' +
+          '<button class="btn btn-primary lk-send-card">发链接卡片</button>' +
+        '</div>' +
+        '<button class="sheet-cancel">取消</button>' +
+      '</div>';
+    const ta = mask.querySelector('.lk-paste');
+    const prev = mask.querySelector('.lk-prev');
+    ta.addEventListener('input', () => {
+      const L = parseLink(ta.value);
+      if (L) { prev.hidden = false; prev.innerHTML = '<div class="lk-prev-label">卡片预览</div>' + linkCardHtml(L); }
+      else { prev.hidden = true; prev.innerHTML = ''; }
+    });
+    const grab = () => {
+      const L = parseLink(ta.value);
+      if (!L) UI.toast('没识别到有效链接');
+      return L;
+    };
+    mask.querySelector('.lk-send-card').addEventListener('click', () => {
+      const L = grab(); if (!L) return;
+      mask.remove();
+      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed } });
+    });
+    mask.querySelector('.lk-send-text').addEventListener('click', () => {
+      const L = grab(); if (!L) return;
+      mask.remove();
+      pushMine({ type: 'text', text: L.url });
+    });
+    mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask);
+    requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);
+    setTimeout(() => ta.focus(), 150);
+  }
 
   /* 语音播放：同时只播一条，播放中的气泡波形跳动 */
   let curAudio = null, curVoiceBub = null;
@@ -7718,6 +7993,21 @@ const Chat = (function () {
 
     // ＋更多面板
     document.getElementById('btn-plus-chat').addEventListener('click', toggleMorePanel);
+    /* P36a：分页圆点随横滑同步；每次展开回到第1页（微信行为） */
+    const cmpPages = document.getElementById('cmp-pages');
+    const cmpDots = document.getElementById('cmp-dots');
+    if (cmpPages && cmpDots) {
+      cmpPages.addEventListener('scroll', () => {
+        const i = Math.round(cmpPages.scrollLeft / Math.max(1, cmpPages.clientWidth));
+        [...cmpDots.children].forEach((d, j) => d.classList.toggle('on', j === i));
+      }, { passive: true });
+      const origToggle = toggleMorePanel;
+      toggleMorePanel = function () {
+        const wasHidden = document.getElementById('chat-more-panel').hidden;
+        origToggle();
+        if (wasHidden) { cmpPages.scrollLeft = 0; [...cmpDots.children].forEach((d, j) => d.classList.toggle('on', j === 0)); }
+      };
+    }
     const panel = document.getElementById('chat-more-panel');
     panel.addEventListener('click', e => {
       const b = e.target.closest('.more-tile');
@@ -7740,6 +8030,9 @@ const Chat = (function () {
       else if (k === 'quiz') {    /* P34：灵魂拷问（她定：入口同在＋号展开栏；群聊拦截） */
         if (cur.type !== 'single') UI.toast('灵魂拷问是两个人之间的事，群聊没有哦');
         else Quiz.open(cur.peerId);
+      }
+      else if (k === 'link') {   /* P36（她 08-27 定）：链接分享，群聊私聊都能发 */
+        openLinkSheet();
       }
     });
 
@@ -7769,7 +8062,7 @@ const Chat = (function () {
   function rerender() { if (!cur) return; refreshHeader(); renderMsgs(); }
 
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
-    locateMsg, rerender,
+    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet,
     get conv() { return cur; } };
 })();
 
@@ -7988,6 +8281,7 @@ const Engine = (function () {
             localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
       }
+      /* 撤回钩子不在循环内：她 20:17 定的是“手滑撤回刚发的消息”，必须在整批回复落库后掷（见 fireBatch 尾部） */
       /* 灵魂拷问（二期P34）：params.quizRate 开启后 TA 聊着聊着突然考你；
          V3.6 起 quizDuetRate 已并入（她 19:29 定）：掷中后在 Quiz.maybeAsk 内部二段分流单独试卷/默契挑战 */
       if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
@@ -8034,6 +8328,20 @@ const Engine = (function () {
       setTimeout(() => Call.incoming(conv, ct), t);
     }
 
+    /* 撤回（二期P35，她 20:17 定）：params.revokeRate 开启后 TA 偶尔手滑撤回自己最近的消息。
+       挂整批回复之后（同拍一拍层级）：本批气泡已全部落库，「最近七条」才含刚发的话；
+       maybeRevoke 内部另有 1.2~3.5s “反应过来”延迟 */
+    if (conv.type === 'single' && typeof Chat !== 'undefined' && Chat.maybeRevoke) {
+      const revokeAt = t + rand(800, 2200);
+      setTimeout(() => {
+        try { Chat.maybeRevoke(conv, ct); } catch (e) {
+          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
+            a.push({ t: Date.now(), msg: 'chat.revoke: ' + (e && e.message) });
+            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
+        }
+      }, revokeAt);
+    }
+
     return t;
   }
 
@@ -8070,7 +8378,8 @@ const Engine = (function () {
   function snippetIn(m) {
     return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
-      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : (m.text || '');
+      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
+      : m.type === 'link' ? '[链接]' : (m.text || '');
   }
   function authorNameIn(conv, m) {
     if (m.from === 'me') return DB.state.profile.name || '我';
@@ -11148,6 +11457,78 @@ const Moments = (function () {
     return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(f); });
   }
 
+  /* ---------- P36d 视频本体进 IndexedDB 拆雷（她 08-27 定：搬进 IDB 并回读校验通过，才清 localStorage 的 base64，两头不空） ---------- */
+  let _vseq = 0;
+  async function storeVideoBlob(blob) {
+    const key = 'vid_' + Date.now().toString(36) + '_' + (++_vseq) + Math.random().toString(36).slice(2, 5);
+    await MediaStore.put(key, blob);
+    const back = await MediaStore.get(key);          /* 回读校验 */
+    if (!back) throw new Error('idb-verify-fail');
+    return 'idb:' + key;
+  }
+  function dataUrlToBlob(dataUrl) {
+    return new Promise((res, rej) => {
+      try {
+        const p = String(dataUrl).split(',');
+        const mime = (p[0].match(/data:([^;]+)/) || [])[1] || 'video/mp4';
+        const bin = atob(p[1]);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        res(new Blob([arr], { type: mime }));
+      } catch (e) { rej(e); }
+    });
+  }
+  /* 渲染后异步 hydrate：idb引用→objectURL；遗留 dataURL 直用（src() 已兼容） */
+  function hydrateVids(scope) {
+    (scope || document).querySelectorAll('video[data-vsrc]').forEach(v => {
+      if (v.dataset.hydrated) return;
+      v.dataset.hydrated = '1';
+      MediaStore.src(v.dataset.vsrc).then(u => {
+        if (u) v.src = u;
+        else { const w = v.closest('.mo-vthumb'); if (w) w.classList.add('vid-lost'); }
+      });
+    });
+  }
+  /* 视频点开全屏看（媒体规则：无黑封面无播放键装饰，controls 留给用户自己按） */
+  function openVideoViewer(ref) {
+    const box = document.createElement('div');
+    box.className = 'img-viewer';
+    box.innerHTML = '<div class="iv-stage"><video controls autoplay playsinline style="max-width:96vw;max-height:88vh;border-radius:8px"></video></div>' +
+      '<div class="iv-bar"><span style="color:#fff;font-size:11px;opacity:.55">点空白处关闭</span></div>';
+    const vd = box.querySelector('video');
+    MediaStore.src(ref).then(u => { if (u) vd.src = u; });
+    box.addEventListener('click', e => {
+      if (e.target.closest('video')) return;
+      try { vd.pause(); } catch (_) {}
+      box.remove();
+    });
+    document.body.appendChild(box);
+    requestAnimationFrame(() => box.classList.add('show'));
+  }
+  /* 启动幂等迁移：存量 dataURL 视频（动态+封面）→ IDB；失败保留原样下次再迁 */
+  async function migrateStoredVideos() {
+    if (typeof MediaStore === 'undefined' || !MediaStore.available()) return;
+    const st = store();
+    let moved = 0;
+    const tasks = [];
+    const moveOne = (holder, key) => tasks.push((async () => {
+      const v = holder[key];
+      if (typeof v !== 'string' || !/^data:video/.test(v)) return;
+      try {
+        const ref = await storeVideoBlob(await dataUrlToBlob(v));
+        holder[key] = ref;
+        moved++;
+      } catch (e) { /* 保留 dataURL，绝不清掉 */ }
+    })());
+    (st.posts || []).forEach(p => (p.videos || []).forEach((_, i) => moveOne(p.videos, i)));
+    const cv = st.covers || {};
+    if (cv.me) moveOne(cv, 'me');
+    Object.keys(cv.byContact || {}).forEach(uid => { if (cv.byContact[uid]) moveOne(cv.byContact, uid); });
+    if (!tasks.length) return;
+    await Promise.all(tasks);
+    if (moved) DB.save();
+  }
+
   /* ---------- 打开朋友圈 ---------- */
   function open() {
     viewUid = null;               // 从发现页进=全部人，清掉可能残留的相册态
@@ -11226,7 +11607,13 @@ const Moments = (function () {
     if (nameEl) nameEl.textContent = name;
     if (!cv) { box.classList.remove('has-img'); return; }
     box.classList.add('has-img');
-    if (/^data:video/.test(cv)) { vid.src = cv; vid.hidden = false; }
+    if (/^data:video/.test(cv) || (typeof MediaStore !== 'undefined' && MediaStore.isRef(cv))) {
+      vid.hidden = false;   /* P36d：idb 引用需异步 resolve */
+      MediaStore.src(cv).then(u => {
+        if (u) vid.src = u;
+        else { vid.hidden = true; box.classList.remove('has-img'); }   /* 文件不在→退回无封面态，不黑屏 */
+      });
+    }
     else { img.src = cv; img.hidden = false; }
   }
   /* 封面点击（清然 23:34 录屏定稿）：点一下封面往下拉开铺满大半屏，头像昵称跟着推下去，
@@ -11246,7 +11633,10 @@ function coverTap(e) {
       const f = pickFiles(inp)[0];
       if (!f) return;
       try {
-        const data = await readAsDataURL(f);
+        /* P36d：视频封面进 IDB，图片维持原路 */
+        const data = (/^video\//.test(f.type) && MediaStore.available())
+          ? await storeVideoBlob(f)
+          : await readAsDataURL(f);
         if (viewUid) {
           const bc = (store().covers.byContact = store().covers.byContact || {});
           bc[viewUid] = data;
@@ -11481,8 +11871,12 @@ function coverTap(e) {
     shell.querySelector('#mo-vfile').addEventListener('change', async e => {
       const f = pickFiles(e.target)[0];
       if (!f) return;
-      try { video = await readAsDataURL(f); UI.toast('已添加视频'); }
-      catch (err) { UI.toast('视频读取失败'); }
+      try {
+        /* P36d：存 IDB 只留引用串；IDB 不可用才退回 dataURL 老路 */
+        video = MediaStore.available() ? await storeVideoBlob(f) : await readAsDataURL(f);
+        UI.toast('已添加视频');
+      }
+      catch (err) { UI.toast('视频保存失败'); }
       e.target.value = '';
     });
     /* 添加入口收进表情按钮（她02:29定）：点选图片/视频/链接/@人，不平铺拉长页面 */
@@ -11546,8 +11940,13 @@ function coverTap(e) {
       shell.querySelector('#mo-locval').textContent = locText;
     });
 
-    shell.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', closeShell));
-    shell.addEventListener('click', e => { if (e.target === shell) closeShell(); });
+    shell.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', quitPublish));
+    shell.addEventListener('click', e => { if (e.target === shell) quitPublish(); });
+    /* P36d：草稿没发表就关→顺手把已存 IDB 的视频删掉，不留孤儿 */
+    function quitPublish() {
+      if (video && MediaStore.isRef(video)) MediaStore.del(video.slice(4));
+      closeShell();
+    }
     shell.querySelector('#mo-send').addEventListener('click', () => {
       const text = shell.querySelector('#mo-text').value.trim();
       if (!text && !imgs.length && !video && !link) return UI.toast('说点什么吧');
@@ -11601,7 +12000,7 @@ function coverTap(e) {
           (p.text ? '<p class="mo-item-text">' + esc(p.text) + '</p>' : '') +
           ((p.videos || []).length
             ? '<div class="mo-item-imgs n' + Math.min(p.videos.length, 9) + '">' +
-              p.videos.map(d => '<div class="mo-thumb mo-vthumb"><video src="' + d + '" muted preload="metadata"></video></div>').join('') + '</div>'
+              p.videos.map(d => '<div class="mo-thumb mo-vthumb"><video data-vsrc="' + esc(d) + '" muted preload="metadata" playsinline></video></div>').join('') + '</div>'
             : '') +
           (p.link
             ? '<div class="mo-item-link"><span>' + esc(p.link) + '</span></div>'
@@ -11629,6 +12028,7 @@ function coverTap(e) {
     }).join('') + (totalAll > pageLimit ? '<div class="mo-more">继续上滑加载更多</div>' : '');
     mountIcons();
     bindItemEvents(list);
+    hydrateVids(list);   /* P36d：idb 引用异步接上 */
   }
 
   function bindItemEvents(list) {
@@ -11664,7 +12064,16 @@ function coverTap(e) {
       viewUid = uid; pageLimit = 30; renderList();
       document.getElementById('mo-nav').classList.remove('solid');
     }));
-    list.querySelectorAll('.mo-thumb').forEach(t => t.addEventListener('click', () => openViewer(t.style.backgroundImage.slice(5, -2))));
+    list.querySelectorAll('.mo-thumb').forEach(t => t.addEventListener('click', () => {
+      const vd = t.querySelector('video');
+      if (vd) { openVideoViewer(vd.dataset.vsrc); return; }   /* P36d：视频点开全屏看 */
+      openViewer(t.style.backgroundImage.slice(5, -2));
+    }));
+    list.querySelectorAll('.mo-item-link').forEach(el => el.addEventListener('click', () => {
+      /* L40「朋友圈发链接点击可播放」：与聊天链接卡同一套本地解析 */
+      const L = (typeof Chat !== 'undefined' && Chat.parseLink) ? Chat.parseLink(el.textContent) : null;
+      if (L && Chat.openLink) Chat.openLink(L); else window.open(el.textContent.trim(), '_blank', 'noopener');
+    }));
     /* 评论区表情包小图点击放大（八-3） */
     list.querySelectorAll('.mo-cmt-img').forEach(im => im.addEventListener('click', e => {
       e.stopPropagation();
@@ -11773,12 +12182,14 @@ function coverTap(e) {
       .then(ok => {
         if (!ok) return;
         const s = store();
+        const gone = s.posts.find(p => p.id === id);
+        if (gone) (gone.videos || []).forEach(v => { if (MediaStore.isRef(v)) MediaStore.del(v.slice(4)); });  /* P36d：删动态连文件带走，防孤儿 */
         s.posts = s.posts.filter(p => p.id !== id);
         DB.save(); renderList();
       });
   }
 
-  function init() {}
+  function init() { migrateStoredVideos(); }
 
   return { init, open, openUser };
 })();
@@ -11893,6 +12304,7 @@ const Profile = (function () {
     el('pf-comin').value = pa.cardComboMin;
     el('pf-comax').value = pa.cardComboMax;
     el('pf-readnr').value = pa.readNoReply;
+    el('pf-revoke').value = (pa.revokeRate ?? 0);
     el('pf-mopost').value = pa.moPostRate;
     el('pf-mopmin').value = pa.moPostMin;
     el('pf-mopmax').value = pa.moPostMax;
@@ -12059,7 +12471,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, callLo: '', callHi: '', callUnit: 'min', cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0 }, c.params || {});
@@ -12073,6 +12485,8 @@ const Profile = (function () {
         p.cardComboMin = Math.max(2, Math.round(+el('pf-comin').value) || 2);
         p.cardComboMax = Math.max(p.cardComboMin, Math.round(+el('pf-comax').value) || p.cardComboMin);
         p.readNoReply = Math.min(100, Math.max(0, Math.round(+el('pf-readnr').value || 0)));
+        /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回 */
+        p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
         /* 朋友圈（二期P16③）：发帖概率%+互动间隔秒区间，默认30~120s（原文L45口径） */
         p.moPostRate = Math.min(100, Math.max(0, Math.round(+el('pf-mopost').value)));
         if (!isFinite(p.moPostRate)) p.moPostRate = 60;
@@ -12116,6 +12530,7 @@ const Profile = (function () {
         el('pf-comin').value = p.cardComboMin;
         el('pf-comax').value = p.cardComboMax;
         el('pf-readnr').value = p.readNoReply;
+        el('pf-revoke').value = p.revokeRate;
         DB.save();
         UI.toast('AI回复设置已保存');
       });
@@ -12125,8 +12540,8 @@ const Profile = (function () {
     el('pf-delete').addEventListener('click', async () => {
       const c = cur(); if (!c) return;
       const ok = await UI.confirmBox({
-        title: '删除AI角色',
-        text: '将删除「' + Home.displayName(c) + '」及其全部聊天记录与专属数据，不可恢复。',
+        title: '删除好友',
+        text: '将删除好友「' + Home.displayName(c) + '」及其全部聊天记录与专属数据，不可恢复。',
         danger: true, okText: '删除'
       });
       if (!ok) return;
@@ -13816,6 +14231,7 @@ Router.register('report', () => Report.render());   /* P25 */
   Wallet.init();   /* 钱包：零钱/充值/查看人/账单/收支统计（二期P14） */
   Kinship.init();  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
   Redpacket.init();/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
+  Moments.init();  /* P36d：朋友圈存量视频 dataURL→IndexedDB 幂等迁移（她 08-27 拆雷） */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
