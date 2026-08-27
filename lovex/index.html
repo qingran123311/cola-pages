@@ -886,12 +886,22 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .lk-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .lk-site{font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lk-line{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lk-play{flex:none;color:var(--t2);display:flex;align-items:center}
 .lk-sheet-body{padding:12px 14px 4px}
 .lk-sheet-body .lk-paste{width:100%;resize:none;font-size:13px;line-height:1.5}
 .lk-prev{margin-top:10px}
 .lk-prev-label{font-size:11px;color:var(--t2);margin:0 0 6px}
 .lk-prev .lk-card{width:100%;cursor:default}
+/* P36 V2 小屏链接卡（她 08-27 定 B 方案：卡上带 16:9 小屏，点一下原地展开播放器；无封面降级文字卡） */
+.lk-card.lk-big{flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden}
+.lk-mini{position:relative;width:100%;aspect-ratio:16/9;background:var(--line);overflow:hidden;flex:none}
+.lk-poster-ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:12px;letter-spacing:3px}
+.lk-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.lk-tri{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;border-left:15px solid rgba(255,255,255,.95);border-top:10px solid transparent;border-bottom:10px solid transparent;filter:drop-shadow(0 1px 5px rgba(0,0,0,.55))}
+.lk-go{position:absolute;right:8px;bottom:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:3px 9px;border-radius:99px}
+.lk-mini iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.lk-on .lk-poster,.lk-on .lk-poster-ghost,.lk-on .lk-tri{display:none}
+.lk-cap{padding:9px 11px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.lk-title{font-size:13px;line-height:1.4;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lk-sheet-btns{display:flex;gap:10px;padding:12px 14px 4px}
 .lk-sheet-btns .btn{flex:1}
 /* 站内播放层：img-viewer 同族黑底全屏 */
@@ -6620,10 +6630,10 @@ const Chat = (function () {
         bub.addEventListener('click', () => UI.toast('（模拟语音，时长 ' + m.dur + ' 秒）'));
       }
     } else if (m.type === 'link' && m.link) {
-      /* P36b（她 08-27 定）：链接分享卡——纯本地解析零联网，点卡播放/跳出 */
+      /* P36 V2（她 08-27 定）：链接小屏卡 B 方案——点一下原地起播；嵌不了的跳出 */
       bub.classList.add('bubble-card');
       bub.innerHTML = linkCardHtml(m.link);
-      bub.addEventListener('click', e => { e.stopPropagation(); openLink(m.link); });
+      bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m.link); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
       bub.classList.add('bubble-kin');
@@ -7026,8 +7036,9 @@ const Chat = (function () {
   function sendVoice(dur, audio) { pushMine({ type: 'voice', dur, audio: audio || null }); }
   function sendRawText(text) { if (cur && text) pushMine({ type: 'text', text }); }
 
-  /* ---------------- P36 链接分享（她 08-27 定：分享其他 App 的链接；纯本地解析零联网，
-     不发任何后台请求；B站完整长链站内嵌播，短链/其它平台点开跳外部，永远不白屏） ---------------- */
+  /* ---------------- P36 V2 链接分享（她 08-27 定：分享其他 App 的链接；二轮拍板：删「发纯文本」，
+     卡片改小屏预览=B 方案；允许联网抓封面——只走公共 CORS 代理拉平台接口/og 标签，
+     抓不到静默降级文字卡，绝不报错绝不拦发送；B站/YouTube 点小屏原地展开播放器，不自动加载） ---------------- */
   const LINK_RE = /https?:\/\/[^\s\u3000\uff0c\u3002\uff01\u3001\uff1b"'<>\uff08\uff09\u3010\u3011]+/i;
   const LINK_SITES = {
     'bilibili.com': '哔哩哔哩', 'b23.tv': '哔哩哔哩',
@@ -7061,15 +7072,99 @@ const Chat = (function () {
     if (site === 'YouTube' && yt) { out.vid = yt[1]; out.embed = 'https://www.youtube.com/embed/' + yt[1]; }
     return out;
   }
+  /* 封面/标题抓取（仅发送/预览时拉一次，消息里存结果；代理全挂→返回 null 降级，不影响发送） */
+  function lkViaProxy(target, asJson) {
+    const base = asJson
+      ? ['https://api.allorigins.win/get?url=', 'https://api.codetabs.com/v1/proxy?quest=']
+      : ['https://api.allorigins.win/raw?url=', 'https://api.codetabs.com/v1/proxy?quest='];
+    return base.map(p => p + encodeURIComponent(target)).reduce(
+      (chain, u) => chain.then(res => res || new Promise(done => {
+        const ctl = new AbortController();
+        const tm = setTimeout(() => ctl.abort(), 9000);
+        fetch(u, { signal: ctl.signal }).then(r => r.ok ? r.text() : '').then(txt => {
+          clearTimeout(tm);
+          if (txt && asJson) { try { const w = JSON.parse(txt); if (typeof w.contents === 'string') txt = w.contents; } catch (_) {}
+          }
+          done(txt || '');
+        }).catch(() => { clearTimeout(tm); done(''); });
+      })),
+      Promise.resolve(''));
+  }
+  async function fetchLinkMeta(L) {
+    try {
+      if (L.site === '哔哩哔哩' && L.vid) {
+        const txt = await lkViaProxy('https://api.bilibili.com/x/web-interface/view?bvid=' + L.vid, true);
+        if (txt) {
+          const j = JSON.parse(txt);
+          const d = j && j.data;
+          if (j && j.code === 0 && d) return { title: d.title || '', up: (d.owner && d.owner.name) || '', poster: String(d.pic || '').replace(/^http:/, 'https:') };
+        }
+      } else if (L.site === 'YouTube' && L.vid) {
+        return { title: '', up: '', poster: 'https://i.ytimg.com/vi/' + L.vid + '/hqdefault.jpg' };
+      } else {
+        const html = await lkViaProxy(L.url, false);
+        if (html && html.length > 400) {
+          const og = k => {
+            let m = html.match(new RegExp('<meta[^>]+(?:property|name)=["\']og:' + k + '["\'][^>]*content=["\']([^"\']+)["\']', 'i'));
+            if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*(?:property|name)=["\']og:' + k + '["\']', 'i'));
+            return m ? m[1].trim() : '';
+          };
+          let title = og('title'), poster = og('image');
+          if (!title || !poster) {
+            const rm = html.match(/window\._ROUTER_DATA\s*=\s*(\{[\s\S]*?\})\s*<\/script>/);
+            if (rm) try {
+              const j = JSON.parse(rm[1]);
+              const ld = j && j.loaderData;
+              const item = ld && Object.values(ld).map(v => v && v.videoInfoRes && v.videoInfoRes.item_list && v.videoInfoRes.item_list[0]).find(Boolean);
+              if (item) { title = title || item.desc || ''; poster = poster || ((item.video && item.video.cover && ((item.video.cover.url_list || [])[0] || item.video.cover.url)) || ''); }
+            } catch (_) {}
+          }
+          if (!title) { const t2 = html.match(/<title[^>]*>([^<]{2,120})<\/title>/i); title = t2 ? t2[1].trim() : ''; }
+          poster = String(poster || '').replace(/^http:/, 'https:');
+          if (title || poster) return { title, up: '', poster };
+        }
+      }
+    } catch (e) { logErr('lkMeta:' + (e && e.message)); }
+    return null;
+  }
   function linkCardHtml(L) {
-    return '<div class="lk-card">' +
-      '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
-      '<div class="lk-mid">' +
-        '<div class="lk-site">' + esc(L.site || '链接') + '</div>' +
-        '<div class="lk-line">' + esc(L.vid || L.host || '') + '</div>' +
+    if (!L.poster && !L.embed) {   /* 无封面且嵌不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
+      return '<div class="lk-card">' +
+        '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
+        '<div class="lk-mid">' +
+          '<div class="lk-site">' + esc(L.title || L.site || '链接') + '</div>' +
+          '<div class="lk-line">' + esc(L.title ? (L.site || '') : (L.vid || L.host || '')) + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    const poster = L.poster
+      ? '<img class="lk-poster" src="' + esc(L.poster) + '" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
+      : '';
+    const mask = L.embed
+      ? '<span class="lk-tri"></span>'
+      : '<span class="lk-go">浏览器打开</span>';
+    return '<div class="lk-card lk-big">' +
+      '<div class="lk-mini"><div class="lk-poster-ghost">' + esc(L.site || '链接') + '</div>' + poster + mask + '</div>' +
+      '<div class="lk-cap">' +
+        (L.title ? '<div class="lk-title">' + esc(L.title) + '</div>' : '') +
+        '<div class="lk-line">' + esc(L.site || '链接') + (L.vid ? ' · ' + esc(L.vid) : '') + '</div>' +
       '</div>' +
-      (L.embed ? '<span class="lk-play" title="站内播放">' + I('video', 14) + '</span>' : '') +
     '</div>';
+  }
+  /* B 方案（她 08-27 选）：点小屏才原地展开播放器，不自动加载；嵌不了的点卡跳浏览器 */
+  function tapLinkCard(root, L) {
+    if (!L.embed) { if (L.url) window.open(L.url, '_blank', 'noopener'); return; }
+    const mini = root.querySelector('.lk-mini');
+    if (!mini || mini.dataset.on) return;
+    mini.dataset.on = '1';
+    mini.classList.add('lk-on');
+    const f = document.createElement('iframe');
+    f.src = L.embed;
+    f.allowFullscreen = true;
+    f.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+    f.setAttribute('scrolling', 'no');
+    f.setAttribute('frameborder', '0');
+    mini.appendChild(f);
   }
   function openLink(L) {
     if (L && L.embed) openLinkPlayer(L);
@@ -7095,7 +7190,7 @@ const Chat = (function () {
     requestAnimationFrame(() => wrap.classList.add('show'));
     setTimeout(() => wrap.classList.add('show'), 80);
   }
-  /* 分享链接 sheet：粘贴→实时识别→卡片预览；发卡片/发纯文本两钮（微信心智：整段分享文案自动提链接） */
+  /* 分享链接 sheet：粘贴→实时识别→小屏卡片预览（异步拉封面/标题，拉不到不拦发送）；「发纯文本」已删（她 08-27 定） */
   function openLinkSheet() {
     document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());  /* 防叠层 */
     if (!cur) return;
@@ -7110,32 +7205,35 @@ const Chat = (function () {
           '<div class="lk-prev" hidden></div>' +
         '</div>' +
         '<div class="lk-sheet-btns">' +
-          '<button class="btn btn-secondary lk-send-text">发纯文本</button>' +
           '<button class="btn btn-primary lk-send-card">发链接卡片</button>' +
         '</div>' +
         '<button class="sheet-cancel">取消</button>' +
       '</div>';
     const ta = mask.querySelector('.lk-paste');
     const prev = mask.querySelector('.lk-prev');
-    ta.addEventListener('input', () => {
-      const L = parseLink(ta.value);
-      if (L) { prev.hidden = false; prev.innerHTML = '<div class="lk-prev-label">卡片预览</div>' + linkCardHtml(L); }
-      else { prev.hidden = true; prev.innerHTML = ''; }
-    });
-    const grab = () => {
-      const L = parseLink(ta.value);
-      if (!L) UI.toast('没识别到有效链接');
-      return L;
+    let parsed = null, meta = null, seq = 0;
+    const draw = note => {
+      if (!parsed) { prev.hidden = true; prev.innerHTML = ''; return; }
+      prev.hidden = false;
+      prev.innerHTML = '<div class="lk-prev-label">卡片预览' + (note ? ' · ' + note : '') + '</div>' + linkCardHtml(Object.assign({}, parsed, meta || {}));
     };
-    mask.querySelector('.lk-send-card').addEventListener('click', () => {
-      const L = grab(); if (!L) return;
-      mask.remove();
-      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed } });
+    ta.addEventListener('input', () => {
+      parsed = parseLink(ta.value);
+      meta = null;
+      if (!parsed) { draw(); return; }
+      draw('正在抓封面…');
+      const my = ++seq, myUrl = parsed.url;
+      fetchLinkMeta(parsed).then(mt => {
+        if (my !== seq || !parsed || parsed.url !== myUrl) return;
+        meta = mt;
+        draw(mt && (mt.title || mt.poster) ? '' : '这站抓不到封面，将发文字卡');
+      });
     });
-    mask.querySelector('.lk-send-text').addEventListener('click', () => {
-      const L = grab(); if (!L) return;
+    mask.querySelector('.lk-send-card').addEventListener('click', () => {
+      if (!parsed) { UI.toast('没识别到有效链接'); return; }
       mask.remove();
-      pushMine({ type: 'text', text: L.url });
+      const L = Object.assign({}, parsed, meta || {});
+      pushMine({ type: 'link', text: L.url, link: { url: L.url, host: L.host, site: L.site, vid: L.vid, embed: L.embed, title: L.title || '', poster: L.poster || '' } });
     });
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
