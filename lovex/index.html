@@ -1020,7 +1020,13 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
   border:none;background:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;
   min-width:0}
 .gi-member .avatar,.gi-add .plus-circle{width:48px;height:48px;font-size:16px}
-.gi-member .gm-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 头衔不被裁（2026-08-28 她报“群主/管理员头衔不见了”）：徽标原先与名字挤在同一块文本里，
+   成员格只有 5 列 ~86px，white-space:nowrap + overflow:hidden 会把名字后面的徽标整块挤出格子裁掉。
+   铁律：名字这种“长度由用户定”的内容，和任何固定元素同框时必须 flex 分居（名字 .gn-tx 自己省略，徽标 flex:none），
+   否则功能上线时好看、她一填长内容就坏。 */
+.gi-member .gm-name{max-width:100%;display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
+.gi-member .gm-name .gn-tx{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.gi-member .gm-name>i{flex:none}
 .own-tag{display:inline-block;font-style:normal;font-size:9px;line-height:1;
   padding:2px 4px;border-radius:4px;background:var(--primary-ultra);color:var(--primary);
   margin-left:3px;vertical-align:1px}
@@ -9838,7 +9844,15 @@ const Group = (function () {
     }
     const meNm = document.createElement('span');
     meNm.className = 'gm-name';
-    meNm.innerHTML = (p.name || '我') + '<i class="own-tag">群主</i>';
+    /* 名字与徽标分居（08-28 头衔被裁的修法）：名字进 .gn-tx 自己省略，徽标不参与压缩；
+       顺手改成 DOM 拼接，不再把用户自定名字塞进 innerHTML（名字里带 < > & 会碎版） */
+    const meTx = document.createElement('span');
+    meTx.className = 'gn-tx';
+    meTx.textContent = p.name || '我';
+    const meTag = document.createElement('i');
+    meTag.className = 'own-tag';
+    meTag.textContent = '群主';
+    meNm.appendChild(meTx); meNm.appendChild(meTag);
     me.appendChild(meAv); me.appendChild(meNm);
     me.addEventListener('click', () => Router.switchTab('mine'));
     grid.appendChild(me);
@@ -9855,8 +9869,16 @@ const Group = (function () {
       }
       const nm = document.createElement('span');
       nm.className = 'gm-name';
-      if (admins.includes(mc.id)) nm.innerHTML = Home.displayName(mc) + '<i class="adm-tag">管理员</i>';
-      else nm.textContent = Home.displayName(mc);
+      const nmTx = document.createElement('span');
+      nmTx.className = 'gn-tx';
+      nmTx.textContent = Home.displayName(mc);
+      nm.appendChild(nmTx);
+      if (admins.includes(mc.id)) {
+        const nmTag = document.createElement('i');
+        nmTag.className = 'adm-tag';
+        nmTag.textContent = '管理员';
+        nm.appendChild(nmTag);
+      }
       b.appendChild(av); b.appendChild(nm);
       b.addEventListener('click', () => Profile.open(mc.id));
       grid.appendChild(b);
