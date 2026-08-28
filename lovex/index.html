@@ -2831,7 +2831,7 @@ const DB = (function () {
         payPref: 'balance'             // P39 支付方式记忆：'balance'=我零钱 | 亲属卡 cardId（卡不可用时自动回落零钱，老存档无此字段也走零钱）
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
-      kinshipAuto: {},                 // P26 亲属卡主动赠送限次计数：contactId -> 次数（一生最多2次，她 08-26 定）
+      kinshipMo: {},                   // 亲属卡月度赠送（她 08-28 晚定）：contactId -> {monthKey, sent}（每月掷一次 60%送/40%不发；旧 kinshipAuto 限次计数已废，装载时一次性清掉）
       repPlans: {},                    // P25/P33 报备当日计划（计划时刻制）：contactId -> {day, autoAt, chkAt, askAt, askDone}（P33 起 autoDone/chkDone/autoDur 退役：到点掷骰、循环不止）
       reportLib: {                     // P25 TA 报备语料库（她口供：地点库+动作词，偶尔随机带情绪词）
         places: ['图书馆', '教室', '宿舍', '食堂', '健身房', '超市', '操场', '咖啡店', '实验室', '回家路上'],
@@ -2926,6 +2926,11 @@ const DB = (function () {
     const m = (state.libs || {})[k];
     if (m && typeof m === 'object') { delete m.groups; delete m.items; }
   });
+
+  /* 08-28 晚：亲属卡主动赠送改月度（kinshipMo），旧限次计数 kinshipAuto 整表废弃——
+     装载/import 时一次性清掉（幂等），死数据不跟去新档 */
+  function dropObsoleteKinshipAuto() { if (state.kinshipAuto) delete state.kinshipAuto; }
+  dropObsoleteKinshipAuto();
 
   /* 迁移：旧版按角色独立的拍一拍库 → 全局一套（决策#24）。
      deepMerge 会把新默认 {groups,items} 与旧 map 合成混合体，先识别旧角色键再归拢 */
@@ -3038,8 +3043,8 @@ const DB = (function () {
     (st.convs || []).filter(cv => cv.type === 'single' && cv.peerId === cid)
       .forEach(cv => { dropConv(cv.id); n++; });
 
-    /* 2) 一张表一个键的：报备 / 当日计划 / 主动赠送计数 / 信 / 心事簿 / 状态轮换 */
-    kill(st.reports, cid); kill(st.repPlans, cid); kill(st.kinshipAuto, cid);
+    /* 2) 一张表一个键的：报备 / 当日计划 / 亲属卡月度赠送 / 信 / 心事簿 / 状态轮换 */
+    kill(st.reports, cid); kill(st.repPlans, cid); kill(st.kinshipMo, cid);
     kill(st.letters, cid); kill(st.diary, cid); kill(st.aiRuntime, cid);
 
     /* 3) 角色专属子库：字卡 / 表情 / 私语 / 红包封面 / 朋友圈封面 */
@@ -3133,7 +3138,7 @@ const DB = (function () {
     const live = new Set(['me'].concat((state.contacts || []).map(c => c.id)));
     const dead = new Set();
     const mark = u => { if (u && u !== 'me' && !live.has(u)) dead.add(u); };
-    ['reports', 'repPlans', 'kinshipAuto', 'letters', 'diary', 'aiRuntime'].forEach(k => Object.keys(state[k] || {}).forEach(mark));
+    ['reports', 'repPlans', 'kinshipMo', 'letters', 'diary', 'aiRuntime'].forEach(k => Object.keys(state[k] || {}).forEach(mark));
     [['libs', 'contactCards'], ['libs', 'contactStickers'], ['libs', 'whispers'], ['stickers', 'byContact']].forEach(pair => {
       const m = state[pair[0]] && state[pair[0]][pair[1]];
       if (m) Object.keys(m).forEach(mark);
@@ -3215,6 +3220,7 @@ const DB = (function () {
       throw new Error('这不是 LOVE♡X 的备份文件');
     }
     state = deepMerge(defaults(), obj.data);
+    dropObsoleteKinshipAuto();
     clearTimeout(saveTimer);
     writeNow();
     return true;
@@ -5409,6 +5415,25 @@ const Diary = (function () {
     if (bk && bk.poke) { bk.poke.unread = false; DB.save(); }
   }
 
+  /* 她 08-28 晚：「对方记录了心事簿会有标注黑点在心事簿的应用图标」。
+     口径=TA 有还没被她看过的新心事：最新一条已出现的 TA 日记（ts<=now）比上次翻开这本簿的时刻新。
+     seenAt 在 openBook 时刷新；戳戳催更生成的日记到点出现后同样会亮点，属同一语义（TA 有新写的）。 */
+  function hasFresh(ctId) {
+    const bk = DB.state.diary[ctId];
+    if (!bk || !bk.days) return false;
+    const seen = bk.seenAt || 0;
+    let latest = 0;
+    const now = Date.now();
+    Object.values(bk.days).forEach(d => {
+      ((d && d.ais) || []).forEach(a => { if (a && a.ts <= now && a.ts > latest) latest = a.ts; });
+    });
+    return latest > seen;
+  }
+  function markSeen(ctId) {
+    const bk = DB.state.diary[ctId];
+    if (bk) { bk.seenAt = Date.now(); DB.save(); }
+  }
+
   /* ---------------- 我戳 TA（催更） ----------------
      70%：TA 最近一条“还没出现的日记”提前到现在起的两小时内；今天压根没排 → 催 TA 现补一篇；
      30%：按原节奏（清然 14:41）。她 08-28 13:41：“为啥我戳不了对方”——
@@ -5470,6 +5495,7 @@ const Diary = (function () {
     month = new Date();
     editingMe = false;
     clearPoke(ctId);          // 点进来，戳戳亮点就消（清然 14:41）
+    markSeen(ctId);           // 「TA 有新心事」黑点一并消（她 08-28 晚定口径）
     settle(cur);
     Router.go('diary');
     render();
@@ -5983,7 +6009,7 @@ const Diary = (function () {
     });
   }
 
-  return { open, openBook, init, settle, pokeState, render };
+  return { open, openBook, init, settle, pokeState, hasFresh, render };
 })();
 
 /* =====================================================
@@ -6701,10 +6727,14 @@ const Chat = (function () {
     updatePokeDot();   // P22 戳戳亮点：加号按钮+心事簿入口（清然 14:41）
   }
 
-  /* P22：TA 催更戳戳亮点——单聊且对方已截未读戳时，底栏加号与＋号栏心事簿格各亮一个小点；
-     点进心事簿后 Diary.clearPoke 熄灭 */
+  /* 心事簿入口亮点（一颗点、两个触发源，UI 只有一个点不堆装饰）：
+     ① P22 戳戳——TA 催更没被理会；② 她 08-28 晚要的——TA 记录了新心事还没看过。
+     单聊才判；点进心事簿后 Diary.clearPoke/markSeen 熄灭 */
   function updatePokeDot() {
-    const on = cur && cur.type === 'single' && typeof Diary !== 'undefined' && Diary.pokeState(cur.peerId);
+    let on = false;
+    if (cur && cur.type === 'single' && typeof Diary !== 'undefined') {
+      on = !!Diary.pokeState(cur.peerId) || !!(Diary.hasFresh && Diary.hasFresh(cur.peerId));
+    }
     const plus = document.getElementById('btn-plus-chat');
     if (plus) plus.classList.toggle('has-poke', !!on);
     const tile = document.querySelector('.more-tile[data-more="diary"]');
@@ -8817,14 +8847,8 @@ const Engine = (function () {
           dur: vItem.dur || 1, audio: vItem.audio, senderId: ct ? ct.id : null }), t);
         continue;
       }
-      /* 亲属卡（二期P14.5）：回复链上 2% 主动赠送（typeof 防御，P12 教训） */
-      if (conv.type === 'single' && typeof Kinship !== 'undefined' && Kinship.maybeGift) {
-        try { Kinship.maybeGift(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'kinship.gift: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-        }
-      }
+      /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
+         60% 送/40% 不发——旧「回复链 2%」钩子已拆（台账 L12：拢新口必拆旧口） */
       /* 红包（二期P15）：params.giftRedRate 开启后主动发红包，同一钩子链；群聊三模式在 maybeGift 内部分支（L24） */
       if (typeof Redpacket !== 'undefined' && Redpacket.maybeGift) {
         try { Redpacket.maybeGift(conv, ct); } catch (e) {
@@ -8988,20 +9012,22 @@ const Engine = (function () {
     const inConvStack = visPage && ['page-chat', 'page-ginfo', 'page-history'].includes(visPage.id);
     const viewing = inConvStack && Chat.conv && Chat.conv.id === conv.id;
     if (viewing) {
-      Chat.appendMessage(m);
+      Chat.appendMessage(m);                     // 开着这个会话：消息直接进气泡，不计未读
     } else {
-      conv.unread = (conv.unread || 0) + 1;       // 不在页面→未读红点
+      conv.unread = (conv.unread || 0) + 1;      // 不在页面→未读红点
       if (Home.msgBanner) Home.msgBanner(conv, m); // 二期P10 微信式站内横幅
-      /* P17 系统通知：仅页面在后台（document.hidden）时弹，前台横幅不重复（微信口径） */
-      if (m.from !== 'me' && window.Notify) {
-        var nTitle = conv.type === 'group'
-          ? (Home.displayName(Home.contactById(conv.peerId)) || '群聊')
-          : Home.displayName(Home.contactById(conv.peerId));
-        var nBody = conv.type === 'group'
-          ? authorNameIn(conv, m) + '：' + snippetIn(m)
-          : snippetIn(m);
-        Notify.maybeSys(conv, m, nTitle, nBody);
-      }
+    }
+    /* P17 系统通知（她 08-28 晚定「在聊天页里切去抖音也要弹」）：弹不弹只看页面可见性/焦点
+       ——maybeSys 内部判 visible+hasFocus，被「正开着这个会话」挡住的旧写法已拆（台账 L12 拢口口径）；
+       前台看得见且有焦点时仍不重复弹（应用内已有横幅/气泡） */
+    if (m.from !== 'me' && window.Notify) {
+      var nTitle = conv.type === 'group'
+        ? (Home.displayName(Home.contactById(conv.peerId)) || '群聊')
+        : Home.displayName(Home.contactById(conv.peerId));
+      var nBody = conv.type === 'group'
+        ? authorNameIn(conv, m) + '：' + snippetIn(m)
+        : snippetIn(m);
+      Notify.maybeSys(conv, m, nTitle, nBody);
     }
     DB.save();
     Home.render();
@@ -10831,11 +10857,11 @@ const Wallet = (function () {
       onSubmit(v) {
         const chk = toFen(v.amt);
         if (chk.err) return chk.err;
-        const fen = chk.fen;
-        if (fen > 5000000) return '单笔最多 50000 元';
-        addBill(viewUid, 'recharge', 1, fen, '零钱充值');
+        /* 她 08-28 晚定：充值不设上限（原「单笔最多 50000 元」那行已拆）；
+           金额合法性只剩 toFen 一道口（两位小数/非负），余额不封顶 */
+        addBill(viewUid, 'recharge', 1, chk.fen, '零钱充值');
         renderCash();
-        UI.toast('已充值 ¥' + yuan(fen));
+        UI.toast('已充值 ¥' + yuan(chk.fen));
       }
     });
   }
@@ -11110,7 +11136,8 @@ const Wallet = (function () {
    钱包入口 → 亲属卡页（我送出的/我收到的 + 赠送流程）
    赠送：多选联系人 → 设每月上限 → 确认 → 24h 未领取自动作废
    聊天卡片消息：受赠方「送你一张亲属卡」/ 赠送方「给XXX的亲属卡」+ 立即领取
-   AI 行为：被赠 85% 概率延迟领取；回复时 2% 主动赠送（默认值，可调）
+   AI 行为：被赠 85% 概率延迟领取；月度赠送——每位联系人每月掷一次，60% 送一张新卡 / 40% 不发
+   （她 08-28 晚定，旧「回复链 2% + 一生 2 次」机制已废）
    数据：DB.state.kinship.cards[cardId]
         card = { id, fromUid('me'|ctId), toUid, limitFen, usedFen, monthKey,
                  status:'pending'|'active'|'expired', createdAt, expireAt, activatedAt }
@@ -11124,7 +11151,9 @@ const Wallet = (function () {
 const Kinship = (function () {
 
   const CLAIM_RATE = 0.85;     // AI 被赠后的领取概率
-  const GIFT_RATE = 2;         // AI 回复时主动赠送概率 %
+  /* 她 08-28 晚定：AI 主动送卡改月度——每位联系人每月掷一次，60% 送一张新卡、40% 不发。
+     旧的「回复链 2% + 一生最多 2 次」（kinshipAuto 计数）已废，她说“一直发亲属卡不太合适” */
+  const MONTHLY_SEND_RATE = 60;   // 每月掷中才送（40% 不发）
   /* 她 08-26：几百块太小——“我设置的对方都是富豪首富”，档位提到千~万级（具体数值待她校准） */
   const GIFT_LIMITS = [520.0, 1314.0, 3344.0, 5200.0, 9999.0];   // AI 送出的月上限档位（元）
 
@@ -11421,17 +11450,24 @@ const Kinship = (function () {
     /* 不领取则等 24h 补跑作废 */
   }
 
-  /* ---------- AI 主动赠送（engine fireBatch 钩子，2%） ---------- */
-  function maybeGift(conv, ct) {
-    /* 她 08-26：亲属卡是长久的东西（按月），主动送一生 1~2 次就够，
-       不再挂在回复链上无限出；之前“一直发亲属卡”就是这里没限次 */
-    const auto = (DB.state.kinshipAuto = DB.state.kinshipAuto || {});
-    if ((auto[ct.id] || 0) >= 2) return;
-    if (Math.random() * 100 >= GIFT_RATE) return;
-    auto[ct.id] = (auto[ct.id] || 0) + 1;
-    DB.save();
-    const limYuan = GIFT_LIMITS[Math.floor(Math.random() * GIFT_LIMITS.length)];
-    deliverCard(ct.id, 'me', limYuan * 100);
+  /* ---------- AI 月度赠送（她 08-28 晚定）----------
+     每位联系人每月只掷一次：月初第一次碰到（启动/心跳/回前台都跑，monthKey 幂等）掷
+     MONTHLY_SEND_RATE%，命中→送一张新卡（额度档位随机）+ 走既有聊天卡片/领取链；
+     没中→这个月就不送了。没有“一直发”，也没有回复链挂钩 */
+  function settleMonthly() {
+    const k = monthKey();
+    let changed = false;
+    (DB.state.contacts || []).forEach(ct => {
+      if (ct.isGroup) return;
+      const all = (DB.state.kinshipMo = DB.state.kinshipMo || {});
+      const rec = all[ct.id] = all[ct.id] || { monthKey: '', sent: false };
+      if (rec.monthKey === k) return;             // 这个月已经掷过了（送没送都算数）
+      rec.monthKey = k;
+      rec.sent = Math.random() * 100 < MONTHLY_SEND_RATE;
+      changed = true;
+      if (rec.sent) deliverCard(ct.id, 'me', GIFT_LIMITS[Math.floor(Math.random() * GIFT_LIMITS.length)] * 100);
+    });
+    if (changed) DB.save();
   }
 
   /* ---------- 24h 过期补跑（init 时扫一遍） ---------- */
@@ -11461,7 +11497,7 @@ const Kinship = (function () {
     scanExpiry();
   }
 
-  return { init, maybeGift, doClaim, claimFromChat, myCards, cardsOf, bestCardFor, maxCardLeft, charge, refund, remaining, info, rollAll };
+  return { init, settleMonthly, doClaim, claimFromChat, myCards, cardsOf, bestCardFor, maxCardLeft, charge, refund, remaining, info, rollAll };
 })();
 
 /* =====================================================
@@ -15114,6 +15150,8 @@ const History = (function () {
     DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
     /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
     DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
+    /* 亲属卡月度赠送（她 08-28 晚定）：每位联系人每月掷一次 60% 送/40% 不发，monthKey 幂等 */
+    try { Kinship.settleMonthly(); } catch (e) {}
     /* 朋友圈互动结算（08-28“回评要补”）：TA 的赞/评/回评落库排程，到点补跑，幂等 */
     try { Moments.settle(); } catch (e) {}
     Report.init();   /* P25 报备页按钮接线 */
@@ -15126,6 +15164,7 @@ const History = (function () {
       DB.state.contacts.forEach(ct => { try { Report.advance(ct); } catch (e) {} });
       try { Quiz.advanceAll(); } catch (e) {}   /* P34：到点的试卷交卷落库 */
       try { Moments.settle(); } catch (e) {}    /* 朋友圈到点的赞/评/回评落库 */
+      try { Kinship.settleMonthly(); } catch (e) {}  /* 跨月时补掷亲属卡月度赠送 */
     }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
