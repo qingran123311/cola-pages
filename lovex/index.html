@@ -12422,6 +12422,7 @@ const Moments = (function () {
   function open() {
     viewUid = null;               // 从发现页进=全部人，清掉可能残留的相册态
     pageLimit = 30;
+    settle();                     // 进页先把到点的赞/评/回评补跑落库（刷新也不丢）
     Router.go('moments');
     renderCover();
     renderList();
@@ -12433,6 +12434,7 @@ const Moments = (function () {
     if (!uid) return;
     viewUid = uid;
     pageLimit = 30;
+    settle();     // 相册态同样先补跑到点的互动
     Router.go('moments');
     renderCover();
     renderList();
@@ -12569,40 +12571,41 @@ function coverTap(e) {
   }
   /* 首次互动延迟=每人0~1分钟缓冲+各自聊天回复设置内等概率延迟（顺序无关）；追评不加缓冲 */
   /* 她 08-26：评论人开关——关（默认）=TA 发的动态只有我能点赞评论（微信式）；
-     开=联系人之间互评，且 30% 动态主人会回一条评论 */
+     开=联系人之间互评，且 30% 动态主人会回一条评论。
+     我的动态不受这个开关影响（P26 口径）——08-27 #41 重构成“看动态主人参数”时把这条
+     弄丢了：uid='me' 查不到主人参数直接整条早退，我发的动态从此零赞零评（她 08-28 抓到）。 */
   function scheduleReactions(postId) {
     const target = store().posts.find(x => x.id === postId);
     if (!target) return;
-    /* 互评开关按人（她 08-27：“默认就是只有我，互评放回复设置里调”）：动态主人开了才排 TA 之间的互动 */
-    const owner = Home.contactById(target.uid);
-    if (!(owner && owner.params && +owner.params.moMutual)) return;
+    if (target.uid !== 'me') {
+      /* 互评开关按人（她 08-27：“默认就是只有我，互评放回复设置里调”）：TA 的动态主人开了才排 TA 之间的互动 */
+      const owner = Home.contactById(target.uid);
+      if (!(owner && owner.params && +owner.params.moMutual)) return;
+    }
     contactsAll().forEach(ct => {
       if (ct.id === target.uid || !canSee(target, ct)) return;
       const rnr = Math.min(100, Math.max(0, +(ct.params || {}).readNoReply || 0));
       if (rnr > 0 && Math.random() * 100 < rnr) return;
       const w = chatWindowOf(ct);
-      setTimeout(() => reactOnce(postId, ct), rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000);
+      /* 计划时刻制（她 08-28“回评要补”）：时刻预生成落库，刷新/重开到点由 settle() 补跑——
+         不再是内存 setTimeout（决策 #60 的根治） */
+      addPlan(target, { kind: 'react', ct: ct.id, at: Date.now() + rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000 });
     });
   }
   /* 我回复TA的评论后TA再回：只按聊天回复延迟，无缓冲。
      她 08-28 13:41：“我评论了他们的朋友圈他们不回我”——顶楼评论也得排主人回一条，
      所以这里多一个 first 参数：首次互动带 0~1 分钟缓冲（与 TA 之间互评同一口径），追评不加。
-     命中 TA 的「已读不回」概率就不回（与聊天同口径，默认 0 = 必回）。 */
+     命中 TA 的「已读不回」概率就不回（与聊天同口径，默认 0 = 必回）。
+     08-28 起改落库排程（她“回评要补”）：回评时刻写进 post.plans，settle() 到点补跑，刷新不丢。 */
   function replyBack(pid, toUid, first) {
     const ct = Home.contactById(toUid);
     const w = chatWindowOf(ct);
     if (!w) return;
     const rnr = Math.min(100, Math.max(0, +((ct.params || {}).readNoReply) || 0));
     if (rnr > 0 && Math.random() * 100 < rnr) return;
-    setTimeout(() => {
-      const post = store().posts.find(x => x.id === pid);
-      if (!post) return;
-      const text = cardText(ct, 50);
-      if (!text) return;
-      post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: toUid, toUid: 'me', text, ts: Date.now() });
-      DB.save();
-      renderList();
-    }, rand(w.minS, w.maxS) * 1000 + (first ? rand(0, 60) * 1000 : 0));
+    const post = store().posts.find(x => x.id === pid);
+    if (!post) return;
+    addPlan(post, { kind: 'reply', ct: toUid, to: 'me', at: Date.now() + rand(w.minS, w.maxS) * 1000 + (first ? rand(0, 60) * 1000 : 0) });
   }
   function reactOnce(postId, ct) {
     const post = store().posts.find(x => x.id === postId);
@@ -12622,22 +12625,58 @@ function coverTap(e) {
     }
     DB.save();
     renderList();
-    /* 她 08-26：互评开启时，动态主人 30% 会回复这条评论（楼中楼） */
+    /* 她 08-26：互评开启时，动态主人 30% 会回复这条评论（楼中楼）——同样落库排程 */
     const justCommented = post.comments.length && post.comments[post.comments.length - 1].uid === ct.id;
     if (justCommented && post.uid !== 'me' && post.uid !== ct.id && Math.random() < 0.3) {
       const owner = Home.contactById(post.uid);
       const w2 = owner ? chatWindowOf(owner) : null;
       const delayS = w2 ? rand(w2.minS, w2.maxS) : rand(3, 15);
-      setTimeout(() => {
-        const p2 = store().posts.find(x => x.id === postId);
-        if (!p2 || !owner) return;
-        const t2 = cardText(owner, 40);
-        if (!t2) return;
-        p2.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: post.uid, toUid: ct.id, text: t2, ts: Date.now() });
-        DB.save();
-        renderList();
-      }, delayS * 1000);
+      addPlan(post, { kind: 'reply', ct: post.uid, to: ct.id, at: Date.now() + delayS * 1000 });
     }
+  }
+  /* ---------- 计划时刻制（她 08-28“回评要补”）：TA 的赞/评/回评全部落库排程 ----------
+     以前整条链是内存 setTimeout，刷新/关页即失（决策 #60 诚实栏挂的账）——现在时刻预生成
+     存进 post.plans，settle() 到点落库；启动、30s 心跳、回前台、进朋友圈页各跑一次，幂等。 */
+  function addPlan(post, plan) {
+    (post.plans = post.plans || []).push(plan);
+    DB.save();
+  }
+  function settle() {
+    const now = Date.now();
+    let acted = false;
+    (store().posts || []).forEach(p => {
+      if (!p.plans || !p.plans.length) return;
+      const due = p.plans.filter(pl => pl.at <= now);
+      if (!due.length) return;
+      p.plans = p.plans.filter(pl => pl.at > now);
+      due.forEach(pl => {
+        const ct = Home.contactById(pl.ct);
+        if (!ct) return;                       /* 人没了，这笔互动不补 */
+        if (pl.kind === 'react') { reactOnce(p.id, ct); return; }
+        /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位） */
+        const text = cardText(ct, 50);
+        if (!text) return;
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text, ts: Date.now() });
+      });
+      acted = true;
+    });
+    if (acted) { DB.save(); renderList(); }
+  }
+  /* 08-27 晚 #41 重构把“我的动态”误伤成全程零互动（scheduleReactions 对 uid='me' 早退），
+     窗口内发出的动态一个赞/评都没排上。补排只挑受害窗口内、零赞零评、还没排过计划的；
+     plans 排上之后就不再进来，幂等，不会翻旧账刷屏。 */
+  const REACT_BUG_SINCE = new Date(2026, 7, 27, 19, 40, 0).getTime();   // commit 63385266（#41 上线时刻）
+  function backfillMissed() {
+    let n = 0;
+    (store().posts || []).forEach(p => {
+      if (p.uid !== 'me' || p.ts < REACT_BUG_SINCE) return;
+      if ((p.likes && p.likes.length) || (p.comments && p.comments.length) || (p.plans && p.plans.length)) return;
+      const before = (p.plans || []).length;
+      scheduleReactions(p.id);
+      if ((p.plans || []).length > before) n++;
+    });
+    if (n) DB.save();
+    return n;
   }
   /* AI 自主发圈：掷发帖概率%（默认60%，资料卡可调），命中后在各自间隔区间内等概率取延迟落帖 */
   const postedOnce = {};
@@ -13083,9 +13122,12 @@ function coverTap(e) {
       });
   }
 
-  function init() { migrateStoredVideos(); }
+  function init() {
+    migrateStoredVideos();
+    backfillMissed();   /* 08-27 晚起我的动态全程零互动，受害动态一次性补排（幂等） */
+  }
 
-  return { init, open, openUser };
+  return { init, open, openUser, settle, backfillMissed };
 })();
 
 /* =====================================================
@@ -15072,6 +15114,8 @@ const History = (function () {
     DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
     /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
     DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
+    /* 朋友圈互动结算（08-28“回评要补”）：TA 的赞/评/回评落库排程，到点补跑，幂等 */
+    try { Moments.settle(); } catch (e) {}
     Report.init();   /* P25 报备页按钮接线 */
     Quiz.init();     /* P34 灵魂拷问：主页/题库/出卷按钮接线 */
     /* P34 交卷引擎结算：启动时把到点的卷子落库（幂等，与心跳同源） */
@@ -15081,6 +15125,7 @@ const History = (function () {
     setInterval(() => {
       DB.state.contacts.forEach(ct => { try { Report.advance(ct); } catch (e) {} });
       try { Quiz.advanceAll(); } catch (e) {}   /* P34：到点的试卷交卷落库 */
+      try { Moments.settle(); } catch (e) {}    /* 朋友圈到点的赞/评/回评落库 */
     }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
@@ -15107,6 +15152,7 @@ const History = (function () {
       DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
       DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
       try { Quiz.advanceAll(); } catch (e) {}   /* P34：回前台补跑到点卷子 */
+      try { Moments.settle(); } catch (e) {}    /* 朋友圈错过的赞/评/回评立刻补跑 */
       Home.render();
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
