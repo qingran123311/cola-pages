@@ -7173,18 +7173,6 @@ const Chat = (function () {
      所以抖音/小红书的封面与正文图一律走 中转?action=img&i=N 实时取图：不 fetch、不存 idb、不怕对方签名链过期 */
   const lkImgMode = L => !L.poster && !!L.url && !!lkRelayImgOn() && (L.site === '抖音' || L.site === '小红书');
   const lkImgUrl = (share, i) => { const b = lkRelayImgOn(); return b ? b + (b.indexOf('?') >= 0 ? '&' : '?') + 'action=img&url=' + encodeURIComponent(share) + (i ? '&i=' + i : '') : ''; };
-  async function lkViaRelay(target) {
-    const base = lkRelayOn();
-    if (!base) return '';
-    const ctl = new AbortController();
-    /* 20s：EdgeOne 首次访问要冷启动函数实例，10s 容易误判“抓不到”（2026-08-27） */
-    const tm = setTimeout(() => ctl.abort(), 20000);
-    try {
-      const r = await fetch(base + (base.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(target), { signal: ctl.signal });
-      return r.ok ? await r.text() : '';
-    } catch (e) { lkLog('lkRelay:' + (e && e.message)); return ''; }
-    finally { clearTimeout(tm); }
-  }
   /* 图中转：经同一 Worker 拉图片字节（Worker 已改二进制透传）；拿不到回 null 不拦发送 */
   async function lkRelayBlob(target) {
     const base = lkRelayOn();
@@ -7225,37 +7213,11 @@ const Chat = (function () {
         }
       } else if (L.site === 'YouTube' && L.vid) {
         return { title: '', up: '', poster: 'https://i.ytimg.com/vi/' + L.vid + '/hqdefault.jpg' };
-      } else if ((L.site === '抖音' || L.site === '小红书') && lkRelayOn()) {
-        /* 自建中转（个人中心可接/可关）：Worker 替浏览器请求（能装爬虫 UA，绕开 CORS）；失败静默降级标题卡 */
-        const html = await lkViaRelay(L.url);
-        if (html && html.length > 400) {
-          let title = '', poster = '';
-          if (L.site === '小红书') {
-            const og = k => {
-              let m = html.match(new RegExp('<meta[^>]+property=["\']og:' + k + '["\'][^>]*content=["\']([^"\']+)', 'i'));
-              if (!m) m = html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*property=["\']og:' + k, 'i'));
-              return m ? m[1].trim() : '';
-            };
-            title = og('title').replace(/\s*-\s*小红书\s*$/, '');
-            poster = og('image');
-            /* 页里第一个 og:image 是站点 logo 占位，真封面是 sns-webpic 域那个——全量抓按域挑（EdgeOne 实测 2026-08-27） */
-            if (poster && !/sns-webpic|xhscdn/.test(poster)) {
-              const all = html.match(/<meta[^>]*og:image[^>]*content=["']([^"']+)["']/gi) || [];
-              const real = all.map(s => (s.match(/content=["']([^"']+)/) || [])[1]).find(x => x && /sns-webpic|xhscdn/.test(x));
-              if (real) poster = real;
-            }
-          } else {
-            /* 抖音：Googlebot 视角 SSR 里正文图直挂在页（实测带 query 可热链 200）；头像/logo 排除，&amp; 实体必解 */
-            const ims = html.match(/https:\/\/p\d[a-z0-9\-]*\.douyinpic\.com\/[^"'<>\\ ]+/g) || [];
-            const pick = ims.find(s => !/avatar|logo|douyinstatic/.test(s));
-            if (pick) poster = pick.replace(/&amp;/g, '&');
-          }
-          poster = String(poster || '').replace(/^http:/, 'https:').replace(/^\/\//, 'https://');
-          if (title || poster) return { title, up: '', poster, vsrc: '' };
-        }
       }
-      /* 其它站不再抓页 HTML（2026-08-27 实测）：抖音 share 页是客户端渲染空壳（_ROUTER_DATA 无数据），
-         抖音/小红书经公共代理 520/408 被拦死，白转 18s。标题改由分享文案就地抠（shareTitleGuess） */
+      /* 抖音/小红书不走这里（2026-08-28 删）：图由 <img> 直挂中转 action=img 实时取（lkImgMode/lkImgUrl），标题从分享文案就地抠（titleGuess）。
+         原来这块是"经中转取整页 HTML 再抠 og:*"——但抖音 share 页对普通 UA 是客户端渲染空壳（_ROUTER_DATA 无数据）、公共代理 520/408 被拦死（08-27 实测），
+         而且 fetchLinkMeta 只会被 B站/YouTube 调到（见 lk-send 里的 fetchable 白名单），这块永远进不来，已删。
+         将来中转若能返 JSON 真标题，按决策 #17~#24 的思路新写一条通道，别在这里贴补丁。 */
     } catch (e) { lkLog('lkMeta:' + (e && e.message)); }
     return null;
   }
@@ -8404,6 +8366,7 @@ const Chat = (function () {
     locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest,
     get conv() { return cur; } };
 })();
+
 /* =====================================================
    LOVE♡X · engine.js —— AI回复引擎（M5）
    单聊：参数随机延迟 → 「正在输入」→ 1~N条字卡错落发出
@@ -10558,6 +10521,18 @@ const Wallet = (function () {
     ensure(uid);
     return DB.state.wallet.bal[uid] || 0;
   }
+  /* 金额输入 → 分（全站唯一口径，红包/亲属卡/充值共用）
+     为什么不用 `Math.round(n*100) !== n*100` 判“两位小数”：浮点误差会把 8.88 元算成 888.0000000000001，
+     正常金额被判“最多两位小数”而发不出去（2026-08-28 纠察实测：8.88 元红包点「塞钱」无反应）。
+     校验一律看用户原始字符串的小数位，只在最后一步乘 100 取整。 */
+  function toFen(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    const n = Number(s);
+    if (!s || !(n > 0)) return { err: '请输入大于 0 的金额' };
+    if (!/^(\d+|\d*\.\d{1,2})$/.test(s)) return { err: '最多两位小数' };
+    return { fen: Math.round(n * 100) };
+  }
+
   function yuan(fen) { return (fen / 100).toFixed(2); }
 
   /* 记账+入账一体：io=1 收入（余额加），io=-1 支出（余额扣）。返回 txn */
@@ -10603,11 +10578,10 @@ const Wallet = (function () {
       fields: [{ key: 'amt', label: '充值金额（元）', type: 'number', placeholder: '0.00' }],
       okText: '充值',
       onSubmit(v) {
-        const n = Number(v.amt);
-        if (!(n > 0)) return '请输入大于 0 的金额';
-        if (n > 50000) return '单笔最多 50000 元';
-        const fen = Math.round(n * 100);
-        if (fen !== n * 100) return '最多两位小数';
+        const chk = toFen(v.amt);
+        if (chk.err) return chk.err;
+        const fen = chk.fen;
+        if (fen > 5000000) return '单笔最多 50000 元';
         addBill(viewUid, 'recharge', 1, fen, '零钱充值');
         renderCash();
         UI.toast('已充值 ¥' + yuan(fen));
@@ -10877,7 +10851,7 @@ const Wallet = (function () {
     if (viewUid !== 'me' && !Home.contactById(viewUid)) viewUid = 'me';
   }
 
-  return { init, bal, yuan, addBill, openWallet, renderWallet, renderCash, renderBills: function(){ renderBills(true); }, renderStats: function(){ if (typeof renderStats === 'function') renderStats(); } };
+  return { init, bal, yuan, addBill, toFen, openWallet, renderWallet, renderCash, renderBills: function(){ renderBills(true); }, renderStats: function(){ if (typeof renderStats === 'function') renderStats(); } };
 })();
 
 /* =====================================================
@@ -10972,11 +10946,10 @@ const Kinship = (function () {
       fields: [{ key: 'lim', label: '每月额度上限（元）', type: 'number', placeholder: String(c.limitFen / 100), value: c.limitFen / 100 }],
       okText: '保存',
       onSubmit(v) {
-        const n = Number(v.lim);
-        if (!(n > 0)) return '请输入大于 0 的金额';
-        if (n > 50000) return '单月最多 50000 元';
-        const fen = Math.round(n * 100);
-        if (fen !== n * 100) return '最多两位小数';
+        const chk = Wallet.toFen(v.lim);
+        if (chk.err) return chk.err;
+        const fen = chk.fen;
+        if (fen > 5000000) return '单月最多 50000 元';
         c.limitFen = fen;
         DB.save(); render();
         UI.toast('已修改：每月 ¥' + yuan(fen));
@@ -11040,11 +11013,10 @@ const Kinship = (function () {
       fields: [{ key: 'lim', label: '每人每月额度上限（元）', type: 'number', placeholder: '如 520' }],
       okText: '下一步',
       onSubmit(v) {
-        const n = Number(v.lim);
-        if (!(n > 0)) return '请输入大于 0 的金额';
-        if (n > 50000) return '单月最多 50000 元';
-        const fen = Math.round(n * 100);
-        if (fen !== n * 100) return '最多两位小数';
+        const chk = Wallet.toFen(v.lim);
+        if (chk.err) return chk.err;
+        const fen = chk.fen;
+        if (fen > 5000000) return '单月最多 50000 元';
         onOk(fen);
       }
     });
@@ -11309,11 +11281,10 @@ const Redpacket = (function () {
   }
 
   function putMoney() {
-    const v = Number(document.getElementById('rp-amt').value);
-    if (!(v > 0)) return UI.toast('请输入大于 0 的金额');
-    if (v > 50000) return UI.toast('单个红包最多 50000 元');
-    const fen = Math.round(v * 100);
-    if (fen !== v * 100) return UI.toast('最多两位小数');
+    const chk = Wallet.toFen(document.getElementById('rp-amt').value);
+    if (chk.err) return UI.toast(chk.err);
+    const fen = chk.fen;
+    if (fen > 5000000) return UI.toast('单个红包最多 50000 元');
     if (fen > Wallet.bal('me')) return UI.toast('零钱不足，先去充值吧');
     const note = document.getElementById('rp-note').value.trim() || document.getElementById('rp-note').placeholder;
     if (sendCtx.conv.type === 'group') {
