@@ -1021,11 +1021,11 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
   min-width:0}
 .gi-member .avatar,.gi-add .plus-circle{width:48px;height:48px;font-size:16px}
 /* 头衔不被裁（2026-08-28 她报“群主/管理员头衔不见了”）：徽标原先与名字挤在同一块文本里，
-   成员格只有 5 列 ~86px，white-space:nowrap + overflow:hidden 会把名字后面的徽标整块挤出格子裁掉。
-   铁律：名字这种“长度由用户定”的内容，和任何固定元素同框时必须 flex 分居（名字 .gn-tx 自己省略，徽标 flex:none），
-   否则功能上线时好看、她一填长内容就坏。 */
-.gi-member .gm-name{max-width:100%;display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
-.gi-member .gm-name .gn-tx{min-width:0;overflow:hidden;text-overflow:ellipsis}
+   成员格是 5 列网格，一格只有 ~87px，white-space:nowrap + overflow:hidden 把名字后面的徽标整块挤出格子裁掉。
+   定案（她 08:25：“或许头衔应该在名字下面会好一点”）：名字一行、徽标一行，徽标永不与名字抢宽度。
+   铁律：“长度由用户定”的内容（昵称/自定义标题）与固定元素同框时，要么 flex 分居、要么换行，不得共用一行。 */
+.gi-member .gm-name{max-width:100%;display:flex;flex-direction:column;align-items:center;gap:2px;white-space:nowrap;line-height:1.35}
+.gi-member .gm-name .gn-tx{max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .gi-member .gm-name>i{flex:none}
 .own-tag{display:inline-block;font-style:normal;font-size:9px;line-height:1;
   padding:2px 4px;border-radius:4px;background:var(--primary-ultra);color:var(--primary);
