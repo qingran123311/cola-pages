@@ -2432,6 +2432,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-stres.l{background:var(--fill);color:var(--t3);border:1px solid var(--line)}
 .gm-stres.d{background:var(--fill);color:var(--t2);border:1px solid var(--line)}
 
+/* P40 大厅右上第二个按钮（齿轮）：navbar-act 只容一个，齿轮在战绩左侧 */
+.gm-nav2{position:absolute;right:64px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t1);padding:6px;display:flex}
 </style>
 </head>
 <body>
@@ -2907,7 +2909,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   <header class="navbar">
     <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
     <div class="navbar-title">游戏</div>
-    <button class="nav-act" id="gm-stats-btn">战绩</button>
+    <button class="gm-nav2" id="gm-gear-top" title="游戏设置"><i data-icon="settings" data-size="17"></i></button>
+    <button class="navbar-act" id="gm-stats-btn">战绩</button>
   </header>
   <div class="page-body" id="gm-hall"></div>
 </section>
@@ -2917,7 +2920,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   <header class="navbar">
     <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
     <div class="navbar-title" id="room-title">对局</div>
-    <button class="nav-act" id="room-gear" title="游戏设置"><i data-icon="settings" data-size="18"></i></button>
+    <button class="navbar-act" id="room-gear" title="游戏设置"><i data-icon="settings" data-size="17"></i></button>
   </header>
   <div class="page-body page-body-flush" id="room-body"></div>
   <div id="room-float"></div>
@@ -13681,13 +13684,11 @@ const Games = (function () {
         '<small class="gm-card-rec">' + (st.length ? st.length + ' 战 ' + w + ' 胜' : '还没玩过') + '</small>' +
         '</button>';
     }).join('') + '</div>';
-    h += '<button class="gm-gear-mini" id="gm-gear-mini"><i data-icon="settings" data-size="12"></i>游戏设置</button>';
     box.innerHTML = h;
     mountIcons();
     box.querySelectorAll('[data-room]').forEach(b => b.addEventListener('click', () => openRoom(b.dataset.room)));
     box.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => startFlow(b.dataset.game)));
-    const gm = document.getElementById('gm-gear-mini');
-    if (gm) gm.addEventListener('click', openSettings);
+    /* 设置入口=右上角小齿轮（她 08-29：不要"游戏设置"文字行），绑定在 init 里 */
   }
 
   /* ---------- 开局：选人 → 邀请（80/20）→ 房间 ---------- */
@@ -13768,20 +13769,22 @@ const Games = (function () {
     const ta = taUid(r);
     if (p.by === 'ta') {
       const wantFirst = Math.random() < 0.5;
-      r.pendingFirst = wantFirst ? 'ta' : 'me';
+      /* pendingFirst 存的是「提案里谁执黑」的**联系人 id**——之前存角色串 'ta' 会被当成
+         联系人查不到（名字变"已删除联系人"），execTaMove 的守卫也永远不匹配 → TA 先手时整盘卡死（她 08-29 抓到） */
+      r.pendingFirst = wantFirst ? ta : 'me';
       feed(r, 'ta', esc(name(ta)) + '：' + (wantFirst ? '这局我先手？' : '你先请～'));
     } else {
       if (Math.random() * 100 < FIRST_AGREE) {
         setBlack(r, 'me');
         feed(r, 'ta', esc(name(ta)) + '：好呀，你先');
       } else {
-        r.pendingFirst = 'ta';
+        r.pendingFirst = ta;
         feed(r, 'ta', esc(name(ta)) + '：不行，这局我要先手！——除非你现在认怂');
       }
     }
     DB.save();
   }
-  /* 她对 TA 提案的答复：agree=true→按提案；false=驳回（她要先手，TA 让步） */
+  /* 她对 TA 提案的答复：agree=true→按提案（pendingFirst=联系人 id）；false=驳回（她要先手，TA 让步） */
   function answerFirst(agree) {
     const r = curRoom(); if (!r || r.phase !== 'negotiate' || !r.pendingFirst) return;
     const ta = taUid(r);
@@ -13794,6 +13797,7 @@ const Games = (function () {
     feed(r, 'sys', '商定好了——' + esc(name(uid)) + ' 执黑先行');
     r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+    scheduleTimers(r);
   }
 
   /* ---------- 落子与终局 ---------- */
@@ -13926,16 +13930,15 @@ const Games = (function () {
       (thinking ? '<span class="gm-thinking">' + esc(name(ta)) + ' 正在想…</span>' : '') +
       '</div>';
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
-    /* 阶段横幅/协商按钮 */
+    /* 阶段提示：她 08-29 定——别写机制说明（"80%会来""商定先手"那类删掉），只留必要状态 */
     if (r.phase === 'inviting') {
-      h += '<div class="gm-banner">已经把邀请递过去了，等 ' + esc(name(ta)) + ' 应答…（80% 会来）</div>';
+      h += '<div class="gm-banner">等待 ' + esc(name(ta)) + ' 应答…</div>';
     } else if (r.phase === 'dead') {
       h += '<div class="gm-banner">' + esc(name(ta)) + ' 婉拒了这局，返回再请一位吧</div>';
     } else if (r.phase === 'negotiate') {
-      h += '<div class="gm-banner">商定先手——谁执黑谁先走</div>';
       if (r.pendingFirst) {
         h += '<div class="gm-nego"><button class="btn btn-secondary" id="gm-nego-no">驳回，我要先手</button>' +
-             '<button class="btn btn-primary" id="gm-nego-yes">同意，' + (r.pendingFirst === 'ta' ? 'TA 先手' : '我先手') + '</button></div>';
+             '<button class="btn btn-primary" id="gm-nego-yes">同意，' + (r.pendingFirst === 'me' ? '我先手' : 'TA 先手') + '</button></div>';
       } else {
         h += '<div class="gm-nego"><button class="btn btn-primary" id="gm-first-btn">我要先手</button></div>';
       }
@@ -13947,7 +13950,7 @@ const Games = (function () {
         h += '<div class="gm-nego"><button class="btn btn-primary" id="gm-spin-btn">转战利品</button></div>';
       }
     } else if (r.phase === 'playing' && turn !== 'me') {
-      h += '<div class="gm-banner">等 TA 落子…</div>';
+      /* TA 落子中：玩家条上已有「正在想…」，不再叠横幅（她 08-29：别堆说明文字） */
     }
     h += '<div class="gm-feed" id="room-feed">' + (r.feed || []).map(f =>
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
@@ -13991,17 +13994,18 @@ const Games = (function () {
   function toggleChips() {
     const row = document.getElementById('room-chips');
     if (!row) return;
-    if (!row.classList.contains('open')) {
+    /* 她 08-29 抓到：点短语没反应——旧写法 toggle('open') 但行上一直挂着 hidden 类，永远 display:none */
+    if (row.classList.contains('hidden')) {
       const quick = pickAll('快捷短语', DEF_QUICK);
       const props = S().propsStyle === 'sticker' ? PROPS.map(p => p.sticker) : PROPS.map(p => p.line);
       row.innerHTML =
         PROPS.map((p, i) => '<button class="gm-chip gm-prop" data-prop="' + p.id + '">' +
           '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + props[i] + '</svg>' + esc(p.name) + '</button>').join('') +
         quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
-      row.classList.toggle('open');
-      row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.remove('open'); }));
-      row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.remove('open'); }));
-    } else row.classList.remove('open');
+      row.classList.remove('hidden');
+      row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
+      row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.add('hidden'); }));
+    } else row.classList.add('hidden');
   }
   function pickAll(groupName, builtin) {
     const l = lib();
@@ -14230,37 +14234,50 @@ const Games = (function () {
     showSettle(r);   // 回结算卡（已转就不再给转钮）
   }
 
-  /* ---------- 游戏设置（只在游戏里：极小齿轮） ---------- */
+  /* ---------- 游戏设置（只在游戏里：右上角小齿轮；她 08-29：表单拆短，手机一屏放得下） ---------- */
   function openSettings() {
     const cfg = S().wheelCfg;
     UI.actionSheet('游戏设置', [
-      { key: 'wheel', label: '战利品转盘 · 占比与红包档' },
+      { key: 'weight', label: '转盘占比（五类%）' },
+      { key: 'reds', label: '转盘红包档位（四档）' },
       { key: 'prop', label: '道具/转盘配色：' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿') + '（点一下切换）' }
     ]).then(k => {
       if (k === 'prop') {
         S().propsStyle = S().propsStyle === 'sticker' ? 'mono' : 'sticker';
         DB.save(); UI.toast('已切换为' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿'));
-      } else if (k === 'wheel') {
+      } else if (k === 'weight') {
         const w = cfg.weights || {};
         Home.openForm({
-          title: '转盘占比%（五类合计随意，按比例分）',
+          title: '转盘占比（按比例分）',
           fields: [
-            { key: 'red', label: '红包%', type: 'number', value: w.red }, { key: 'truth', label: '真心话%', type: 'number', value: w.truth },
-            { key: 'dare', label: '大冒险%', type: 'number', value: w.dare }, { key: 'errand', label: '使唤%', type: 'number', value: w.errand },
-            { key: 'blank', label: '空门%', type: 'number', value: w.blank },
-            { key: 'r0', label: '红包档1(元)', type: 'number', value: (cfg.reds[0] || 0) / 100 },
-            { key: 'r1', label: '红包档2(元)', type: 'number', value: (cfg.reds[1] || 0) / 100 },
-            { key: 'r2', label: '红包档3(元)', type: 'number', value: (cfg.reds[2] || 0) / 100 },
-            { key: 'r3', label: '红包档4(元)', type: 'number', value: (cfg.reds[3] || 0) / 100 }
+            { key: 'red', label: '红包%', type: 'number', value: w.red },
+            { key: 'truth', label: '真心话%', type: 'number', value: w.truth },
+            { key: 'dare', label: '大冒险%', type: 'number', value: w.dare },
+            { key: 'errand', label: '使唤%', type: 'number', value: w.errand },
+            { key: 'blank', label: '空门%', type: 'number', value: w.blank }
           ],
           okText: '保存',
           onSubmit(v) {
             const num = x => Math.max(0, Math.round(+x || 0));
             cfg.weights = { red: num(v.red), truth: num(v.truth), dare: num(v.dare), errand: num(v.errand), blank: num(v.blank) };
+            DB.save(); UI.toast('转盘占比已更新');
+          }
+        });
+      } else if (k === 'reds') {
+        Home.openForm({
+          title: '转中红包时的金额档（元）',
+          fields: [
+            { key: 'r0', label: '档1（元）', type: 'number', value: (cfg.reds[0] || 0) / 100 },
+            { key: 'r1', label: '档2（元）', type: 'number', value: (cfg.reds[1] || 0) / 100 },
+            { key: 'r2', label: '档3（元）', type: 'number', value: (cfg.reds[2] || 0) / 100 },
+            { key: 'r3', label: '档4（元）', type: 'number', value: (cfg.reds[3] || 0) / 100 }
+          ],
+          okText: '保存',
+          onSubmit(v) {
             cfg.reds = [v.r0, v.r1, v.r2, v.r3].map(x => {
               const chk = Wallet.toFen(String(x)); return chk.err ? 0 : chk.fen;
             });
-            DB.save(); UI.toast('转盘已更新');
+            DB.save(); UI.toast('红包档位已更新');
           }
         });
       }
@@ -14306,6 +14323,8 @@ const Games = (function () {
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
+    const gt = document.getElementById('gm-gear-top');
+    if (gt) gt.addEventListener('click', openSettings);
     const rg = document.getElementById('room-gear');
     if (rg) rg.addEventListener('click', openSettings);
   }
