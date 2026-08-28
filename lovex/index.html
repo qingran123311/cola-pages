@@ -2434,6 +2434,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 
 /* P40 大厅右上第二个按钮（齿轮）：navbar-act 只容一个，齿轮在战绩左侧 */
 .gm-nav2{position:absolute;right:64px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t1);padding:6px;display:flex}
+/* ---------- P40 补丁（她 08-29 夜） ---------- */
+.gm-ava img{width:100%;height:100%;object-fit:cover}
+.gm-propbig{padding:8px 12px;font-size:12.5px;gap:6px}
+.gm-propbig svg{width:22px;height:22px}
+.gm-fimg{max-width:150px;max-height:120px;border-radius:8px;display:block}
+.gm-fsmile{border:none;background:none;color:var(--t2);padding:4px;display:flex}
+.gm-fstg{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-top:1px solid var(--line);max-height:132px;overflow-y:auto}
+.gm-fstg.hidden{display:none}
+.gm-fst{width:44px;height:44px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);padding:3px;cursor:pointer}
+.gm-fst img{width:100%;height:100%;object-fit:contain}
+
 </style>
 </head>
 <body>
@@ -7552,10 +7563,12 @@ const Chat = (function () {
     clearQuote();
   }
 
-  /* P40 悬浮聊天窗发送口：面板里就是真会话，走这里=正常聊天（TA 按聊天回复设置回） */
-  function sendTo(convId, text) {
+  /* P40 悬浮聊天窗发送口：面板里就是真会话，走这里=正常聊天（TA 按聊天回复设置回）。
+     img 传图片 dataURL 时发图片消息（她 08-29：悬浮窗也要能发表情/图，不是只有字） */
+  function sendTo(convId, text, img) {
     const t = String(text || '').trim();
-    if (t && DB.state.convs.some(c => c.id === convId)) pushMine({ type: 'text', text: t }, convId);
+    if ((!t && !img) || !DB.state.convs.some(c => c.id === convId)) return;
+    pushMine(img ? { type: 'img', img, sticker: true } : { type: 'text', text: t }, convId);
   }
 
   function sendImage(dataUrl, sticker) { pushMine({ type: 'img', img: dataUrl, sticker: !!sticker }); }
@@ -13603,7 +13616,6 @@ const Games = (function () {
     const first = room.blackUid || 'me';
     return ((room.moves || []).length % 2 === 0) ? first : (first === 'me' ? taUid(room) : 'me');
   }
-  function coord(x, y) { return String.fromCharCode(65 + y) + (x + 1); }
 
   const REG = {};
   function register(def) { REG[def.id] = def; }
@@ -13808,7 +13820,7 @@ const Games = (function () {
     if (!d.legal(r, x, y)) return;
     r.plans.forEach(p => { if (p.kind === 'urge') p.done = true; });   // 走了就不催
     const res = d.applyMove(r, 'me', x, y);
-    feed(r, 'sys', esc(name('me')) + ' 落子 ' + coord(x, y));
+    /* 她 08-29：落子播报（"XX 落子 E5"）又吵又长，删——棋盘自己会说话 */
     if (res) return endGame(r, res);
     r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
     if (Math.random() * 100 < TA_CHAT_PROB) {
@@ -13823,7 +13835,6 @@ const Games = (function () {
     const mv = d.aiPick(r);
     if (!mv) return endGame(r, { win: 'draw', line: [] });
     const res = d.applyMove(r, taUid(r), mv.x, mv.y);
-    feed(r, 'sys', esc(name(taUid(r))) + ' 落子 ' + coord(mv.x, mv.y));
     if (res) return endGame(r, res);
     r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (Math.random() * 100 < TA_CHAT_PROB) {
@@ -13956,11 +13967,13 @@ const Games = (function () {
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
     h += '<div class="gm-ipt">' +
       '<button class="gm-chip-btn" id="room-quick">短语</button>' +
+      '<button class="gm-chip-btn" id="room-prop-btn">道具</button>' +
       '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
       '<button class="gm-send" id="room-send">发</button>' +
       '<button class="gm-resign" id="room-resign">认输</button>' +
       '</div>' +
-      '<div class="gm-chips hidden" id="room-chips"></div>';
+      '<div class="gm-chips hidden" id="room-chips"></div>' +
+      '<div class="gm-chips hidden" id="room-props"></div>';
     body.innerHTML = h;
     /* 棋盘 */
     const bel = document.getElementById('room-board');
@@ -13979,33 +13992,50 @@ const Games = (function () {
     if (send) send.addEventListener('click', () => { roomSay(ipt.value); ipt.value = ''; });
     if (ipt) ipt.addEventListener('keydown', e => { if (e.key === 'Enter') { roomSay(ipt.value); ipt.value = ''; } });
     const rs = document.getElementById('room-resign'); if (rs) rs.addEventListener('click', resign);
-    const qb = document.getElementById('room-quick'); if (qb) qb.addEventListener('click', toggleChips);
+    const qb = document.getElementById('room-quick'); if (qb) qb.addEventListener('click', () => toggleRow('room-chips', buildQuickHtml));
+    const pb = document.getElementById('room-prop-btn'); if (pb) pb.addEventListener('click', () => toggleRow('room-props', buildPropsHtml));
     renderFloat(r);
     tick();
   }
   function playerChip(uid, r, active) {
-    const ct = Home.contactById(uid);
-    const ava = (uid === 'me' || !ct) ? '' : (ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1)));
+    /* 她 08-29：五子棋头像显示不正确——我的格子是空盒。补上：我用我的头像/昵称首字 */
+    const prof = DB.state.profile || {};
+    let ava = '';
+    if (uid === 'me') {
+      ava = prof.avatar ? '<img src="' + prof.avatar + '">' : esc((prof.name || '我').slice(0, 1));
+    } else {
+      const ct = Home.contactById(uid);
+      if (ct) ava = ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1));
+    }
     const stone = r.blackUid === uid ? '<i class="gm-stone-dot"></i>' : '';
     return '<span class="gm-player' + (active ? ' on' : '') + '" data-uid="' + uid + '">' +
       '<span class="gm-ava">' + ava + '</span>' +
       '<b>' + esc(name(uid)) + '</b>' + stone + '</span>';
   }
-  function toggleChips() {
-    const row = document.getElementById('room-chips');
+  /* 两个面板共用一套开合：开一个关另一个（她 08-29：道具要一眼找得到，独立成「道具」钮） */
+  function toggleRow(rowId, buildHtml) {
+    const row = document.getElementById(rowId);
     if (!row) return;
-    /* 她 08-29 抓到：点短语没反应——旧写法 toggle('open') 但行上一直挂着 hidden 类，永远 display:none */
+    const other = rowId === 'room-chips' ? 'room-props' : 'room-chips';
+    const otherRow = document.getElementById(other);
+    if (otherRow && !otherRow.classList.contains('hidden')) otherRow.classList.add('hidden');
     if (row.classList.contains('hidden')) {
-      const quick = pickAll('快捷短语', DEF_QUICK);
-      const props = S().propsStyle === 'sticker' ? PROPS.map(p => p.sticker) : PROPS.map(p => p.line);
-      row.innerHTML =
-        PROPS.map((p, i) => '<button class="gm-chip gm-prop" data-prop="' + p.id + '">' +
-          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + props[i] + '</svg>' + esc(p.name) + '</button>').join('') +
-        quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
+      if (!row.dataset.built) { row.innerHTML = buildHtml(); bindRow(row); row.dataset.built = '1'; }
       row.classList.remove('hidden');
-      row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
-      row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.add('hidden'); }));
     } else row.classList.add('hidden');
+  }
+  function buildQuickHtml() {
+    const quick = pickAll('快捷短语', DEF_QUICK);
+    return quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
+  }
+  function buildPropsHtml() {
+    const props = S().propsStyle === 'sticker' ? PROPS.map(p => p.sticker) : PROPS.map(p => p.line);
+    return PROPS.map((p, i) => '<button class="gm-chip gm-propbig" data-prop="' + p.id + '">' +
+      '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + props[i] + '</svg>' + esc(p.name) + '</button>').join('');
+  }
+  function bindRow(row) {
+    row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
+    row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.add('hidden'); }));
   }
   function pickAll(groupName, builtin) {
     const l = lib();
@@ -14057,6 +14087,24 @@ const Games = (function () {
   }
 
   /* ---------- 悬浮聊天窗（游戏里正常聊天：真会话，走各 TA 聊天回复设置） ---------- */
+  /* 悬浮窗气泡：真图真字（她 08-29：满屏"[图片]"不行） */
+  function fBubbleHtml(m, fpeer) {
+    const body = (m.type === 'img' && m.img)
+      ? '<img class="gm-fimg" src="' + m.img + '">'
+      : esc(m.type === 'text' ? m.text : '[' + (m.type === 'voice' ? '语音' : '消息') + ']');
+    if (m.from === 'me') return '<div class="gm-fbubble me">' + body + '</div>';
+    if (m.from === 'sys') return '<div class="gm-fsys">' + esc(m.text || '') + '</div>';
+    const who = m.senderId ? name(m.senderId) : name(fpeer);
+    return '<div class="gm-fbubble ta"><i>' + esc(who) + '</i>' + body + '</div>';
+  }
+  /* 表情池：我的 + 共用，未屏蔽（同聊天我方口径），悬浮窗表情格用 */
+  function myStickerPool() {
+    const out = [];
+    const push = lib => ((lib && lib.items) || []).forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
+    push((DB.state.libs || {}).userStickers);
+    push((DB.state.libs || {}).sharedStickers);
+    return out;
+  }
   function renderFloat(r) {
     const host = document.getElementById('room-float');
     if (!host) return;
@@ -14077,19 +14125,35 @@ const Games = (function () {
       '<div class="gm-fhead" id="gm-fhead"><span class="gm-fball-mini"><i data-icon="chat" data-size="12"></i></span>' +
       '<b>' + esc(name(fpeer)) + '</b>' +
       '<button id="gm-fclose"><i data-icon="x" data-size="14"></i></button></div>' +
-      '<div class="gm-fmsgs" id="gm-fmsgs">' + msgs.map(m => {
-        if (m.from === 'me') return '<div class="gm-fbubble me">' + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>';
-        if (m.from === 'sys') return '<div class="gm-fsys">' + esc(m.text || '') + '</div>';
-        const who = m.senderId ? name(m.senderId) : name(fpeer);
-        return '<div class="gm-fbubble ta"><i>' + esc(who) + '</i>' + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>';
-      }).join('') + '</div>' +
-      '<div class="gm-fipt"><input id="gm-fipt" placeholder="正常聊天，不打断下棋…"><button id="gm-fsend">发</button></div>' +
+      '<div class="gm-fmsgs" id="gm-fmsgs">' + msgs.map(m => fBubbleHtml(m, fpeer)).join('') + '</div>' +
+      '<div class="gm-fstg hidden" id="gm-fstg"></div>' +
+      '<div class="gm-fipt"><button class="gm-fsmile" id="gm-fsmile"><i data-icon="smile" data-size="17"></i></button>' +
+      '<input id="gm-fipt" placeholder="正常聊天，不打断下棋…"><button id="gm-fsend">发</button></div>' +
       '</div>';
     host.innerHTML = h;
     mountIcons();
     const fm = document.getElementById('gm-fmsgs');
     if (fm) fm.scrollTop = fm.scrollHeight;
     document.getElementById('gm-fclose').addEventListener('click', () => { floatConv = null; renderFloat(r); });
+    /* 表情：我的+共用未屏蔽表情，点了直接发图（她 08-29：悬浮窗要能发表情、能看真图） */
+    document.getElementById('gm-fsmile').addEventListener('click', () => {
+      const grid = document.getElementById('gm-fstg');
+      if (!grid) return;
+      if (grid.classList.contains('hidden')) {
+        if (!grid.dataset.built) {
+          const pool = myStickerPool();
+          grid.innerHTML = pool.slice(0, 60).map(src =>
+            '<button class="gm-fst" data-img="' + esc(src) + '"><img src="' + src + '"></button>').join('');
+          grid.dataset.built = '1';
+          grid.querySelectorAll('[data-img]').forEach(b => b.addEventListener('click', () => {
+            if (typeof Chat !== 'undefined' && Chat.sendTo) Chat.sendTo(floatConv, '', b.dataset.img);
+            grid.classList.add('hidden');
+            setTimeout(() => renderFloat(r), 60);
+          }));
+        }
+        grid.classList.remove('hidden');
+      } else grid.classList.add('hidden');
+    });
     const send = () => {
       const ipt = document.getElementById('gm-fipt');
       const t = ipt.value.trim(); if (!t) return;
@@ -14126,13 +14190,8 @@ const Games = (function () {
     if (!floatConv || conv.id !== floatConv) return;
     const fm = document.getElementById('gm-fmsgs');
     if (!fm) return;
-    if (m.from === 'sys') fm.insertAdjacentHTML('beforeend', '<div class="gm-fsys">' + esc(m.text || '') + '</div>');
-    else {
-      const fpeerNow = (DB.state.convs.find(c => c.id === conv.id) || {}).peerId || conv.id;
-      const who = m.senderId ? name(m.senderId) : name(fpeerNow);
-      fm.insertAdjacentHTML('beforeend', '<div class="gm-fbubble ' + (m.from === 'me' ? 'me' : 'ta') + '">' +
-        (m.from === 'me' ? '' : '<i>' + esc(who) + '</i>') + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>');
-    }
+    const fpeerNow = (DB.state.convs.find(c => c.id === conv.id) || {}).peerId || conv.id;
+    fm.insertAdjacentHTML('beforeend', fBubbleHtml(m, fpeerNow));
     fm.scrollTop = fm.scrollHeight;
   }
   /* engine viewing 判定用：悬浮窗开着 + 对局页在前台 = 正在看这个会话 */
