@@ -499,7 +499,7 @@ button{-webkit-tap-highlight-color:transparent}
    -----------------------------------------------------
    z-index 层级表（新增浮层前先查此表，改动后同步更新）：
    0~25 页面内元素 · 900 menu-drop · 1140 通话 · 1150 dialog-mask/letter-layer
-   1160 img-viewer · 1161 通话小窗 · 1170 换背景面板
+   1160 img-viewer · 1161 通话小窗/游戏悬浮聊天窗(gm-fball/gm-fpanel) · 1170 换背景面板
    1172 业务壳上限(rp-send/rp-open/rp-cov-dialog)
    1180 操作弹层(sheet-mask/rp-cov-mask) · 1190 ui-modal(confirm/输入模态) · 1200 toast · 1210 msg-banner
    ===================================================== */
@@ -2316,6 +2316,122 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* 应战按钮（详情页待作答态） */
 #qzv-goanswer{width:100%;justify-content:center;margin-top:11px;padding:9px}
 
+/* =====================================================
+   LOVE♡X · P40 游戏板块 —— 大厅/对局/悬浮聊天窗/转盘/战绩
+   骨架永远墨线（全走主题变量）；物件彩（道具/转盘贴纸版）
+   只用独立游戏色 --g-*，不进全站三色纪律（清然 08-28 晚口径）
+   ===================================================== */
+:root{
+  --g-egg:#F2CE5F; --g-flower:#F0A8B4; --g-flower2:#F6C6CF;
+  --g-hammer:#8FB3D9; --g-stick-line:#3A3A42; --g-leaf:#5E8F5A;
+}
+/* ---------- 大厅 ---------- */
+.gm-sec{font-size:12px;color:var(--t3);margin:2px 2px -8px}
+.gm-shelf{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x mandatory}
+.gm-card{flex:0 0 132px;scroll-snap-align:start;background:var(--card);border:1.5px solid var(--line);
+  border-radius:14px;padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1)}
+.gm-card-ico{width:52px;height:52px;border-radius:12px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.gm-card b{font-size:15px}
+.gm-card small{color:var(--t3);font-size:11px}
+.gm-card-rec{color:var(--t2)!important}
+.gm-gear-mini{margin-top:2px;align-self:center;display:inline-flex;align-items:center;gap:5px;color:var(--t3);
+  font-size:11px;background:none;border:none;padding:6px 10px}
+/* ---------- 对局页 ---------- */
+#page-room .page-body-flush{gap:0;padding:0}
+.gm-players{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 12px 6px;position:relative}
+.gm-player{display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45;transition:opacity .2s}
+.gm-player.on{opacity:1}
+.gm-ava{width:40px;height:40px;border-radius:8px;background:var(--fill);overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--t2);border:2px solid transparent}
+.gm-player.on .gm-ava{border-color:var(--primary)}
+.gm-player b{font-size:11px;font-weight:600;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm-stone-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--t1)}
+.gm-vs{font-size:11px;color:var(--t3);letter-spacing:1px}
+.gm-thinking{position:absolute;bottom:-4px;right:14px;font-size:10px;color:var(--t3)}
+.gm-splat .gm-ava{animation:gm-shake .45s}
+@keyframes gm-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}55%{transform:translateX(3px)}80%{transform:translateX(-2px)}}
+.gm-prop-fly{position:absolute;z-index:6;transition:transform .6s cubic-bezier(.3,.7,.4,1),opacity .2s;color:var(--t2);opacity:1}
+.gm-prop-fly.sticker{color:var(--g-stick-line)}
+.gm-prop-fly svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
+.gm-board-wrap{display:flex;flex-direction:column;align-items:center;padding:2px 12px}
+.gm-timer{height:16px;font-size:11px;color:var(--t3)}
+.gk-board{display:grid;grid-template-columns:repeat(15,1fr);width:min(92vw,430px);aspect-ratio:1;
+  background:var(--card);border:2px solid var(--t2);border-radius:6px}
+.gk-cell{position:relative;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer}
+.gk-cell:nth-child(15n){border-right:none}
+.gk-cell:nth-last-child(-n+15){border-bottom:none}
+.gk-cell.star::after{content:'';position:absolute;left:50%;top:50%;width:3px;height:3px;border-radius:50%;background:var(--line);transform:translate(-50%,-50%)}
+.gk-stone{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:78%;height:78%;border-radius:50%}
+.gk-black{background:var(--t1)}
+.gk-white{background:var(--card);border:1.5px solid var(--t1)}
+.gk-last::after{content:'';position:absolute;left:50%;top:50%;width:4px;height:4px;border-radius:50%;background:var(--primary);transform:translate(-50%,-50%)}
+.gk-winline{box-shadow:0 0 0 2px var(--primary)}
+.gk-grey{opacity:.35}
+.gm-banner{margin:8px 14px;padding:8px 12px;border:1.5px dashed var(--line);border-radius:10px;font-size:12px;color:var(--t2);text-align:center}
+.gm-nego{display:flex;gap:10px;justify-content:center;padding:2px 14px 4px}
+.gm-nego .btn{flex:1;max-width:180px;padding:9px}
+.gm-feed{flex:1;overflow-y:auto;margin:6px 14px;padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;min-height:64px}
+.gm-fline{font-size:11.5px;color:var(--t2);padding:2.5px 0;line-height:1.5}
+.gm-fline.me{color:var(--t1)}
+.gm-fline.ta{color:var(--t2)}
+.gm-fline.sys{color:var(--t3)}
+.gm-ipt{display:flex;align-items:center;gap:8px;padding:8px 14px calc(10px + env(safe-area-inset-bottom))}
+.gm-chip-btn,.gm-send,.gm-resign{border:1.5px solid var(--line);background:var(--card);color:var(--t2);border-radius:9px;font-size:12px;padding:7px 11px}
+.gm-send{color:var(--primary);border-color:var(--primary)}
+.gm-resign{color:var(--t3)}
+.gm-ipt input{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:8px 10px;font-size:13px;color:var(--t1)}
+.gm-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 8px}
+.gm-chips.hidden{display:none}
+.gm-chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--card);
+  color:var(--t2);border-radius:14px;font-size:11.5px;padding:5px 10px}
+/* ---------- 悬浮聊天窗（层级 1161，对齐通话小窗） ---------- */
+#room-float{position:fixed;right:12px;bottom:86px;z-index:1161}
+.gm-fball{width:42px;height:42px;border-radius:50%;background:color-mix(in srgb,var(--nav-bg) 82%,transparent);
+  backdrop-filter:blur(8px);border:1.5px solid var(--line);color:var(--t2);box-shadow:0 4px 16px rgba(0,0,0,.28)}
+.gm-fpanel{width:min(78vw,300px);background:color-mix(in srgb,var(--nav-bg) 88%,transparent);backdrop-filter:blur(10px);
+  border:1.5px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.28);overflow:hidden}
+.gm-fhead{display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:grab;border-bottom:1px solid var(--line)}
+.gm-fhead b{flex:1;font-size:12px}
+.gm-fball-mini{color:var(--t3)}
+.gm-fhead button{border:none;background:none;color:var(--t3);padding:2px}
+.gm-fmsgs{max-height:min(40vh,300px);overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.gm-fbubble{max-width:82%;font-size:12px;line-height:1.5;padding:6px 9px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--t1);align-self:flex-start}
+.gm-fbubble i{display:block;font-style:normal;font-size:10px;color:var(--t3);margin-bottom:1px}
+.gm-fbubble.me{align-self:flex-end;background:var(--primary);color:#fff;border-color:var(--primary)}
+.gm-fsys{align-self:center;font-size:10px;color:var(--t3);text-align:center}
+.gm-fipt{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+.gm-fipt input{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:7px 9px;font-size:12px;color:var(--t1)}
+.gm-fipt button{border:1.5px solid var(--primary);color:var(--primary);background:none;border-radius:9px;padding:7px 12px;font-size:12px}
+/* ---------- 结算/转盘 ---------- */
+.gm-ovl{align-items:center;justify-content:center}
+.gm-settle,.gm-wheelbox{width:min(84vw,340px);background:var(--card);border:2px solid var(--t2);border-radius:18px;
+  padding:22px 18px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.gm-settle-t{font-size:26px;font-weight:700;color:var(--t1)}
+.gm-settle-s{font-size:12px;color:var(--t3);margin-top:-6px}
+.gm-settle .btn{width:100%;justify-content:center}
+.gm-wheel-title{font-size:15px;font-weight:700;color:var(--t1)}
+.gm-wheel-wrap{position:relative;width:min(70vw,250px);aspect-ratio:1}
+.gm-wheel{width:100%;height:100%;border-radius:50%;border:3px solid var(--t2);position:relative;
+  transition:transform 2.8s cubic-bezier(.15,.75,.25,1)}
+.gm-wlabel{position:absolute;left:50%;top:50%;font-size:11px;color:var(--t2);transform-origin:0 0}
+.gm-wlabel.sticker{color:var(--g-stick-line);font-weight:600}
+.gm-wheel-pointer{position:absolute;left:50%;top:-7px;transform:translateX(-50%);z-index:2;width:0;height:0;
+  border-left:8px solid transparent;border-right:8px solid transparent;border-top:14px solid var(--t1)}
+.gm-wheel-sub{font-size:11px;color:var(--t3)}
+/* ---------- 战绩档案 ---------- */
+.gm-stcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.gm-sthead{display:flex;align-items:baseline;gap:10px}
+.gm-sthead b{font-size:15px;flex:1}
+.gm-stbig{font-size:14px;font-weight:700;color:var(--t1)}
+.gm-ststreak{font-size:11px;color:var(--primary)}
+.gm-strows{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
+.gm-strow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--t1)}
+.gm-strow small{color:var(--t3);margin-left:auto}
+.gm-stres{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.gm-stres.w{background:var(--fill);color:var(--primary);border:1px solid var(--primary)}
+.gm-stres.l{background:var(--fill);color:var(--t3);border:1px solid var(--line)}
+.gm-stres.d{background:var(--fill);color:var(--t2);border:1px solid var(--line)}
+
 </style>
 </head>
 <body>
@@ -2346,6 +2462,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <div class="page-body">
       <div class="card cell-group">
         <button class="cell" id="disc-moments"><span class="cell-icon"><i data-icon="camera" data-size="20"></i></span><span class="cell-text">朋友圈</span><span class="chevron">›</span></button>
+        <button class="cell" id="disc-game"><span class="cell-icon"><i data-icon="gamepad" data-size="20"></i></span><span class="cell-text">游戏</span><span class="chevron">›</span></button>
       </div>
       <!-- 预留扩展位：她后续会往发现页加东西 -->
     </div>
@@ -2785,6 +2902,36 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   <div class="page-body" id="dy-body"></div>
 </section>
 
+<!-- ===== 页面：游戏大厅（P40，她定：发现页朋友圈下方入口） ===== -->
+<section class="page" id="page-game">
+  <header class="navbar">
+    <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+    <div class="navbar-title">游戏</div>
+    <button class="nav-act" id="gm-stats-btn">战绩</button>
+  </header>
+  <div class="page-body" id="gm-hall"></div>
+</section>
+
+<!-- ===== 页面：对局（P40）：玩家条+棋盘+播报线+发言框，悬浮聊天窗挂 #room-float ===== -->
+<section class="page" id="page-room">
+  <header class="navbar">
+    <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+    <div class="navbar-title" id="room-title">对局</div>
+    <button class="nav-act" id="room-gear" title="游戏设置"><i data-icon="settings" data-size="18"></i></button>
+  </header>
+  <div class="page-body page-body-flush" id="room-body"></div>
+  <div id="room-float"></div>
+</section>
+
+<!-- ===== 页面：战绩档案（P40）：按对手聚合的对战档案卡 ===== -->
+<section class="page" id="page-gstats">
+  <header class="navbar">
+    <button class="nav-back" data-back><i data-icon="chevron-left" data-size="20"></i></button>
+    <div class="navbar-title">战绩</div>
+  </header>
+  <div class="page-body" id="gstats-body"></div>
+</section>
+
 </div>
 
 <!-- ===== 底部导航（仅根页显示） ===== -->
@@ -2832,6 +2979,14 @@ const DB = (function () {
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
       kinshipMo: {},                   // 亲属卡月度赠送（她 08-28 晚定）：contactId -> {monthKey, sent}（每月掷一次 60%送/40%不发；旧 kinshipAuto 限次计数已废，装载时一次性清掉）
+      games: {                         // P40 游戏板块（她 08-28 晚拍板）
+        rooms: {},                     // roomId -> {id,game,players,blackUid,phase,moves[],plans[],feed[],status,winner,spun,createdAt}
+        records: [],                   // 每局一行 {id,game,players,winner,moves,ts,dur}（战绩页渲染时聚合，不另存计数）
+        wheelCfg: {                    // 战利品转盘：红包档位（分）与类别占比%（游戏内齿轮面板可调，她定红包四档）
+          reds: [52, 520, 1314, 5200],
+          weights: { red: 20, truth: 20, dare: 20, errand: 20, blank: 20 }
+        }
+      },
       repPlans: {},                    // P25/P33 报备当日计划（计划时刻制）：contactId -> {day, autoAt, chkAt, askAt, askDone}（P33 起 autoDone/chkDone/autoDur 退役：到点掷骰、循环不止）
       reportLib: {                     // P25 TA 报备语料库（她口供：地点库+动作词，偶尔随机带情绪词）
         places: ['图书馆', '教室', '宿舍', '食堂', '健身房', '超市', '操场', '咖啡店', '实验室', '回家路上'],
@@ -2860,6 +3015,7 @@ const DB = (function () {
         voices:  { groups: [], items: [] },           // 语音库·共用（二期P12）item:{id,name,audio,dur,blocked,groupId}
         whispers: {},                                 // 私语·联系人专属语音（二期P12）ctId→{groups,items}
         redNotes: { groups: [], items: [] },          // 红包备注库（二期P15）：item.name 即备注文案
+        gameNotes: { groups: [], items: [] },         // P40 游戏语料库：分组=快捷短语/转盘-真心话/转盘-大冒险/转盘-使唤/胜负感言（她要几百条，走文件管理批量导入）
         covers:   { mine: [], byContact: {} }         // 红包封面（二期P15）：mine:[{id,name,data}]；byContact.ctId:[…] 联系人专属
       },
       diary: {},                     // 心事簿（P21）：ctId→{days:{'YYYY-MM-DD':{me,ai,myCmt,reply}},visits:[{who,day,ts}]}
@@ -2914,7 +3070,7 @@ const DB = (function () {
      contactCards/contactStickers/whispers 是 ctId→lib 映射表，
      covers/stickers 结构不同，都不能塞 groups/items，
      否则 scopeSet 遍历到假键直接 TypeError，导入字卡全废。*/
-  const FLAT_LIB_KEYS = ['globalCards', 'aiStatus', 'userPat', 'aiPat', 'userStickers', 'sharedStickers', 'emojis', 'kamoji', 'voices', 'redNotes'];
+  const FLAT_LIB_KEYS = ['globalCards', 'aiStatus', 'userPat', 'aiPat', 'userStickers', 'sharedStickers', 'emojis', 'kamoji', 'voices', 'redNotes', 'gameNotes'];
   FLAT_LIB_KEYS.forEach(k => {
     const lib = (state.libs || {})[k];
     if (!lib || typeof lib !== 'object') return;
@@ -3047,6 +3203,17 @@ const DB = (function () {
     kill(st.reports, cid); kill(st.repPlans, cid); kill(st.kinshipMo, cid);
     kill(st.letters, cid); kill(st.diary, cid); kill(st.aiRuntime, cid);
 
+    /* 2.5) P40 游戏：含该联系人的对局与战绩一并清（人删了账不留，她 08-28 拍板口径） */
+    Object.keys(st.games && st.games.rooms || {}).forEach(k => {
+      const r = st.games.rooms[k];
+      if (r && (r.players || []).includes(cid)) { delete st.games.rooms[k]; n++; }
+    });
+    if (st.games && Array.isArray(st.games.records)) {
+      const before = st.games.records.length;
+      st.games.records = st.games.records.filter(r => !(r.players || []).includes(cid));
+      n += before - st.games.records.length;
+    }
+
     /* 3) 角色专属子库：字卡 / 表情 / 私语 / 红包封面 / 朋友圈封面 */
     kill(st.libs && st.libs.contactCards, cid);
     kill(st.libs && st.libs.contactStickers, cid);
@@ -3139,6 +3306,11 @@ const DB = (function () {
     const dead = new Set();
     const mark = u => { if (u && u !== 'me' && !live.has(u)) dead.add(u); };
     ['reports', 'repPlans', 'kinshipMo', 'letters', 'diary', 'aiRuntime'].forEach(k => Object.keys(state[k] || {}).forEach(mark));
+    Object.keys((state.games && state.games.rooms) || {}).forEach(k => {
+      const r = state.games.rooms[k];
+      if (r) (r.players || []).forEach(mark);
+    });
+    ((state.games && state.games.records) || []).forEach(r => { if (r) (r.players || []).forEach(mark); });
     [['libs', 'contactCards'], ['libs', 'contactStickers'], ['libs', 'whispers'], ['stickers', 'byContact']].forEach(pair => {
       const m = state[pair[0]] && state[pair[0]][pair[1]];
       if (m) Object.keys(m).forEach(mark);
@@ -5134,7 +5306,9 @@ const ICONS = {
   'w-partsun':     '<circle cx="8.6" cy="8" r="3"/><path d="M8.6 2.8v1.5M3.9 4.7l1.1 1.1M13.3 4.7l-1.1 1.1"/><path d="M11 19.6a3.6 3.6 0 0 1-.4-7.2A5 5 0 0 1 20.2 10.8a3.9 3.9 0 0 1-.6 7.7z"/>',
   'w-storm':       '<path d="M7 13a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.2 3.5 4.3 4.3 0 0 1 16.5 12z"/><path d="M12.8 12.5L10.2 16.5h3.2L10.8 20.5"/>',
   'heart-sketch':  '<path d="M12 20.2C6.6 15.8 3.4 12.1 3.5 8.8c.1-2.4 2-4.3 4.3-4.2 1.8.1 3.3 1.2 4.2 2.9.9-1.6 2.4-2.7 4.2-2.8 2.3-.1 4.2 1.9 4.3 4.3.1 3.2-3.1 6.9-8.5 11.2z"/><path d="M8 7.5c-1 .3-1.8 1.1-2 2.1"/>',
-  'quiz':          '<rect x="4.5" y="4" width="15" height="16.5" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.5 10.5h7M8.5 14h7M8.5 17.5h4"/>'
+  'quiz':          '<rect x="4.5" y="4" width="15" height="16.5" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.5 10.5h7M8.5 14h7M8.5 17.5h4"/>',
+  'gamepad':       '<path d="M7 8.5h10a4.3 4.3 0 0 1 4.2 5.2l-.7 3.6a2.5 2.5 0 0 1-4.4 1L14.7 16.5H9.3l-1.4 1.8a2.5 2.5 0 0 1-4.4-1l-.7-3.6A4.3 4.3 0 0 1 7 8.5z"/><path d="M8 11v3.4M6.3 12.7h3.4"/><circle cx="15.8" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.6" r="0.7" fill="currentColor" stroke="none"/>',
+  'go-board':      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/><circle cx="9.3" cy="9.3" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/><circle cx="14.6" cy="9.3" r="1.4" fill="currentColor" stroke="none"/>'
 };
 
 function I(name, size = 18) {
@@ -6800,7 +6974,7 @@ const Chat = (function () {
   function snippetOf(m) {
     return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
-      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
+      : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : m.type === 'game' ? '[游戏邀请]'
       : m.type === 'link' ? '[链接]' : (m.text || '');
   }
 
@@ -6979,6 +7153,34 @@ const Chat = (function () {
         } else {
           UI.toast('等待' + (isMine ? '对方' : '') + '领取中，24 小时内未领取将自动作废');
         }
+      });
+    } else if (m.type === 'game') {
+      /* P40 游戏邀请卡：状态实时读房间（等待应答/商定先手/对局中/已拒绝/已结束），点击入局 */
+      bub.classList.add('bubble-kin');
+      const room = (DB.state.games && DB.state.games.rooms) ? DB.state.games.rooms[m.roomId] : null;
+      const gdef = (typeof Games !== 'undefined' && room) ? Games.defOf(room) : null;
+      const isMine = m.from === 'me';
+      const gname = gdef ? gdef.name : '游戏';
+      const title = isMine
+        ? '给' + Home.displayName(Home.contactById(cur.peerId)) + '的' + gname + '邀请'
+        : '邀你来一局' + gname;
+      let st;
+      if (!room) st = '<span class="ks-state">已失效</span>';
+      else if (room.phase === 'inviting') st = '<span class="ks-state">等待应答…</span>';
+      else if (room.phase === 'negotiate') st = '<span class="ks-state go">商定先手中 · 进入 ›</span>';
+      else if (room.phase === 'playing') st = '<span class="ks-state go">对局中 · 进入 ›</span>';
+      else if (room.phase === 'dead') st = '<span class="ks-state">对方婉拒了</span>';
+      else st = '<span class="ks-state done">已结束</span>';
+      bub.innerHTML =
+        '<div class="ks-head"><i data-icon="gamepad" data-size="13"></i><span>游戏邀请</span></div>' +
+        '<div class="ks-title"></div>' +
+        '<div class="ks-limit">输赢进战绩，赢家转战利品</div>' + st;
+      bub.querySelector('.ks-title').textContent = title;
+      bub.addEventListener('click', () => {
+        if (!room) return UI.toast('这场对局已失效');
+        if (room.phase === 'dead') return UI.toast('对方婉拒了这局，另请一位吧');
+        if (room.phase === 'inviting') return UI.toast('还在等应答，稍一刻');
+        if (typeof Games !== 'undefined' && Games.openRoom) Games.openRoom(room.id);
       });
     } else if (m.type === 'redpacket') {
       /* 红包卡片消息（二期P15）：主题化卡片，点击开红包；底部品牌行照微信（清然 22:07 参考图） */
@@ -7312,26 +7514,29 @@ const Chat = (function () {
     scrollBottom();
   }
 
-  /* ---------------- 我方发消息（统一入口） ---------------- */
-  function pushMine(extra) {
-    if (!cur) return;
+  /* ---------------- 我方发消息（统一入口） ----------------
+     convId 缺省=当前会话；P40 悬浮聊天窗传显式 convId（同一入口，不复制第二套，台账 L13） */
+  function pushMine(extra, convId) {
+    const cv = convId ? DB.state.convs.find(c => c.id === convId) : cur;
+    if (!cv) return;
     const m = Object.assign({
       id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       from: 'me', ts: Date.now()
     }, extra);
-    (DB.state.msgs[cur.id] = DB.state.msgs[cur.id] || []).push(m);
-    cur.lastMsg = m.type === 'text' ? m.text
+    (DB.state.msgs[cv.id] = DB.state.msgs[cv.id] || []).push(m);
+    cv.lastMsg = m.type === 'text' ? m.text
                 : m.type === 'img' ? '[图片]'
                 : m.type === 'kinship' ? '[亲属卡]'
                 : m.type === 'redpacket' ? '[红包]'
                 : m.type === 'quiz' ? '[灵魂拷问]'
+                : m.type === 'game' ? '[游戏邀请]'
                 : m.type === 'link' ? '[链接]'
                 : '[语音]';
-    cur.lastTime = m.ts;
+    cv.lastTime = m.ts;
     DB.save();
-    renderMsgs();
+    if (!convId || (cur && cv.id === cur.id)) renderMsgs();   // 悬浮窗发的消息不重渲主窗
     Home.render();
-    Engine.onUserMessage(cur.id);   // 文字/图片/语音都会触发AI回复安排
+    Engine.onUserMessage(cv.id);   // 文字/图片/语音都会触发AI回复安排
   }
 
   function sendText() {
@@ -7342,6 +7547,12 @@ const Chat = (function () {
     updateSendState();
     pushMine({ type: 'text', text, quote: pendingQuote || undefined });
     clearQuote();
+  }
+
+  /* P40 悬浮聊天窗发送口：面板里就是真会话，走这里=正常聊天（TA 按聊天回复设置回） */
+  function sendTo(convId, text) {
+    const t = String(text || '').trim();
+    if (t && DB.state.convs.some(c => c.id === convId)) pushMine({ type: 'text', text: t }, convId);
   }
 
   function sendImage(dataUrl, sticker) { pushMine({ type: 'img', img: dataUrl, sticker: !!sticker }); }
@@ -8644,7 +8855,7 @@ const Chat = (function () {
   function rerender() { if (!cur) return; refreshHeader(); renderMsgs(); }
 
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
-    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest,
+    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo,
     get conv() { return cur; } };
 })();
 
@@ -9010,9 +9221,14 @@ const Engine = (function () {
        （计未读+弹横幅），退群重进才看得见——她在群里改禁言，回来就该看到 */
     const visPage = document.querySelector('.page.active');
     const inConvStack = visPage && ['page-chat', 'page-ginfo', 'page-history'].includes(visPage.id);
-    const viewing = inConvStack && Chat.conv && Chat.conv.id === conv.id;
-    if (viewing) {
-      Chat.appendMessage(m);                     // 开着这个会话：消息直接进气泡，不计未读
+    /* P40：游戏悬浮聊天窗开着该会话也算「正在看」（不计未读不误弹横幅，她 08-28：游戏里聊天不受影响）。
+       三路分流：主窗进气泡（聊天页真开着）／悬浮窗那路由 Games.onPushRaw 自己进气泡／都不在才计未读+横幅 */
+    const floatConv = (typeof Games !== 'undefined' && Games.viewingConv) ? Games.viewingConv() : null;
+    const mainViewing = inConvStack && Chat.conv && Chat.conv.id === conv.id;
+    if (mainViewing) {
+      Chat.appendMessage(m);                     // 聊天页开着：消息直接进气泡，不计未读
+    } else if (floatConv === conv.id) {
+      /* 悬浮窗看着：不计未读、不弹横幅，气泡由下方 onPushRaw 进面板 */
     } else {
       conv.unread = (conv.unread || 0) + 1;      // 不在页面→未读红点
       if (Home.msgBanner) Home.msgBanner(conv, m); // 二期P10 微信式站内横幅
@@ -9028,6 +9244,10 @@ const Engine = (function () {
         ? authorNameIn(conv, m) + '：' + snippetIn(m)
         : snippetIn(m);
       Notify.maybeSys(conv, m, nTitle, nBody);
+    }
+    /* P40：游戏悬浮聊天窗实时进气泡（Games 缺席/异常都不能影响主链路） */
+    if (typeof Games !== 'undefined' && Games.onPushRaw) {
+      try { Games.onPushRaw(conv, m); } catch (e) {}
     }
     DB.save();
     Home.render();
@@ -9087,7 +9307,8 @@ const Library = (function () {
     aiStatus:    { title: '状态',         per: false },
     voices:      { title: '音集',         per: false },   // 二期P12：共用语音
     whispers:    { title: '私语',           per: true },     // 二期P12：联系人专属语音
-    redNotes:    { title: '红包',       per: false }     // 二期P15：发红包随机选用
+    redNotes:    { title: '红包',       per: false },     // 二期P15：发红包随机选用
+    gameNotes:   { title: '游戏',       per: false }      // P40：快捷短语/转盘奖池/胜负感言（她要几百条，支持批量导入）
   };
   /* 图片表情三库已于 2026-08-23 撤出文件管理，管理收进表情面板内（清然决定） */
   const isVoiceKind = k => k === 'voices' || k === 'whispers';
@@ -11732,6 +11953,18 @@ const Redpacket = (function () {
     DB.save();
     return rps()[id];
   }
+  /* P40 战利品转盘与概率赠送共用的「直接发一个红包」口（台账 L13：一个口不复制两遍）。
+     fromUid='me' → Pay.settle（按我的支付方式）；否则 settlePeer（TA 零钱 / TA 名下亲属卡）。
+     扣款失败返 null（调用方当没发过，余额永不扣成负数），成功返回红包记录。 */
+  function giftDirect(conv, fromUid, toUid, fen, note, coverId, extra) {
+    const meta = { type: 'redpacket', note: note || '游戏战利品', peer: toUid };
+    const pay = fromUid === 'me' ? Pay.settle(fen, meta) : Pay.settlePeer(fromUid, fen, meta);
+    if (pay.err) return null;
+    const rp = createRp(conv.id, fromUid, toUid, fen, note, coverId || null,
+      Object.assign({}, extra || {}, { pay }));
+    pushMsg(rp, fromUid === 'me');
+    return rp;
+  }
   function pushMsg(rp, fromIsMe) {
     const conv = DB.state.convs.find(c => c.id === rp.convId);
     if (!conv || typeof Engine === 'undefined' || !Engine.pushRaw) return;
@@ -12295,16 +12528,9 @@ const Redpacket = (function () {
         }
       }
     }
-    /* 掘钱只走 Pay（她 08-28 13:41：TA 用我送的卡也真扣我）；pay 存进红包记录，退款才谈得上原路 */
-    const pay = Pay.settlePeer(ct.id, fen, {
-      type: 'redpacket',
-      note: isGroup ? MODE_NAMES[extra.mode] : '发红包',
-      peer: toUid === 'me' ? 'me' : toUid
-    });
-    if (pay.err) return;                                 // 卡和 TA 自己都不够 → 这红包就当没发过
-    const rp = createRp(conv.id, ct.id, toUid, fen, pickNote(), aiCoverId(ct.id),
-      Object.assign(extra || {}, { pay: pay }));
-    pushMsg(rp, false);
+    /* 掘钱只走 Pay（她 08-28 13:41：TA 用我送的卡也真扣我），建红包+推消息统一走 giftDirect 口 */
+    const rp = giftDirect(conv, ct.id, toUid, fen, pickNote(), aiCoverId(ct.id), extra);
+    if (!rp) return;                                     // 卡和 TA 自己都不够 → 这红包就当没发过
     if (isGroup && extra) {
       scheduleGroupClaims(rp);
       /* 发出者本人也可能抢自己的拼手气/普通包（L24） */
@@ -12327,7 +12553,7 @@ const Redpacket = (function () {
     scanExpiry();
   }
 
-  return { init, openSend, openOpen, maybeGift, doClaim };
+  return { init, openSend, openOpen, maybeGift, doClaim, giftDirect };
 })();
 
 /* =====================================================
@@ -13175,6 +13401,920 @@ function coverTap(e) {
 const Cards = {
   open() { Library.open({ kind: 'globalCards' }); }
 };
+
+/* =====================================================
+   LOVE♡X · gomoku.js —— 五子棋（P40 首发游戏，她 08-28 晚拍板）
+   15 路棋盘；board 由 moves 推导（存档续局不重算）；
+   AI=两层：顶层硬规则（成五直下/必堵/活四冲四）+ 空位「进攻分+防守分」打分；
+   棋力=每局随机状态 room.stateRoll（0~100 均匀随机，她定"这次松这次严"）：
+     防守权重=0.7~1.4、放水概率=0~35%、认真档(roll>60)额外看一步交换。
+   只搜已有棋子周边 2 格内的空位；落子合法性/胜负判定全在这里，game.js 只编排。
+   ===================================================== */
+const Gomoku = (function () {
+
+  const N = 15;
+
+  function emptyBoard() { return Array.from({ length: N }, () => Array(N).fill(null)); }
+  function boardOf(room) {
+    const b = emptyBoard();
+    (room.moves || []).forEach(mv => { if (mv.x >= 0 && mv.y >= 0 && mv.x < N && mv.y < N) b[mv.x][mv.y] = mv.uid; });
+    return b;
+  }
+  function inB(x, y) { return x >= 0 && y >= 0 && x < N && y < N; }
+  function legal(room, x, y) {
+    if (!inB(x, y)) return false;
+    return boardOf(room)[x][y] === null;
+  }
+  /* 落子并返回 {win:uid|'draw', line:[[x,y]x5]} 或 null（未终局） */
+  function applyMove(room, uid, x, y) {
+    room.moves.push({ uid: uid, x: x, y: y, ts: Date.now() });
+    const b = boardOf(room);
+    const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+    for (const d of dirs) {
+      const line = [[x, y]];
+      for (let s = 1; s < 5; s++) { const i = x + d[0] * s, j = y + d[1] * s; if (!inB(i, j) || b[i][j] !== uid) break; line.push([i, j]); }
+      for (let s = 1; s < 5; s++) { const i = x - d[0] * s, j = y - d[1] * s; if (!inB(i, j) || b[i][j] !== uid) break; line.unshift([i, j]); }
+      if (line.length >= 5) return { win: uid, line: line.slice(0, 5) };
+    }
+    if ((room.moves || []).length >= N * N) return { win: 'draw', line: [] };
+    return null;
+  }
+
+  /* ---------- 打分：假设 uid 在 (x,y) 落子后，四个方向的棋型分之和（取最高两向，鼓励双威胁） ---------- */
+  const S5 = 1e6, S_LIVE4 = 50000, S_RUSH4 = 8000, S_LIVE3 = 5000, S_SLEEP3 = 500, S_LIVE2 = 300, S_SLEEP2 = 50, S_LIVE1 = 20;
+  function dirScore(b, x, y, dx, dy, uid) {
+    let c = 1, open = 0;
+    for (let s = 1; s < 5; s++) { const i = x + dx * s, j = y + dy * s; if (!inB(i, j)) { open++; break; } if (b[i][j] === null) { open++; break; } if (b[i][j] !== uid) break; c++; }
+    for (let s = 1; s < 5; s++) { const i = x - dx * s, j = y - dy * s; if (!inB(i, j)) { open++; break; } if (b[i][j] === null) { open++; break; } if (b[i][j] !== uid) break; c++; }
+    if (c >= 5) return S5;
+    if (c === 4) return open >= 2 ? S_LIVE4 : (open === 1 ? S_RUSH4 : 0);
+    if (c === 3) return open >= 2 ? S_LIVE3 : (open === 1 ? S_SLEEP3 : 0);
+    if (c === 2) return open >= 2 ? S_LIVE2 : (open === 1 ? S_SLEEP2 : 0);
+    return open >= 2 ? S_LIVE1 : 0;
+  }
+  function placeScore(b, x, y, uid) {
+    const ds = [[1, 0], [0, 1], [1, 1], [1, -1]].map(d => dirScore(b, x, y, d[0], d[1], uid)).sort((a, b2) => b2 - a);
+    return ds[0] + ds[1] * 0.4;   // 主威胁全额+次威胁四成：双三/四三自然冒头
+  }
+
+  /* ---------- AI：返回 {x,y} ---------- */
+  function aiPick(room, taUid) {
+    const b = boardOf(room);
+    const opp = room.players[0] === taUid ? room.players[1] : room.players[0];
+    const roll = typeof room.stateRoll === 'number' ? room.stateRoll : 50;
+    const defenseW = 0.7 + (roll / 100) * 0.7;            // 松→严
+    const noiseP = ((100 - roll) / 100) * 0.35;           // 松→易放水
+    const twoPly = roll > 60;                             // 认真档多看一步交换
+
+    let best = null, bestScore = -1;
+    const scored = [];
+    for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
+      if (b[x][y] !== null) continue;
+      let near = false;
+      for (let dx = -2; dx <= 2 && !near; dx++) for (let dy = -2; dy <= 2; dy++) {
+        if (inB(x + dx, y + dy) && b[x + dx][y + dy] !== null) { near = true; break; }
+      }
+      if (!near) continue;
+      const my = placeScore(b, x, y, taUid);
+      const op = placeScore(b, x, y, opp);
+      let s = my + defenseW * op;
+      scored.push({ x, y, my, op, s });
+      if (s > bestScore) { bestScore = s; best = { x, y }; }
+    }
+    if (!best) return { x: 7, y: 7 };                      // 空盘落天元
+    /* 顶层硬规则：能成五直下；对方能成五必堵（多手可堵时挑自己分最高的） */
+    const myWin = scored.filter(c => c.my >= S5);
+    if (myWin.length) return { x: myWin[0].x, y: myWin[0].y };
+    const oppWin = scored.filter(c => c.op >= S5).sort((a, b2) => b2.my - a.my);
+    if (oppWin.length) return { x: oppWin[0].x, y: oppWin[0].y };
+    /* 认真档：对前 3 名候选模拟对手最强回手，扣一半分（防"送活三"） */
+    if (twoPly) {
+      scored.sort((a, b2) => b2.s - a.s);
+      scored.slice(0, 3).forEach(c => {
+        b[c.x][c.y] = taUid;
+        let worst = 0;
+        for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) {
+          const i = c.x + dx, j = c.y + dy;
+          if (!inB(i, j) || b[i][j] !== null) continue;
+          const v = placeScore(b, i, j, opp);
+          if (v > worst) worst = v;
+        }
+        b[c.x][c.y] = null;
+        c.s -= worst * 0.5;
+      });
+      scored.sort((a, b2) => b2.s - a.s);
+      best = scored[0];
+    } else {
+      scored.sort((a, b2) => b2.s - a.s);
+      best = scored[0];
+    }
+    /* 放水：按概率从前几名里乱挑一手（低状态偶尔漏招，不犯必败低级错——硬规则已先行） */
+    if (Math.random() < noiseP && scored.length > 1) {
+      const top = scored.slice(0, Math.min(4, scored.length));
+      const pick = top[Math.floor(Math.random() * top.length)];
+      return { x: pick.x, y: pick.y };
+    }
+    return { x: best.x, y: best.y };
+  }
+
+  /* 对 game.js 的注册定义 */
+  function def() {
+    return {
+      id: 'gomoku', name: '五子棋', icon: 'go-board', playersTxt: '双人',
+      newRoom() { return {}; },
+      legal, applyMove, aiPick,
+      /* 棋盘 DOM：15×15 网格，星位小点；棋子=span；最后一手描边；连五高亮由 room.winLine */
+      render(room, el) {
+        const b = boardOf(room);
+        const last = (room.moves || [])[((room.moves || []).length) - 1];
+        let h = '<div class="gk-board">';
+        for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
+          const star = ((x === 3 || x === 7 || x === 11) && (y === 3 || y === 7 || y === 11)) ? ' star' : '';
+          const u = b[x][y];
+          h += '<div class="gk-cell' + star + '" data-x="' + x + '" data-y="' + y + '">' +
+            (u ? '<span class="gk-stone ' + (u === 'me' ? 'gk-black' : 'gk-white') +
+              (last && last.x === x && last.y === y ? ' gk-last' : '') +
+              ((room.winLine || []).some(p => p[0] === x && p[1] === y) ? ' gk-winline' : '') +
+              '"></span>' : '') + '</div>';
+        }
+        h += '</div>';
+        el.innerHTML = h;
+        el.querySelectorAll('.gk-cell').forEach(cell =>
+          cell.addEventListener('click', () => {
+            if (typeof Games !== 'undefined' && Games.onCell) Games.onCell(+cell.dataset.x, +cell.dataset.y);
+          }));
+      }
+    };
+  }
+  return { def, N };
+})();
+
+/* =====================================================
+   LOVE♡X · game.js —— 游戏板块（P40，她 08-28 晚拍板「动工」）
+   发现页「游戏」行 → 大厅（线稿卡牌架）→ 开局（选人→邀请 80/20→先手协商 70/30）→ 对局页
+   对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
+   纪律（都是她的口径，别改）：
+   · TA 一切行为走计划时刻制：room.plans[] 预生成、advance() 到点落库，断线续局不重算
+   · 游戏内延迟不按聊天回复设置：落子 0~30s、快捷/协商/邀请回应 5~10s；
+     唯一例外=悬浮窗里的「正常聊天」，照旧走各 TA 聊天回复设置
+   · 邀请同意率 80%、先手协商 TA 同意率 70%（她的 73 分）
+   · 棋力零设置：每局 stateRoll 0~100 均匀随机（gomoku 内部消费）
+   · 钱只走 Redpacket.giftDirect（Pay 唯一口）；弹层只走 UI.raise；
+     悬浮窗发消息走 Chat.sendTo（同一入口）；金额只走 toFen（转盘红包档位存分）
+   · 游戏设置只在游戏里（大厅/对局页小齿轮），不进聊天设置不进资料卡
+   ===================================================== */
+const Games = (function () {
+
+  /* ---------- 基础 ---------- */
+  const QUICK_SEC = [5, 10];     // 快捷短语/协商/邀请回应 TA 接话档（她定 5~10 秒）
+  const MOVE_SEC = 30;           // TA 每手落子上限（她定），0~30 均匀随机
+  const INVITE_AGREE = 80;       // 邀请同意率%（她定 20% 拒绝）
+  const FIRST_AGREE = 70;        // 先手协商 TA 同意率%（她的 73 分 = 70/30）
+  const TA_CHAT_PROB = 30;       // TA 落子/接话之外主动冒一句的概率%（建议值，齿轮面板可调）
+  const WHEEL_SECTORS = ['red', 'truth', 'dare', 'errand', 'blank'];
+  const WHEEL_NAMES = { red: '红包', truth: '真心话', dare: '大冒险', errand: '使唤卡', blank: '空门' };
+  const DEF_QUICK = ['快点啦', '厉害啊', '不服再来一局', '让我悔一步棋嘛', '稳住稳住', '差一点就赢了'];
+  const DEF_TA = ['让我想想哈', '这步有讲究啊', '嘿嘿', '哎呀，手滑了', '你今天状态很好啊', '就差一点点'];
+  const PROPS = [
+    { id: 'egg', name: '扔鸡蛋', line: '<ellipse cx="12" cy="14" rx="6.2" ry="7.6"/><path d="M8.5 9.5c.6-2.4 2-3.6 3.5-3.6"/>', sticker: '<ellipse cx="12" cy="14" rx="6.2" ry="7.6" fill="#F2CE5F" stroke="#3A3A42"/><path d="M8.5 9.5c.6-2.4 2-3.6 3.5-3.6" stroke="#B98F2B"/>' },
+    { id: 'flower', name: '献花', line: '<circle cx="12" cy="9" r="3.2"/><circle cx="8.6" cy="10.6" r="2.4"/><circle cx="15.4" cy="10.6" r="2.4"/><path d="M12 12.5V20M12 16.5c-1.8 0-3-1-3.4-2.4"/>', sticker: '<circle cx="12" cy="9" r="3.2" fill="#F0A8B4" stroke="#3A3A42"/><circle cx="8.6" cy="10.6" r="2.4" fill="#F6C6CF" stroke="#3A3A42"/><circle cx="15.4" cy="10.6" r="2.4" fill="#F6C6CF" stroke="#3A3A42"/><path d="M12 12.5V20M12 16.5c-1.8 0-3-1-3.4-2.4" stroke="#5E8F5A"/>' },
+    { id: 'hammer', name: '敲一敲', line: '<rect x="6" y="4.5" width="9" height="4.6" rx="1.2"/><path d="M11.5 9v10.5"/><path d="M4 20.5h16" stroke-dasharray="2.5 2.5"/>', sticker: '<rect x="6" y="4.5" width="9" height="4.6" rx="1.2" fill="#8FB3D9" stroke="#3A3A42"/><path d="M11.5 9v10.5" stroke="#7A5A2E"/><path d="M4 20.5h16" stroke-dasharray="2.5 2.5"/>' }
+  ];
+
+  function S() {
+    const g = DB.state.games = DB.state.games || {};
+    g.rooms = g.rooms || {}; g.records = g.records || [];
+    g.wheelCfg = g.wheelCfg || { reds: [52, 520, 1314, 5200], weights: { red: 20, truth: 20, dare: 20, errand: 20, blank: 20 } };
+    g.propsStyle = g.propsStyle || 'mono';
+    return g;
+  }
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function uidR() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function name(uid) {
+    if (uid === 'me') return DB.state.profile.name || '我';
+    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
+  }
+  function taUid(room) { return (room.players || []).find(u => u !== 'me') || null; }
+  function currentTurn(room) {
+    const first = room.blackUid || 'me';
+    return ((room.moves || []).length % 2 === 0) ? first : (first === 'me' ? taUid(room) : 'me');
+  }
+  function coord(x, y) { return String.fromCharCode(65 + y) + (x + 1); }
+
+  const REG = {};
+  function register(def) { REG[def.id] = def; }
+  function defOf(room) { return REG[room.game] || { name: '游戏', icon: 'gamepad' }; }
+
+  /* ---------- 语料（文件管理·游戏库；空组回落内置/字卡池） ---------- */
+  const LIB = 'gameNotes';
+  function lib() { return DB.state.libs[LIB] = DB.state.libs[LIB] || { groups: [], items: [] }; }
+  function ensureSeed() {
+    const l = lib();
+    if (l.groups.length || l.items.length) return;   // 幂等：她动过就绝不回填
+    const mk = (nm) => { const g = { id: 'g' + uidR(), name: nm, blocked: false }; l.groups.push(g); return g; };
+    const put = (g, arr) => arr.forEach(t => l.items.push({ id: 'i' + uidR(), text: t, groupId: g.id, blocked: false }));
+    put(mk('快捷短语'), ['快点啦', '厉害啊', '不服再来一局', '让我悔一步棋嘛', '你这步有想法', '稳住，能赢', '哎呀差一点', '承让承让']);
+    put(mk('转盘-真心话'), ['最近一次偷偷开心是因为什么？', '说一个你第一次见到我就想吐槽的点', '你现在最想我陪你做什么？', '今天有没有哪一刻在想我？', '说一个你从没告诉过我的小习惯', '如果只能留一样东西，你留什么？', '你最怕我哪天不理你吗？', '你觉得我哪句口头禅最洗脑？']);
+    put(mk('转盘-大冒险'), ['用一句话夸我到起鸡皮疙瘩', '承认这局是侥幸，要真诚', '下一句回复必须带一个颜文字', '模仿我平时说话的语气说三句', '把你现在的状态描述成天气预报', '下一局让我三步，不许反悔', '现在给我发一个大表情', '用唱的把“我输了”唱出来']);
+    put(mk('转盘-使唤'), ['接下来一小时都要秒回我', '明天早上主动跟我说早安', '陪我安安静静待十分钟', '给我讲一段你今天遇到的趣事', '把头像换成我喜欢的风格一整天', '现在去倒杯水，回来汇报', '下一次主动找我聊天', '写一句今天最想对我说的话']);
+    put(mk('胜负感言'), ['赢了赢了，手感不错', '这局算你赢，下局我就认真了', '唉，手滑了', '嘿嘿，承让承让', '你今天状态很好啊', '不服，再来', '今天有点不在状态，别笑']);
+    DB.save();
+  }
+  function poolOf(groupName, fallbackUid) {
+    const l = lib();
+    const g = l.groups.find(x => x.name === groupName && !x.blocked);
+    const items = g ? l.items.filter(i => i.groupId === g.id && !i.blocked && i.text) : [];
+    if (items.length) return items.map(i => i.text);
+    if (fallbackUid && typeof Library !== 'undefined' && Library.usableCardPool) {
+      const p = Library.usableCardPool(fallbackUid === 'me' ? null : fallbackUid);
+      if (p && p.length) return p;
+    }
+    return null;
+  }
+  function pickLine(groupName, fallbackUid, builtin) {
+    const p = poolOf(groupName, fallbackUid);
+    const arr = p || builtin || [];
+    return arr.length ? arr[Math.floor(Math.random() * arr.length)] : '';
+  }
+
+  /* ---------- 大厅 ---------- */
+  let cur = null;          // 当前房间 id
+  let floatConv = null;    // 悬浮聊天窗当前会话 id（null=收起）
+  let tickI = null;        // 倒计时 interval
+  let overlay = null;      // 结算/转盘浮层
+
+  function open() { Router.go('game'); renderHall(); }
+  function openRoom(roomId) { cur = roomId; Router.go('room'); renderRoom(); }
+  function curRoom() { return S().rooms[cur] || null; }
+
+  function pairStats(ctId) {
+    let w = 0, l = 0, d = 0;
+    S().records.forEach(r => {
+      if (!(r.players || []).includes(ctId)) return;
+      if (r.winner === 'draw') d++; else if (r.winner === 'me') w++; else l++;
+    });
+    return { w, l, d, total: w + l + d };
+  }
+  function renderHall() {
+    const box = document.getElementById('gm-hall');
+    if (!box) return;
+    const rooms = Object.values(S().rooms)
+      .filter(r => r.status === 'playing' && r.phase !== 'dead')
+      .sort((a, b) => b.createdAt - a.createdAt);
+    let h = '';
+    if (rooms.length) {
+      h += '<div class="gm-sec">继续对局</div><div class="card cell-group">' + rooms.map(r => {
+        const ta = taUid(r);
+        const turn = r.phase === 'playing' ? (currentTurn(r) === 'me' ? '轮到你了' : 'TA 在想…') : (r.phase === 'negotiate' ? '商定先手中' : '等 TA 应答…');
+        return '<button class="cell" data-room="' + r.id + '"><span class="cell-icon"><i data-icon="' + defOf(r).icon + '" data-size="20"></i></span>' +
+          '<span class="cell-text"><b>' + esc(defOf(r).name) + ' · ' + esc(name(ta)) + '</b><small>' + esc(turn) + '</small></span><span class="chevron">›</span></button>';
+      }).join('') + '</div>';
+    }
+    h += '<div class="gm-sec">开一局</div><div class="gm-shelf">' + Object.values(REG).map(d => {
+      const st = S().records.filter(r => r.game === d.id);
+      let w = 0; st.forEach(r => { if (r.winner === 'me') w++; });
+      return '<button class="gm-card" data-game="' + d.id + '">' +
+        '<span class="gm-card-ico"><i data-icon="' + d.icon + '" data-size="26"></i></span>' +
+        '<b>' + esc(d.name) + '</b>' +
+        '<small>' + esc(d.playersTxt) + '</small>' +
+        '<small class="gm-card-rec">' + (st.length ? st.length + ' 战 ' + w + ' 胜' : '还没玩过') + '</small>' +
+        '</button>';
+    }).join('') + '</div>';
+    h += '<button class="gm-gear-mini" id="gm-gear-mini"><i data-icon="settings" data-size="12"></i>游戏设置</button>';
+    box.innerHTML = h;
+    mountIcons();
+    box.querySelectorAll('[data-room]').forEach(b => b.addEventListener('click', () => openRoom(b.dataset.room)));
+    box.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', () => startFlow(b.dataset.game)));
+    const gm = document.getElementById('gm-gear-mini');
+    if (gm) gm.addEventListener('click', openSettings);
+  }
+
+  /* ---------- 开局：选人 → 邀请（80/20）→ 房间 ---------- */
+  function startFlow(gameId) {
+    if (!REG[gameId]) return;
+    const pool = (DB.state.contacts || []).filter(c => !c.isGroup);
+    if (!pool.length) return UI.toast('先创建 AI 联系人再开局');
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask';
+    mask.innerHTML = '<div class="dialog"><div class="dialog-title">选一位对手</div>' +
+      '<div class="form-body pick-list gm-pick"></div>' +
+      '<div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button></div></div>';
+    const list = mask.querySelector('.gm-pick');
+    pool.forEach(ct => {
+      const row = document.createElement('button');
+      row.className = 'pick-row';
+      row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span><span class="chevron">›</span>';
+      row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
+      list.appendChild(row);
+    });
+    mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
+    document.getElementById('dialog-layer').appendChild(mask);
+    UI.raise(mask);
+  }
+  function invite(ctId, gameId) {
+    const room = {
+      id: 'gm' + uidR(), game: gameId, players: ['me', ctId], blackUid: null,
+      phase: 'inviting', moves: [], plans: [], feed: [], winLine: [],
+      status: 'playing', winner: null, spun: false,
+      stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
+    };
+    S().rooms[room.id] = room;
+    /* 邀请卡进会话（像默契挑战：点卡片入局，状态实时读房间） */
+    const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ctId);
+    if (conv) {
+      const arr = DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || [];
+      const m = { id: 'm' + uidR(), from: 'me', type: 'game', roomId: room.id, ts: Date.now() };
+      arr.push(m);
+      conv.lastMsg = '[游戏邀请]'; conv.lastTime = m.ts;
+      const visPage = document.querySelector('.page.active');
+      if (visPage && visPage.id === 'page-chat' && typeof Chat !== 'undefined' && Chat.conv && Chat.conv.id === conv.id)
+        Chat.appendMessage(m);
+    }
+    room.plans.push({ kind: 'invite', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false });
+    DB.save();
+    openRoom(room.id);
+    scheduleTimers(room);
+  }
+  function execInvite(r) {
+    if (r.phase !== 'inviting') return;
+    const ta = taUid(r);
+    if (Math.random() * 100 < INVITE_AGREE) {
+      r.phase = 'negotiate';
+      feed(r, 'sys', esc(name(ta)) + ' 加入了' + esc(defOf(r).name) + '，先商量谁执黑');
+      r.plans.push({ kind: 'negotiate', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, by: 'ta' });
+      DB.save();
+    } else {
+      r.phase = 'dead'; r.status = 'dead';
+      const line = pickLine('胜负感言', ta, ['改天吧，今天不太行']);
+      feed(r, 'sys', esc(name(ta)) + ' 婉拒了这局' + (line ? '：' + esc(line) : ''));
+      DB.save();
+      UI.toast(name(ta) + ' 婉拒了这局，另请一位吧');
+    }
+  }
+
+  /* ---------- 先手协商（确认式，最多拉扯一轮） ---------- */
+  function claimFirst() {
+    const r = curRoom(); if (!r || r.phase !== 'negotiate') return;
+    r.plans.forEach(p => { if (p.kind === 'negotiate') p.done = true; });   // TA 主动提案作废
+    r.plans = r.plans.filter(p => !p.done);
+    r.pendingFirst = null;
+    feed(r, 'me', esc(name('me')) + '：我要先手');
+    r.plans.push({ kind: 'negotiate', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, by: 'me' });
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function execNegotiate(r, p) {
+    if (r.phase !== 'negotiate') return;
+    const ta = taUid(r);
+    if (p.by === 'ta') {
+      const wantFirst = Math.random() < 0.5;
+      r.pendingFirst = wantFirst ? 'ta' : 'me';
+      feed(r, 'ta', esc(name(ta)) + '：' + (wantFirst ? '这局我先手？' : '你先请～'));
+    } else {
+      if (Math.random() * 100 < FIRST_AGREE) {
+        setBlack(r, 'me');
+        feed(r, 'ta', esc(name(ta)) + '：好呀，你先');
+      } else {
+        r.pendingFirst = 'ta';
+        feed(r, 'ta', esc(name(ta)) + '：不行，这局我要先手！——除非你现在认怂');
+      }
+    }
+    DB.save();
+  }
+  /* 她对 TA 提案的答复：agree=true→按提案；false=驳回（她要先手，TA 让步） */
+  function answerFirst(agree) {
+    const r = curRoom(); if (!r || r.phase !== 'negotiate' || !r.pendingFirst) return;
+    const ta = taUid(r);
+    if (agree) setBlack(r, r.pendingFirst);
+    else { setBlack(r, 'me'); feed(r, 'ta', esc(name(ta)) + '：行吧行吧，你先（小声：下局轮我）'); }
+    DB.save(); renderRoom();
+  }
+  function setBlack(r, uid) {
+    r.blackUid = uid; r.pendingFirst = null; r.phase = 'playing';
+    feed(r, 'sys', '商定好了——' + esc(name(uid)) + ' 执黑先行');
+    r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+    if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+  }
+
+  /* ---------- 落子与终局 ---------- */
+  function onCell(x, y) {
+    const r = curRoom(); if (!r || r.phase !== 'playing') return;
+    if (currentTurn(r) !== 'me') return;
+    const d = defOf(r);
+    if (!d.legal(r, x, y)) return;
+    r.plans.forEach(p => { if (p.kind === 'urge') p.done = true; });   // 走了就不催
+    const res = d.applyMove(r, 'me', x, y);
+    feed(r, 'sys', esc(name('me')) + ' 落子 ' + coord(x, y));
+    if (res) return endGame(r, res);
+    r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+    if (Math.random() * 100 < TA_CHAT_PROB) {
+      const t = pickLine('快捷短语', taUid(r), DEF_TA);
+      if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
+    }
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function execTaMove(r) {
+    if (r.phase !== 'playing' || currentTurn(r) !== taUid(r)) return;
+    const d = defOf(r);
+    const mv = d.aiPick(r);
+    if (!mv) return endGame(r, { win: 'draw', line: [] });
+    const res = d.applyMove(r, taUid(r), mv.x, mv.y);
+    feed(r, 'sys', esc(name(taUid(r))) + ' 落子 ' + coord(mv.x, mv.y));
+    if (res) return endGame(r, res);
+    r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+    if (Math.random() * 100 < TA_CHAT_PROB) {
+      const t = pickLine('快捷短语', taUid(r), DEF_TA);
+      if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
+    }
+  }
+  function execSay(r, p) { const t = p.text || pickLine('快捷短语', taUid(r), DEF_TA); if (t) feed(r, 'ta', esc(name(taUid(r))) + '：' + esc(t)); }
+  function execUrge(r) {
+    if (r.phase !== 'playing' || currentTurn(r) !== 'me') return;
+    feed(r, 'ta', esc(name(taUid(r))) + '：该你了吧，都等半天啦');
+  }
+  function resign() {
+    const r = curRoom(); if (!r || r.phase !== 'playing') return;
+    UI.confirmBox({ title: '认输？', text: '这局就判给 ' + esc(name(taUid(r))) + ' 了，战绩会记一笔', okText: '认输', danger: true })
+      .then(ok => { if (ok) endGame(r, { win: taUid(r), line: [] }); });
+  }
+  function endGame(r, res) {
+    r.phase = 'ended'; r.status = 'ended'; r.winner = res.win || 'draw';
+    r.winLine = res.line || [];
+    S().records.push({
+      id: 'gr' + uidR(), game: r.game, players: r.players.slice(),
+      winner: r.winner, moves: (r.moves || []).length, ts: Date.now(), dur: Date.now() - r.createdAt
+    });
+    const ta = taUid(r);
+    const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ta);
+    if (conv && typeof Engine !== 'undefined' && Engine.pushRaw) {
+      const txt = r.winner === 'draw' ? '你刚和' + name(ta) + '下了一局' + defOf(r).name + '，平局'
+        : r.winner === 'me' ? '你刚和' + name(ta) + '下了一局' + defOf(r).name + '，赢了'
+        : '你刚和' + name(ta) + '下了一局' + defOf(r).name + '，输了';
+      Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: txt });
+    }
+    feed(r, 'sys', r.winner === 'draw' ? '平局！棋盘都下满了' : (r.winner === 'me' ? '你赢了！' : esc(name(ta)) + ' 赢了'));
+    r.plans = [];
+    DB.save(); renderRoom();
+    showSettle(r);
+  }
+  function again() {
+    const r = curRoom(); if (!r) return;
+    const ta = taUid(r);
+    S().rooms[r.id] && (S().rooms[r.id].status = 'ended');
+    invite(ta, r.game);   // 走同一套邀请流（TA 仍 20% 可拒绝）
+  }
+
+  /* ---------- 播报线 ---------- */
+  function feed(r, uid, text) {
+    r.feed = r.feed || [];
+    r.feed.push({ uid, text, ts: Date.now() });
+    while (r.feed.length > 60) r.feed.shift();
+  }
+
+  /* ---------- 计划结算（存档续局的心跳） ---------- */
+  function advance() {
+    let acted = false;
+    Object.values(S().rooms).forEach(r => {
+      (r.plans || []).forEach(p => {
+        if (p.done || p.at > Date.now()) return;
+        p.done = true;
+        if (r.phase === 'dead' || r.phase === 'ended') return;
+        if (p.kind === 'invite') execInvite(r);
+        else if (p.kind === 'negotiate') execNegotiate(r, p);
+        else if (p.kind === 'taMove') execTaMove(r);
+        else if (p.kind === 'say') execSay(r, p);
+        else if (p.kind === 'urge') execUrge(r);
+        acted = true;
+      });
+      r.plans = (r.plans || []).filter(p => !p.done);
+      /* 收尾：婉拒的房 30 分钟后清掉；已结束且转过战利品的房 24h 后清（records 里都留着） */
+      const now = Date.now();
+      if ((r.phase === 'dead' && now - r.createdAt > 18e5) ||
+          (r.phase === 'ended' && r.spun && now - r.createdAt > 864e5)) { delete S().rooms[r.id]; acted = true; }
+    });
+    if (acted) {
+      DB.save();
+      const visPage = document.querySelector('.page.active');
+      if (visPage && visPage.id === 'page-room') renderRoom();
+    }
+  }
+  function scheduleTimers(r) {
+    (r.plans || []).forEach(p => {
+      if (p.done) return;
+      const wait = Math.max(0, p.at - Date.now());
+      setTimeout(() => { try { advance(); } catch (e) {} }, wait + 30);
+    });
+  }
+
+  /* ---------- 对局页渲染 ---------- */
+  function renderRoom() {
+    const body = document.getElementById('room-body');
+    if (!body) return;
+    const r = curRoom();
+    if (!r) { body.innerHTML = '<div class="wl-empty" style="padding-top:80px">这场对局不存在了</div>'; return; }
+    document.getElementById('room-title').textContent = defOf(r).name;
+    const ta = taUid(r);
+    const turn = currentTurn(r);
+    const thinking = (r.plans || []).some(p => p.kind === 'taMove' && !p.done);
+    const lastTaSay = (() => { const f = (r.feed || []).slice().reverse().find(x => x.uid === 'ta'); return f ? f.text : ''; })();
+    const urgeP = (r.plans || []).find(p => p.kind === 'urge' && !p.done);
+
+    let h = '<div class="gm-players">' +
+      playerChip('me', r, turn === 'me') +
+      '<span class="gm-vs">VS</span>' +
+      playerChip(ta, r, turn === ta) +
+      (thinking ? '<span class="gm-thinking">' + esc(name(ta)) + ' 正在想…</span>' : '') +
+      '</div>';
+    h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
+    /* 阶段横幅/协商按钮 */
+    if (r.phase === 'inviting') {
+      h += '<div class="gm-banner">已经把邀请递过去了，等 ' + esc(name(ta)) + ' 应答…（80% 会来）</div>';
+    } else if (r.phase === 'dead') {
+      h += '<div class="gm-banner">' + esc(name(ta)) + ' 婉拒了这局，返回再请一位吧</div>';
+    } else if (r.phase === 'negotiate') {
+      h += '<div class="gm-banner">商定先手——谁执黑谁先走</div>';
+      if (r.pendingFirst) {
+        h += '<div class="gm-nego"><button class="btn btn-secondary" id="gm-nego-no">驳回，我要先手</button>' +
+             '<button class="btn btn-primary" id="gm-nego-yes">同意，' + (r.pendingFirst === 'ta' ? 'TA 先手' : '我先手') + '</button></div>';
+      } else {
+        h += '<div class="gm-nego"><button class="btn btn-primary" id="gm-first-btn">我要先手</button></div>';
+      }
+    } else if (r.phase === 'ended') {
+      h += '<div class="gm-banner">' + (r.winner === 'draw' ? '平局——棋盘都下满了'
+        : (r.winner === 'me' ? '你赢了！' : esc(name(ta)) + ' 赢了')) + (r.spun ? ' · 战利品已转' : '') + '</div>';
+      /* 收过结算卡也能回来补转（她关掉弹层后不至于丢掉转盘机会） */
+      if (!r.spun && r.winner !== 'draw') {
+        h += '<div class="gm-nego"><button class="btn btn-primary" id="gm-spin-btn">转战利品</button></div>';
+      }
+    } else if (r.phase === 'playing' && turn !== 'me') {
+      h += '<div class="gm-banner">等 TA 落子…</div>';
+    }
+    h += '<div class="gm-feed" id="room-feed">' + (r.feed || []).map(f =>
+      '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
+    h += '<div class="gm-ipt">' +
+      '<button class="gm-chip-btn" id="room-quick">短语</button>' +
+      '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
+      '<button class="gm-send" id="room-send">发</button>' +
+      '<button class="gm-resign" id="room-resign">认输</button>' +
+      '</div>' +
+      '<div class="gm-chips hidden" id="room-chips"></div>';
+    body.innerHTML = h;
+    /* 棋盘 */
+    const bel = document.getElementById('room-board');
+    if (r.phase === 'playing' || r.phase === 'ended') defOf(r).render(r, bel);
+    else bel.innerHTML = '<div class="gk-board gk-grey"></div>';
+    /* 播报滚到底 */
+    const fd = document.getElementById('room-feed');
+    if (fd) fd.scrollTop = fd.scrollHeight;
+    /* 绑定 */
+    const nb = document.getElementById('gm-nego-yes'); if (nb) nb.addEventListener('click', () => answerFirst(true));
+    const nn = document.getElementById('gm-nego-no'); if (nn) nn.addEventListener('click', () => answerFirst(false));
+    const fb = document.getElementById('gm-first-btn'); if (fb) fb.addEventListener('click', claimFirst);
+    const sp = document.getElementById('gm-spin-btn'); if (sp) sp.addEventListener('click', () => showSettle(r));
+    const ipt = document.getElementById('room-ipt');
+    const send = document.getElementById('room-send');
+    if (send) send.addEventListener('click', () => { roomSay(ipt.value); ipt.value = ''; });
+    if (ipt) ipt.addEventListener('keydown', e => { if (e.key === 'Enter') { roomSay(ipt.value); ipt.value = ''; } });
+    const rs = document.getElementById('room-resign'); if (rs) rs.addEventListener('click', resign);
+    const qb = document.getElementById('room-quick'); if (qb) qb.addEventListener('click', toggleChips);
+    renderFloat(r);
+    tick();
+  }
+  function playerChip(uid, r, active) {
+    const ct = Home.contactById(uid);
+    const ava = (uid === 'me' || !ct) ? '' : (ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1)));
+    const stone = r.blackUid === uid ? '<i class="gm-stone-dot"></i>' : '';
+    return '<span class="gm-player' + (active ? ' on' : '') + '" data-uid="' + uid + '">' +
+      '<span class="gm-ava">' + ava + '</span>' +
+      '<b>' + esc(name(uid)) + '</b>' + stone + '</span>';
+  }
+  function toggleChips() {
+    const row = document.getElementById('room-chips');
+    if (!row) return;
+    if (!row.classList.contains('open')) {
+      const quick = pickAll('快捷短语', DEF_QUICK);
+      const props = S().propsStyle === 'sticker' ? PROPS.map(p => p.sticker) : PROPS.map(p => p.line);
+      row.innerHTML =
+        PROPS.map((p, i) => '<button class="gm-chip gm-prop" data-prop="' + p.id + '">' +
+          '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + props[i] + '</svg>' + esc(p.name) + '</button>').join('') +
+        quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
+      row.classList.toggle('open');
+      row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.remove('open'); }));
+      row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.remove('open'); }));
+    } else row.classList.remove('open');
+  }
+  function pickAll(groupName, builtin) {
+    const l = lib();
+    const g = l.groups.find(x => x.name === groupName && !x.blocked);
+    const items = g ? l.items.filter(i => i.groupId === g.id && !i.blocked && i.text).map(i => i.text) : [];
+    return items.length ? items : builtin;
+  }
+  function roomSay(text) {
+    const r = curRoom(); if (!r) return;
+    const t = String(text || '').trim();
+    if (t) feed(r, 'me', esc(name('me')) + '：' + esc(t));
+    /* 快捷/自由发言 TA 都接话：5~10 秒档（她定），内容从语料池抽 */
+    const line = pickLine('快捷短语', taUid(r), DEF_TA);
+    if (line) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: line });
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function throwProp(id) {
+    const r = curRoom(); if (!r || !taUid(r)) return;
+    const p = PROPS.find(x => x.id === id); if (!p) return;
+    const verb = { egg: '把鸡蛋扔到了', flower: '给', hammer: '敲了敲' }[id];
+    feed(r, 'sys', esc(name('me')) + ' ' + verb + ' ' + esc(name(taUid(r))) + (id === 'flower' ? ' 一束花' : id === 'hammer' ? ' 桌面' : ' 脸上'));
+    propFly(p);
+    if (Math.random() < 0.5) {   // TA 概率回嘴（建议值 50%，齿轮面板没暴露——要调说话告诉我）
+      const t = pickLine('胜负感言', taUid(r), DEF_TA);
+      if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
+    }
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function propFly(p) {
+    const host = document.querySelector('.gm-players');
+    const target = host && host.querySelector('.gm-player[data-uid]:not([data-uid="me"])');
+    if (!host || !target) return;
+    const svg = S().propsStyle === 'sticker' ? p.sticker : p.line;
+    const el = document.createElement('span');
+    el.className = 'gm-prop-fly' + (S().propsStyle === 'sticker' ? ' sticker' : '');
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + svg + '</svg>';
+    const hr = host.getBoundingClientRect(), tr = target.getBoundingClientRect();
+    el.style.left = '8px'; el.style.top = '8px';
+    host.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.transform = 'translate(' + (tr.left - hr.left) + 'px,' + (tr.top - hr.top) + 'px) rotate(540deg)';
+      el.style.opacity = '0.9';
+    });
+    setTimeout(() => {
+      el.remove();
+      target.classList.add('gm-splat');
+      setTimeout(() => target.classList.remove('gm-splat'), 500);
+    }, 650);
+  }
+
+  /* ---------- 悬浮聊天窗（游戏里正常聊天：真会话，走各 TA 聊天回复设置） ---------- */
+  function renderFloat(r) {
+    const host = document.getElementById('room-float');
+    if (!host) return;
+    const ta = taUid(r);
+    const taConv = ta ? DB.state.convs.find(c => c.type === 'single' && c.peerId === ta) : null;
+    if (!floatConv) {
+      host.innerHTML = '<button class="gm-fball" id="gm-fball"><i data-icon="chat" data-size="16"></i></button>';
+      mountIcons();
+      document.getElementById('gm-fball').addEventListener('click', () => {
+        if (!taConv) return UI.toast('还没有和 TA 的会话，先去聊一句吧');
+        floatConv = taConv.id; renderFloat(r);
+      });
+      return;
+    }
+    const msgs = (DB.state.msgs[floatConv] || []).slice(-30);
+    const fpeer = (DB.state.convs.find(c => c.id === floatConv) || {}).peerId || floatConv;
+    let h = '<div class="gm-fpanel" id="gm-fpanel">' +
+      '<div class="gm-fhead" id="gm-fhead"><span class="gm-fball-mini"><i data-icon="chat" data-size="12"></i></span>' +
+      '<b>' + esc(name(fpeer)) + '</b>' +
+      '<button id="gm-fclose"><i data-icon="x" data-size="14"></i></button></div>' +
+      '<div class="gm-fmsgs" id="gm-fmsgs">' + msgs.map(m => {
+        if (m.from === 'me') return '<div class="gm-fbubble me">' + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>';
+        if (m.from === 'sys') return '<div class="gm-fsys">' + esc(m.text || '') + '</div>';
+        const who = m.senderId ? name(m.senderId) : name(fpeer);
+        return '<div class="gm-fbubble ta"><i>' + esc(who) + '</i>' + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>';
+      }).join('') + '</div>' +
+      '<div class="gm-fipt"><input id="gm-fipt" placeholder="正常聊天，不打断下棋…"><button id="gm-fsend">发</button></div>' +
+      '</div>';
+    host.innerHTML = h;
+    mountIcons();
+    const fm = document.getElementById('gm-fmsgs');
+    if (fm) fm.scrollTop = fm.scrollHeight;
+    document.getElementById('gm-fclose').addEventListener('click', () => { floatConv = null; renderFloat(r); });
+    const send = () => {
+      const ipt = document.getElementById('gm-fipt');
+      const t = ipt.value.trim(); if (!t) return;
+      ipt.value = '';
+      if (typeof Chat !== 'undefined' && Chat.sendTo) Chat.sendTo(floatConv, t);
+      else {
+        const arr = DB.state.msgs[floatConv] = DB.state.msgs[floatConv] || [];
+        arr.push({ id: 'm' + uidR(), from: 'me', type: 'text', text: t, ts: Date.now() });
+        DB.save();
+      }
+      setTimeout(() => renderFloat(r), 60);
+    };
+    document.getElementById('gm-fsend').addEventListener('click', send);
+    document.getElementById('gm-fipt').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    dragFloat();
+  }
+  function dragFloat() {
+    const head = document.getElementById('gm-fhead');
+    const panel = document.getElementById('gm-fpanel');
+    if (!head || !panel) return;
+    head.addEventListener('pointerdown', e => {
+      const sx = e.clientX, sy = e.clientY, r0 = panel.getBoundingClientRect();
+      const move = ev => {
+        panel.style.right = 'auto'; panel.style.bottom = 'auto';
+        panel.style.left = Math.max(4, r0.left + ev.clientX - sx) + 'px';
+        panel.style.top = Math.max(4, r0.top + ev.clientY - sy) + 'px';
+      };
+      const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+    });
+  }
+  /* engine.pushRaw 挂钩：悬浮窗开着该会话 → 气泡实时进来 */
+  function onPushRaw(conv, m) {
+    if (!floatConv || conv.id !== floatConv) return;
+    const fm = document.getElementById('gm-fmsgs');
+    if (!fm) return;
+    if (m.from === 'sys') fm.insertAdjacentHTML('beforeend', '<div class="gm-fsys">' + esc(m.text || '') + '</div>');
+    else {
+      const fpeerNow = (DB.state.convs.find(c => c.id === conv.id) || {}).peerId || conv.id;
+      const who = m.senderId ? name(m.senderId) : name(fpeerNow);
+      fm.insertAdjacentHTML('beforeend', '<div class="gm-fbubble ' + (m.from === 'me' ? 'me' : 'ta') + '">' +
+        (m.from === 'me' ? '' : '<i>' + esc(who) + '</i>') + esc(m.type === 'text' ? m.text : '[' + (m.type === 'img' ? '图片' : '消息') + ']') + '</div>');
+    }
+    fm.scrollTop = fm.scrollHeight;
+  }
+  /* engine viewing 判定用：悬浮窗开着 + 对局页在前台 = 正在看这个会话 */
+  function viewingConv() {
+    const visPage = document.querySelector('.page.active');
+    return (visPage && visPage.id === 'page-room' && floatConv) ? floatConv : null;
+  }
+
+  /* ---------- 倒计时（我方 30 秒：超时 TA 催，不判负） ---------- */
+  function tick() {
+    if (tickI) { clearInterval(tickI); tickI = null; }
+    const r = curRoom();
+    if (!r || r.phase !== 'playing') return;
+    const urgeP = (r.plans || []).find(p => p.kind === 'urge' && !p.done);
+    if (!urgeP) return;
+    tickI = setInterval(() => {
+      const el = document.getElementById('room-timer');
+      const left = Math.max(0, Math.ceil((urgeP.at - Date.now()) / 1000));
+      if (!el) { if (tickI) clearInterval(tickI); tickI = null; return; }
+      el.textContent = currentTurn(r) === 'me' ? ('你的回合 · ' + left + 's') : '';
+      if (left <= 0) { if (tickI) clearInterval(tickI); tickI = null; }
+    }, 1000);
+  }
+
+  /* ---------- 结算 + 战利品转盘 ---------- */
+  function showSettle(r) {
+    closeOverlay();
+    const won = r.winner === 'me', draw = r.winner === 'draw';
+    overlay = document.createElement('div');
+    overlay.className = 'dialog-mask gm-ovl';
+    overlay.innerHTML =
+      '<div class="gm-settle">' +
+        '<div class="gm-settle-t">' + (draw ? '平局' : (won ? '你赢了' : 'TA 赢了')) + '</div>' +
+        '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' + esc(name(draw ? '' : r.winner)) + ' 拿下</div>' +
+        (draw || r.spun ? '' : '<button class="btn btn-primary" id="gm-spin">转战利品（' + (won ? 'TA 陪你玩' : '看 TA 手气') + '）</button>') +
+        '<button class="btn btn-secondary" id="gm-again">再来一局</button>' +
+        '<button class="btn btn-secondary" data-x>收下</button>' +
+      '</div>';
+    document.getElementById('dialog-layer').appendChild(overlay);
+    UI.raise(overlay);
+    const sp = document.getElementById('gm-spin');
+    if (sp) sp.addEventListener('click', () => { openWheel(r); });
+    document.getElementById('gm-again').addEventListener('click', () => { closeOverlay(); again(); });
+    overlay.querySelector('[data-x]').addEventListener('click', closeOverlay);
+  }
+  function closeOverlay() { if (overlay) { overlay.remove(); overlay = null; } }
+  function openWheel(r) {
+    const cfg = S().wheelCfg;
+    const w = cfg.weights || {};
+    const total = WHEEL_SECTORS.reduce((s, k) => s + Math.max(0, +w[k] || 0), 0) || 1;
+    let roll = Math.random() * total, idx = 0;
+    for (let i = 0; i < WHEEL_SECTORS.length; i++) {
+      roll -= Math.max(0, +w[WHEEL_SECTORS[i]] || 0);
+      if (roll <= 0) { idx = i; break; }
+    }
+    const grad = WHEEL_SECTORS.map((k, i) => {
+      const c = S().propsStyle === 'sticker'
+        ? ['#E9C46A', '#94B8D4', '#A8C7A0', '#D9A8A8', '#CFCFCF'][i]
+        : ['#FFFFFF', '#EDEDF0', '#E2E2E6', '#D8D8DC', '#CECED2'][i];
+      return c + ' ' + (i * 72) + 'deg ' + ((i + 1) * 72) + 'deg';
+    }).join(',');
+    overlay.innerHTML =
+      '<div class="gm-wheelbox">' +
+        '<div class="gm-wheel-title">战利品转盘</div>' +
+        '<div class="gm-wheel-wrap"><div class="gm-wheel-pointer"></div>' +
+        '<div class="gm-wheel" id="gm-wheel" style="background:conic-gradient(' + grad + ')">' +
+          WHEEL_SECTORS.map((k, i) => '<span class="gm-wlabel' + (S().propsStyle === 'sticker' ? ' sticker' : '') + '" style="transform:rotate(' + (i * 72 + 36) + 'deg)">' + esc(WHEEL_NAMES[k]) + '</span>').join('') +
+        '</div></div>' +
+        '<div class="gm-wheel-sub">赢家转，输家执行</div>' +
+      '</div>';
+    UI.raise(overlay);
+    const wheel = document.getElementById('gm-wheel');
+    const targetDeg = 360 * 4 + (360 - (idx * 72 + 36)) + rand(-25, 25);
+    requestAnimationFrame(() => { wheel.style.transform = 'rotate(' + targetDeg + 'deg)'; });
+    setTimeout(() => { applyWheel(r, WHEEL_SECTORS[idx]); }, 3000);
+  }
+  function applyWheel(r, kind) {
+    r.spun = true;
+    const loser = r.winner === 'me' ? taUid(r) : 'me';
+    const ta = taUid(r);
+    if (kind === 'red') {
+      const cfg = S().wheelCfg;
+      const fen = (cfg.reds || [52, 520, 1314, 5200])[Math.floor(Math.random() * (cfg.reds || []).length)];
+      const payer = loser, payee = r.winner;
+      const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === (payer === 'me' ? payee : payer));
+      let rp = null;
+      if (conv && typeof Redpacket !== 'undefined' && Redpacket.giftDirect)
+        rp = Redpacket.giftDirect(conv, payer, payee, fen, '游戏战利品', null, null);
+      feed(r, 'sys', rp ? ('转中红包 ¥' + Wallet.yuan(fen) + '——' + esc(name(payer)) + ' 给 ' + esc(name(payee)) + ' 发了战利品红包')
+        : ('转中红包，可惜 ' + esc(name(payer)) + ' 零钱不够，红包飞了'));
+    } else if (kind === 'blank') {
+      feed(r, 'sys', '转中了空门——什么都没有，哈哈');
+    } else {
+      const gname = { truth: '转盘-真心话', dare: '转盘-大冒险', errand: '转盘-使唤' }[kind];
+      const line = pickLine(gname, taUid(r), null) || '（语料空空，去文件管理·游戏库加几条）';
+      feed(r, 'sys', '转中「' + WHEEL_NAMES[kind] + '」——' + esc(name(loser)) + '：' + esc(line));
+    }
+    DB.save();
+    showSettle(r);   // 回结算卡（已转就不再给转钮）
+  }
+
+  /* ---------- 游戏设置（只在游戏里：极小齿轮） ---------- */
+  function openSettings() {
+    const cfg = S().wheelCfg;
+    UI.actionSheet('游戏设置', [
+      { key: 'wheel', label: '战利品转盘 · 占比与红包档' },
+      { key: 'prop', label: '道具/转盘配色：' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿') + '（点一下切换）' }
+    ]).then(k => {
+      if (k === 'prop') {
+        S().propsStyle = S().propsStyle === 'sticker' ? 'mono' : 'sticker';
+        DB.save(); UI.toast('已切换为' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿'));
+      } else if (k === 'wheel') {
+        const w = cfg.weights || {};
+        Home.openForm({
+          title: '转盘占比%（五类合计随意，按比例分）',
+          fields: [
+            { key: 'red', label: '红包%', type: 'number', value: w.red }, { key: 'truth', label: '真心话%', type: 'number', value: w.truth },
+            { key: 'dare', label: '大冒险%', type: 'number', value: w.dare }, { key: 'errand', label: '使唤%', type: 'number', value: w.errand },
+            { key: 'blank', label: '空门%', type: 'number', value: w.blank },
+            { key: 'r0', label: '红包档1(元)', type: 'number', value: (cfg.reds[0] || 0) / 100 },
+            { key: 'r1', label: '红包档2(元)', type: 'number', value: (cfg.reds[1] || 0) / 100 },
+            { key: 'r2', label: '红包档3(元)', type: 'number', value: (cfg.reds[2] || 0) / 100 },
+            { key: 'r3', label: '红包档4(元)', type: 'number', value: (cfg.reds[3] || 0) / 100 }
+          ],
+          okText: '保存',
+          onSubmit(v) {
+            const num = x => Math.max(0, Math.round(+x || 0));
+            cfg.weights = { red: num(v.red), truth: num(v.truth), dare: num(v.dare), errand: num(v.errand), blank: num(v.blank) };
+            cfg.reds = [v.r0, v.r1, v.r2, v.r3].map(x => {
+              const chk = Wallet.toFen(String(x)); return chk.err ? 0 : chk.fen;
+            });
+            DB.save(); UI.toast('转盘已更新');
+          }
+        });
+      }
+    });
+  }
+
+  /* ---------- 战绩档案 ---------- */
+  function openStats() { Router.go('gstats'); renderStats(); }
+  function renderStats() {
+    const box = document.getElementById('gstats-body');
+    if (!box) return;
+    const recs = S().records.slice().sort((a, b) => b.ts - a.ts);
+    const byOpp = {};
+    recs.forEach(r => { const o = (r.players || []).find(u => u !== 'me'); (byOpp[o] = byOpp[o] || []).push(r); });
+    const keys = Object.keys(byOpp);
+    if (!keys.length) {
+      box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="gamepad" data-size="40"></i></div><div class="empty-text">还没有战绩<br>去开一局吧</div></div>';
+      mountIcons(); return;
+    }
+    box.innerHTML = keys.map(o => {
+      const list = byOpp[o];
+      let w = 0, l = 0, d = 0, streak = 0;
+      list.slice().reverse().forEach(r => {
+        if (r.winner === 'draw') d++; else if (r.winner === 'me') { w++; if (streak >= 0) streak++; else streak = 1; }
+        else { l++; if (streak <= 0) streak--; else streak = -1; }
+      });
+      const rows = list.slice(0, 8).map(r =>
+        '<div class="gm-strow"><span class="gm-stres ' + (r.winner === 'me' ? 'w' : r.winner === 'draw' ? 'd' : 'l') + '">' +
+        (r.winner === 'me' ? '胜' : r.winner === 'draw' ? '平' : '负') + '</span>' +
+        '<b>' + esc(defOf({ game: r.game }).name) + '</b>' +
+        '<small>' + r.moves + ' 手 · ' + new Date(r.ts).toLocaleDateString('zh-CN') + '</small></div>').join('');
+      return '<div class="gm-stcard">' +
+        '<div class="gm-sthead"><b>' + esc(name(o)) + '</b>' +
+        '<span class="gm-stbig">' + w + ' 胜 ' + l + ' 负' + (d ? ' ' + d + ' 平' : '') + '</span>' +
+        '<span class="gm-ststreak">' + (streak > 1 ? '连胜 ' + streak : streak < -1 ? '连败 ' + (-streak) : '') + '</span></div>' +
+        '<div class="gm-strows">' + rows + '</div></div>';
+    }).join('');
+  }
+
+  /* ---------- 启动 ---------- */
+  function init() {
+    register(Gomoku.def());
+    ensureSeed();
+    const sb = document.getElementById('gm-stats-btn');
+    if (sb) sb.addEventListener('click', openStats);
+    const rg = document.getElementById('room-gear');
+    if (rg) rg.addEventListener('click', openSettings);
+  }
+
+  return {
+    init, open, openRoom, renderHall, renderRoom, renderStats, advance, onCell,
+    viewingConv, onPushRaw, defOf, claimFirst, answerFirst
+  };
+})();
 
 /* =====================================================
    LOVE♡X · profile.js —— AI资料卡页（M3）
@@ -15165,6 +16305,7 @@ const History = (function () {
       try { Quiz.advanceAll(); } catch (e) {}   /* P34：到点的试卷交卷落库 */
       try { Moments.settle(); } catch (e) {}    /* 朋友圈到点的赞/评/回评落库 */
       try { Kinship.settleMonthly(); } catch (e) {}  /* 跨月时补掷亲属卡月度赠送 */
+      try { Games.advance(); } catch (e) {}     /* P40：到点的落子/接话/协商落库（存档续局） */
     }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
@@ -15192,6 +16333,7 @@ const History = (function () {
       DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
       try { Quiz.advanceAll(); } catch (e) {}   /* P34：回前台补跑到点卷子 */
       try { Moments.settle(); } catch (e) {}    /* 朋友圈错过的赞/评/回评立刻补跑 */
+      try { Games.advance(); } catch (e) {}     /* P40：错过的落子/接话立刻补跑 */
       Home.render();
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
@@ -15206,6 +16348,9 @@ const History = (function () {
 Router.register('report', () => Report.render());   /* P25 */
     Router.register('quiz', () => Quiz.render());        /* P34 灵魂拷问主页 */
     Router.register('quizlib', () => Quiz.renderLib());  /* P34 题库 */
+    Router.register('game', () => Games.renderHall());   /* P40 游戏大厅 */
+    Router.register('room', () => Games.renderRoom());   /* P40 对局页（含存档续局） */
+    Router.register('gstats', () => Games.renderStats());/* P40 战绩档案 */
     Home.init();
     Chat.init();
     Profile.init();
@@ -15217,6 +16362,7 @@ Router.register('report', () => Report.render());   /* P25 */
   Kinship.init();  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
   Redpacket.init();/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
   Moments.init();  /* P36d：朋友圈存量视频 dataURL→IndexedDB 幂等迁移（她 08-27 拆雷） */
+  Games.init();    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
@@ -15234,6 +16380,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     /* 发现页：朋友圈入口（二期P16①骨架上线） */
     const dm = document.getElementById('disc-moments');
     if (dm) dm.addEventListener('click', () => Moments.open());
+    /* 发现页：游戏入口（P40，她定：朋友圈下方） */
+    const dg = document.getElementById('disc-game');
+    if (dg) dg.addEventListener('click', () => Games.open());
   }
 
   /* ---------------- 返回键 / 占位入口 ---------------- */
