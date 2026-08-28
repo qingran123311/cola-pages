@@ -5215,6 +5215,24 @@ const Diary = (function () {
     }
     return d.thread;
   }
+  /* 留言线程按「页」分两侧：side='ai' 走老字段 d.thread（我在 TA 那页递的话）；
+     side='me' 走 d.threadMe（TA 在我这页留了言，我回他的话）。
+     两个方向共用同一套渲染与发送，不再“一边能递话、另一边看得见却回不了”（她 08-28 13:41）。
+     只有递话时才建数组；渲染与判定一律读 (d.threadMe || [])，不要把空数组灌满整本存档。 */
+  function threadOf(d, side) { return side === 'me' ? (d.threadMe = d.threadMe || []) : ensureThread(d); }
+  function planOf(d, side) { return side === 'me' ? d.replyPlanMe : d.replyPlan; }
+  /* 一条留言便签（我递的话 dy-sticky-me、TA 的话 dy-sticky-ai）——两侧共用一份 */
+  function stickyHtml(t) {
+    return '<div class="dy-sticky dy-sticky-' + (t.who === 'me' ? 'me' : 'ai') + '"><span class="dy-tape"></span>' +
+           '<div class="dy-sticky-txt">' + t.text.map(l => esc(l)).join('<br>') + '</div>' +
+           '<div class="dy-sticky-t">' + fmtTs(t.ts) + '</div></div>';
+  }
+  /* 递话输入行：id 带 side，因为两页都在 DOM 里（另一页只是 dy-hide），共用 id 会拿错框 */
+  function cmtRowHtml(side, ph) {
+    return '<div class="dy-cmt-row"><input class="dy-cmt-ipt" id="dy-cmt-ipt-' + side + '" data-side="' + side +
+           '" placeholder="' + esc(ph) + '" maxlength="100">' +
+           '<button class="dy-cmt-go" id="dy-cmt-go-' + side + '">递给TA</button></div>';
+  }
   function bookOf(ctId) {
     if (!DB.state.diary[ctId]) DB.state.diary[ctId] = { days: {}, visits: [] };
     const bk = DB.state.diary[ctId];
@@ -5322,15 +5340,20 @@ const Diary = (function () {
         if (pool.length) d.cmt = { text: pick(pool), ts: d.planCmt.at };
         d.planCmt.done = true;
       }
-      /* TA 回复我的留言（P30：thread 追加式，支持连续对话） */
-      if (d.replyPlan && !d.replyPlan.done && now >= d.replyPlan.at && ensureThread(d).length) {
-        const pool = poolOf(ct.id);
-        if (pool.length) {
-          const lines = Array.from({ length: randI(1, 3) }, () => pick(pool));
-          d.thread.push({ who: 'ta', text: lines, ts: d.replyPlan.at });
+      /* TA 回复我的留言（P30：thread 追加式，支持连续对话）。
+         两侧同一段代码：我在 TA 那页递的话走 replyPlan，TA 在我这页留了言我回的话走 replyPlanMe */
+      ['ai', 'me'].forEach(side => {
+        const pl = planOf(d, side);
+        const th = side === 'me' ? d.threadMe : ensureThread(d);
+        if (pl && !pl.done && now >= pl.at && th && th.length) {
+          const pool = poolOf(ct.id);
+          if (pool.length) {
+            const lines = Array.from({ length: randI(1, 3) }, () => pick(pool));
+            th.push({ who: 'ta', text: lines, ts: pl.at });
+          }
+          pl.done = true;
         }
-        d.replyPlan.done = true;
-      }
+      });
     });
   }
 
@@ -5387,21 +5410,45 @@ const Diary = (function () {
   }
 
   /* ---------------- 我戳 TA（催更） ----------------
-     70%：TA 最近一条"还没出现的日记"提前到现在起的两小时内；
-     30%：按原计划（清然 14:41）。 */
+     70%：TA 最近一条“还没出现的日记”提前到现在起的两小时内；今天压根没排 → 催 TA 现补一篇；
+     30%：按原节奏（清然 14:41）。她 08-28 13:41：“为啥我戳不了对方”——
+     按钮不再只在“有未来计划”时才给，戳下去也得有反应，不只是给一句提示。 */
   function pokeTa() {
     const bk = bookOf(cur.id);
     const tk = todayKey();
+    if (!bk.days[tk]) bk.days[tk] = {};
     const today = bk.days[tk];
-    const future = ((today && today.ais) || []).filter(a => a.ts > Date.now());
-    if (!future.length) { UI.toast('TA 今天没有在写啦'); return; }
-    future.sort((a, b) => a.ts - b.ts);
-    if (roll(70)) {
-      future[0].ts = Date.now() + randI(3, 120) * 60000;
-      DB.save();
-      UI.toast('戳到 TA 了，TA 会早点来写');
+    const now = Date.now();
+    const future = ((today.ais) || []).filter(a => a.ts > now).sort((a, b) => a.ts - b.ts);
+    if (!future.length) {
+      const pool = poolOf(cur.id);
+      if (!pool.length) { UI.toast('TA 的字卡库是空的，催不出来'); return; }
+      /* 没得提前只能催新写一篇：每天最多催出一篇，连点不会把 TA 逗成话痨 */
+      if (today.pokeExtra) { UI.toast('TA：刚被你戳过一回了，让我缓缓'); return; }
+    }
+    if (!roll(70)) { UI.toast('TA 假装没感觉到，按自己的节奏来'); if (view === 'day') render(); return; }
+    if (future.length) {
+      const nt = now + randI(3, 120) * 60000;
+      /* 戳戳只能提前，不能“越催越晚”——TA 本来就在几分钟后写，就不重排 */
+      if (nt >= future[0].ts) {
+        UI.toast('TA 说已经在赶了，别催');
+      } else {
+        future[0].ts = nt;
+        DB.save();
+        UI.toast('戳到 TA 了，TA 会早点来写');
+      }
     } else {
-      UI.toast('TA 假装没感觉到，按自己的节奏来');
+      const pool = poolOf(cur.id), L = lib();
+      today.pokeExtra = true;
+      today.ais = today.ais || [];
+      today.ais.push({
+        text: Array.from({ length: randI(1, 5) }, () => pick(pool)),
+        daily: '', emoji: pick(L.emojis) || '', mood: pick(L.moods) || '',
+        weather: pick(L.weathers) || '', ts: now + randI(3, 120) * 60000
+      });
+      today.ais.sort((a, b) => a.ts - b.ts);
+      DB.save();
+      UI.toast('戳到 TA 了，TA 说这就去写');
     }
     if (view === 'day') render();
   }
@@ -5592,12 +5639,19 @@ const Diary = (function () {
       else meHtml += '<div class="dy-meta-row"><span class="dy-meta-txt dy-dim">这一页还空着</span></div>';
       meHtml += editFormHtml(L);
     }
-    /* TA 对这页的留言：便利贴（时间戳=真实应答时刻） */
-    if (mine.length && rec.cmt) {
-      meHtml += '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
-                '<div class="dy-sticky-from"><i data-icon="cat" data-size="14"></i>' + esc(displayName(cur)) + ' 翻到这页，留下：</div>' +
-                '<div class="dy-sticky-txt">' + esc(rec.cmt.text) + '</div>' +
-                '<div class="dy-sticky-t">' + fmtTs(rec.cmt.ts) + '</div></div>';
+    /* TA 对这页的留言：便利贴（时间戳=真实应答时刻）。
+       她 08-28 13:41：“对方给我留言后我不能再回复他”——下面接同一条线程与递话输入行 */
+    const thMe = rec.threadMe || [];
+    if (mine.length && (rec.cmt || thMe.length)) {
+      if (rec.cmt) {
+        meHtml += '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
+                  '<div class="dy-sticky-from"><i data-icon="cat" data-size="14"></i>' + esc(displayName(cur)) + ' 翻到这页，留下：</div>' +
+                  '<div class="dy-sticky-txt">' + esc(rec.cmt.text) + '</div>' +
+                  '<div class="dy-sticky-t">' + fmtTs(rec.cmt.ts) + '</div></div>';
+      }
+      meHtml += thMe.map(t => stickyHtml(t)).join('');
+      if (rec.replyPlanMe && !rec.replyPlanMe.done) meHtml += '<div class="dy-reply-wait">TA 正在想怎么回你…</div>';
+      meHtml += cmtRowHtml('me', '回 ' + displayName(cur) + ' 一句');
     } else if (mine.length && rec.planCmt && !rec.planCmt.done) {
       meHtml += '<div class="dy-reply-wait">TA 正在来看你的路上…</div>';
     }
@@ -5605,10 +5659,14 @@ const Diary = (function () {
     /* --- TA 侧 --- */
     let aiHtml = '';
     const peeked = hasPeeked(day) || peekOpen;
+    /* 戳戳（催更）：TA 侧不管哪一态都给这个钮（以前“没得提前”就不给，所以她戳不到） */
+    const pokeHtml = isToday
+      ? '<button class="dy-poke-btn" id="dy-poketa"><i data-icon="paw" data-size="17"></i>戳戳 ' + esc(displayName(cur)) + '</button>'
+      : '';
     if (!allAi.length) {
       /* 今天骰子没中：TA 本来就不会写 */
       aiHtml = '<div class="dy-empty"><i data-icon="cat" data-size="44"></i><div class="dy-empty-t">' +
-               (isToday ? 'TA 今天还没留下心事' : 'TA 这一天没有写') + '</div></div>';
+               (isToday ? 'TA 今天还没留下心事' : 'TA 这一天没有写') + '</div></div>' + pokeHtml;
     } else if (!shown.length) {
       /* 有计划但都还没到时刻（或今天骡子没中）：确实一页都没有。
          也能翻开看一眼 → 记“一无所获”（清然：空手来访也留痕） */
@@ -5618,7 +5676,7 @@ const Diary = (function () {
                        : (isToday ? 'TA 还没动笔' : 'TA 这一天还没有写')) + '</div></div>' +
                (!looked ? '<button class="dy-peek" id="dy-peek"><i data-icon="paw" data-size="18"></i>翻开看看</button>' +
                           '<div class="dy-peek-tip">偷看会被记进访客记录哦</div>' : '') +
-               (isToday ? '<button class="dy-poke-btn" id="dy-poketa"><i data-icon="paw" data-size="17"></i>戳戳 ' + esc(displayName(cur)) + '</button>' : '');
+               pokeHtml;
     } else if (!peeked) {
       /* 封纸态：只透露写了几个字，偷看才翻开 */
       const pages = shown.length;
@@ -5629,31 +5687,22 @@ const Diary = (function () {
           '<span class="dy-meta-time">' + fmtTs(shown[shown.length - 1].ts) + '</span></div>' +
           '<button class="dy-peek" id="dy-peek"><i data-icon="paw" data-size="18"></i>偷看 TA 的这一页</button>' +
           '<div class="dy-peek-tip">偷看会被记进访客记录哦</div>' +
+          pokeHtml +
         '</div>';
     } else {
       /* 展开：已出现的每一页一张拼贴（时间正序），每日一句只在第一页 */
       aiHtml = shown.map((en, i) => scrapBlock(en, { right: true, html: en.text.map(l => esc(l)).join('<br>') })).join('');
       if (shown.length < allAi.length) {
-        aiHtml += '<div class="dy-more-later"><i data-icon="feather" data-size="13"></i> TA 之后还会再写几笔…</div>' +
-                  '<button class="dy-poke-btn" id="dy-poketa"><i data-icon="paw" data-size="17"></i>戳戳 ' + esc(displayName(cur)) + '</button>';
+        aiHtml += '<div class="dy-more-later"><i data-icon="feather" data-size="13"></i> TA 之后还会再写几笔…</div>';
       }
       /* 我给 TA 的留言线程（P30）：追加式连续对话，首条回复分钟级缓冲 */
-      const th = ensureThread(rec);
+      const th = threadOf(rec, 'ai');
       if (th.length) {
-        th.forEach(t => {
-          aiHtml += t.who === 'me'
-            ? '<div class="dy-sticky dy-sticky-me"><span class="dy-tape"></span>' +
-              '<div class="dy-sticky-txt">' + t.text.map(l => esc(l)).join('<br>') + '</div>' +
-              '<div class="dy-sticky-t">' + fmtTs(t.ts) + '</div></div>'
-            : '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
-              '<div class="dy-sticky-txt">' + t.text.map(l => esc(l)).join('<br>') + '</div>' +
-              '<div class="dy-sticky-t">' + fmtTs(t.ts) + '</div></div>';
-        });
-        aiHtml += (rec.replyPlan && !rec.replyPlan.done)
-          ? '<div class="dy-reply-wait">TA 正在想怎么回你…</div>' : '';
+        aiHtml += th.map(t => stickyHtml(t)).join('');
+        const pl = planOf(rec, 'ai');
+        aiHtml += (pl && !pl.done) ? '<div class="dy-reply-wait">TA 正在想怎么回你…</div>' : '';
       }
-      aiHtml += '<div class="dy-cmt-row"><input class="dy-cmt-ipt" id="dy-cmt-ipt" placeholder="给 TA 的这一页留句话" maxlength="100">' +
-                '<button class="dy-cmt-go" id="dy-cmt-go">递给TA</button></div>';
+      aiHtml += cmtRowHtml('ai', '给 TA 的这一页留句话') + pokeHtml;
     }
 
     return '' +
@@ -5729,11 +5778,15 @@ const Diary = (function () {
     /* 我戳 TA */
     const pokeBtn = document.getElementById('dy-poketa');
     if (pokeBtn) pokeBtn.onclick = pokeTa;
-    /* 我给 TA 留言 */
-    const go = document.getElementById('dy-cmt-go');
-    if (go) go.onclick = sendComment;
-    const ipt = document.getElementById('dy-cmt-ipt');
-    if (ipt) ipt.addEventListener('keydown', e => { if (e.key === 'Enter') sendComment(); });
+    /* 递话：我的页与 TA 的页各一套，按 side 落到对应线程 */
+    ['ai', 'me'].forEach(side => {
+      const go = document.getElementById('dy-cmt-go-' + side);
+      const ipt = document.getElementById('dy-cmt-ipt-' + side);
+      if (!go || !ipt) return;
+      const send = () => sendComment(side, ipt);
+      go.onclick = send;
+      ipt.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    });
   }
 
   /* 我写下一条便签：追加 + 触发 TA 响应式计划（P22 核心）
@@ -5791,25 +5844,27 @@ const Diary = (function () {
     });
   }
 
-  /* 我给 TA 留言（P30 线程制）：可连续递话；首条回复分钟级缓冲，后续按聊天秒延迟 */
-  function sendComment() {
-    const ipt = document.getElementById('dy-cmt-ipt');
+  /* 我给 TA 留言（P30 线程制）：可连续递话；首条回复分钟级缓冲，后续按聊天秒延迟
+     side='ai' 落在我看 TA 那一页，side='me' 落在 TA 留言给我的那一页——同一段代码 */
+  function sendComment(side, ipt) {
     const text = ipt.value.trim();
     if (!text) return;
     const bk = bookOf(cur.id);
     if (!bk.days[day]) bk.days[day] = {};
     migDay(bk.days[day]);
-    const th = ensureThread(bk.days[day]);
+    const th = threadOf(bk.days[day], side);
     const last = th[th.length - 1];
     if (last && last.who === 'me' && Date.now() - last.ts < 1200) return;   // 防连点重复
     th.push({ who: 'me', text: [text], ts: Date.now() });
     const R = rates(), d = bk.days[day];
-    if ((!d.replyPlan || d.replyPlan.done) && roll(R.reply)) {
+    const pl = planOf(d, side);
+    if ((!pl || pl.done) && roll(R.reply)) {
       const myN = th.filter(t => t.who === 'me').length;
       /* 清然 12:13：首条留言回复缓冲几分钟；之后像聊天一样接得上 */
-      d.replyPlan = { at: Date.now() + (myN === 1
+      const plan = { at: Date.now() + (myN === 1
         ? randI(Math.min(R.replyMin, R.replyMax), Math.max(R.replyMin, R.replyMax)) * 60000
         : delaySecs(cur) * 1000), done: false };
+      if (side === 'me') d.replyPlanMe = plan; else d.replyPlan = plan;
     }
     DB.save(); render();
   }
@@ -11059,11 +11114,11 @@ const Wallet = (function () {
    数据：DB.state.kinship.cards[cardId]
         card = { id, fromUid('me'|ctId), toUid, limitFen, usedFen, monthKey,
                  status:'pending'|'active'|'expired', createdAt, expireAt, activatedAt }
-   消费口径（她 08-28 10:57 定：「我建议真扣余额」）：
+   消费口径（她 08-28 10:57 定「我建议真扣余额」，13:41 补「他用我送的卡也扣我」= 双向对称）：
      持卡方（toUid）用卡消费，钱从**开通人（fromUid）的零钱余额里真扣**，走 Wallet.addBill 唯一记账口；
      usedFen 只用来管「本月额度」，跳月靠 monthKey 归零（不写定时器）。
-     AI 侧支出（TA 主动发红包等）仍走 TA 自己的零钱：我送出去的那张卡，V1 不会把 TA 的花费
-     算到我头上（想要再加开关，总之不准默默扣）。
+     这条规则不分方向：我用 TA 送的卡 → 扣 TA；TA 用我送的卡（AI 主动发红包等）→ 扣我。
+     谁开的卡谁掏钱，两个方向共用 Pay 里同一段实现，绝不在 AI 侧另写一套。
    付款入口只有一个：Pay（src/js/pay.js），页面里不准自己扣款。
    ===================================================== */
 const Kinship = (function () {
@@ -11121,28 +11176,43 @@ const Kinship = (function () {
   function remaining(c) { return c ? Math.max(0, (c.limitFen || 0) - (c.usedFen || 0)) : 0; }
   function info(cardId) { return cards()[cardId] || null; }
 
-  /* 我能刷的卡（持卡人=我）。不可用的也列出来、带上原因：
-     她说过“数据归属模糊就是 bug”，卡在我的钱包里就不能因额度不够而凭空消失。 */
-  function myCards(amtFen) {
+  /* 某人能刷的卡（持卡人 = holder）。不可用的也列出来、带上原因：
+     她说过“数据归属模糊就是 bug”，卡在我的钱包里就不能因额度不够而凭空消失。
+     holder 传 'me' 是我能刷的，传某个联系人 = TA 能刷的（我为 TA 开的那张）——
+     两个方向是同一条规则，所以只有这一个函数，不写第二份。 */
+  function cardsOf(holder, amtFen) {
     rollAll();
     const out = [];
     Object.values(cards()).forEach(c => {
-      if (!c || c.toUid !== 'me' || c.status !== 'active') return;
+      if (!c || c.toUid !== holder || c.status !== 'active') return;
       const left = remaining(c);
       const owner = c.fromUid;
       const obal = Wallet.bal(owner);
       let why = '';
       if (amtFen != null && left < amtFen) why = left > 0 ? '本月只剩 ¥' + yuan(left) : '本月额度已刷完';
       else if (amtFen != null && obal < amtFen) why = name(owner) + ' 的零钱不够';
-      out.push({ id: c.id, ownerUid: owner, ownerBal: obal, left, limitFen: c.limitFen || 0, why });
+      out.push({ id: c.id, holderUid: holder, ownerUid: owner, ownerBal: obal, left, usedFen: c.usedFen || 0, limitFen: c.limitFen || 0, why });
     });
     return out.sort((a, b) => b.left - a.left);
   }
+  function myCards(amtFen) { return cardsOf('me', amtFen); }
+  /* AI 侧代付用：TA 能刷、且这个月额度与开通人零钱都够的那张（本月剩得最多的优先）。
+     拿不出可用卡就返 null，由调用方降级到 TA 自己的零钱——AI 不会拒单，人才能挑。 */
+  function bestCardFor(holder, amtFen) {
+    return cardsOf(holder, amtFen).filter(c => !c.why)[0] || null;
+  }
+  /* 某人本月能刷的卡里最大的那个额度（用来算 TA 兜里的钱，没卡就是 0） */
+  function maxCardLeft(holder) {
+    const l = cardsOf(holder, null).filter(c => !c.why);
+    return l.length ? l[0].left : 0;
+  }
 
-  /* 额度入账与回补：只给 Pay 用，页面不准自己改 usedFen */
-  function charge(cardId, fen) {
+  /* 额度入账与回补：只给 Pay 用，页面不准自己改 usedFen
+     holder = 这次刷卡通用的人（我用 TA 的卡 → 'me'；TA 用我送的卡 → TA 的 id） */
+  function charge(cardId, fen, holder) {
+    const who = holder || 'me';
     const c = cards()[cardId];
-    if (!c || c.toUid !== 'me' || c.status !== 'active') return { err: '这张亲属卡已不可用' };
+    if (!c || c.toUid !== who || c.status !== 'active') return { err: '这张亲属卡已不可用' };
     roll(c);
     if (remaining(c) < fen) return { err: '超出本月额度（还剩 ¥' + yuan(remaining(c)) + '）' };
     if (Wallet.bal(c.fromUid) < fen) return { err: name(c.fromUid) + ' 的零钱不够' };
@@ -11163,9 +11233,10 @@ const Kinship = (function () {
   function statusTag(c, isIn) {
     if (c.status === 'active') {
       /* 持卡人看「还剩多少」，开通人看「额度多大」——两种身份关心的是两回事 */
+      /* 我送出的那张也要看得见 TA 本月刷掉多少，否则她没法核「真扣我」这件事 */
       return '<span class="tag tag-ok">' + (isIn
         ? '使用中 · 本月还剩 ¥' + yuan(remaining(c))
-        : '使用中 · 月¥' + yuan(c.limitFen)) + '</span>';
+        : '使用中 · 月¥' + yuan(c.limitFen) + ' · TA 本月已用 ¥' + yuan(c.usedFen || 0)) + '</span>';
     }
     if (c.status === 'expired') return '<span class="tag">已过期</span>';
     const leftH = Math.max(1, Math.ceil((c.expireAt - Date.now()) / 36e5));
@@ -11208,9 +11279,9 @@ const Kinship = (function () {
         '<span class="wl-bill-mid"><b>' + esc(other) + '</b>' + statusTag(c, !isOut) + '</span>' + act +
         '</div>';
     });
-    /* 我送出的那张卡不会默默扣我的钱，把这句话钉在页面上，免得对账时发疑 */
+    /* 钱的去向钉在页面上，免得对账时发疑（她 08-28 13:41：他要用我送的卡也扣我） */
     return h + '</div>' + (isOut
-      ? '<div class="wk-tip">TA 用这张卡消费不占你的零钱（AI 侧支出仍走 TA 自己余额）</div>' : '');
+      ? '<div class="wk-tip">TA 用这张卡消费，钱从你的零钱里真扣，本月额度一并计；退回也原路回你的零钱</div>' : '');
   }
 
   function editLimit(c) {
@@ -11390,16 +11461,17 @@ const Kinship = (function () {
     scanExpiry();
   }
 
-  return { init, maybeGift, doClaim, claimFromChat, myCards, charge, refund, remaining, info, rollAll };
+  return { init, maybeGift, doClaim, claimFromChat, myCards, cardsOf, bestCardFor, maxCardLeft, charge, refund, remaining, info, rollAll };
 })();
 
 /* =====================================================
    LOVE♡X · pay.js —— 支付方式（P39）
    唯一支付口：这笔钱谁出、扣谁的余额、记谁的账，只在这里说一次
    她 08-28 10:57 定：亲属卡「真扣余额」——用 TA 的卡，钱就从 TA 的零钱里走
+   她 08-28 13:41 补：他用我送的卡也扣我 —— 所以这条是双向的，谁开的卡谁掏钱
    两种途径：
-     balance 我的零钱：一笔支出，动我余额（老行为，一分不变）
-     kinship 亲属卡：两笔流水——开通人那笔真扣 TA 余额；我这笔只落账、不动我余额
+     balance 零钱：一笔支出，动掘钱人余额（老行为，一分不变）
+     kinship 亲属卡：两笔流水——开通人那笔真扣余额；刷卡人那笔只落账、不动余额
    退款一律原路：亲属卡付的退回开通人零钱，本月额度一并回补
    规矩：金额只走 Wallet.toFen（元→分）；记账只走 Wallet.addBill；额度只走 Kinship.charge/refund
    UI：一行「支付方式」+ 就地展开选择，不新建浮层（少一处浮层就少一处玻璃罩风险，红线见 ui.js 头）
@@ -11444,25 +11516,46 @@ const Pay = (function () {
   /* ---------- 结算：掏钱的唯一出口 ----------
      meta = { type, note, peer, via? } → 成功返 { via, cardId?, ownerUid? }，失败返 { err }
      调用方（现在是红包，将来是商城）拿到返回值存进自己的记录，退款时原路退。 */
+  /* 亲属卡结算的唯一实现：刷卡人（spender）消费 → 开通人真掱余额，刷卡人只落流水。
+     我用 TA 的卡、TA 用我送的卡都走这里；要加方向就改这一处，不准在别处复制第二遍（台账 L13）。 */
+  function settleByCard(cardId, spender, amtFen, meta) {
+    const mm = meta || {};
+    const card = Kinship.info(cardId);
+    if (!card || card.toUid !== spender) return { err: '这张亲属卡已不可用' };
+    const ch = Kinship.charge(cardId, amtFen, spender);
+    if (ch.err) return { err: ch.err };
+    const owner = card.fromUid;
+    /* 真扣：从开通人零钱走，动他的余额 */
+    Wallet.addBill(owner, mm.type || 'consume', -1, amtFen, '替你支付 · 亲属卡', spender);
+    /* 刷卡人这侧只落一笔流水，余额一分不动（钱不是我出的，但消费是我的，账上要看得见） */
+    Wallet.addBill(spender, mm.type || 'consume', -1, amtFen,
+      (mm.note ? mm.note + ' · ' : '') + '亲属卡 · ' + Wallet.userName(owner),
+      owner, { touchBal: false });
+    return { via: cardId, cardId: cardId, ownerUid: owner };
+  }
+
+  /* 我掘钱：按她选的支付方式（零钱 / 某张亲属卡） */
   function settle(amtFen, meta) {
     const mm = meta || {};
     const key = validKey(mm.via || pref());
-    if (key !== BALANCE) {
-      const card = Kinship.info(key);
-      if (!card || card.toUid !== 'me') return { err: '这张亲属卡已不可用' };
-      const ch = Kinship.charge(key, amtFen);
-      if (ch.err) return { err: ch.err };
-      const owner = card.fromUid;
-      /* 真扣：从开通人零钱走，动他的余额 */
-      Wallet.addBill(owner, mm.type || 'consume', -1, amtFen, '替你支付 · 亲属卡', 'me');
-      /* 我这侧只落一笔流水，余额一分不动（钱不是我出的，但消费是我的，账上要看得见） */
-      Wallet.addBill('me', mm.type || 'consume', -1, amtFen,
-        (mm.note ? mm.note + ' · ' : '') + '亲属卡 · ' + Wallet.userName(owner),
-        owner, { touchBal: false });
-      return { via: key, cardId: key, ownerUid: owner };
-    }
+    if (key !== BALANCE) return settleByCard(key, 'me', amtFen, mm);
     if (Wallet.bal('me') < amtFen) return { err: '零钱不足，先去充值吧' };
     Wallet.addBill('me', mm.type || 'consume', -1, amtFen, mm.note || '', mm.peer || null);
+    return { via: BALANCE };
+  }
+
+  /* TA 掘钱（AI 侧支出，比如 TA 主动发红包）：有可用卡就真扣开通人（我）；
+     本月额度刷完 / 没开过卡 → 落回 TA 自己的零钱。AI 不弹选择，只降级。
+     两边都不够就返 err，让调用方当作“这笔没发生”——余额不准被掳成负数。 */
+  function settlePeer(spender, amtFen, meta) {
+    const mm = meta || {};
+    const card = Kinship.bestCardFor(spender, amtFen);
+    if (card) {
+      const r = settleByCard(card.id, spender, amtFen, mm);
+      if (!r.err) return r;
+    }
+    if (Wallet.bal(spender) < amtFen) return { err: Wallet.userName(spender) + ' 的零钱不够' };
+    Wallet.addBill(spender, mm.type || 'consume', -1, amtFen, mm.note || '', mm.peer || null);
     return { via: BALANCE };
   }
 
@@ -11473,9 +11566,9 @@ const Pay = (function () {
     const payer = kin ? kin.ownerUid : ((rp && rp.fromUid) || 'me');
     if (kin) Kinship.refund(kin.cardId, amtFen);
     Wallet.addBill(payer, 'refund', 1, amtFen, note || '红包退回', peer || null);
-    /* 我用亲属卡付的，我这边补一笔退款流水（同样不动余额，保持我账目收支相抵） */
-    if (kin && rp && rp.fromUid === 'me') {
-      Wallet.addBill('me', 'refund', 1, amtFen,
+    /* 刷卡人（消费方）补一笔退款流水，同样不动余额，保持账目收支相抵 */
+    if (kin && rp && rp.fromUid && rp.fromUid !== kin.ownerUid) {
+      Wallet.addBill(rp.fromUid, 'refund', 1, amtFen,
         (note || '退回') + ' · 原路退回' + Wallet.userName(kin.ownerUid), kin.ownerUid, { touchBal: false });
     }
   }
@@ -11551,7 +11644,7 @@ const Pay = (function () {
   function refresh() { render(); }
   function detach() { m = null; }
 
-  return { attach, refresh, detach, render, summary, options, settle, refundFor, pref, setPref, BALANCE };
+  return { attach, refresh, detach, render, summary, options, settle, settlePeer, refundFor, pref, setPref, BALANCE };
 })();
 
 /* =====================================================
@@ -11991,9 +12084,10 @@ const Redpacket = (function () {
       box.innerHTML = '<b>¥' + yuan(rp.totalFen) + '</b><small>' +
         (rp.claimUid === 'me' ? '已存入你的零钱' : name(rp.claimUid || rp.toUid) + '已领取') + '</small>';
     } else {
-      /* 亲属卡代付的包，钱是退回开通人那里，不能说「退回你的零钱」 */
-      const who = (rp.pay && rp.pay.via && rp.pay.via !== Pay.BALANCE)
-        ? name(rp.pay.ownerUid) : (rp.fromUid === 'me' ? '你' : name(rp.fromUid));
+      /* 亲属卡代付的包，钱是退回开通人那里，不能说「退回你的零钱」（开通人是我时就说「你」） */
+      const kinOwner = (rp.pay && rp.pay.via && rp.pay.via !== Pay.BALANCE) ? rp.pay.ownerUid : null;
+      const who = kinOwner ? (kinOwner === 'me' ? '你' : name(kinOwner))
+                           : (rp.fromUid === 'me' ? '你' : name(rp.fromUid));
       box.innerHTML = '<b>¥' + yuan(rp.totalFen) + '</b>' +
         '<small>该红包已退回，金额将原路退回' + esc(who) + '的零钱</small>';
     }
@@ -12130,7 +12224,8 @@ const Redpacket = (function () {
   function maybeGift(conv, ct) {
     const rate = Math.min(100, Math.max(0, +(ct.params || {}).giftRedRate || 0));
     if (!rate || Math.random() * 100 >= rate) return;
-    const bal = Wallet.bal(ct.id);
+    /* 兜里的钱 = TA 自己的零钱 或 我为 TA 开的卡本月还剩的（她 08-28 13:41：他要用我送的卡） */
+    const bal = Math.max(Wallet.bal(ct.id), Kinship.maxCardLeft(ct.id));
     if (bal < 52) return;                              // 余额太薄就不打肿脸
     let fen;
     if (Math.random() < 0.45) {
@@ -12164,8 +12259,15 @@ const Redpacket = (function () {
         }
       }
     }
-    Wallet.addBill(ct.id, 'redpacket', -1, fen, isGroup ? MODE_NAMES[extra.mode] : '发红包', toUid === 'me' ? 'me' : toUid);
-    const rp = createRp(conv.id, ct.id, toUid, fen, pickNote(), aiCoverId(ct.id), extra);
+    /* 掘钱只走 Pay（她 08-28 13:41：TA 用我送的卡也真扣我）；pay 存进红包记录，退款才谈得上原路 */
+    const pay = Pay.settlePeer(ct.id, fen, {
+      type: 'redpacket',
+      note: isGroup ? MODE_NAMES[extra.mode] : '发红包',
+      peer: toUid === 'me' ? 'me' : toUid
+    });
+    if (pay.err) return;                                 // 卡和 TA 自己都不够 → 这红包就当没发过
+    const rp = createRp(conv.id, ct.id, toUid, fen, pickNote(), aiCoverId(ct.id),
+      Object.assign(extra || {}, { pay: pay }));
     pushMsg(rp, false);
     if (isGroup && extra) {
       scheduleGroupClaims(rp);
@@ -12482,11 +12584,16 @@ function coverTap(e) {
       setTimeout(() => reactOnce(postId, ct), rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000);
     });
   }
-  /* 我回复TA的评论后TA再回：只按聊天回复延迟，无缓冲 */
-  function replyBack(pid, toUid) {
+  /* 我回复TA的评论后TA再回：只按聊天回复延迟，无缓冲。
+     她 08-28 13:41：“我评论了他们的朋友圈他们不回我”——顶楼评论也得排主人回一条，
+     所以这里多一个 first 参数：首次互动带 0~1 分钟缓冲（与 TA 之间互评同一口径），追评不加。
+     命中 TA 的「已读不回」概率就不回（与聊天同口径，默认 0 = 必回）。 */
+  function replyBack(pid, toUid, first) {
     const ct = Home.contactById(toUid);
     const w = chatWindowOf(ct);
     if (!w) return;
+    const rnr = Math.min(100, Math.max(0, +((ct.params || {}).readNoReply) || 0));
+    if (rnr > 0 && Math.random() * 100 < rnr) return;
     setTimeout(() => {
       const post = store().posts.find(x => x.id === pid);
       if (!post) return;
@@ -12495,7 +12602,7 @@ function coverTap(e) {
       post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: toUid, toUid: 'me', text, ts: Date.now() });
       DB.save();
       renderList();
-    }, rand(w.minS, w.maxS) * 1000);
+    }, rand(w.minS, w.maxS) * 1000 + (first ? rand(0, 60) * 1000 : 0));
   }
   function reactOnce(postId, ct) {
     const post = store().posts.find(x => x.id === postId);
@@ -12948,6 +13055,8 @@ function coverTap(e) {
       closeShell();
       renderList();
       if (toUid) replyBack(pid, toUid);
+      /* 我在 TA 动态下顶楼评论：主人要回我（以前只排了「回复 TA 的评论」那一条路，所以我平白评论一句没人接） */
+      else if (p.uid && p.uid !== 'me') replyBack(pid, p.uid, true);
     });
   }
 
