@@ -1586,6 +1586,34 @@ html[data-theme="wechat"] .rp-luck-best{color:#7A4A12;background:rgba(217,169,60
 .rp-put{background:var(--t1);color:var(--card);border:none;border-radius:var(--r-btn);padding:11px 0;font-size:var(--fs-body)}
 html.dark .rp-put{background:#E8E8E8;color:#111}
 .rp-balance{text-align:center;color:var(--t3);font-size:var(--fs-small)}
+/* ===== P39 支付方式：一行 + 就地展开（黑白线稿口径：只用墨与主题色，不加第四个颜色）===== */
+.rp-pay{margin-top:0}   /* .rp-sheet 本身 gap:12px，这里再加就成了两层间距 */
+.rp-pay:empty{display:none}          /* 一张亲属卡都没有 → 整段不占位 */
+.rp-pay-line{display:flex;align-items:center;gap:10px;width:100%;background:var(--bg);
+  border:1px solid var(--line);border-radius:var(--r-btn);padding:8px 10px;text-align:left;color:var(--t1)}
+.rp-pay-ico{width:26px;height:26px;border-radius:6px;flex:none;background:var(--card);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--t1)}
+/* 名字可长（台账 L3）：中间那列 flex:1 + min-width:0 让它自己省略号，不把金额顶出格子 */
+.rp-pay-line b{flex:1;min-width:0;font-size:var(--fs-small);font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-pay-line small{flex:none;font-size:var(--fs-small);color:var(--t2)}
+.rp-pay-line .chevron,.rp-pay-caret{color:var(--t3);flex:none;display:flex;align-items:center}
+.rp-pay-opts{margin-top:6px;border:1px solid var(--line);border-radius:var(--r-btn);overflow:hidden}
+.rp-pay-opt{position:relative;display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;
+  background:var(--card);border:none;border-bottom:1px solid var(--line);font:inherit;color:var(--t1);
+  text-align:left;cursor:pointer}
+.rp-pay-opt:last-child{border-bottom:none}
+.rp-pay-dot{width:13px;height:13px;border-radius:50%;border:1px solid var(--t3);flex:none;background:var(--card)}
+.rp-pay-opt.on .rp-pay-dot{border-color:var(--t1);background:var(--t1);box-shadow:inset 0 0 0 2px var(--card)}
+.rp-pay-opt.on{box-shadow:inset 2px 0 0 var(--t1)}   /* 选中态：描边加深 + 左侧实心点，不靠颜色 */
+.rp-pay-opt b{flex:1;min-width:0;font-weight:500;font-size:var(--fs-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-pay-opt small{flex:none;font-size:var(--fs-small);color:var(--t2)}
+.rp-pay-opt.off{cursor:default}
+.rp-pay-opt.off b,.rp-pay-opt.off small,.rp-pay-opt.off .rp-pay-dot{color:var(--t3);font-weight:400;border-color:var(--line)}
+.rp-pay-opt em{flex:none;font-style:normal;font-size:var(--fs-aux);color:var(--t3);
+  max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 本月额度用掉多少：2px 细条，半透墨色，不发光不渐变 */
+.rp-pay-bar{position:absolute;left:10px;right:10px;bottom:3px;height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.rp-pay-bar i{display:block;height:100%;background:var(--t1);opacity:.45}
 /* 聊天红包卡片：跟随主题（清然 22:07 参考图定稿：微信=橙黄实底白字+红底图标） */
 .bubble-rp{min-width:170px;background:var(--rp-msg-bg);border:1px solid var(--rp-msg-bd);border-radius:var(--r-bubble);padding:10px 12px}
 .rp-card{display:flex;align-items:center;gap:10px}
@@ -2799,7 +2827,8 @@ const DB = (function () {
         notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
         // P26 朋友圈互评开关已按她 08-27 21:08 口径改成「按人」：存 contacts[].params.moMutual，
         // 默认关=只有我能评赞；入口在资料卡·高级回复设置（不再占朋友圈右上角）
-        lkRelay: ''                    // P36 视频/图文中转（自建 Worker 地址）：空=关，抖音/小红书只发标题卡；填了才去抓真封面（docs/lk-relay-worker.js）
+        lkRelay: '',                   // P36 视频/图文中转（自建 Worker 地址）：空=关，抖音/小红书只发标题卡；填了才去抓真封面（docs/lk-relay-worker.js）
+        payPref: 'balance'             // P39 支付方式记忆：'balance'=我零钱 | 亲属卡 cardId（卡不可用时自动回落零钱，老存档无此字段也走零钱）
       },
       reports: {},                     // P25 报备记录：contactId -> [{id,who:'me'|'ta',how:'auto'|'manual'|'checkin'|'asked',place,doing,mood,startTs,endTs,ts}]
       kinshipAuto: {},                 // P26 亲属卡主动赠送限次计数：contactId -> 次数（一生最多2次，她 08-26 定）
@@ -10651,7 +10680,9 @@ const GroupManage = (function () {
    数据：DB.state.wallet = { bal:{uid:分}, bills:{uid:[txn]} }   每人独立（她定）
    txn = { id, ts, type, io:1收入|-1支出, amt(分), note, peer }
    金额一律以「分」存整数，展示时 yuan() 格式化，避免浮点误差
-   addBill 是全站唯一记账口（P15 红包也走这里），扣款入账一体完成
+   addBill 是全站唯一记账口（P15 红包、P39 亲属卡都走这里），扣款入账一体完成
+   opts.touchBal=false：只落流水、不动余额——亲属卡那笔「我的支出」用（钱是开通人出的，
+   我这侧要看得见这笔消费，但余额一分不该变）。除这个显式开关外，别处不许自己改 bal。
    ===================================================== */
 const Wallet = (function () {
 
@@ -10697,8 +10728,9 @@ const Wallet = (function () {
 
   function yuan(fen) { return (fen / 100).toFixed(2); }
 
-  /* 记账+入账一体：io=1 收入（余额加），io=-1 支出（余额扣）。返回 txn */
-  function addBill(uid, type, io, amtFen, note, peer) {
+  /* 记账+入账一体：io=1 收入（余额加），io=-1 支出（余额扣）。返回 txn
+     amtFen 一律传「分」的整数；要校验用户输入的元，先过 toFen（台账 L13：不留第二套换算） */
+  function addBill(uid, type, io, amtFen, note, peer, opts) {
     const w = ensure(uid);
     const t = {
       id: 'tx' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36),
@@ -10706,7 +10738,9 @@ const Wallet = (function () {
       amt: Math.max(0, Math.round(amtFen)), note: note || '', peer: peer || null
     };
     w.bills[uid].push(t);
-    w.bal[uid] = Math.max(0, (w.bal[uid] || 0) + t.io * t.amt);
+    if (!opts || opts.touchBal !== false) {
+      w.bal[uid] = Math.max(0, (w.bal[uid] || 0) + t.io * t.amt);
+    }
     DB.save();
     return t;
   }
@@ -11013,7 +11047,7 @@ const Wallet = (function () {
     if (viewUid !== 'me' && !Home.contactById(viewUid)) viewUid = 'me';
   }
 
-  return { init, bal, yuan, addBill, toFen, openWallet, renderWallet, renderCash, renderBills: function(){ renderBills(true); }, renderStats: function(){ if (typeof renderStats === 'function') renderStats(); } };
+  return { init, bal, yuan, addBill, toFen, userName, openWallet, renderWallet, renderCash, renderBills: function(){ renderBills(true); }, renderStats: function(){ if (typeof renderStats === 'function') renderStats(); } };
 })();
 
 /* =====================================================
@@ -11023,9 +11057,14 @@ const Wallet = (function () {
    聊天卡片消息：受赠方「送你一张亲属卡」/ 赠送方「给XXX的亲属卡」+ 立即领取
    AI 行为：被赠 85% 概率延迟领取；回复时 2% 主动赠送（默认值，可调）
    数据：DB.state.kinship.cards[cardId]
-        card = { id, fromUid('me'|ctId), toUid, limitFen, usedFen,
+        card = { id, fromUid('me'|ctId), toUid, limitFen, usedFen, monthKey,
                  status:'pending'|'active'|'expired', createdAt, expireAt, activatedAt }
-   承诺制：赠送不扣余额，对方消费（商城接入后）才由开通人支付
+   消费口径（她 08-28 10:57 定：「我建议真扣余额」）：
+     持卡方（toUid）用卡消费，钱从**开通人（fromUid）的零钱余额里真扣**，走 Wallet.addBill 唯一记账口；
+     usedFen 只用来管「本月额度」，跳月靠 monthKey 归零（不写定时器）。
+     AI 侧支出（TA 主动发红包等）仍走 TA 自己的零钱：我送出去的那张卡，V1 不会把 TA 的花费
+     算到我头上（想要再加开关，总之不准默默扣）。
+   付款入口只有一个：Pay（src/js/pay.js），页面里不准自己扣款。
    ===================================================== */
 const Kinship = (function () {
 
@@ -11056,9 +11095,78 @@ const Kinship = (function () {
   /* 会话定位：单聊 conv 的 peerId 即对方 uid */
   function convOf(uid) { return DB.state.convs.find(c => c.type === 'single' && c.peerId === uid); }
 
+  /* ============ 消费链路（P39）============
+     一张卡能不能刷，三件事同时成立：已领取、本月额度够、开通人零钱够。
+     月度重置不靠定时器（离线网页关一天定时器就不可信）：读之前先把 monthKey 对一遍。
+     老存档没有 monthKey —— roll() 第一次碰到它就补成当月，属存量自愈（台账 L14）。 */
+  function monthKey(d) {
+    const x = d || new Date();
+    return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0');
+  }
+  /* 跳月归零：返回是否发生了变化（调用方据此决定要不要存盘） */
+  function roll(c) {
+    if (!c || c.status !== 'active') return false;
+    const k = monthKey();
+    if (c.monthKey === k) return false;
+    c.monthKey = k; c.usedFen = 0;
+    return true;
+  }
+  function rollAll() {
+    let ch = false;
+    Object.values(cards()).forEach(c => { if (roll(c)) ch = true; });
+    if (ch) DB.save();
+    return ch;
+  }
+  /* 本月还剩多少额度（纯算，roll 由调用方负责） */
+  function remaining(c) { return c ? Math.max(0, (c.limitFen || 0) - (c.usedFen || 0)) : 0; }
+  function info(cardId) { return cards()[cardId] || null; }
+
+  /* 我能刷的卡（持卡人=我）。不可用的也列出来、带上原因：
+     她说过“数据归属模糊就是 bug”，卡在我的钱包里就不能因额度不够而凭空消失。 */
+  function myCards(amtFen) {
+    rollAll();
+    const out = [];
+    Object.values(cards()).forEach(c => {
+      if (!c || c.toUid !== 'me' || c.status !== 'active') return;
+      const left = remaining(c);
+      const owner = c.fromUid;
+      const obal = Wallet.bal(owner);
+      let why = '';
+      if (amtFen != null && left < amtFen) why = left > 0 ? '本月只剩 ¥' + yuan(left) : '本月额度已刷完';
+      else if (amtFen != null && obal < amtFen) why = name(owner) + ' 的零钱不够';
+      out.push({ id: c.id, ownerUid: owner, ownerBal: obal, left, limitFen: c.limitFen || 0, why });
+    });
+    return out.sort((a, b) => b.left - a.left);
+  }
+
+  /* 额度入账与回补：只给 Pay 用，页面不准自己改 usedFen */
+  function charge(cardId, fen) {
+    const c = cards()[cardId];
+    if (!c || c.toUid !== 'me' || c.status !== 'active') return { err: '这张亲属卡已不可用' };
+    roll(c);
+    if (remaining(c) < fen) return { err: '超出本月额度（还剩 ¥' + yuan(remaining(c)) + '）' };
+    if (Wallet.bal(c.fromUid) < fen) return { err: name(c.fromUid) + ' 的零钱不够' };
+    c.usedFen = (c.usedFen || 0) + fen;
+    DB.save();
+    return { ok: true };
+  }
+  /* 退款回补额度。跳月退的那笔不冲抵新一个月的已用（归零后再减会被 max(0,…) 抹平） */
+  function refund(cardId, fen) {
+    const c = cards()[cardId];
+    if (!c) return;
+    roll(c);
+    c.usedFen = Math.max(0, (c.usedFen || 0) - fen);
+    DB.save();
+  }
+
   /* ---------- 状态文案 ---------- */
-  function statusTag(c) {
-    if (c.status === 'active') return '<span class="tag tag-ok">使用中 · 月¥' + yuan(c.limitFen) + '</span>';
+  function statusTag(c, isIn) {
+    if (c.status === 'active') {
+      /* 持卡人看「还剩多少」，开通人看「额度多大」——两种身份关心的是两回事 */
+      return '<span class="tag tag-ok">' + (isIn
+        ? '使用中 · 本月还剩 ¥' + yuan(remaining(c))
+        : '使用中 · 月¥' + yuan(c.limitFen)) + '</span>';
+    }
     if (c.status === 'expired') return '<span class="tag">已过期</span>';
     const leftH = Math.max(1, Math.ceil((c.expireAt - Date.now()) / 36e5));
     return '<span class="tag tag-busy">待领取 · 约' + leftH + '小时后作废</span>';
@@ -11068,6 +11176,7 @@ const Kinship = (function () {
   function openPage() { Router.go('kin'); render(); }
 
   function render() {
+    rollAll();
     const all = Object.values(cards());
     const mineOut = all.filter(c => c.fromUid === 'me').sort((a, b) => b.createdAt - a.createdAt);
     const mineIn = all.filter(c => c.toUid === 'me').sort((a, b) => b.createdAt - a.createdAt);
@@ -11096,10 +11205,12 @@ const Kinship = (function () {
       if (!isOut && c.status === 'pending') act = '<button class="wk-btn primary" data-act="claim" data-id="' + c.id + '">立即领取</button>';
       h += '<div class="wk-row">' +
         '<span class="wl-bill-ico"><i data-icon="heart" data-size="16"></i></span>' +
-        '<span class="wl-bill-mid"><b>' + esc(other) + '</b>' + statusTag(c) + '</span>' + act +
+        '<span class="wl-bill-mid"><b>' + esc(other) + '</b>' + statusTag(c, !isOut) + '</span>' + act +
         '</div>';
     });
-    return h + '</div>';
+    /* 我送出的那张卡不会默默扣我的钱，把这句话钉在页面上，免得对账时发疑 */
+    return h + '</div>' + (isOut
+      ? '<div class="wk-tip">TA 用这张卡消费不占你的零钱（AI 侧支出仍走 TA 自己余额）</div>' : '');
   }
 
   function editLimit(c) {
@@ -11279,7 +11390,168 @@ const Kinship = (function () {
     scanExpiry();
   }
 
-  return { init, maybeGift, doClaim, claimFromChat };
+  return { init, maybeGift, doClaim, claimFromChat, myCards, charge, refund, remaining, info, rollAll };
+})();
+
+/* =====================================================
+   LOVE♡X · pay.js —— 支付方式（P39）
+   唯一支付口：这笔钱谁出、扣谁的余额、记谁的账，只在这里说一次
+   她 08-28 10:57 定：亲属卡「真扣余额」——用 TA 的卡，钱就从 TA 的零钱里走
+   两种途径：
+     balance 我的零钱：一笔支出，动我余额（老行为，一分不变）
+     kinship 亲属卡：两笔流水——开通人那笔真扣 TA 余额；我这笔只落账、不动我余额
+   退款一律原路：亲属卡付的退回开通人零钱，本月额度一并回补
+   规矩：金额只走 Wallet.toFen（元→分）；记账只走 Wallet.addBill；额度只走 Kinship.charge/refund
+   UI：一行「支付方式」+ 就地展开选择，不新建浮层（少一处浮层就少一处玻璃罩风险，红线见 ui.js 头）
+   ===================================================== */
+const Pay = (function () {
+  const BALANCE = 'balance';
+  let m = null;                 // { box, getAmt, onPick, open } —— 同一时刻只有一处在付款
+
+  function yuan(fen) { return Wallet.yuan(fen); }
+  function st() { return (DB.state.settings = DB.state.settings || {}); }
+  function pref() { return st().payPref || BALANCE; }
+  function setPref(k) { st().payPref = k; DB.save(); }
+
+  /* ---------- 数据：能选什么、各自够不够 ----------
+     amtFen 传 null = 金额还没填，此时只报「有什么卡」，不判够不够 */
+  function options(amtFen) {
+    const myBal = Wallet.bal('me');
+    const cards = Kinship.myCards(amtFen);
+    const list = [{
+      key: BALANCE, kind: 'balance', icon: 'wallet', label: '零钱', sub: '¥' + yuan(myBal),
+      why: amtFen != null && myBal < amtFen ? '零钱不足' : '', left: myBal
+    }];
+    cards.forEach(c => list.push({
+      key: c.id, kind: 'kinship', icon: 'heart',
+      label: '亲属卡 · ' + Wallet.userName(c.ownerUid), sub: '本月还剩 ¥' + yuan(c.left),
+      why: c.why, left: c.left, limitFen: c.limitFen, ownerUid: c.ownerUid
+    }));
+    /* 上次选的用不了（刷爆了 / TA 没钱了）就自动落到第一个能用的，别让她点了才发现 */
+    const want = list.filter(x => x.key === pref() && !x.why)[0] || list.filter(x => !x.why)[0] || list[0];
+    list.forEach(x => { x.on = !!(want && x.key === want.key); });
+    return { list, cards: cards.length };
+  }
+
+  /* 记忆里的选择如果已经不存在了（卡被摘掉/删好友连带清了），必须回落零钱——
+     拿一个失效的 cardId 去结算会把人卡死：那种时候选择行根本不出现，她无从改起 */
+  function validKey(k) {
+    if (!k || k === BALANCE) return BALANCE;
+    const c = Kinship.info(k);
+    return (c && c.toUid === 'me' && c.status === 'active') ? k : BALANCE;
+  }
+
+  /* ---------- 结算：掏钱的唯一出口 ----------
+     meta = { type, note, peer, via? } → 成功返 { via, cardId?, ownerUid? }，失败返 { err }
+     调用方（现在是红包，将来是商城）拿到返回值存进自己的记录，退款时原路退。 */
+  function settle(amtFen, meta) {
+    const mm = meta || {};
+    const key = validKey(mm.via || pref());
+    if (key !== BALANCE) {
+      const card = Kinship.info(key);
+      if (!card || card.toUid !== 'me') return { err: '这张亲属卡已不可用' };
+      const ch = Kinship.charge(key, amtFen);
+      if (ch.err) return { err: ch.err };
+      const owner = card.fromUid;
+      /* 真扣：从开通人零钱走，动他的余额 */
+      Wallet.addBill(owner, mm.type || 'consume', -1, amtFen, '替你支付 · 亲属卡', 'me');
+      /* 我这侧只落一笔流水，余额一分不动（钱不是我出的，但消费是我的，账上要看得见） */
+      Wallet.addBill('me', mm.type || 'consume', -1, amtFen,
+        (mm.note ? mm.note + ' · ' : '') + '亲属卡 · ' + Wallet.userName(owner),
+        owner, { touchBal: false });
+      return { via: key, cardId: key, ownerUid: owner };
+    }
+    if (Wallet.bal('me') < amtFen) return { err: '零钱不足，先去充值吧' };
+    Wallet.addBill('me', mm.type || 'consume', -1, amtFen, mm.note || '', mm.peer || null);
+    return { via: BALANCE };
+  }
+
+  /* 原路退回：rp 是付款方的业务记录（可能带 rp.pay），当初谁掏的余额就退回谁 */
+  function refundFor(rp, amtFen, note, peer) {
+    const pay = rp && rp.pay;
+    const kin = (pay && pay.via && pay.via !== BALANCE) ? pay : null;
+    const payer = kin ? kin.ownerUid : ((rp && rp.fromUid) || 'me');
+    if (kin) Kinship.refund(kin.cardId, amtFen);
+    Wallet.addBill(payer, 'refund', 1, amtFen, note || '红包退回', peer || null);
+    /* 我用亲属卡付的，我这边补一笔退款流水（同样不动余额，保持我账目收支相抵） */
+    if (kin && rp && rp.fromUid === 'me') {
+      Wallet.addBill('me', 'refund', 1, amtFen,
+        (note || '退回') + ' · 原路退回' + Wallet.userName(kin.ownerUid), kin.ownerUid, { touchBal: false });
+    }
+  }
+
+  /* ---------- UI：宿主给一个空容器就够了 ---------- */
+  function rowHtml(cur, open) {
+    return '<button class="rp-pay-line" data-pay-toggle type="button">' +
+      '<span class="rp-pay-ico"><i data-icon="' + cur.icon + '" data-size="16"></i></span>' +
+      '<b>' + UI.escapeHtml(cur.label) + '</b>' +
+      '<small>' + UI.escapeHtml(cur.sub) + '</small>' +
+      (open ? '<span class="rp-pay-caret"><i data-icon="chevron-down" data-size="12"></i></span>'
+            : '<span class="chevron">›</span>') +
+      '</button>';
+  }
+  function optsHtml(o) {
+    return '<div class="rp-pay-opts">' + o.list.map(x => {
+      /* 额度细条：本月用掉了多少，2px、黑白，不发光不渐变 */
+      const bar = (x.kind === 'kinship' && x.limitFen)
+        ? '<span class="rp-pay-bar"><i style="width:' +
+          Math.min(100, Math.max(0, Math.round((x.limitFen - x.left) / x.limitFen * 100))) + '%"></i></span>'
+        : '';
+      return '<button type="button" class="rp-pay-opt' + (x.on ? ' on' : '') + (x.why ? ' off' : '') +
+        '" data-pay-key="' + UI.escapeHtml(x.key) + '">' +
+        '<span class="rp-pay-dot"></span>' +
+        '<b>' + UI.escapeHtml(x.label) + '</b>' +
+        '<small>' + UI.escapeHtml(x.sub) + '</small>' +
+        (x.why ? '<em>' + UI.escapeHtml(x.why) + '</em>' : '') + bar +
+        '</button>';
+    }).join('') + '</div>';
+  }
+
+  function render() {
+    if (!m || !m.box || !document.body.contains(m.box)) return;
+    let amt = null;
+    try { amt = m.getAmt ? (m.getAmt() || null) : null; } catch (e) { amt = null; }
+    const o = options(amt);
+    if (!o.cards) {
+      /* 一张亲属卡都没有：整段不出现，不放「不可用」占位（她：不要堆装饰） */
+      m.box.innerHTML = '';
+      if (m.onPick) m.onPick(null);
+      return;
+    }
+    const cur = o.list.filter(x => x.on)[0] || o.list[0];
+    m.box.innerHTML = rowHtml(cur, m.open) + (m.open ? optsHtml(o) : '');
+    mountIcons();
+    m.box.querySelector('[data-pay-toggle]').addEventListener('click', () => {
+      m.open = !m.open;
+      render();
+    });
+    m.box.querySelectorAll('[data-pay-key]').forEach(b => b.addEventListener('click', () => {
+      const hit = o.list.filter(x => x.key === b.dataset.payKey)[0];
+      if (!hit) return;
+      if (hit.why) { UI.toast(hit.why); return; }   // 不可用就说清为什么，不静默吞掉点击
+      setPref(hit.key);
+      m.open = false;
+      render();
+    }));
+    if (m.onPick) m.onPick(cur);
+  }
+
+  /* 底部那行小字：选的是什么就报什么数，不再写死「零钱 ¥」 */
+  function summary() {
+    const o = options(null);
+    const cur = o.list.filter(x => x.on)[0];
+    if (!cur || cur.key === BALANCE) return '零钱 ¥' + yuan(Wallet.bal('me'));
+    return UI.escapeHtml(cur.label + ' · ' + cur.sub);
+  }
+
+  function attach(box, opts) {
+    m = Object.assign({ box: box, open: false }, opts || {});
+    render();
+  }
+  function refresh() { render(); }
+  function detach() { m = null; }
+
+  return { attach, refresh, detach, render, summary, options, settle, refundFor, pref, setPref, BALANCE };
 })();
 
 /* =====================================================
@@ -11290,7 +11562,8 @@ const Kinship = (function () {
    AI 主动发红包：params.giftRedRate 开关（拟态 switch，默认关=0），
      金额=特殊数字池或按其零钱余额随机位数，发送即从 TA 零钱扣款
    封面：libs.covers.mine（我的）/ covers.byContact.ctId（AI 专属，TA 发包时用）
-   账单联动：收发全部走 Wallet.addBill(type 'redpacket'/'refund')，真实统计
+   账单联动：收发一律走 Wallet.addBill(type 'redpacket'/'refund')，真实统计
+   支付方式（P39）：「塞钱进红包」不再自己扣余额，一律走 Pay.settle；退款走 Pay.refundFor 原路退
    ===================================================== */
 const Redpacket = (function () {
 
@@ -11366,8 +11639,9 @@ const Redpacket = (function () {
         '<div class="rp-note-line"><input type="text" id="rp-note" maxlength="30" placeholder="' + esc(pickNote()) + '">' +
           '<button class="rp-dice" id="rp-randnote" title="换一条备注">换</button></div>' +
         '<button class="rp-cover-line" id="rp-coverline"><span class="rp-cover-thumb"><i data-icon="hongbao" data-size="16"></i></span><b>红包封面</b><span class="chevron">›</span></button>' +
+        '<div class="rp-pay" id="rp-pay"></div>' +          /* P39 支付方式：没亲属卡时整段空着 */
         '<button class="rp-put" id="rp-put">塞钱进红包</button>' +
-        '<small class="rp-balance">零钱 ¥' + yuan(Wallet.bal('me')) + '</small>' +
+        '<small class="rp-balance" id="rp-balance">零钱 ¥' + yuan(Wallet.bal('me')) + '</small>' +
       '</div>';
     document.body.appendChild(shell);
     UI.raise(shell);
@@ -11375,6 +11649,18 @@ const Redpacket = (function () {
     refreshCoverThumb();
     if (isGroup) renderGroupForm();
     shell.querySelector('[data-x]').addEventListener('click', closeShell);
+    /* 金额一变就重算可用性（够不够、本月还剩多少）；用代理监听，群聊换模式重建表单也不会失联 */
+    shell.addEventListener('input', e => { if (e.target && e.target.id === 'rp-amt') Pay.refresh(); });
+    Pay.attach(document.getElementById('rp-pay'), {
+      getAmt() {
+        const r = Wallet.toFen(document.getElementById('rp-amt').value);
+        return r.err ? 0 : r.fen;
+      },
+      onPick() {
+        const el = document.getElementById('rp-balance');
+        if (el) el.innerHTML = Pay.summary();
+      }
+    });
     document.getElementById('rp-randnote').addEventListener('click', () => {
       document.getElementById('rp-note').value = pickNote();
     });
@@ -11445,7 +11731,7 @@ const Redpacket = (function () {
     if (chk.err) return UI.toast(chk.err);
     const fen = chk.fen;
     if (fen > 5000000) return UI.toast('单个红包最多 50000 元');
-    if (fen > Wallet.bal('me')) return UI.toast('零钱不足，先去充值吧');
+    /* 余额够不够不在这里判——P39 起由 Pay.settle 统一判（选的是亲属卡时拿我的零钱去拦是错的） */
     const note = document.getElementById('rp-note').value.trim() || document.getElementById('rp-note').placeholder;
     if (sendCtx.conv.type === 'group') {
       /* ---- 群聊三模式（清然 L24）---- */
@@ -11459,20 +11745,26 @@ const Redpacket = (function () {
       } else if (sendCtx.mode === 'special') {
         if (!sendCtx.toUid) return UI.toast('先选好发给谁');
       }
-      Wallet.addBill('me', 'redpacket', -1, fen, MODE_NAMES[sendCtx.mode], null);
+      /* 掏钱只走 Pay 一个口（P39：零钱或亲属卡，余额够不够也在里面判） */
+      const pay = Pay.settle(fen, { type: 'redpacket', note: MODE_NAMES[sendCtx.mode], peer: null });
+      if (pay.err) return UI.toast(pay.err);
+      extra.pay = { via: pay.via, cardId: pay.cardId || null, ownerUid: pay.ownerUid || null };
       const rp = createRp(sendCtx.conv.id, 'me', sendCtx.mode === 'special' ? sendCtx.toUid : null, fen, note, null, extra);
       pushMsg(rp, true);
       scheduleGroupClaims(rp);
       closeShell();
-      UI.toast(MODE_NAMES[sendCtx.mode] + '已发出 ¥' + yuan(fen));
+      UI.toast(MODE_NAMES[sendCtx.mode] + '已发出 ¥' + yuan(fen) + (pay.via === Pay.BALANCE ? '' : '（亲属卡代付）'));
       return;
     }
-    Wallet.addBill('me', 'redpacket', -1, fen, note, sendCtx.ct.id);
-    const rp = createRp(sendCtx.conv.id, 'me', sendCtx.ct.id, fen, note, null);
+    const pay = Pay.settle(fen, { type: 'redpacket', note: note, peer: sendCtx.ct.id });
+    if (pay.err) return UI.toast(pay.err);
+    const rp = createRp(sendCtx.conv.id, 'me', sendCtx.ct.id, fen, note, null, {
+      pay: { via: pay.via, cardId: pay.cardId || null, ownerUid: pay.ownerUid || null }
+    });
     pushMsg(rp, true);
     aiThreeWays(rp, sendCtx.ct);
     closeShell();
-    UI.toast('红包已发出 ¥' + yuan(fen));
+    UI.toast('红包已发出 ¥' + yuan(fen) + (pay.via === Pay.BALANCE ? '' : '（亲属卡代付）'));
   }
 
   /* ---------- 群聊：AI 抢红包调度（L24/L25） ----------
@@ -11543,7 +11835,8 @@ const Redpacket = (function () {
     let back = c.totalFen;
     if (c.mode && c.mode !== 'single' && Array.isArray(c.claims))
       back = Math.max(0, c.totalFen - c.claims.reduce((s, x) => s + x.fen, 0));
-    if (back > 0) Wallet.addBill(c.fromUid, 'refund', 1, back, '红包退回', c.toUid || null);
+    /* 原路退回（P39）：零钱付的退我零钱，亲属卡付的退开通人零钱并回补本月额度 */
+    if (back > 0) Pay.refundFor(c, back, '红包退回', c.toUid || null);
     DB.save();
     const conv = DB.state.convs.find(x => x.id === c.convId);
     if (conv && typeof Engine !== 'undefined' && Engine.pushRaw) Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: sysText });
@@ -11606,7 +11899,7 @@ const Redpacket = (function () {
 
   /* ---------- 红包详情全屏（微信同款：任何人任何时候点都能打开看，清然 21:29） ---------- */
   let shell = null;
-  function closeShell() { if (shell) { shell.remove(); shell = null; } }
+  function closeShell() { if (shell) { shell.remove(); shell = null; } Pay.detach(); }
 
   function openOpen(rpId) {
     const rp = rps()[rpId];
@@ -11698,8 +11991,11 @@ const Redpacket = (function () {
       box.innerHTML = '<b>¥' + yuan(rp.totalFen) + '</b><small>' +
         (rp.claimUid === 'me' ? '已存入你的零钱' : name(rp.claimUid || rp.toUid) + '已领取') + '</small>';
     } else {
+      /* 亲属卡代付的包，钱是退回开通人那里，不能说「退回你的零钱」 */
+      const who = (rp.pay && rp.pay.via && rp.pay.via !== Pay.BALANCE)
+        ? name(rp.pay.ownerUid) : (rp.fromUid === 'me' ? '你' : name(rp.fromUid));
       box.innerHTML = '<b>¥' + yuan(rp.totalFen) + '</b>' +
-        '<small>该红包已退回，金额将原路退回' + (rp.fromUid === 'me' ? '你的' : name(rp.fromUid) + '的') + '零钱</small>';
+        '<small>该红包已退回，金额将原路退回' + esc(who) + '的零钱</small>';
     }
     if (pop) { box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
   }
