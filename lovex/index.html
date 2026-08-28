@@ -6211,7 +6211,8 @@ const Home = (function () {
     return DB.state.contacts.find(c => c.id === id);
   }
   function displayName(c) {
-    return c ? (c.remark || c.name) : '';
+    /* 人不在了也要给个名字：群聊/列表里留着死人发的旧消息，名字不能空（空了就像渲染坏了） */
+    return c ? (c.remark || c.name) : '已删除联系人';
   }
   /* ---------- 群会话工具（决策记录#15） ---------- */
   function membersOf(cv) {
