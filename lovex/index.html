@@ -4791,6 +4791,7 @@ const UI = (function () {
     t.textContent = msg;
     layer.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => t.classList.add('show'), 80);   // 三件套③保底
     setTimeout(() => {
       t.classList.remove('show');
       setTimeout(() => t.remove(), 260);
@@ -4821,6 +4822,8 @@ const UI = (function () {
       });
       layer.appendChild(mask);
       requestAnimationFrame(() => mask.classList.add('show'));
+      // 三件套第③件：rAF 在后台 tab 可能不跑，没拿到 show = 透明玻璃罩罩住整页（清然红线）
+      setTimeout(() => mask.classList.add('show'), 80);
     });
   }
 
@@ -4852,6 +4855,7 @@ const UI = (function () {
       mask.addEventListener('click', e => { if (e.target === mask) { mask.remove(); resolve(null); } });
       layer.appendChild(mask);
       requestAnimationFrame(() => mask.classList.add('show'));
+      setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
     });
   }
 
@@ -5581,6 +5585,7 @@ const Diary = (function () {
         if (e.key === 'Enter') { const v = ipt.value.trim(); mask.remove(); resolve(v || null); }
       });
       requestAnimationFrame(() => mask.classList.add('show'));   // 与 openForm/confirmBox 同款淡入
+      setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
     });
   }
 
@@ -6223,6 +6228,7 @@ const Home = (function () {
     b.addEventListener('click', () => { hideBanner(); openConv(cv.id); });
     document.getElementById('app').appendChild(b);
     requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add('show')));
+    setTimeout(() => b.classList.add('show'), 80);   // 三件套③保底
     bannerTimer = setTimeout(hideBanner, 4200);
   }
 
@@ -6384,6 +6390,7 @@ const Home = (function () {
     mask.appendChild(dlg);
     layer.appendChild(mask);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
   }
 
   function init() {
@@ -6892,6 +6899,7 @@ const Chat = (function () {
     });
     document.body.appendChild(v);
     requestAnimationFrame(() => v.classList.add('show'));
+    setTimeout(() => v.classList.add('show'), 80);   // 三件套③保底
   }
 
   function authorNameOf(m) {
@@ -9052,6 +9060,7 @@ const Library = (function () {
     shell = mask;
     mountIcons(shell);   // 动态弹窗也要挂图标（之前关闭×一直空着）
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
 
     shell.querySelector('#lib-close').addEventListener('click', close);
 
@@ -9781,6 +9790,7 @@ const Group = (function () {
     mask.appendChild(dlg);
     layer.appendChild(mask);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
   }
 
   /* ---------- 群资料页 ---------- */
@@ -9946,6 +9956,7 @@ const Group = (function () {
     mask.appendChild(dlg);
     layer.appendChild(mask);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
   }
 
   /* 改完资料后，若该群正在聊天页则即时刷新标题与背景 */
@@ -10185,6 +10196,7 @@ const GroupManage = (function () {
     shell = mask;
     mountIcons(shell);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
     shell.querySelector('#gm-close').addEventListener('click', close);
     shell.querySelector('#gm-tabs').addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -11019,6 +11031,7 @@ const Kinship = (function () {
     });
     document.getElementById('dialog-layer').appendChild(mask);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
   }
 
   function askLimit(count, onOk) {
@@ -11225,6 +11238,7 @@ const Redpacket = (function () {
       '</div>';
     document.body.appendChild(shell);
     requestAnimationFrame(() => shell.classList.add('show'));
+    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
     mountIcons();
     refreshCoverThumb();
     if (isGroup) renderGroupForm();
@@ -11501,6 +11515,7 @@ const Redpacket = (function () {
       '</div>';
     document.body.appendChild(shell);
     requestAnimationFrame(() => shell.classList.add('show'));
+    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
     mountIcons();
     fillOpenState(rp, false);
     const luckEntry = document.getElementById('rp-luckentry');
@@ -11588,6 +11603,7 @@ const Redpacket = (function () {
       '</div>';
     document.body.appendChild(shell);
     requestAnimationFrame(() => shell.classList.add('show'));
+    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
     mountIcons();
     shell.querySelector('[data-x]').addEventListener('click', () => {
       shell.remove();
@@ -11621,6 +11637,7 @@ const Redpacket = (function () {
       '</div>';
     document.body.appendChild(coversShell);
     requestAnimationFrame(() => coversShell.classList.add('show'));
+    setTimeout(() => coversShell.classList.add('show'), 80);   // 三件套③保底
     const ctSel = coversShell.querySelector('#rp-cov-ct');
     ctSel.innerHTML = (DB.state.contacts || []).filter(c => !c.isGroup)
       .map(c => '<option value="' + c.id + '">' + esc(Home.displayName(c)) + '</option>').join('');
@@ -11769,6 +11786,7 @@ const Moments = (function () {
     v.addEventListener('click', () => v.remove());
     document.body.appendChild(v);
     requestAnimationFrame(() => v.classList.add('show'));
+    setTimeout(() => v.classList.add('show'), 80);   // 三件套③保底：看图层没 show 就是看不见又点不动的玻璃罩
   }
 
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -11850,6 +11868,7 @@ const Moments = (function () {
     });
     document.body.appendChild(box);
     requestAnimationFrame(() => box.classList.add('show'));
+    setTimeout(() => box.classList.add('show'), 80);   // 三件套③保底
   }
   /* 启动幂等迁移：存量 dataURL 视频（动态+封面）→ IDB；失败保留原样下次再迁 */
   async function migrateStoredVideos() {
@@ -12137,6 +12156,7 @@ function coverTap(e) {
         '</div>';
       document.body.appendChild(m);
       requestAnimationFrame(() => m.classList.add('show'));
+      setTimeout(() => m.classList.add('show'), 80);   // 三件套③保底
       m.querySelector('.dialog-title').textContent = title;
       const ipt = m.querySelector('.mo-ipt');
       ipt.value = value || '';
@@ -12177,6 +12197,7 @@ function coverTap(e) {
       '</div>';
     document.body.appendChild(shell);
     requestAnimationFrame(() => shell.classList.add('show'));
+    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
     mountIcons();
     const grid = shell.querySelector('#mo-grid');
     let imgs = [], video = null, link = '';
@@ -12457,6 +12478,7 @@ function coverTap(e) {
       '</div>';
     document.body.appendChild(shell);
     requestAnimationFrame(() => shell.classList.add('show'));
+    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
     mountIcons();
     /* 发送钮隐藏、输入时才显示（清然 L47） */
     const sendBtn = shell.querySelector('#mo-cmt-go');
@@ -15071,6 +15093,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
     requestAnimationFrame(() => mask.classList.add('show'));
+    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
     fill();
   }
 
