@@ -2965,6 +2965,165 @@ const DB = (function () {
     fill('aiPat', AI_SEED, true);
   })();
 
+  /* =====================================================
+     数据归属收尾（2026-08-28 纠察，清然定：“联系人都不在了，还是不留帐了”）
+     为什么写在 DB 而不是各个页面：所有「按 contactId 存」的表都挂在 state 下，
+     以后新增一张表就在这里补一行，不轮到调用方自己记。
+     旧状况：清理散在资料卡「删除好友」按钮里，只盖住 6 处，剩下的报备/当日计划/
+     亲属卡/钱包流水/朋友圈/拷问名单全成了孤儿（沙盒实测 3 个死联系人 + 4 张挂空亲属卡）。
+     现在三个入口共用同一个函数：删好友、删会话、启动迁移。
+     ===================================================== */
+
+  const mediaGC = [];   // 待回收的 IndexedDB 媒体引用（'idb:xxx'），防孤儿 blob 撑库
+  function collectMedia(v, depth) {
+    if (depth > 4 || v == null) return;
+    if (typeof v === 'string') { if (/^idb:/.test(v)) mediaGC.push(v); return; }
+    if (Array.isArray(v)) { for (const x of v) collectMedia(x, depth + 1); return; }
+    if (typeof v === 'object') { for (const k of Object.keys(v)) collectMedia(v[k], depth + 1); }
+  }
+  /* db.js 装载时 media.js 还没执行（MediaStore 在 TDZ），往后排一拍再真删 */
+  function flushMediaGC() {
+    const list = mediaGC.splice(0);
+    if (!list.length) return;
+    setTimeout(() => {
+      list.forEach(ref => { try { MediaStore.del(ref.slice(4)); } catch (e) {} });
+    }, 0);
+  }
+
+  /* 删一个会话：消息与里面的媒体本体一起走 */
+  function dropConv(convId) {
+    const msgs = state.msgs && state.msgs[convId];
+    if (msgs) { collectMedia(msgs, 0); delete state.msgs[convId]; }
+    state.convs = (state.convs || []).filter(cv => cv.id !== convId);
+  }
+
+  /* 清掉一个联系人在全库的数据残留，返回清掉的条目数 */
+  function purgeContact(cid) {
+    if (!cid || cid === 'me') return 0;
+    const st = state;
+    let n = 0;
+    const has = (o, k) => o && Object.prototype.hasOwnProperty.call(o, k);
+    const kill = (o, k) => { if (has(o, k)) { collectMedia(o[k], 0); delete o[k]; n++; } };
+
+    /* 1) 单聊会话 + 聊天记录 + 里面的媒体 */
+    (st.convs || []).filter(cv => cv.type === 'single' && cv.peerId === cid)
+      .forEach(cv => { dropConv(cv.id); n++; });
+
+    /* 2) 一张表一个键的：报备 / 当日计划 / 主动赠送计数 / 信 / 心事簿 / 状态轮换 */
+    kill(st.reports, cid); kill(st.repPlans, cid); kill(st.kinshipAuto, cid);
+    kill(st.letters, cid); kill(st.diary, cid); kill(st.aiRuntime, cid);
+
+    /* 3) 角色专属子库：字卡 / 表情 / 私语 / 红包封面 / 朋友圈封面 */
+    kill(st.libs && st.libs.contactCards, cid);
+    kill(st.libs && st.libs.contactStickers, cid);
+    kill(st.libs && st.libs.whispers, cid);
+    if (st.libs && st.libs.covers) kill(st.libs.covers.byContact, cid);
+    if (st.stickers) kill(st.stickers.byContact, cid);
+    if (st.moments && st.moments.covers) kill(st.moments.covers.byContact, cid);
+
+    /* 4) 群里的幽灵：成员 / 管理员 / 禁言名单（群本身与群聊天记录保留） */
+    (st.convs || []).filter(cv => cv.type === 'group').concat(st.groups || []).forEach(g => {
+      let ch = false;
+      if (Array.isArray(g.memberIds) && g.memberIds.includes(cid)) { g.memberIds = g.memberIds.filter(x => x !== cid); ch = true; }
+      if (Array.isArray(g.adminIds) && g.adminIds.includes(cid)) { g.adminIds = g.adminIds.filter(x => x !== cid); ch = true; }
+      if (has(g.mutes, cid)) { delete g.mutes[cid]; ch = true; }
+      if (ch) n++;
+    });
+
+    /* 5) 亲属卡：双向都摘（开通方的挂名卡与领取方的额度一并消失） */
+    if (st.kinship && st.kinship.cards) {
+      Object.keys(st.kinship.cards).forEach(k => {
+        const c = st.kinship.cards[k];
+        if (c && (c.fromUid === cid || c.toUid === cid)) { delete st.kinship.cards[k]; n++; }
+      });
+    }
+
+    /* 6) 红包：只清与 TA 的私聊红包；群里发的那些属于群，其他人还要看 */
+    if (st.redpackets) {
+      Object.keys(st.redpackets).forEach(k => {
+        const r = st.redpackets[k];
+        if (!r || (r.fromUid !== cid && r.toUid !== cid)) return;
+        const cv = (st.convs || []).find(x => x.id === r.convId);
+        if (cv && cv.type === 'group') return;
+        delete st.redpackets[k]; n++;
+      });
+    }
+
+    /* 7) 钱包：TA 的余额与账单，以及我账单里 TA 那几笔（peer 就是为这个准备的字段） */
+    if (st.wallet) {
+      kill(st.wallet.bal, cid);
+      if (st.wallet.bills) {
+        kill(st.wallet.bills, cid);
+        const arr = st.wallet.bills.me;
+        if (Array.isArray(arr)) {
+          const kept = arr.filter(t => t.peer !== cid);
+          n += arr.length - kept.length;
+          st.wallet.bills.me = kept;
+        }
+      }
+    }
+
+    /* 8) 朋友圈：TA 发的动态（连本体）、TA 的评论与点赞、「给谁看」名单 */
+    if (st.moments && Array.isArray(st.moments.posts)) {
+      const gone = st.moments.posts.filter(p => p.uid === cid);
+      if (gone.length) {
+        collectMedia(gone, 0);
+        st.moments.posts = st.moments.posts.filter(p => p.uid !== cid);
+        n += gone.length;
+      }
+      st.moments.posts.forEach(p => {
+        if (Array.isArray(p.likes) && p.likes.includes(cid)) { p.likes = p.likes.filter(x => x !== cid); n++; }
+        if (Array.isArray(p.visList) && p.visList.includes(cid)) { p.visList = p.visList.filter(x => x !== cid); n++; }
+        if (Array.isArray(p.mentions) && p.mentions.includes(cid)) { p.mentions = p.mentions.filter(x => x !== cid); n++; }
+        if (Array.isArray(p.comments)) {
+          const kept = p.comments.filter(c => c.uid !== cid && c.toUid !== cid);
+          n += p.comments.length - kept.length;
+          p.comments = kept;
+        }
+      });
+    }
+
+    /* 9) 灵魂拷问：把 TA 从「问谁」里摘掉，没人可问的卷子整张作废 */
+    const trimPaper = z => {
+      if (!z || !Array.isArray(z.targets) || !z.targets.includes(cid)) return true;
+      z.targets = z.targets.filter(x => x !== cid);
+      if (Array.isArray(z.pending)) z.pending = z.pending.filter(p => p.ctId !== cid);
+      if (z.answers) delete z.answers[cid];
+      n++;
+      return z.targets.length > 0;
+    };
+    if (Array.isArray(st.quizzes)) st.quizzes = st.quizzes.filter(trimPaper);
+    if (Array.isArray(st.quizTpls)) st.quizTpls.forEach(z => { if (z && Array.isArray(z.targets)) z.targets = z.targets.filter(x => x !== cid); });
+
+    flushMediaGC();
+    return n;
+  }
+
+  /* 启动幂等迁移：老存档里「人已经不在、数据还在」的孤儿，一次抹平（不碰现存联系人） */
+  function sweepOrphans() {
+    const live = new Set(['me'].concat((state.contacts || []).map(c => c.id)));
+    const dead = new Set();
+    const mark = u => { if (u && u !== 'me' && !live.has(u)) dead.add(u); };
+    ['reports', 'repPlans', 'kinshipAuto', 'letters', 'diary', 'aiRuntime'].forEach(k => Object.keys(state[k] || {}).forEach(mark));
+    [['libs', 'contactCards'], ['libs', 'contactStickers'], ['libs', 'whispers'], ['stickers', 'byContact']].forEach(pair => {
+      const m = state[pair[0]] && state[pair[0]][pair[1]];
+      if (m) Object.keys(m).forEach(mark);
+    });
+    if (state.libs && state.libs.covers) Object.keys((state.libs.covers.byContact) || {}).forEach(mark);
+    if (state.moments && state.moments.covers) Object.keys((state.moments.covers.byContact) || {}).forEach(mark);
+    Object.keys((state.wallet && state.wallet.bills) || {}).forEach(mark);
+    Object.keys((state.wallet && state.wallet.bal) || {}).forEach(mark);
+    Object.values((state.kinship && state.kinship.cards) || {}).forEach(c => { if (c) { mark(c.fromUid); mark(c.toUid); } });
+    ((state.moments && state.moments.posts) || []).forEach(p => { if (p) mark(p.uid); });
+    let touched = 0;
+    dead.forEach(u => { touched += purgeContact(u); });
+    /* 单聊会话指向已不存在的人（早期删好友漏删 conv）一并收掉 */
+    const ghosts = (state.convs || []).filter(cv => cv.type === 'single' && cv.peerId && !live.has(cv.peerId));
+    ghosts.forEach(cv => { dropConv(cv.id); touched++; });
+    if (touched) save();
+    return touched;
+  }
+
   let saveTimer = null;
   let onQuota = null;   // 容量不足回调，由 app.js 装配提示
 
@@ -3032,8 +3191,14 @@ const DB = (function () {
     return true;
   }
 
+  /* 装载完就扫一次：孤儿数据不留到下一次 */
+  try { sweepOrphans(); } catch (e) { /* 收尾失败不能堵住启动链 */ }
+
   return {
     get state() { return state; },
+    purgeContact,
+    dropConv,
+    sweepOrphans,
     save,
     flushSave: writeNow,
     exportAll,
@@ -3545,10 +3710,9 @@ var Report = (function () {
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    /* P30：显隐三件套（第三次同型教训）——sheet-mask opacity:0 起手，不补 show 就是隐形玻璃
-       （清然 12:13：“键盘弹出但选择界面没有”） */
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 后台 tab rAF 不跑的保底（P30）
+    /* P30：这里曾出过“键盘弹出但选择界面没有”（清然 12:13）——sheet-mask opacity:0 起手，
+       不补 show 就是隐形玻璃；现在开层统一走 UI.raise，兼底在 ui.js 里 */
+       UI.raise(mask);
     setTimeout(() => mask.querySelector(mode === 'answer' ? '#rp-f-doing' : '#rp-f-place')?.focus(), 80);
   }
 
@@ -3653,7 +3817,8 @@ var Report = (function () {
  * - TA 一切行为计划时刻制：pending[{ctId,at}] 存档，advanceAll 到点落库，
  *   时间戳=应答时刻，禁止随机回填（P22 铁律同源）
  * - 分组兜底锚点用位置/「默认」组对象，不用名字（P27 铁律）
- * - 弹层一律 sheet 显隐三件套：mask + rAF show + setTimeout 80ms 兜底（P30 红线）
+ * - 开层只调 UI.raise(mask)（挂 DOM + rAF show + 80ms 兼底已收拢进 ui.js）；
+ *   自己写 classList.add('show') 会被 build.ps1 门禁拦住
  * ============================================================ */
 var Quiz = (function () {
 
@@ -3798,8 +3963,7 @@ var Quiz = (function () {
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);
+    UI.raise(mask);
   }
 
   /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现。
@@ -3900,8 +4064,7 @@ var Quiz = (function () {
       mask.remove(); onDone(state);
     });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);
+    UI.raise(mask);
   }
 
   /* ---------------- TA 作答生成（本地规则随机，非 AI 理解——已向她言明） ---------------- */
@@ -4534,8 +4697,7 @@ var Quiz = (function () {
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);
+    UI.raise(mask);
     setTimeout(() => mask.querySelector('#qz-e-title').focus(), 80);
   }
 
@@ -4591,8 +4753,7 @@ var Quiz = (function () {
     });
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);
+    UI.raise(mask);
   }
 
   /* ---------------- 设置齿轮：TA 抽题概率（V2 引擎消费，参数先行） ---------------- */
@@ -4784,14 +4945,30 @@ const Router = (function () {
    ===================================================== */
 const UI = (function () {
 
+  /* ============ 浮层显隐三件套的唯一实现（全站入口）============
+     为何只留这一处：浮层靠 show 类才“看得见 + 点得动”，而 show 是在 requestAnimationFrame
+     里挂的；页面在后台 tab / 锁屏 / 被节流时 rAF 可能根本不跑——没拿到 show 的 mask 就是一层
+     铺满整屏、透明但吃点击的玻璃罩（清然红线：「再有一次跟弹窗有问题我就要骂你了哦」）。
+     08-27 之前这条规范只活在文档里，31 处各拄一遍、22 处漏了兼底。
+     现在写浮层只准调 UI.raise()；build.ps1 门禁拦住“ui.js 之外出现 classList.add('show')”。
+     opts.frames=2：需要先把布局算完再起过渡的（首页消息横幅），多等一帧。 */
+  function raise(node, opts) {
+    if (!node) return node;
+    const o = opts || {};
+    const on = () => { node.classList.add('show'); };
+    if (o.frames === 2) requestAnimationFrame(() => requestAnimationFrame(on));
+    else requestAnimationFrame(on);
+    setTimeout(on, o.ms == null ? 80 : o.ms);
+    return node;
+  }
+
   function toast(msg, ms = 2000) {
     const layer = document.getElementById('toast-layer');
     const t = document.createElement('div');
     t.className = 'toast';
     t.textContent = msg;
     layer.appendChild(t);
-    requestAnimationFrame(() => t.classList.add('show'));
-    setTimeout(() => t.classList.add('show'), 80);   // 三件套③保底
+    raise(t);
     setTimeout(() => {
       t.classList.remove('show');
       setTimeout(() => t.remove(), 260);
@@ -4821,9 +4998,7 @@ const UI = (function () {
         else if (act === 'cancel' || e.target === mask) { mask.remove(); resolve(false); }
       });
       layer.appendChild(mask);
-      requestAnimationFrame(() => mask.classList.add('show'));
-      // 三件套第③件：rAF 在后台 tab 可能不跑，没拿到 show = 透明玻璃罩罩住整页（清然红线）
-      setTimeout(() => mask.classList.add('show'), 80);
+      raise(mask);
     });
   }
 
@@ -4854,12 +5029,11 @@ const UI = (function () {
       mask.querySelector('.sheet-cancel').addEventListener('click', () => { mask.remove(); resolve(null); });
       mask.addEventListener('click', e => { if (e.target === mask) { mask.remove(); resolve(null); } });
       layer.appendChild(mask);
-      requestAnimationFrame(() => mask.classList.add('show'));
-      setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+      raise(mask);
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet };
+  return { toast, confirmBox, escapeHtml, actionSheet, raise };
 })();
 
 /* =====================================================
@@ -5584,8 +5758,7 @@ const Diary = (function () {
       ipt.addEventListener('keydown', e => {
         if (e.key === 'Enter') { const v = ipt.value.trim(); mask.remove(); resolve(v || null); }
       });
-      requestAnimationFrame(() => mask.classList.add('show'));   // 与 openForm/confirmBox 同款淡入
-      setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+      UI.raise(mask);
     });
   }
 
@@ -6186,8 +6359,7 @@ const Home = (function () {
         danger: true, okText: '删除'
       });
       if (ok) {
-        delete DB.state.msgs[cv.id];
-        DB.state.convs = DB.state.convs.filter(x => x.id !== cv.id);
+        DB.dropConv(cv.id);   // 会话 + 消息 + 里面的媒体本体一起走
         DB.save(); render();
         UI.toast('会话已删除');
       }
@@ -6227,8 +6399,7 @@ const Home = (function () {
     b.appendChild(av); b.appendChild(tx);
     b.addEventListener('click', () => { hideBanner(); openConv(cv.id); });
     document.getElementById('app').appendChild(b);
-    requestAnimationFrame(() => requestAnimationFrame(() => b.classList.add('show')));
-    setTimeout(() => b.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(b, { frames: 2 });
     bannerTimer = setTimeout(hideBanner, 4200);
   }
 
@@ -6389,8 +6560,7 @@ const Home = (function () {
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     mask.appendChild(dlg);
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
   }
 
   function init() {
@@ -6898,8 +7068,7 @@ const Chat = (function () {
       setTimeout(() => v.remove(), 180);
     });
     document.body.appendChild(v);
-    requestAnimationFrame(() => v.classList.add('show'));
-    setTimeout(() => v.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(v);
   }
 
   function authorNameOf(m) {
@@ -7344,10 +7513,9 @@ const Chat = (function () {
     wrap.querySelector('.lkp-ext').addEventListener('click', () => window.open(L.url, '_blank', 'noopener'));
     layer.appendChild(wrap);
     show();
-    requestAnimationFrame(() => wrap.classList.add('show'));
-    setTimeout(() => wrap.classList.add('show'), 80);
+    UI.raise(wrap);
   }
-  /* 站内播放层：全屏弹层三件套红线同构（rAF show + 80ms 兜底）；右上角去浏览器逃生口。
+  /* 站内播放层：开层统一走 UI.raise（三件套在 ui.js）；右上角去浏览器逃生口。
      可嵌播→iframe；原生 mp4 直链(L.vsrc)→video；两者走同一全屏层 */
   function openLinkPlayer(L) {
     const layer = document.getElementById('dialog-layer');
@@ -7369,8 +7537,7 @@ const Chat = (function () {
     wrap.querySelector('.lkp-x').addEventListener('click', () => { if (isVid) { const v = wrap.querySelector('video'); if (v) v.pause(); } wrap.remove(); });
     wrap.querySelector('.lkp-ext').addEventListener('click', () => window.open(L.url, '_blank', 'noopener'));
     layer.appendChild(wrap);
-    requestAnimationFrame(() => wrap.classList.add('show'));
-    setTimeout(() => wrap.classList.add('show'), 80);
+    UI.raise(wrap);
   }
   /* 分享链接 sheet：粘贴→实时识别→小屏卡片预览（异步拉封面/标题，拉不到不拦发送）；「发纯文本」已删（她 08-27 定） */
   function openLinkSheet() {
@@ -7441,8 +7608,7 @@ const Chat = (function () {
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);
+    UI.raise(mask);
     setTimeout(() => ta.focus(), 150);
   }
 
@@ -9022,8 +9188,7 @@ const Library = (function () {
     layer.appendChild(mask);
     shell = mask;
     mountIcons(shell);   // 动态弹窗也要挂图标（之前关闭×一直空着）
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
 
     shell.querySelector('#lib-close').addEventListener('click', close);
 
@@ -9752,8 +9917,7 @@ const Group = (function () {
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     mask.appendChild(dlg);
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
   }
 
   /* ---------- 群资料页 ---------- */
@@ -9918,8 +10082,7 @@ const Group = (function () {
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     mask.appendChild(dlg);
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
   }
 
   /* 改完资料后，若该群正在聊天页则即时刷新标题与背景 */
@@ -10048,8 +10211,7 @@ const Group = (function () {
         danger: true, okText: '删除'
       });
       if (!ok) return;
-      delete DB.state.msgs[g.id];
-      DB.state.convs = DB.state.convs.filter(x => x.id !== g.id);
+      DB.dropConv(g.id);
       DB.save();
       Router.back();
       Home.render();
@@ -10158,8 +10320,7 @@ const GroupManage = (function () {
     layer.appendChild(mask);
     shell = mask;
     mountIcons(shell);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
     shell.querySelector('#gm-close').addEventListener('click', close);
     shell.querySelector('#gm-tabs').addEventListener('click', e => {
       const b = e.target.closest('button');
@@ -11003,8 +11164,7 @@ const Kinship = (function () {
       onOk(sel);
     });
     document.getElementById('dialog-layer').appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
   }
 
   function askLimit(count, onOk) {
@@ -11209,8 +11369,7 @@ const Redpacket = (function () {
         '<small class="rp-balance">零钱 ¥' + yuan(Wallet.bal('me')) + '</small>' +
       '</div>';
     document.body.appendChild(shell);
-    requestAnimationFrame(() => shell.classList.add('show'));
-    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(shell);
     mountIcons();
     refreshCoverThumb();
     if (isGroup) renderGroupForm();
@@ -11485,8 +11644,7 @@ const Redpacket = (function () {
             (isLucky && (rp.claims || []).length ? '<a class="rp-luck-entry" id="rp-luckentry">查看大家的手气</a>' : '')) +
       '</div>';
     document.body.appendChild(shell);
-    requestAnimationFrame(() => shell.classList.add('show'));
-    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(shell);
     mountIcons();
     fillOpenState(rp, false);
     const luckEntry = document.getElementById('rp-luckentry');
@@ -11573,8 +11731,7 @@ const Redpacket = (function () {
         '</div>' +
       '</div>';
     document.body.appendChild(shell);
-    requestAnimationFrame(() => shell.classList.add('show'));
-    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(shell);
     mountIcons();
     shell.querySelector('[data-x]').addEventListener('click', () => {
       shell.remove();
@@ -11607,8 +11764,7 @@ const Redpacket = (function () {
         '<div class="dialog-btns"><button class="btn btn-secondary" data-close>完成</button></div>' +
       '</div>';
     document.body.appendChild(coversShell);
-    requestAnimationFrame(() => coversShell.classList.add('show'));
-    setTimeout(() => coversShell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(coversShell);
     const ctSel = coversShell.querySelector('#rp-cov-ct');
     ctSel.innerHTML = (DB.state.contacts || []).filter(c => !c.isGroup)
       .map(c => '<option value="' + c.id + '">' + esc(Home.displayName(c)) + '</option>').join('');
@@ -11756,8 +11912,7 @@ const Moments = (function () {
     v.innerHTML = '<div class="iv-stage"><img src="' + src + '" alt=""></div>';
     v.addEventListener('click', () => v.remove());
     document.body.appendChild(v);
-    requestAnimationFrame(() => v.classList.add('show'));
-    setTimeout(() => v.classList.add('show'), 80);   // 三件套③保底：看图层没 show 就是看不见又点不动的玻璃罩
+    UI.raise(v);
   }
 
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -11838,8 +11993,7 @@ const Moments = (function () {
       box.remove();
     });
     document.body.appendChild(box);
-    requestAnimationFrame(() => box.classList.add('show'));
-    setTimeout(() => box.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(box);
   }
   /* 启动幂等迁移：存量 dataURL 视频（动态+封面）→ IDB；失败保留原样下次再迁 */
   async function migrateStoredVideos() {
@@ -12126,8 +12280,7 @@ function coverTap(e) {
           '</div>' +
         '</div>';
       document.body.appendChild(m);
-      requestAnimationFrame(() => m.classList.add('show'));
-      setTimeout(() => m.classList.add('show'), 80);   // 三件套③保底
+      UI.raise(m);
       m.querySelector('.dialog-title').textContent = title;
       const ipt = m.querySelector('.mo-ipt');
       ipt.value = value || '';
@@ -12167,8 +12320,7 @@ function coverTap(e) {
         '</div>' +
       '</div>';
     document.body.appendChild(shell);
-    requestAnimationFrame(() => shell.classList.add('show'));
-    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(shell);
     mountIcons();
     const grid = shell.querySelector('#mo-grid');
     let imgs = [], video = null, link = '';
@@ -12448,8 +12600,7 @@ function coverTap(e) {
         '<div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button><button class="btn btn-primary" id="mo-cmt-go" style="display:none">发送</button></div>' +
       '</div>';
     document.body.appendChild(shell);
-    requestAnimationFrame(() => shell.classList.add('show'));
-    setTimeout(() => shell.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(shell);
     mountIcons();
     /* 发送钮隐藏、输入时才显示（清然 L47） */
     const sendBtn = shell.querySelector('#mo-cmt-go');
@@ -12877,24 +13028,17 @@ const Profile = (function () {
       });
     });
 
-    /* 删除角色：连带清聊天记录与全部专属数据 */
+    /* 删除角色：连带清掉 TA 在全库的数据残留（表里列到哪儿就清到哪儿，见 DB.purgeContact） */
     el('pf-delete').addEventListener('click', async () => {
       const c = cur(); if (!c) return;
       const ok = await UI.confirmBox({
         title: '删除好友',
-        text: '将删除好友「' + Home.displayName(c) + '」及其全部聊天记录与专属数据，不可恢复。',
+        text: '将删除好友「' + Home.displayName(c) + '」及其全部聊天记录、专属数据，以及与之相关的钱包流水与红包、亲属卡，不可恢复。',
         danger: true, okText: '删除'
       });
       if (!ok) return;
+      DB.purgeContact(cid);
       DB.state.contacts = DB.state.contacts.filter(x => x.id !== cid);
-      DB.state.convs = DB.state.convs.filter(cv => {
-        if (cv.peerId === cid) { delete DB.state.msgs[cv.id]; return false; }
-        return true;
-      });
-      delete DB.state.libs.contactCards[cid];
-      delete DB.state.stickers.byContact[cid];
-      delete DB.state.aiRuntime[cid];
-      delete DB.state.letters[cid];
       DB.save();
       cid = null;
       Router.switchTab('home');
@@ -13213,9 +13357,7 @@ const Call = (function () {
       if (e.target === mask) mask.remove();
     });
     layer.appendChild(mask);
-    /* P30：显隐三件套——同 report.openForm，缺 show 即隐形玻璃 */
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 后台 tab rAF 保底
+    UI.raise(mask);
   }
 
   /* ---------- 来电（AI 主动，engine 调用） ---------- */
@@ -15063,8 +15205,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
-    requestAnimationFrame(() => mask.classList.add('show'));
-    setTimeout(() => mask.classList.add('show'), 80);   // 三件套③保底
+    UI.raise(mask);
     fill();
   }
 
