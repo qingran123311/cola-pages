@@ -1744,8 +1744,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-cell img{width:100%;height:100%;object-fit:cover;display:block}
 .mo-cell-del{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;display:flex;align-items:center;justify-content:center;padding:0}
 
-/* 朋友圈评论：文字+表情合并一条；冒号不吞（她 08-29：评论区图再小一点 84→60） */
-.mo-cmt-img{max-height:60px;max-width:88px;border-radius:6px;vertical-align:middle;margin-left:5px;display:inline-block}
+/* 朋友圈评论：文字+表情合并一条；冒号不吞（她 08-29 二次：再小一点 60→48） */
+.mo-cmt-img{max-height:48px;max-width:72px;border-radius:5px;vertical-align:middle;margin-left:5px;display:inline-block}
 /* 评论区工具行（相册/拍照/表情） */
 .mo-cmt-prev{display:block;max-height:110px;border-radius:8px;margin:8px 18px 0}
 .mo-cmt-tools{display:flex;gap:12px;padding:10px 18px 2px}
@@ -2452,6 +2452,15 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-fstg.hidden{display:none}
 .gm-fst{width:44px;height:44px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);padding:3px;cursor:pointer}
 .gm-fst img{width:100%;height:100%;object-fit:contain}
+
+/* ---------- P40 扫雷（mine）---------- */
+.mn-board{display:grid;width:min(94vw,470px);aspect-ratio:1;background:var(--card);border:2px solid var(--t2);border-radius:6px;gap:1px;padding:1px}
+.mn-cell{position:relative;background:var(--fill);cursor:pointer;border-radius:2px;
+  box-shadow:inset 0 -1.5px 0 color-mix(in srgb,var(--t2) 45%,transparent),inset 0 1.5px 0 color-mix(in srgb,var(--card) 70%,transparent)}
+.mn-cell:hover{background:color-mix(in srgb,var(--fill) 80%,var(--t2))}
+.mn-cell.mn-open{background:var(--card);box-shadow:inset 0 0 0 1px var(--line);cursor:default;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t1)}
+.mn-cell.mn-boom{color:var(--t1);background:color-mix(in srgb,var(--fill) 70%,var(--t2))}
 
 </style>
 </head>
@@ -5331,7 +5340,8 @@ const ICONS = {
   'heart-sketch':  '<path d="M12 20.2C6.6 15.8 3.4 12.1 3.5 8.8c.1-2.4 2-4.3 4.3-4.2 1.8.1 3.3 1.2 4.2 2.9.9-1.6 2.4-2.7 4.2-2.8 2.3-.1 4.2 1.9 4.3 4.3.1 3.2-3.1 6.9-8.5 11.2z"/><path d="M8 7.5c-1 .3-1.8 1.1-2 2.1"/>',
   'quiz':          '<rect x="4.5" y="4" width="15" height="16.5" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.5 10.5h7M8.5 14h7M8.5 17.5h4"/>',
   'gamepad':       '<path d="M7 8.5h10a4.3 4.3 0 0 1 4.2 5.2l-.7 3.6a2.5 2.5 0 0 1-4.4 1L14.7 16.5H9.3l-1.4 1.8a2.5 2.5 0 0 1-4.4-1l-.7-3.6A4.3 4.3 0 0 1 7 8.5z"/><path d="M8 11v3.4M6.3 12.7h3.4"/><circle cx="15.8" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.6" r="0.7" fill="currentColor" stroke="none"/>',
-  'go-board':      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/><circle cx="9.3" cy="9.3" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/><circle cx="14.6" cy="9.3" r="1.4" fill="currentColor" stroke="none"/>'
+  'go-board':      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/><circle cx="9.3" cy="9.3" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/><circle cx="14.6" cy="9.3" r="1.4" fill="currentColor" stroke="none"/>',
+  'mine-bomb':     '<circle cx="12" cy="13.5" r="6"/><path d="M12 4v3M12 20v2.5M2.5 13.5H5M19 13.5h2.5M4.8 6.3l1.9 1.9M19.2 6.3l-1.9 1.9"/><path d="M12 7V4.8l2-1" stroke-linejoin="round"/>'
 };
 
 function I(name, size = 18) {
@@ -13612,6 +13622,174 @@ const Gomoku = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · mine.js —— 扫雷（P40 第二个游戏，她 08-29 定案）
+   口径（全部她拍板）：同一张图两人交替翻；安全格 +3 分；踩雷 -5 分；
+   单人累计 5 雷直接判负；全安全格翻完比分高者胜（同分平局）。
+   边长/雷数默认 16/40（她授权我配），齿轮面板可调。
+   公平性：雷在第一次翻格时才生成，且避开第一格及其 8 邻（扫雷惯例首翻安全）。
+   TA 不作弊：只从已翻数字做推理（数字=周围未翻数→全是雷要避开；
+   数字<周围未翻数→多余的是安全格优先翻），推理不出才随机；
+   stateRoll 只影响"偷懒概率"（低状态不推理直接随机）。
+   一次翻格动作 = moves 里一条记录（零格连开会一口气开一片，仍算一手）。
+   ===================================================== */
+const Mine = (function () {
+
+  function cfgOf() {
+    const g = DB.state.games = DB.state.games || {};
+    g.mineCfg = g.mineCfg || { size: 16, mines: 40 };
+    g.mineCfg.size = Math.max(8, Math.min(20, Math.round(+g.mineCfg.size || 16)));
+    g.mineCfg.mines = Math.max(5, Math.min(Math.round(g.mineCfg.size * g.mineCfg.size * 0.3), Math.round(+g.mineCfg.mines || 40)));
+    return g.mineCfg;
+  }
+  function key(x, y) { return x + ',' + y; }
+  function otherUid(room, uid) { return room.players[0] === uid ? room.players[1] : room.players[0]; }
+  function inB(m, x, y) { return x >= 0 && y >= 0 && x < m.size && y < m.size; }
+  function neighbors(m, x, y) {
+    const out = [];
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      if (!dx && !dy) continue;
+      if (inB(m, x + dx, y + dy)) out.push(key(x + dx, y + dy));
+    }
+    return out;
+  }
+  /* 雷区生成：避开首翻格及其 8 邻（首翻必安全，且首翻能带出一片） */
+  function genMines(m, safeX, safeY) {
+    const forbidden = new Set([key(safeX, safeY)].concat(neighbors(m, safeX, safeY)));
+    const pool = [];
+    for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
+      if (!forbidden.has(key(x, y))) pool.push(key(x, y));
+    }
+    m.mineSet = [];
+    const total = Math.min(m.mines, pool.length);
+    for (let i = 0; i < total; i++) {
+      const j = i + Math.floor(Math.random() * (pool.length - i));
+      const tmp = pool[j]; pool[j] = pool[i]; pool[i] = tmp;
+      m.mineSet.push(pool[i]);
+    }
+    /* 每格相邻雷数 */
+    m.nums = {};
+    for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
+      const k = key(x, y);
+      if (m.mineSet.includes(k)) { m.nums[k] = -1; continue; }
+      m.nums[k] = neighbors(m, x, y).filter(nk => m.mineSet.includes(nk)).length;
+    }
+  }
+  /* 翻开一格；零格连开一片（经典扫雷）。返回本动作开到的格子 key 数组 */
+  function flip(m, x, y) {
+    const opened = [];
+    const stack = [key(x, y)];
+    while (stack.length) {
+      const k = stack.pop();
+      if (m.open[k]) continue;
+      m.open[k] = { mine: m.mineSet.includes(k), n: Math.max(0, m.nums[k] || 0) };
+      opened.push(k);
+      if ((m.nums[k] || 0) === 0 && !m.mineSet.includes(k)) {
+        const parts = k.split(',');
+        neighbors(m, +parts[0], +parts[1]).forEach(nk => { if (!m.open[nk]) stack.push(nk); });
+      }
+    }
+    return opened;
+  }
+  function legal(room, x, y) {
+    const m = room.mine;
+    return !!m && x >= 0 && y >= 0 && x < m.size && y < m.size && !m.open[key(x, y)];
+  }
+  /* 翻一格 → {win:uid|'draw'} 或 null；一次动作 = moves 一条（alternating 靠 parity） */
+  function applyMove(room, uid, x, y) {
+    const m = room.mine;
+    if (!m.mineSet) genMines(m, x, y);
+    if (m.mineSet.includes(key(x, y))) {
+      flip(m, x, y);
+      m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
+      m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
+      room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
+      if (m.hits[uid] >= 5) return { win: otherUid(room, uid), line: [] };
+      return null;
+    }
+    const opened = flip(m, x, y).filter(k => !m.mineSet.includes(k));
+    m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + opened.length * 3;
+    room.moves.push({ uid, x, y, ts: Date.now() });
+    const safeTotal = m.size * m.size - m.mineSet.length;
+    if (Object.keys(m.open).filter(k => !m.mineSet.includes(k)).length >= safeTotal) {
+      const other = otherUid(room, uid);
+      const a = m.scores[uid] || 0, b = m.scores[other] || 0;
+      return { win: a === b ? 'draw' : (a > b ? uid : other), line: [] };
+    }
+    return null;
+  }
+  /* TA 翻格：先推理（数字=未翻邻数→全是雷避开；数字<未翻邻数→多余的是安全格优先），
+     推理不出/低状态偷懒 → 未翻格里随机。TA 不开天眼，只用桌面上看得见的信息 */
+  function aiPick(room, taUid) {
+    const m = room.mine, size = m.size;
+    const un = [];
+    for (let x = 0; x < size; x++) for (let y = 0; y < size; y++) {
+      if (!m.open[key(x, y)]) un.push({ x, y });
+    }
+    if (!un.length) return null;
+    const roll = typeof room.stateRoll === 'number' ? room.stateRoll : 50;
+    const lazyP = ((100 - roll) / 100) * 0.5;             // 低状态懒得推理
+    const danger = new Set(), safe = [];
+    un.forEach(c => {
+      const nks = neighbors(m, c.x, c.y).filter(nk => m.open[nk] && !m.mineSet.includes(nk) && m.open[nk].n > 0);
+      nks.forEach(nk => {
+        const n = m.open[nk].n;
+        const unNb = neighbors(m, nk.split(',')[0] - 0, nk.split(',')[1] - 0)
+          .filter(k => !m.open[k]);
+        /* 已翻数字格周围：雷都在未翻邻居里（翻开的都安全） */
+        const minesHidden = n - unNb.filter(k => (m.open[k] && m.open[k].mine)).length;
+        if (unNb.length && unNb.length <= minesHidden) unNb.forEach(k => danger.add(k));
+        if (unNb.length > minesHidden) {
+          /* 有富余安全格：无法断言具体哪格安全，但 danger 概率低——只用于避开已知雷 */
+        }
+      });
+    });
+    const candidates = un.filter(c => !danger.has(key(c.x, c.y)));
+    const pool = candidates.length ? candidates : un;
+    if (Math.random() >= lazyP && safe.length) {
+      const hit = safe.find(c => !danger.has(key(c.x, c.y)));
+      if (hit) return { x: hit.x, y: hit.y };
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    return { x: pick.x, y: pick.y };
+  }
+  /* 棋盘：未翻=凸格；翻开的数字格墨色深浅随雷数；雷=线稿雷 */
+  function render(room, el) {
+    const m = room.mine || { size: cfgOf().size, open: {} };
+    let h = '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr)">';
+    for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
+      const k = key(x, y);
+      const o = m.open[k];
+      if (!o) {
+        h += '<div class="mn-cell" data-x="' + x + '" data-y="' + y + '"></div>';
+      } else if (o.mine) {
+        h += '<div class="mn-cell mn-open mn-boom"><svg viewBox="0 0 24 24" width="70%" height="70%" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="13.5" r="5"/><path d="M12 5.5v2.5M12 21v-2M3 13.5h2.5M18.5 13.5H21M5.5 7l1.6 1.6M18.5 7l-1.6 1.6"/></svg></div>';
+      } else {
+        h += '<div class="mn-cell mn-open mn-n" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
+      }
+    }
+    h += '</div>';
+    el.innerHTML = h;
+    el.querySelectorAll('.mn-cell:not(.mn-open)').forEach(cell =>
+      cell.addEventListener('click', () => {
+        if (typeof Games !== 'undefined' && Games.onCell) Games.onCell(+cell.dataset.x, +cell.dataset.y);
+      }));
+  }
+
+  function def() {
+    return {
+      id: 'mine', name: '扫雷', icon: 'mine-bomb', playersTxt: '双人',
+      newRoom(room) {
+        const c = cfgOf();
+        room.mine = { size: c.size, mines: c.mines, mineSet: null, open: {}, nums: {}, hits: {}, scores: {} };
+      },
+      legal, applyMove, aiPick, render
+    };
+  }
+
+  return { def };
+})();
+
+/* =====================================================
    LOVE♡X · game.js —— 游戏板块（P40，她 08-28 晚拍板「动工」）
    发现页「游戏」行 → 大厅（线稿卡牌架）→ 开局（选人→邀请 80/20→先手协商 70/30）→ 对局页
    对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
@@ -13782,6 +13960,7 @@ const Games = (function () {
       stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
     };
     S().rooms[room.id] = room;
+    const d0 = REG[gameId]; if (d0 && d0.newRoom) d0.newRoom(room);   // 各游戏棋盘数据初始化（扫雷的雷区/计分挂这）
     /* 邀请卡进会话（像默契挑战：点卡片入局，状态实时读房间） */
     const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ctId);
     if (conv) {
@@ -13803,7 +13982,7 @@ const Games = (function () {
     const ta = taUid(r);
     if (Math.random() * 100 < INVITE_AGREE) {
       r.phase = 'negotiate';
-      feed(r, 'sys', esc(name(ta)) + ' 加入了' + esc(defOf(r).name) + '，先商量谁执黑');
+      feed(r, 'sys', esc(name(ta)) + ' 加入了' + esc(defOf(r).name) + '，先商量谁先手');
       r.plans.push({ kind: 'negotiate', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, by: 'ta' });
       DB.save();
     } else {
@@ -13855,7 +14034,7 @@ const Games = (function () {
   }
   function setBlack(r, uid) {
     r.blackUid = uid; r.pendingFirst = null; r.phase = 'playing';
-    feed(r, 'sys', '商定好了——' + esc(name(uid)) + ' 执黑先行');
+    feed(r, 'sys', '商定好了——' + esc(name(uid)) + ' 先手');
     r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
     scheduleTimers(r);
@@ -14374,12 +14553,29 @@ const Games = (function () {
     UI.actionSheet('游戏设置', [
       { key: 'weight', label: '转盘占比（五类%）' },
       { key: 'reds', label: '转盘红包档位（四档）' },
+      { key: 'mine', label: '扫雷棋盘（边长 / 雷数）' },
       { key: 'prop', label: '道具/转盘配色：' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿') + '（点一下切换）' },
       { key: 'chat', label: 'TA 下棋时说话频率：' + chatProb() + '%（点一下改）' }
     ]).then(k => {
       if (k === 'prop') {
         S().propsStyle = S().propsStyle === 'sticker' ? 'mono' : 'sticker';
         DB.save(); UI.toast('已切换为' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿'));
+      } else if (k === 'mine') {
+        const mc = DB.state.games.mineCfg = DB.state.games.mineCfg || { size: 16, mines: 40 };
+        Home.openForm({
+          title: '扫雷棋盘（新对局生效）',
+          fields: [
+            { key: 'size', label: '边长（格，8~20）', type: 'number', value: mc.size },
+            { key: 'mines', label: '雷数（颗）', type: 'number', value: mc.mines }
+          ],
+          okText: '保存',
+          onSubmit(v) {
+            const n = x => Math.max(1, Math.round(+x || 0));
+            mc.size = Math.max(8, Math.min(20, n(v.size)));
+            mc.mines = Math.max(5, Math.min(Math.round(mc.size * mc.size * 0.3), n(v.mines)));
+            DB.save(); UI.toast('扫雷：' + mc.size + '×' + mc.size + ' / ' + mc.mines + ' 雷，下一局生效');
+          }
+        });
       } else if (k === 'chat') {
         Home.openForm({
           title: 'TA 下棋时主动说话的概率%',
@@ -14438,13 +14634,16 @@ const Games = (function () {
     const g = DB.state.gameInviteAt = DB.state.gameInviteAt || {};
     if (Date.now() - (g[ct.id] || 0) < INVITE_COOLDOWN) return;
     g[ct.id] = Date.now();
+    const ids = Object.keys(REG);
+    const gameId = ids[Math.floor(Math.random() * ids.length)] || 'gomoku';
     const room = {
-      id: 'gm' + uidR(), game: 'gomoku', players: ['me', ct.id], blackUid: 'me',
+      id: 'gm' + uidR(), game: gameId, players: ['me', ct.id], blackUid: 'me',
       phase: 'playing', moves: [], plans: [], feed: [], winLine: [],
       status: 'playing', winner: null, spun: false,
       stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
     };
     S().rooms[room.id] = room;
+    const dm = REG[room.game]; if (dm && dm.newRoom) dm.newRoom(room);
     feed(room, 'sys', esc(name(ct.id)) + ' 邀你来一局' + esc(defOf(room).name) + '，你执黑先行');
     room.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (typeof Engine !== 'undefined' && Engine.pushRaw)
@@ -14489,6 +14688,7 @@ const Games = (function () {
   /* ---------- 启动 ---------- */
   function init() {
     register(Gomoku.def());
+    register(Mine.def());
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
