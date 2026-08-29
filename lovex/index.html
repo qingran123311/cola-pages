@@ -259,6 +259,9 @@ button{-webkit-tap-highlight-color:transparent}
   font-size:14px;font-family:inherit;cursor:pointer;line-height:1.4;
 }
 .btn:active{transform:scale(.97);opacity:.9}
+/* 通用禁用态（08-30 P41 §四）：全站之前没这层样式，group.js 的「完成(0)」与
+   游戏选人面板的「开始」都只能看着能点、点了什么也不发生。一处定义处处生效。 */
+.btn:disabled{opacity:.4;pointer-events:none}
 .btn-primary{background:var(--primary);color:var(--on-primary)}
 .btn-secondary{background:var(--card);color:var(--t1);border:1px solid var(--line)}
 .btn-danger{background:transparent;border:1px solid var(--danger);color:var(--danger)}
@@ -339,6 +342,13 @@ button{-webkit-tap-highlight-color:transparent}
   border-radius:16px 16px 0 0;padding:8px 12px calc(10px + env(safe-area-inset-bottom));
   transform:translateY(100%);transition:transform .22s ease}
 .sheet-mask.show .sheet{transform:none}
+/* ---------- 浮层容器统一收口（08-30 P41 §二：黑匣子 20 条顶出视口的根治） ----------
+   规矩只有一条：浮层不得长过视口，内容超了自己内部滚。
+   新面板一律复用 .sheet / .dialog，不得再各自贴 max-height 补丁（台账 L13）。 */
+.sheet,.dialog{max-height:86vh;max-height:86dvh;
+  overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* 自带滞动区的面板（文件管理/游戏面板）：滞动交回内层，避免双滞动条 */
+.sheet-lib,.sheet-gm{overflow:hidden}
 .sheet-title{text-align:center;color:var(--t3);font-size:12px;padding:8px 0 4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sheet-item{display:flex;width:100%;padding:14px;border:none;background:none;
@@ -405,7 +415,12 @@ button{-webkit-tap-highlight-color:transparent}
 /* ---------- 发起群聊：多选行 ---------- */
 .pick-row.pick-checkable{width:100%;display:flex;align-items:center;gap:10px;
   padding:9px 10px;border:none;background:none;border-radius:10px;cursor:pointer;text-align:left}
-.pick-row.pick-checkable.checked{background:var(--primary-ultra)}
+/* 08-30 P41 §四：勾选态原来只把背景刷成 --primary-ultra（极简主题 #E9E9EC 对白底几乎看不出），
+   而 .pick-check 的勾字色永远是 --on-primary=#FFF —— 白底上画白勾，等于“点了没反应”。
+   根治：选中时把圆圈涂成主题色，白勾落在实色上；再加 1.5px 内描边。群选人/游戏选人共用这一处。 */
+.pick-row.pick-checkable.checked{background:var(--primary-ultra);
+  box-shadow:inset 0 0 0 1.5px var(--primary)}
+.pick-row.pick-checkable.checked .pick-check{background:var(--primary);border-color:var(--primary)}
 .pick-row .pick-name{flex:1;font-size:14px;color:var(--t1)}
 .pick-check{margin-left:auto;width:20px;height:20px;border:1.7px solid var(--line);
   border-radius:50%;display:flex;align-items:center;justify-content:center;
@@ -2310,8 +2325,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 }
 /* ---------- 大厅 ---------- */
 .gm-sec{font-size:12px;color:var(--t3);margin:2px 2px -8px}
-.gm-shelf{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x mandatory}
-.gm-card{flex:0 0 132px;scroll-snap-align:start;background:var(--card);border:1.5px solid var(--line);
+/* 08-30 P41 §五：原来是单行横滚（实测 shelf 可视 388 < 内容 424，第三张右缘 599 超出），
+   新游戏只能靠横滑看到。改两列网格：以后新增游戏自动往第二排长，不用调注册顺序。 */
+.gm-shelf{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:2px 2px 6px}
+.gm-card{background:var(--card);border:1.5px solid var(--line);
   border-radius:14px;padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--t1)}
 .gm-card-ico{width:52px;height:52px;border-radius:12px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--t2)}
 .gm-card b{font-size:15px}
@@ -3440,6 +3457,55 @@ const DB = (function () {
   let saveTimer = null;
   let onQuota = null;   // 容量不足回调，由 app.js 装配提示
 
+  /* 她 08-29 正式开案"为啥丢聊天记录"——头号根因就在 writeNow：
+     档案涨满 5MB 后每次写盘静默失败，当次会话的新消息只在内存里，关页即回档。
+     三层防护：①写失败先清备份位再重试一次（备份位占着近半配额）②每日聊天快照（可找回）
+     ③多标签互相覆盖时留远程快照。快照只留两天控容量，写不进就逐档降级，绝不弹窗（P33 口径）。 */
+  const SNAP_KEY = 'LOVEX_MSGSNAP';
+  const SNAP_REMOTE = 'LOVEX_MSGSNAP_REMOTE';
+  function todayKey() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function snapMsgs() {
+    try {
+      const day = todayKey();
+      const raw = localStorage.getItem(SNAP_KEY);
+      const cur = raw ? JSON.parse(raw) : { day: '', days: [] };
+      if (cur.day === day) return;
+      cur.day = day;
+      cur.days = (cur.days || []).filter(x => x.day !== day);
+      cur.days.unshift({ day: day, savedAt: Date.now(), msgs: state.msgs });
+      cur.days = cur.days.slice(0, 2);
+      try { localStorage.setItem(SNAP_KEY, JSON.stringify(cur)); }
+      catch (e1) {
+        cur.days = cur.days.slice(0, 1);
+        try { localStorage.setItem(SNAP_KEY, JSON.stringify(cur)); } catch (e2) {}
+      }
+    } catch (e) {}
+  }
+  function listSnaps() {
+    try {
+      const cur = JSON.parse(localStorage.getItem(SNAP_KEY) || '{"days":[]}');
+      return (cur.days || []).map(x => ({ day: x.day, savedAt: x.savedAt, convs: Object.keys(x.msgs || {}).length }));
+    } catch (e) { return []; }
+  }
+  function getSnapMsgs(day) {
+    try {
+      const cur = JSON.parse(localStorage.getItem(SNAP_KEY) || '{"days":[]}');
+      const hit = (cur.days || []).find(x => x.day === day);
+      return hit ? hit.msgs : null;
+    } catch (e) { return null; }
+  }
+  /* 多标签防护：别的标签页写了主档 → 先把那份新数据存进远程快照位，防被本页旧内存覆盖后无从找回 */
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', function (e) {
+      if (e.key === KEY && e.newValue) {
+        try { localStorage.setItem(SNAP_REMOTE, e.newValue); } catch (x) {}
+      }
+    });
+  }
+
   function writeNow() {
     /* 落盘前把当前主数据滚入备份位（写入失败则静默跳过，不阻塞主写） */
     try {
@@ -3449,7 +3515,16 @@ const DB = (function () {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {
-      if (onQuota) onQuota(e);
+      /* 头号根因的解法：写满先清备份位（占近半配额的旧拷贝）再重试一次；
+         成功=这批消息保住了；仍失败才走静默黑匣子（P33 口径不弹窗，但快照已兜底） */
+      try { localStorage.removeItem(BAK); } catch (x) {}
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        if (onQuota) onQuota(e);
+        return;
+      } catch (e2) {
+        if (onQuota) onQuota(e2);
+      }
     }
   }
 
@@ -3505,8 +3580,9 @@ const DB = (function () {
     return true;
   }
 
-  /* 装载完就扫一次：孤儿数据不留到下一次 */
+  /* 装载完就扫一次：孤儿数据不留到下一次；当天聊天快照顺手落一份（找回兜底） */
   try { sweepOrphans(); } catch (e) { /* 收尾失败不能堵住启动链 */ }
+  try { snapMsgs(); } catch (e) {}
 
   return {
     get state() { return state; },
@@ -3519,6 +3595,8 @@ const DB = (function () {
     importAll,
     backupInfo,
     recoverFromBackup,
+    listSnaps,
+    getSnapMsgs,
     set onQuota(fn) { onQuota = fn; }
   };
 })();
@@ -5250,7 +5328,7 @@ const UI = (function () {
      为何只留这一处：浮层靠 show 类才“看得见 + 点得动”，而 show 是在 requestAnimationFrame
      里挂的；页面在后台 tab / 锁屏 / 被节流时 rAF 可能根本不跑——没拿到 show 的 mask 就是一层
      铺满整屏、透明但吃点击的玻璃罩（清然红线：「再有一次跟弹窗有问题我就要骂你了哦」）。
-     08-27 之前这条规范只活在文档里，31 处各拄一遍、22 处漏了兼底。
+     08-27 之前这条规范只活在文档里，31 处各写一遍、22 处漏了兜底。
      现在写浮层只准调 UI.raise()；build.ps1 门禁拦住“ui.js 之外出现 classList.add('show')”。
      opts.frames=2：需要先把布局算完再起过渡的（首页消息横幅），多等一帧。 */
   function raise(node, opts) {
@@ -6854,7 +6932,7 @@ const Home = (function () {
           remark: (v.remark || '').trim(),
           sign: (v.sign || '').trim(),
           avatar: v.avatar || null,
-          params: { minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 }   // 回复参数，资料卡后续可视化调
+          params: Engine.params()   // 回复参数默认值（08-30 P41：只住 Engine.params 一处）
         };
         DB.state.contacts.push(ct);
         ensureConv(ct.id);
@@ -8985,6 +9063,47 @@ const Engine = (function () {
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function pick(arr) { return arr[rand(0, arr.length - 1)]; }
 
+  /* 回复参数默认值唯一出处（08-30 P41 §三）：
+     这串之前散在 app.js:67 / engine.js:79 / profile.js:72,169 / home.js:278 / moments.js:250 五处，
+     改一处漏四处（台账 L13）。任何人要读回复参数，一律走 Engine.params(ct)。 */
+  const REPLY_DEF = { minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 };
+  function params(ct) {
+    return Object.assign({}, REPLY_DEF, (ct && ct.params) || {});
+  }
+
+  /* 条数抽签唯一入口：min~max 均匀掷；cap 传进来就再截一次（群聊分到的份额） */
+  function pickCount(p, cap) {
+    const minC = Math.max(1, Math.round(+p.minCount) || 1);
+    const maxC = Math.max(minC, Math.round(+p.maxCount) || minC);
+    let n = rand(minC, maxC);
+    if (typeof cap === 'number' && isFinite(cap)) n = Math.min(n, Math.max(0, Math.floor(cap)));
+    return n;
+  }
+
+  /* 把一轮总条数拆到各成员（08-30 P41 §三）：
+     以前是「上限当每人预算，每人各抽一次再被截」——2人局设上限4，约71%的轮次正好等于4，
+     在她眼里就成了「固定4条」。现在改为整轮只抽一次总条数，再轮流分到成员，
+     单人不超过自己的 maxCount，分不完的作罢（人少时不硬凑）。 */
+  function splitRound(total, members) {
+    const share = {}, caps = {};
+    const order = (members || []).map(ct => ct.id);
+    order.forEach(id => share[id] = 0);
+    if (!order.length || total <= 0) return share;
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = rand(0, i), t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    members.forEach(ct => {
+      caps[ct.id] = Math.max(1, Math.round(+(ct.params || {}).maxCount) || 3);
+    });
+    let left = total, spin = 0, guard = 0;
+    while (left > 0 && guard++ < 400) {
+      const id = order[spin++ % order.length];
+      if (share[id] < caps[id]) { share[id]++; left--; }
+      else if (order.every(x => share[x] >= caps[x])) break;
+    }
+    return share;
+  }
+
   function usableCards(ct) {
     /* P4起：全局未屏蔽 + 该角色专属未屏蔽，双重屏蔽规则，等概率混合 */
     if (typeof Library !== 'undefined' && Library.usableCardPool) {
@@ -9018,9 +9137,10 @@ const Engine = (function () {
   }
 
   /* 安排一位AI的一轮回复
-     quota：群聊单轮总条数预算（决策#21），排程时预抽条数并占用，
-     超出预算的成员直接不参与（不会出现“显示了输入却不开口”） */
-  function scheduleOne(conv, ct, quota) {
+     share：群聊本轮分给这位成员的条数（一轮总条数在 onUserMessage 里只抽一次，
+     见 splitRound）；传 null = 单聊，条数自己按参数掷。
+     排程时就定下条数并占用，不会出现“显示了输入却不开口” */
+  function scheduleOne(conv, ct, share) {
     const key = conv.id + ':' + ct.id;
     if (timers.get(key)) return;                  // 该成员本轮还没结束，不叠加
 
@@ -9034,20 +9154,16 @@ const Engine = (function () {
     if (conv.type === 'group' && typeof GroupManage !== 'undefined' &&
         GroupManage.isMuted && GroupManage.isMuted(conv, ct.id)) return;
 
-    const p = Object.assign(
-      { minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 }, ct.params || {});
+    const p = params(ct);
     let minS = Math.max(0, +p.minSec || 0);
     let maxS = Math.max(minS, +p.maxSec || minS);
     const delay = rand(minS, maxS) * 1000;
 
-    /* 本轮要发的条数提前抽签；群聊受总预算约束 */
+    /* 本轮要发的条数提前抽签；群聊受本轮分到的份额约束 */
     let n = null;
-    if (quota) {
-      const minC = Math.max(1, +p.minCount || 1);
-      const maxC = Math.max(minC, +p.maxCount || minC);
-      n = Math.min(rand(minC, maxC), quota.left);
+    if (typeof share === 'number') {
+      n = pickCount(p, share);
       if (n <= 0) return;
-      quota.left -= n;
     }
 
     timers.set(key, true);
@@ -9058,7 +9174,7 @@ const Engine = (function () {
     showTyping(true, Home.displayName(ct));
 
     setTimeout(() => {
-      const total = fireBatch(conv, p, ct, n);
+      const total = fireBatch(conv, p, ct, n, typeof share === 'number' ? share : null);
       // 「正在输入」持续到本批最后一条落地；全员结束才熄灭
       setTimeout(() => {
         timers.delete(key);
@@ -9069,15 +9185,38 @@ const Engine = (function () {
     }, delay);
   }
 
-  /* 用户发来消息 → 安排AI回复 */
+  /* 用户发来消息 → 安排AI回复
+     连发合并成一轮（08-30 P41 §三，她的原话「发两条消息就换来八条」）：
+     一条消息=起一轮是错的，改成「一段连续输入=一轮」。窗口内新到的消息并进同一轮
+     （消息本身已落库，不丢内容），最多顺延到 MERGE_MAX 一定发车，不致于她一直打字就永远不回。 */
+  const MERGE_MS = 900, MERGE_MAX = 2600;
+  const merging = new Map();   // convId -> {first, timer}
+
   function onUserMessage(convId) {
+    if (!DB.state.convs.find(c => c.id === convId)) return;
+    const m = merging.get(convId);
+    if (m) {
+      clearTimeout(m.timer);
+      const until = Math.min(m.first + MERGE_MAX, Date.now() + MERGE_MS);
+      m.timer = setTimeout(() => { merging.delete(convId); startRound(convId); },
+        Math.max(0, until - Date.now()));
+      return;
+    }
+    merging.set(convId, {
+      first: Date.now(),
+      timer: setTimeout(() => { merging.delete(convId); startRound(convId); }, MERGE_MS)
+    });
+  }
+
+  function startRound(convId) {
     const conv = DB.state.convs.find(c => c.id === convId);
     if (!conv) return;
     if (conv.type === 'group') {
-      /* 群聊单轮总条数上限：只限条数，不限发言人数（决策#21） */
-      const budget = Math.min(20, Math.max(1, +conv.groupMaxCount || 5));
-      const quota = { left: budget };
-      Home.membersOf(conv).forEach(ct => scheduleOne(conv, ct, quota));
+      /* 群聊单轮：总条数只掷一次，再分到各成员（限条数不限发言人数，决策#21 + 08-30 P41） */
+      const members = Home.membersOf(conv);
+      const cap = Math.min(20, Math.max(1, +conv.groupMaxCount || 5));
+      const share = splitRound(rand(1, cap), members);
+      members.forEach(ct => scheduleOne(conv, ct, share[ct.id]));
       /* 管理员 AI 自动禁言行为（二期P13）：每管理员独立掷 autoMuteProb%，命中延迟4~10秒执行；
          conv 即群数据本体 */
       if ((conv.autoMuteProb || 0) > 0 && typeof GroupManage !== 'undefined' && GroupManage.aiAutoMuteAct) {
@@ -9124,7 +9263,7 @@ const Engine = (function () {
      15% 单独emoji/颜文字；图片概率内按模式发图（单独/混合可占气泡位）；
      其余字卡文本；附带模式下整轮后追加一张图的独立判定；
      整轮20%概率首条附带对最近10条消息的引用 */
-  function fireBatch(conv, p, ct, n) {
+  function fireBatch(conv, p, ct, n, cap) {
     const cards = usableCards(ct);
     if (!cards.length) { hintNoCards(conv); return 0; }
     /* 拼字卡（二期P9）：命中组合概率时，本条回复由多条字卡拼接为一条消息；
@@ -9141,9 +9280,7 @@ const Engine = (function () {
       return extra;
  }
 
-    const minC = Math.max(1, +p.minCount || 1);
-    const maxC = Math.max(minC, +p.maxCount || minC);
-    const count = (typeof n === 'number') ? n : rand(minC, maxC);
+    const count = (typeof n === 'number') ? n : pickCount(p);
 
     /* 图片回复三模式（决策#34）：single单独 / attach附带 / mix混合 */
     const imgProb = Math.min(100, Math.max(0, Math.round(+p.imgProb || 0)));
@@ -9223,15 +9360,17 @@ const Engine = (function () {
     }
 
     /* 附带/混合模式：文本后随机追加一张图。
-       她 08-26：附加本质是附带发出的，不另加回复延迟；仅微错开防同毫秒乱序 */
-    if ((imgMode === 'attach' || imgMode === 'mix') && imgProb > 0 &&
+       她 08-26：附加本质是附带发出的，不另加回复延迟；仅微错开防同毫秒乱序。
+       08-30 P41 §三：群聊追加这张也要占本轮名额——cap 传进来就不能把「最多 N 条」撑成 N+1。 */
+    const roomForAttach = (typeof cap !== 'number') || (count < cap);
+    if (roomForAttach && (imgMode === 'attach' || imgMode === 'mix') && imgProb > 0 &&
         Math.random() * 100 < imgProb && stickers.length) {
       t += 300;
       const attachImg = pick(stickers);
       setTimeout(() => pushAiImg(conv, attachImg, ct), t);
     }
 
-    /* AI主动拍一拍（策刓736-739）：固定7%（#39p 撤用户可调） */
+    /* AI主动拍一拍（策划 736-739）：固定7%（#39p 撤用户可调） */
     const patProb = 7;
     if (patProb > 0 && Math.random() * 100 < patProb) {
       t += rand(600, 1600);
@@ -9408,9 +9547,7 @@ const Engine = (function () {
     if (gapMin < need) return;
     const cards = usableCards(ct);
     if (!cards.length) return;
-    const minC = Math.max(1, Math.round(+p.minCount || 1));
-    const maxC = Math.max(minC, Math.round(+p.maxCount || 3));
-    const n = rand(minC, maxC);
+    const n = pickCount(p);   // 补发轮同样只走条数抽签唯一入口
     const at = last + need * 60000;
     for (let i = 0; i < n; i++) {
       pushRaw(conv, {
@@ -9420,7 +9557,8 @@ const Engine = (function () {
     }
   }
 
-  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate };
+  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate,
+           params, pickCount };
 })();
 
 /* =====================================================
@@ -12958,7 +13096,7 @@ function coverTap(e) {
   /* 聊天回复延迟窗口（评论互动沿用该联系人聊天回复设置） */
   function chatWindowOf(ct) {
     if (!ct) return null;
-    const p = Object.assign({ minSec: 3, maxSec: 15 }, ct.params || {});
+    const p = Engine.params(ct);   // 08-30 P41：默认值不再各写一份
     let minS = Math.max(0, +p.minSec || 0);
     return { minS, maxS: Math.max(minS, +p.maxSec || minS) };
   }
@@ -14327,25 +14465,37 @@ const Games = (function () {
       '<div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button>' +
       (multi ? '<button class="btn btn-primary" data-ok>开始</button>' : '') + '</div></div>';
     const list = mask.querySelector('.gm-pick');
+    const okBtn = mask.querySelector('[data-ok]');
+    /* 计数沿用了群选人「完成(N)」的文案惯例，不另发一行的部件 */
+    function syncPick() {
+      if (!multi || !okBtn) return;
+      const n = list.querySelectorAll('.pick-row.checked').length;
+      okBtn.textContent = n ? '开始(' + n + ')' : '开始';
+      okBtn.disabled = n === 0;
+    }
     pool.forEach(ct => {
       const row = document.createElement('button');
       row.className = 'pick-row' + (multi ? ' pick-checkable' : '');
       row.dataset.id = ct.id;
       row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span>' + (multi ? '<span class="pick-check"></span>' : '<span class="chevron">›</span>');
       if (multi) {
-        /* 她 08-29：UNO 选人点不动——勾选态类必须是 .checked（components.css 只有它有样式），
-           之前写 .on 没有任何视觉反馈，看起来就是"点不动" */
+        /* 她 08-30：UNO 选人“点不动”。headless 实测 click 链路是通的，真因是勾选看不见：
+           .pick-check 的勾字色恒为 --on-primary(#FFF)，等于白底上画白勾（components.css 已根治）。
+           这里再补「开始(N)」计数 + 未选够置灰，上限 5 位（与下面 slice(0,5) 对齐）。 */
         row.addEventListener('click', () => {
-          row.classList.toggle('checked');
+          const on = !row.classList.contains('checked');
+          if (on && list.querySelectorAll('.pick-row.checked').length >= 5) return UI.toast('最多 5 位');
+          row.classList.toggle('checked', on);
           const chk = row.querySelector('.pick-check');
-          if (chk) chk.textContent = row.classList.contains('checked') ? '✓' : '';
+          if (chk) chk.textContent = on ? '✓' : '';
+          syncPick();
         });
       } else {
         row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
       }
       list.appendChild(row);
     });
-    const okBtn = mask.querySelector('[data-ok]');
+    syncPick();
     if (okBtn) okBtn.addEventListener('click', () => {
       /* 勾选态用 .checked（群选人同款）；dataset.id 取勾选行，不吃重名亏 */
       const chosen = [...list.querySelectorAll('.pick-row.checked')]
@@ -14363,7 +14513,7 @@ const Games = (function () {
   /* 多人开局（UNO）：逐个 80/20 应约，拒者出局；全拒则不开局 */
   function inviteMulti(ctIds, gameId) {
     const accepted = [];
-    ctIds.forEach((cid, i) => {
+    ctIds.forEach(cid => {
       const ct = Home.contactById(cid);
       const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === cid);
       if (Math.random() * 100 < INVITE_AGREE) {
@@ -14374,7 +14524,10 @@ const Games = (function () {
         Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: name(cid) + ' 婉拒了这局 UNO' });
       }
     });
-    if (!accepted.length) return UI.toast('都被婉拒了，另请几位吧');
+    if (!accepted.length) {
+      /* 08-30 P41 §四：只说「都被婉拒了」容易让她当成“点了没反应”，报名字 + 说清概率 */
+      return UI.toast(ctIds.map(name).join('、') + ' 这局都不来（每人 ' + INVITE_AGREE + '% 应约）');
+    }
     const players = ['me'].concat(accepted);
     const room = {
       id: 'gm' + uidR(), game: gameId, players: players, blackUid: 'me',
@@ -15466,7 +15619,7 @@ const Profile = (function () {
     refreshHeader(c);
     refreshStatus(c);
     refreshFields(c);
-    const p = Object.assign({ minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 }, c.params || {});
+    const p = Engine.params(c);   // 默认值只住 Engine.params 一处（08-30 P41）
     el('pf-minsec').value = p.minSec;
     el('pf-maxsec').value = p.maxSec;
     el('pf-mincount').value = p.minCount;
@@ -15563,7 +15716,7 @@ const Profile = (function () {
     ['pf-minsec', 'pf-maxsec', 'pf-mincount', 'pf-maxcount'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
-        const p = Object.assign({ minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 }, c.params || {});
+        const p = Engine.params(c);
         p.minSec = Math.max(0, Math.round(+el('pf-minsec').value || 0));
         p.maxSec = Math.max(p.minSec, Math.round(+el('pf-maxsec').value || p.minSec));
         p.minCount = Math.max(1, Math.round(+el('pf-mincount').value || 1));
@@ -17339,10 +17492,9 @@ const History = (function () {
     nameEl.value = DB.state.profile.name || '';
     statusEl.value = DB.state.profile.statusText || '';
 
-    // 兼容早期联系人：补齐回复参数默认值
+    // 兼容早期联系人：补齐回复参数默认值（默认值只住在 Engine.params 一处，08-30 P41）
     DB.state.contacts.forEach(ct => {
-      ct.params = Object.assign(
-        { minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 }, ct.params || {});
+      ct.params = Engine.params(ct);
     });
 
     // 会话↔联系人完整性自检（数据异常时 visibly 报警，不吞）
