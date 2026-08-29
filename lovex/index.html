@@ -2462,6 +2462,23 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--t1)}
 .mn-cell.mn-boom{color:var(--t1);background:color-mix(in srgb,var(--fill) 70%,var(--t2))}
 
+/* ---------- P40 补丁三（她 08-29 日间实测） ---------- */
+/* 道具飞行：0.9s 可见的弧线飞行 + 到达粘住，再淡出（她两轮说看不见动画） */
+.gm-prop-fly{position:absolute;z-index:6;color:var(--t2);opacity:1;will-change:transform,opacity;
+  transition:transform .9s cubic-bezier(.35,.7,.35,1),opacity .3s .95s;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+.gm-prop-fly.sticker{color:var(--g-stick-line)}
+.gm-pts{font-size:10px;color:var(--t3)}
+/* 扫雷：刚翻开的格子高亮（对方翻哪/谁踩雷看得见）；旗=EMOJI（她点名） */
+.mn-cell.mn-last{box-shadow:inset 0 0 0 2px var(--primary);animation:mn-flash 1.1s}
+@keyframes mn-flash{0%{background:color-mix(in srgb,var(--primary) 30%,var(--card))}100%{}}
+.mn-cell.mn-flag{display:flex;align-items:center;justify-content:center;font-size:12px}
+/* 踩雷爆炸：💥 在格子处炸开（她点名 EMOJI+特效） */
+.gm-boomfx{position:fixed;z-index:1200;font-size:46px;pointer-events:none;line-height:1;
+  animation:gm-pop .9s forwards;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+@keyframes gm-pop{0%{transform:scale(.3);opacity:0}35%{transform:scale(1.55);opacity:1}
+  65%{transform:scale(1.05) rotate(8deg);opacity:1}100%{transform:scale(.85);opacity:0}}
+
 </style>
 </head>
 <body>
@@ -9028,6 +9045,31 @@ const Engine = (function () {
       const ct = Home.contactById(conv.peerId);
       if (ct) scheduleOne(conv, ct, null);
     }
+    /* 她 08-29 定：群成员发言差距太大就"拉一丢丢"（10% 阈值她定），最沉默的隔一阵补一句，
+       拉到均值 10% 以内就不管；等哪次又超了再拉。不摆明面（她：这个做就行了） */
+    if (conv.type === 'group') {
+      setTimeout(() => { try { balanceGroup(conv); } catch (e) {} }, rand(8000, 20000));
+    }
+  }
+
+  /* 发言均衡：统计群内各成员累计发言，均值 10% 以下的最沉默成员补一句（一次 burst 至多补一个） */
+  function balanceGroup(conv) {
+    const arr = DB.state.msgs[conv.id] || [];
+    const cnt = {};
+    arr.forEach(m => { if (m.from === 'ai' && m.senderId && !m.deleted) cnt[m.senderId] = (cnt[m.senderId] || 0) + 1; });
+    const members = (conv.memberIds || []).filter(id => id !== 'me' && Home.contactById(id)
+      && !(typeof GroupManage !== 'undefined' && GroupManage.isMuted && GroupManage.isMuted(conv, id)));
+    if (members.length < 2) return;
+    const total = members.reduce((s, id) => s + (cnt[id] || 0), 0);
+    const avg = total / members.length;
+    if (avg < 10) return;                                   // 聊天量太少谈不上均衡
+    const sorted = members.slice().sort((a, b) => (cnt[a] || 0) - (cnt[b] || 0));
+    const quiet = sorted[0];
+    if ((cnt[quiet] || 0) >= avg * 0.9) return;             // 差距没超 10%，不动
+    const ct = Home.contactById(quiet);
+    const cards = usableCards(ct);
+    if (!cards.length) return;
+    pushAi(conv, maybeDecorate(pick(cards)), ct);
   }
 
   /* 发出n条，条间隔600~1600ms累加；返回本批总时长。
@@ -11719,22 +11761,39 @@ const Kinship = (function () {
     /* 不领取则等 24h 补跑作废 */
   }
 
-  /* ---------- AI 月度赠送（她 08-28 晚定）----------
-     每位联系人每月只掷一次：月初第一次碰到（启动/心跳/回前台都跑，monthKey 幂等）掷
-     MONTHLY_SEND_RATE%，命中→送一张新卡（额度档位随机）+ 走既有聊天卡片/领取链；
-     没中→这个月就不送了。没有“一直发”，也没有回复链挂钩 */
+  /* ---------- AI 月度赠送（她 08-28 晚定 60/40；08-29 改：**当月随机时间**送一次，不卡月初上线）----------
+     每月首次碰到就掷 60/40 定送不送；要送则在当月剩余时段内随机挑一个时刻（计划时刻制），
+     到点由启动/心跳结算补跑送出（离线也不丢）。done=已送出；旧数据形状（当月已按旧规则即时送过）视为已送不补发 */
+  function monthStartEnd(k) {
+    const p = k.split('-');
+    const y = +p[0], mo = +p[1] - 1;
+    return { start: new Date(y, mo, 1).getTime(), end: new Date(y, mo + 1, 0, 22, 0).getTime() };
+  }
   function settleMonthly() {
     const k = monthKey();
+    const now = Date.now();
     let changed = false;
     (DB.state.contacts || []).forEach(ct => {
       if (ct.isGroup) return;
       const all = (DB.state.kinshipMo = DB.state.kinshipMo || {});
       const rec = all[ct.id] = all[ct.id] || { monthKey: '', sent: false };
-      if (rec.monthKey === k) return;             // 这个月已经掷过了（送没送都算数）
-      rec.monthKey = k;
-      rec.sent = Math.random() * 100 < MONTHLY_SEND_RATE;
-      changed = true;
-      if (rec.sent) deliverCard(ct.id, 'me', GIFT_LIMITS[Math.floor(Math.random() * GIFT_LIMITS.length)] * 100);
+      if (rec.monthKey !== k) {
+        rec.monthKey = k; rec.done = false; rec.at = 0;
+        rec.sent = Math.random() * 100 < MONTHLY_SEND_RATE;
+        if (rec.sent) {
+          const se = monthStartEnd(k);
+          const lo = Math.max(now + 3600e3, se.start);
+          const hi = Math.max(lo + 3600e3, se.end);
+          rec.at = lo + Math.floor(Math.random() * (hi - lo));
+        }
+        changed = true;
+      } else if (rec.sent && rec.done == null && rec.at == null) {
+        rec.done = true; changed = true;      // 旧形状：当月已按旧规则即时送过，不补发
+      }
+      if (rec.sent && !rec.done && now >= (rec.at || 0)) {
+        rec.done = true; changed = true;
+        deliverCard(ct.id, 'me', GIFT_LIMITS[Math.floor(Math.random() * GIFT_LIMITS.length)] * 100);
+      }
     });
     if (changed) DB.save();
   }
@@ -13694,7 +13753,8 @@ const Mine = (function () {
     const m = room.mine;
     return !!m && x >= 0 && y >= 0 && x < m.size && y < m.size && !m.open[key(x, y)];
   }
-  /* 翻一格 → {win:uid|'draw'} 或 null；一次动作 = moves 一条（alternating 靠 parity） */
+  /* 翻一格 → {win:uid|'draw'} 或 null；一次动作 = moves 一条（alternating 靠 parity）。
+     lastMv 给渲染用：刚翻开的格子高亮 + 踩雷时播报"谁踩了雷"（她 08-29：看不到对方翻哪/谁踩雷） */
   function applyMove(room, uid, x, y) {
     const m = room.mine;
     if (!m.mineSet) genMines(m, x, y);
@@ -13703,12 +13763,14 @@ const Mine = (function () {
       m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
       m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
       room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
+      room.lastMv = { uid, cells: [key(x, y)], mine: true, ts: Date.now() };
       if (m.hits[uid] >= 5) return { win: otherUid(room, uid), line: [] };
       return null;
     }
     const opened = flip(m, x, y).filter(k => !m.mineSet.includes(k));
     m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + opened.length * 3;
     room.moves.push({ uid, x, y, ts: Date.now() });
+    room.lastMv = { uid, cells: opened, mine: false, ts: Date.now() };
     const safeTotal = m.size * m.size - m.mineSet.length;
     if (Object.keys(m.open).filter(k => !m.mineSet.includes(k)).length >= safeTotal) {
       const other = otherUid(room, uid);
@@ -13716,6 +13778,22 @@ const Mine = (function () {
       return { win: a === b ? 'draw' : (a > b ? uid : other), line: [] };
     }
     return null;
+  }
+  /* 她 08-29：长按格子标注有雷——对了 +3、错了 -5（一格只判一次分；再按取消标注不另计分）。
+     炸弹/旗子用 EMOJI 是她点名要的（游戏内容物例外） */
+  function flag(room, uid, x, y) {
+    const m = room.mine;
+    const k = key(x, y);
+    if (!inB(m, x, y) || m.open[k]) return null;
+    m.flags = m.flags || {}; m.flagScored = m.flagScored || {};
+    if (m.flags[k]) { delete m.flags[k]; return { toggled: 'off' }; }
+    m.flags[k] = true;
+    if (m.mineSet === null) return { toggled: 'on' };        // 首翻前没有答案，不判分
+    if (m.flagScored[k]) return { toggled: 'on' };
+    m.flagScored[k] = true;
+    m.scores = m.scores || {};
+    if (m.mineSet.includes(k)) { m.scores[uid] = (m.scores[uid] || 0) + 3; return { correct: true, toggled: 'on' }; }
+    m.scores[uid] = (m.scores[uid] || 0) - 5; return { correct: false, toggled: 'on' };
   }
   /* TA 翻格：先推理（数字=未翻邻数→全是雷避开；数字<未翻邻数→多余的是安全格优先），
      推理不出/低状态偷懒 → 未翻格里随机。TA 不开天眼，只用桌面上看得见的信息 */
@@ -13752,27 +13830,46 @@ const Mine = (function () {
     const pick = pool[Math.floor(Math.random() * pool.length)];
     return { x: pick.x, y: pick.y };
   }
-  /* 棋盘：未翻=凸格；翻开的数字格墨色深浅随雷数；雷=线稿雷 */
+  /* 棋盘：未翻=凸格；翻开的数字格墨色深浅随雷数；雷/旗=EMOJI（她点名要的，游戏内容物例外）；
+     刚翻开的格子 mn-last 闪一下=看得到对方翻哪/谁踩雷 */
   function render(room, el) {
     const m = room.mine || { size: cfgOf().size, open: {} };
-    let h = '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr)">';
+    m.flags = m.flags || {};
+    const last = room.lastMv;
+    let h = '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr);grid-template-rows:repeat(' + m.size + ',1fr)">';
     for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
       const k = key(x, y);
       const o = m.open[k];
-      if (!o) {
-        h += '<div class="mn-cell" data-x="' + x + '" data-y="' + y + '"></div>';
-      } else if (o.mine) {
-        h += '<div class="mn-cell mn-open mn-boom"><svg viewBox="0 0 24 24" width="70%" height="70%" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="13.5" r="5"/><path d="M12 5.5v2.5M12 21v-2M3 13.5h2.5M18.5 13.5H21M5.5 7l1.6 1.6M18.5 7l-1.6 1.6"/></svg></div>';
+      const isLast = last && (last.cells || []).indexOf(k) >= 0;
+      if (o && o.mine) {
+        h += '<div class="mn-cell mn-open mn-boom' + (isLast ? ' mn-last' : '') + '">💣</div>';
+      } else if (o) {
+        h += '<div class="mn-cell mn-open mn-n' + (isLast ? ' mn-last' : '') + '" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
+      } else if (m.flags[k]) {
+        h += '<div class="mn-cell mn-flag" data-x="' + x + '" data-y="' + y + '">🚩</div>';
       } else {
-        h += '<div class="mn-cell mn-open mn-n" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
+        h += '<div class="mn-cell" data-x="' + x + '" data-y="' + y + '"></div>';
       }
     }
     h += '</div>';
     el.innerHTML = h;
-    el.querySelectorAll('.mn-cell:not(.mn-open)').forEach(cell =>
+    el.querySelectorAll('.mn-cell:not(.mn-open)').forEach(cell => {
+      let lpTimer = null, lpFired = false;
+      cell.addEventListener('pointerdown', () => {
+        lpFired = false;
+        lpTimer = setTimeout(() => {
+          lpFired = true;
+          if (typeof Games !== 'undefined' && Games.onFlag) Games.onFlag(+cell.dataset.x, +cell.dataset.y);
+        }, 500);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+        cell.addEventListener(ev, () => clearTimeout(lpTimer)));
+      cell.addEventListener('contextmenu', e => e.preventDefault());
       cell.addEventListener('click', () => {
+        if (lpFired) { lpFired = false; return; }          // 长按完不再触发翻开
         if (typeof Games !== 'undefined' && Games.onCell) Games.onCell(+cell.dataset.x, +cell.dataset.y);
-      }));
+      });
+    });
   }
 
   function def() {
@@ -13780,9 +13877,9 @@ const Mine = (function () {
       id: 'mine', name: '扫雷', icon: 'mine-bomb', playersTxt: '双人',
       newRoom(room) {
         const c = cfgOf();
-        room.mine = { size: c.size, mines: c.mines, mineSet: null, open: {}, nums: {}, hits: {}, scores: {} };
+        room.mine = { size: c.size, mines: c.mines, mineSet: null, open: {}, nums: {}, hits: {}, scores: {}, flags: {}, flagScored: {} };
       },
-      legal, applyMove, aiPick, render
+      legal, applyMove, flag, aiPick, render
     };
   }
 
@@ -14048,6 +14145,10 @@ const Games = (function () {
     if (!d.legal(r, x, y)) return;
     r.plans.forEach(p => { if (p.kind === 'urge') p.done = true; });   // 走了就不催
     const res = d.applyMove(r, 'me', x, y);
+    if (r.game === 'mine' && r.lastMv && r.lastMv.mine) {
+      feed(r, 'sys', esc(name('me')) + ' 踩雷了（-5 分）');   // 谁踩雷看得见（她 08-29）
+      boomAt(x, y);
+    }
     /* 她 08-29：落子播报（"XX 落子 E5"）又吵又长，删——棋盘自己会说话 */
     if (res) return endGame(r, res);
     r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
@@ -14065,6 +14166,10 @@ const Games = (function () {
     const mv = d.aiPick(r, taUid(r));
     if (!mv) return endGame(r, { win: 'draw', line: [] });
     const res = d.applyMove(r, taUid(r), mv.x, mv.y);
+    if (r.game === 'mine' && r.lastMv && r.lastMv.mine) {
+      feed(r, 'sys', esc(name(taUid(r))) + ' 踩雷了（-5 分）');
+      boomAt(mv.x, mv.y);
+    }
     if (res) return endGame(r, res);
     r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (Math.random() * 100 < chatProb()) {
@@ -14082,6 +14187,31 @@ const Games = (function () {
     UI.confirmBox({ title: '认输？', text: '这局就判给 ' + esc(name(taUid(r))) + ' 了，战绩会记一笔', okText: '认输', danger: true })
       .then(ok => { if (ok) endGame(r, { win: taUid(r), line: [] }); });
   }
+  /* 踩雷爆炸特效：💥 在格子处炸开（她 08-29 点名要 EMOJI 炸弹+爆炸特效，游戏内容物例外） */
+  function boomAt(x, y) {
+    const cell = document.querySelector('#room-board .mn-cell[data-x="' + x + '"][data-y="' + y + '"]');
+    if (!cell) return;
+    const rc = cell.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'gm-boomfx';
+    el.textContent = '💥';
+    el.style.left = (rc.left + rc.width / 2 - 26) + 'px';
+    el.style.top = (rc.top + rc.height / 2 - 26) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 950);
+  }
+  /* 扫雷长按标注（她 08-29：标对了 +3、标错了 -5，格子只判一次分；由 mine.render 长按触发） */
+  function onFlag(x, y) {
+    const r = curRoom(); if (!r || r.phase !== 'playing' || r.game !== 'mine') return;
+    const d = defOf(r);
+    const res = d.flag ? d.flag(r, 'me', x, y) : null;
+    if (res && res.correct != null) {
+      feed(r, 'sys', res.correct ? (esc(name('me')) + ' 标对了 +3 分') : (esc(name('me')) + ' 标错了 -5 分'));
+    }
+    DB.save();
+    if (document.getElementById('page-room').classList.contains('active')) renderRoom();
+  }
+
   function endGame(r, res) {
     r.phase = 'ended'; r.status = 'ended'; r.winner = res.win || 'draw';
     r.winLine = res.line || [];
@@ -14089,6 +14219,13 @@ const Games = (function () {
       id: 'gr' + uidR(), game: r.game, players: r.players.slice(),
       winner: r.winner, moves: (r.moves || []).length, ts: Date.now(), dur: Date.now() - r.createdAt
     });
+    /* 她 08-29：扫雷结算要看得见得分统计 */
+    if (r.game === 'mine' && r.mine) {
+      r.finalScores = {
+        scores: Object.assign({}, r.mine.scores),
+        hits: Object.assign({}, r.mine.hits)
+      };
+    }
     const ta = taUid(r);
     const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ta);
     if (conv && typeof Engine !== 'undefined' && Engine.pushRaw) {
@@ -14129,6 +14266,7 @@ const Games = (function () {
         else if (p.kind === 'taMove') execTaMove(r);
         else if (p.kind === 'say') execSay(r, p);
         else if (p.kind === 'urge') execUrge(r);
+        else if (p.kind === 'taProp') execTaProp(r, p);
         acted = true;
       });
       r.plans = (r.plans || []).filter(p => !p.done);
@@ -14171,6 +14309,9 @@ const Games = (function () {
       (thinking ? '<span class="gm-thinking">' + esc(name(ta)) + ' 正在想…</span>' : '') +
       '</div>';
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
+    /* 短语/道具面板开在玩家条正下方（她 08-29：双击头像却要划到最底下才看得到，来回划） */
+    h += '<div class="gm-chips hidden" id="room-chips"></div>' +
+         '<div class="gm-chips hidden" id="room-props"></div>';
     /* 阶段提示：她 08-29 定——别写机制说明（"80%会来""商定先手"那类删掉），只留必要状态 */
     if (r.phase === 'inviting') {
       h += '<div class="gm-banner">等待 ' + esc(name(ta)) + ' 应答…</div>';
@@ -14200,9 +14341,7 @@ const Games = (function () {
       '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
       '<button class="gm-send" id="room-send">发</button>' +
       '<button class="gm-resign" id="room-resign">认输</button>' +
-      '</div>' +
-      '<div class="gm-chips hidden" id="room-chips"></div>' +
-      '<div class="gm-chips hidden" id="room-props"></div>';
+      '</div>';
     body.innerHTML = h;
     /* 棋盘 */
     const bel = document.getElementById('room-board');
@@ -14236,7 +14375,8 @@ const Games = (function () {
     tick();
   }
   function playerChip(uid, r, active) {
-    /* 她 08-29：五子棋头像显示不正确——我的格子是空盒。补上：我用我的头像/昵称首字 */
+    /* 她 08-29：五子棋头像显示不正确——我的格子是空盒。补上：我用我的头像/昵称首字；
+       扫雷时头像下常驻实时分数（她：分数怎么没实际标出来变化着） */
     const prof = DB.state.profile || {};
     let ava = '';
     if (uid === 'me') {
@@ -14246,9 +14386,11 @@ const Games = (function () {
       if (ct) ava = ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1));
     }
     const stone = r.blackUid === uid ? '<i class="gm-stone-dot"></i>' : '';
+    const pts = (r.game === 'mine' && r.mine && r.mine.scores)
+      ? '<small class="gm-pts">' + (r.mine.scores[uid] || 0) + ' 分 · 雷' + (r.mine.hits[uid] || 0) + '</small>' : '';
     return '<span class="gm-player' + (active ? ' on' : '') + '" data-uid="' + uid + '">' +
       '<span class="gm-ava">' + ava + '</span>' +
-      '<b>' + esc(name(uid)) + '</b>' + stone + '</span>';
+      '<b>' + esc(name(uid)) + '</b>' + stone + pts + '</span>';
   }
   /* 两个面板共用一套开合：开一个关另一个（她 08-29：道具要一眼找得到，独立成「道具」钮） */
   function toggleRow(rowId, buildHtml) {
@@ -14290,38 +14432,53 @@ const Games = (function () {
     if (line) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: line });
     DB.save(); renderRoom(); scheduleTimers(r);
   }
+  /* 道具飞行动画：从 from 头像飞到 target 头像，到达后粘住 0.4s 再淡出 + 目标抖一下。
+     她 08-29 两批都在说"看不见动画"——要点：①强制回流后再起飞（否则瞬移）②飞 0.9s+粘住 0.4s（看得清）
+     ③图标放大 ④_TA 反向也走这（from/target 换位） */
+  function propFly(p, fromUid, toUid) {
+    const host = document.querySelector('.gm-players');
+    if (!host) return;
+    const fromEl = host.querySelector('.gm-player[data-uid="' + fromUid + '"]');
+    const toEl = host.querySelector('.gm-player[data-uid="' + toUid + '"]');
+    if (!fromEl || !toEl) return;
+    const svg = S().propsStyle === 'sticker' ? p.sticker : p.line;
+    const el = document.createElement('span');
+    el.className = 'gm-prop-fly' + (S().propsStyle === 'sticker' ? ' sticker' : '');
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + svg + '</svg>';
+    const hr = host.getBoundingClientRect(), fr = fromEl.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
+    el.style.left = (fr.left - hr.left + fr.width / 2 - 17) + 'px';
+    el.style.top = (fr.top - hr.top) + 'px';
+    host.appendChild(el);
+    void el.offsetWidth;                                    // 强制回流：初始态必须先画完
+    el.style.setProperty('--fx', (tr.left - fr.left) + 'px');
+    el.style.setProperty('--fy', (tr.top - fr.top - 6) + 'px');
+    el.style.transform = 'translate(var(--fx), var(--fy))';
+    setTimeout(() => { toEl.classList.add('gm-splat'); }, 900);
+    setTimeout(() => { el.style.opacity = '0'; }, 1350);
+    setTimeout(() => { el.remove(); toEl.classList.remove('gm-splat'); }, 1700);
+  }
   function throwProp(id) {
     const r = curRoom(); if (!r || !taUid(r)) return;
     const p = PROPS.find(x => x.id === id); if (!p) return;
     const verb = { egg: '把鸡蛋扔到了', flower: '给', hammer: '敲了敲' }[id];
     feed(r, 'sys', esc(name('me')) + ' ' + verb + ' ' + esc(name(taUid(r))) + (id === 'flower' ? ' 一束花' : id === 'hammer' ? ' 桌面' : ' 脸上'));
-    propFly(p);
-    if (Math.random() < 0.5) {   // TA 概率回嘴（建议值 50%，齿轮面板没暴露——要调说话告诉我）
+    propFly(p, 'me', taUid(r));
+    /* 她 08-29：TA 会反击/回礼——六成概率隔几秒扔回来一个（建议值，要调说话我） */
+    if (Math.random() < 0.6) {
+      const back = PROPS[Math.floor(Math.random() * PROPS.length)];
+      r.plans.push({ kind: 'taProp', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, prop: back.id });
+    }
+    if (Math.random() < 0.5) {
       const t = pickLine('胜负感言', taUid(r), DEF_TA);
       if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
     }
     DB.save(); renderRoom(); scheduleTimers(r);
   }
-  function propFly(p) {
-    const host = document.querySelector('.gm-players');
-    const target = host && host.querySelector('.gm-player[data-uid]:not([data-uid="me"])');
-    if (!host || !target) return;
-    const svg = S().propsStyle === 'sticker' ? p.sticker : p.line;
-    const el = document.createElement('span');
-    el.className = 'gm-prop-fly' + (S().propsStyle === 'sticker' ? ' sticker' : '');
-    el.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + svg + '</svg>';
-    const hr = host.getBoundingClientRect(), tr = target.getBoundingClientRect();
-    el.style.left = '8px'; el.style.top = '8px';
-    host.appendChild(el);
-    requestAnimationFrame(() => {
-      el.style.transform = 'translate(' + (tr.left - hr.left) + 'px,' + (tr.top - hr.top) + 'px) rotate(540deg)';
-      el.style.opacity = '0.9';
-    });
-    setTimeout(() => {
-      el.remove();
-      target.classList.add('gm-splat');
-      setTimeout(() => target.classList.remove('gm-splat'), 500);
-    }, 650);
+  function execTaProp(r, p) {
+    const back = PROPS.find(x => x.id === p.prop) || PROPS[0];
+    const verb = { egg: '把鸡蛋扔到了', flower: '给', hammer: '敲了敲' }[back.id];
+    feed(r, 'sys', esc(name(taUid(r))) + ' ' + verb + ' ' + esc(name('me')) + (back.id === 'flower' ? ' 一束花' : back.id === 'hammer' ? ' 桌面' : ' 脸上'));
+    propFly(back, taUid(r), 'me');
   }
 
   /* ---------- 悬浮聊天窗（游戏里正常聊天：真会话，走各 TA 聊天回复设置） ---------- */
@@ -14464,6 +14621,11 @@ const Games = (function () {
       '<div class="gm-settle">' +
         '<div class="gm-settle-t">' + (draw ? '平局' : (won ? '你赢了' : 'TA 赢了')) + '</div>' +
         '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' + esc(name(draw ? '' : r.winner)) + ' 拿下</div>' +
+        /* 她 08-29：扫雷结算要看得见得分统计 */
+        (r.finalScores ? '<div class="gm-settle-prize">' +
+          Object.keys(r.finalScores.scores || {}).map(u =>
+            esc(name(u)) + ' ' + (r.finalScores.scores[u] || 0) + ' 分（踩雷 ' + (r.finalScores.hits[u] || 0) + '）').join('<br>') +
+          '</div>' : '') +
         /* 她 08-29：转完的战利品要直接看得见，别让她退出去翻 */
         (r.lastPrize ? '<div class="gm-settle-prize">战利品 · ' + esc(r.lastPrize) + '</div>' : '') +
         (draw || r.spun ? '' : '<button class="btn btn-primary" id="gm-spin">转战利品（' + (won ? 'TA 陪你玩' : '看 TA 手气') + '）</button>') +
