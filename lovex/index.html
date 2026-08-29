@@ -9269,9 +9269,14 @@ const Engine = (function () {
     /* P17 系统通知（她 08-28 晚定「在聊天页里切去抖音也要弹」）：弹不弹只看页面可见性/焦点
        ——maybeSys 内部判 visible+hasFocus，被「正开着这个会话」挡住的旧写法已拆（台账 L12 拢口口径）；
        前台看得见且有焦点时仍不重复弹（应用内已有横幅/气泡） */
+    /* P17 系统通知（她 08-29 晚定「在聊天页里切去抖音也要弹」）：弹不弹只看页面可见性/焦点
+       ——maybeSys 内部判 visible+hasFocus，被「正开着这个会话」挡住的旧写法已拆（台账 L12 拢口口径）；
+       前台看得见且有焦点时仍不重复弹（应用内已有横幅/气泡）。
+       她 08-29 抓到：群通知标题曾拿 conv.peerId 去查联系人——群会话没有 peerId，
+       永远落到"已删除联系人"兜底；群名只准走 Home.groupName(conv) */
     if (m.from !== 'me' && window.Notify) {
       var nTitle = conv.type === 'group'
-        ? (Home.displayName(Home.contactById(conv.peerId)) || '群聊')
+        ? Home.groupName(conv)
         : Home.displayName(Home.contactById(conv.peerId));
       var nBody = conv.type === 'group'
         ? authorNameIn(conv, m) + '：' + snippetIn(m)
