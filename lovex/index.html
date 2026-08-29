@@ -2523,6 +2523,20 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   box-shadow:0 4px 10px rgba(0,0,0,.25)}
 .un-wash{position:fixed;z-index:1198;border-radius:9px;pointer-events:none}
 
+/* ---------- P40 补丁五（她 08-29 晚） ---------- */
+/* 半边蛋壳：CSS 弧形壳，迸开+旋转+坠落（她：蛋壳要碎开） */
+.gm-shell-half{position:fixed;z-index:1201;width:32px;height:24px;pointer-events:none;
+  background:#FBF3E4;border:1.7px solid #D9C79E;border-radius:50% 50% 8% 8% / 92% 92% 8% 8%;
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);
+  animation:gm-shell-fly .8s cubic-bezier(.3,.5,.6,1) forwards;
+  transform-origin:50% 100%}
+.gm-shell-half::after{content:'';position:absolute;left:22%;top:26%;width:7px;height:4px;
+  background:#D9C79E;border-radius:50%}
+@keyframes gm-shell-fly{
+  0%{transform:translate(0,0) rotate(0);opacity:1}
+  100%{transform:translate(calc(var(--sx) * 46px),52px) rotate(var(--rot));opacity:0}}
+/* 花瓣落地继续用 EMOJI；蛋全链路（飞行🥚→壳迸开+蛋液溅+糊脸）零 EMOJI 脸 */
+
 </style>
 </head>
 <body>
@@ -14319,7 +14333,13 @@ const Games = (function () {
       row.dataset.id = ct.id;
       row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span>' + (multi ? '<span class="pick-check"></span>' : '<span class="chevron">›</span>');
       if (multi) {
-        row.addEventListener('click', () => row.classList.toggle('on'));
+        /* 她 08-29：UNO 选人点不动——勾选态类必须是 .checked（components.css 只有它有样式），
+           之前写 .on 没有任何视觉反馈，看起来就是"点不动" */
+        row.addEventListener('click', () => {
+          row.classList.toggle('checked');
+          const chk = row.querySelector('.pick-check');
+          if (chk) chk.textContent = row.classList.contains('checked') ? '✓' : '';
+        });
       } else {
         row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
       }
@@ -14327,8 +14347,8 @@ const Games = (function () {
     });
     const okBtn = mask.querySelector('[data-ok]');
     if (okBtn) okBtn.addEventListener('click', () => {
-      /* dataset.id 取勾选行（名字匹配会被重名/长名坑，她 08-29 长名压测的教训） */
-      const chosen = [...list.querySelectorAll('.pick-row.on')]
+      /* 勾选态用 .checked（群选人同款）；dataset.id 取勾选行，不吃重名亏 */
+      const chosen = [...list.querySelectorAll('.pick-row.checked')]
         .map(b => pool.find(c => c.id === b.dataset.id))
         .filter(Boolean)
         .slice(0, 5);
@@ -14797,8 +14817,8 @@ const Games = (function () {
       setTimeout(() => el.remove(), 450);                 // 命中后本体再留一瞬，碎片接棒
     };
   }
-  /* 命中：蛋=**蛋液溅开**（她 08-29：不要锅！摊破那种）——蛋黄点四溅下坠+糊脸贴片；
-     花=花瓣/闪光，锤=冲击/火星；目标抖动 */
+  /* 命中（她 08-29 二次打回：蛋要"壳碎+蛋液溅开"，不要 EMOJI 脸）：
+     🥚 本体飞到 → 换成两半蛋壳向两侧迸开旋转坠落 + 12 滴蛋液四溅下坠 + 蛋渍糊脸 + 目标抖动 */
   function hitAvatar(toUid, p) {
     const host = document.querySelector('.gm-players');
     const tEl = host && host.querySelector('.gm-player[data-uid="' + toUid + '"]');
@@ -14806,15 +14826,27 @@ const Games = (function () {
     tEl.classList.add('gm-splat');
     setTimeout(() => tEl.classList.remove('gm-splat'), 620);
     const rc = tEl.getBoundingClientRect();
+    const cx = rc.left + rc.width / 2, cy = rc.top + rc.height / 2;
     if (p.id === 'egg') {
-      /* 蛋液滴：大小不一的蛋黄点，向外溅落 */
+      /* 两半蛋壳：CSS 画的弧形壳，向左右迸开+旋转+坠落 */
+      [['-1', '72deg'], ['1', '-72deg']].forEach(pair => {
+        const shell = document.createElement('span');
+        shell.className = 'gm-shell-half';
+        shell.style.setProperty('--sx', pair[0]);
+        shell.style.setProperty('--rot', pair[1]);
+        shell.style.left = (cx - 16) + 'px';
+        shell.style.top = (cy - 18) + 'px';
+        document.body.appendChild(shell);
+        setTimeout(() => shell.remove(), 900);
+      });
+      /* 蛋液滴 12 滴四溅下坠 */
       for (let i = 0; i < 12; i++) {
         const s = document.createElement('span');
         s.className = 'gm-yolk-dot';
         const sz = 4 + Math.random() * 7;
         s.style.width = sz + 'px'; s.style.height = sz + 'px';
-        s.style.left = (rc.left + rc.width / 2 - sz / 2) + 'px';
-        s.style.top = (rc.top + rc.height / 2 - sz / 2) + 'px';
+        s.style.left = (cx - sz / 2) + 'px';
+        s.style.top = (cy - sz / 2) + 'px';
         document.body.appendChild(s);
         const ang = (Math.PI * 2) * (i / 12) + Math.random() * 0.8;
         const dist = 30 + Math.random() * 52;
@@ -14823,11 +14855,11 @@ const Games = (function () {
           { transform: 'translate(' + (Math.cos(ang) * dist) + 'px,' + (Math.sin(ang) * dist * 0.6 + 34) + 'px) scale(' + (0.4 + Math.random() * 0.7) + ')', opacity: 0 }
         ], { duration: 460 + Math.random() * 340, easing: 'cubic-bezier(.2,.6,.4,1)' }).onfinish = () => s.remove();
       }
-      /* 摊破的蛋液糊在头像上 1.4 秒（不规则蛋黄渍，不是锅） */
+      /* 摊破的蛋液渍糊在头像上 1.4 秒 */
       const blob = document.createElement('span');
       blob.className = 'gm-splatface';
-      blob.style.left = (rc.left + rc.width / 2 - 33) + 'px';
-      blob.style.top = (rc.top + rc.height / 2 - 27) + 'px';
+      blob.style.left = (cx - 33) + 'px';
+      blob.style.top = (cy - 27) + 'px';
       document.body.appendChild(blob);
       setTimeout(() => { blob.style.opacity = '0'; }, 1100);
       setTimeout(() => blob.remove(), 1500);
@@ -14838,8 +14870,8 @@ const Games = (function () {
       const s = document.createElement('span');
       s.className = 'gm-prop-bit';
       s.textContent = i % 2 === 0 ? bits[0] : bits[1];
-      s.style.left = (rc.left + rc.width / 2 - 10) + 'px';
-      s.style.top = (rc.top + rc.height / 2 - 10) + 'px';
+      s.style.left = (cx - 10) + 'px';
+      s.style.top = (cy - 10) + 'px';
       document.body.appendChild(s);
       const ang = (Math.PI * 2) * (i / 10) + Math.random() * 0.7;
       const dist = 36 + Math.random() * 46;
@@ -14905,14 +14937,13 @@ const Games = (function () {
   }
   function playUnoCard(r, uid, idx, color, fromRect) {
     const d = defOf(r);
-    const before = (r.uno.hands[uid] || []).length;
     const res = d.applyCard(r, uid, idx, color);
     if (res && res.err) return UI.toast(res.err);
     const card = r.uno.pile[r.uno.pile.length - 1];
     if (fromRect) d.afterPlay(r, { fromRect: fromRect, card: card });
     feed(r, 'sys', esc(name(uid)) + ' 打出 ' + esc(cardLabel(card)));
     if (res && res.uno) { d.unoPop(res.uno); feed(r, 'sys', esc(name(res.uno)) + ' 只剩一张——UNO！'); }
-    if (res && res.win) return endGame(r, { win: res.win, line: [] });
+    if (res && res.win) return endGame(r, { win: res.win, line: [] });   // 终局结算唯一入口（她 #67 漏参教训：编排层不齐=卡局）
     scheduleNextUno(r);
   }
   function scheduleNextUno(r) {
@@ -15344,9 +15375,10 @@ const Games = (function () {
 
   /* ---------- 启动 ---------- */
   function init() {
+    /* 注册顺序=大厅卡牌排位（她 08-29：UNO 放第二排，即五子棋旁边，扫雷往后排） */
     register(Gomoku.def());
-    register(Mine.def());
     register(Uno.def());
+    register(Mine.def());
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
