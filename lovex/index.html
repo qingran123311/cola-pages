@@ -2064,7 +2064,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-st svg{flex:none}
 .qz-st.ok{color:#2e7d32;background:rgba(46,125,50,.1)}
 .qz-st.wait{color:#b26a00;background:rgba(179,106,0,.1)}
-.theme-dark .qz-st.ok{color:#7bc47f}.theme-dark .qz-st.wait{color:#e0b45f}
 /* 出卷 sheet 内部 */
 .qz-sheet{max-height:82vh}
 .qz-pick-t{padding:12px 16px 4px;font-size:13px;color:var(--t2);display:flex;align-items:baseline}
@@ -2116,17 +2115,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-imp-item small{float:right;color:var(--t2);font-size:11.5px}
 #qz-imp-ok:disabled{opacity:.4}
 /* 卷详情页 */
-.qzv-meta{padding:10px 14px;font-size:12.5px;color:var(--t2)}
 .qzv-paper{margin-top:10px;padding:12px 14px}
 .qzv-name{display:flex;align-items:center;gap:6px;font-size:14.5px;color:var(--t1);font-weight:600}
-.qzv-ts{display:block;margin-top:2px;color:var(--t2);font-size:11.5px}
 .qzv-waiting{padding:18px 0;text-align:center;color:var(--t2);font-size:13px}
 .qzv-q{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
 .qzv-q-t{font-size:14px;color:var(--t1);line-height:1.55}
 .qzv-q-t em{font-style:normal;font-size:11px;color:var(--t2);border:1px solid var(--line);
   border-radius:6px;padding:1px 5px;margin-left:5px}
-.qzv-q-a{margin-top:6px;font-size:14.5px;color:var(--primary);line-height:1.6;
-  padding-left:9px;border-left:3px solid var(--primary);word-break:break-all}
 .qzv-comment{margin-top:12px;font-size:13.5px;color:var(--t1);background:var(--bg);
   border-radius:10px;padding:9px 12px;line-height:1.6}
 .qzv-comment span{display:block;font-size:11.5px;color:var(--t2);margin-bottom:3px}
@@ -2164,7 +2159,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-pc-mid small{font-size:12px;color:var(--t2)}
 .qz-pc-arrow{color:var(--t2);display:flex}
 .qz-pc-done .qz-pc-ico{color:#2e7d32}
-.theme-dark .qz-pc-done .qz-pc-ico{color:#7bc47f}
 
 /* ===== P34 详情页重做（她 16:57“有点简陋”）：卷头 hero+题号圆标+引用条答案 ===== */
 .qzv-hero{padding:16px 16px 13px}
@@ -2259,20 +2253,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qz-sort-line b{width:26px;height:24px;border:1.5px solid var(--line);border-radius:7px;
   display:inline-flex;align-items:center;justify-content:center;color:var(--t2);
   font-weight:600;cursor:pointer}
-.qz-duet-tag{font-size:10.5px;font-weight:600;color:var(--t2);border:1px solid var(--line);
-  border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:3px}
 
 .qzv-paper.qz-duet{margin-top:10px}
-.duet-row.hit{background:rgba(46,125,50,.06);border-radius:10px;padding:9px}
-.theme-dark .duet-row.hit{background:rgba(123,196,127,.08)}
-.qz-duet-line{display:flex;align-items:baseline;gap:8px;margin-top:7px;font-size:14px;
-  color:var(--t1);line-height:1.55}
-.qz-duet-line span{flex:none;font-size:11px;color:var(--t2);border:1px solid var(--line);
-  border-radius:6px;padding:1px 6px;transform:translateY(-1px)}
-.qz-duet-line.ta span{color:var(--primary);border-color:var(--primary)}
 .qz-hit{font-style:normal;display:inline-block;margin-top:6px;font-size:11.5px;
   font-weight:600;color:#2e7d32}
-.theme-dark .qz-hit{color:#7bc47f}
 .qz-duet-sum{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);
   font-size:13px;font-weight:700;color:var(--primary)}
 .qz-arch-card{margin-bottom:10px;padding:12px 14px}
@@ -2290,7 +2274,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* 聊天里的挑战书卡：墨色心形图标，完成态转绿 */
 .qz-pc-duet .qz-pc-ico{color:var(--t2)}
 .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#2e7d32}
-.theme-dark .qz-pc-duet.qz-pc-done .qz-pc-ico{color:#7bc47f}
 /* 单卷双色：TA=主题色实线描边（原有 .on），我=墨色虚线+「我」小标；双标同现即默契 */
 .qz-opt.mine{border-style:dashed;border-color:var(--qz-me);color:var(--qz-me)}
 .qz-opt .qz-mine-tag,.qz-opt .qz-ta-tag{text-decoration:none;margin-left:0;flex:none;font-size:10px;line-height:1;
@@ -2334,8 +2317,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-card b{font-size:15px}
 .gm-card small{color:var(--t3);font-size:11px}
 .gm-card-rec{color:var(--t2)!important}
-.gm-gear-mini{margin-top:2px;align-self:center;display:inline-flex;align-items:center;gap:5px;color:var(--t3);
-  font-size:11px;background:none;border:none;padding:6px 10px}
 /* ---------- 对局页 ---------- */
 #page-room .page-body-flush{gap:0;padding:0}
 .gm-players{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 12px 6px;position:relative}
@@ -2350,7 +2331,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-thinking{position:absolute;bottom:-4px;right:14px;font-size:10px;color:var(--t3)}
 .gm-splat .gm-ava{animation:gm-shake .45s}
 @keyframes gm-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}55%{transform:translateX(3px)}80%{transform:translateX(-2px)}}
-.gm-prop-fly{position:absolute;z-index:6;transition:transform .6s cubic-bezier(.3,.7,.4,1),opacity .2s;color:var(--t2);opacity:1}
+/* 道具飞行主体样式在文件尾 P40 补丁段（fixed 定位挂 body） */
 .gm-prop-fly.sticker{color:var(--g-stick-line)}
 .gm-prop-fly svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
 .gm-board-wrap{display:flex;flex-direction:column;align-items:center;padding:2px 12px}
@@ -2464,7 +2445,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 
 /* ---------- P40 补丁三（她 08-29 日间实测） ---------- */
 /* 道具飞行：0.9s 可见的弧线飞行 + 到达粘住，再淡出（她两轮说看不见动画） */
-.gm-prop-fly{position:absolute;z-index:6;color:var(--t2);opacity:1;will-change:transform,opacity;
+.gm-prop-fly{position:fixed;z-index:1200;color:var(--t1);opacity:1;will-change:transform,opacity;
   transition:transform .9s cubic-bezier(.35,.7,.35,1),opacity .3s .95s;
   filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
 .gm-prop-fly.sticker{color:var(--g-stick-line)}
@@ -4587,14 +4568,8 @@ var Quiz = (function () {
       (sel.includes(o) ? I('check', 10) : '') + esc(o) + '</span>').join('') + '</div>';
   }
   function starRow(n) { n = Math.max(1, Math.min(5, n | 0)); return '★'.repeat(n) + '☆'.repeat(5 - n); }
-  /* 默契对照用：把任意答案压成一行文本（supp/多选/排序/星星） */
-  function plainOf(t, a) {
-    if (a && a.__supp) return '补充：' + a.text;
-    if (a == null || a === '') return '（空）';
-    if (t.type === 'rate') return starRow(a);
-    if (Array.isArray(a)) return a.join(t.type === 'sort' ? ' → ' : '、');
-    return String(a);
-  }
+  /* 死代码清理（她 08-29 要求逐个查）：plainOf/ansText 早年默契对照的旧渲染口，
+     现全站只走 sameAns + starRow，两口子确认全站零引用后删除（扫描报告见 .vx-deadscan） */
   function sameAns(t, a, b) {
     const norm = v => {
       if (v && v.__supp) return { k: 'supp', text: v.text };
@@ -4611,13 +4586,6 @@ var Quiz = (function () {
     if (x.k === 'r') return x.v === y.v;
     if (x.k === 'supp') return false;   // 补充回答是自由发挥，不算默契
     return x.text === y.text;
-  }
-  function ansText(t, a) {
-    if (a == null) return '';
-    if (t.type === 'rate') return starRow(a);
-    if (t.type === 'multi') return Array.isArray(a) ? a.join('、') : String(a);
-    if (t.type === 'sort') return Array.isArray(a) ? a.join(' → ') : String(a);
-    return String(a);
   }
   function renderView() {
     const box = document.getElementById('qzv-body');
@@ -13986,15 +13954,6 @@ const Games = (function () {
   function open() { Router.go('game'); renderHall(); }
   function openRoom(roomId) { cur = roomId; Router.go('room'); renderRoom(); }
   function curRoom() { return S().rooms[cur] || null; }
-
-  function pairStats(ctId) {
-    let w = 0, l = 0, d = 0;
-    S().records.forEach(r => {
-      if (!(r.players || []).includes(ctId)) return;
-      if (r.winner === 'draw') d++; else if (r.winner === 'me') w++; else l++;
-    });
-    return { w, l, d, total: w + l + d };
-  }
   function renderHall() {
     const box = document.getElementById('gm-hall');
     if (!box) return;
@@ -14433,8 +14392,9 @@ const Games = (function () {
     DB.save(); renderRoom(); scheduleTimers(r);
   }
   /* 道具飞行动画：从 from 头像飞到 target 头像，到达后粘住 0.4s 再淡出 + 目标抖一下。
-     她 08-29 两批都在说"看不见动画"——要点：①强制回流后再起飞（否则瞬移）②飞 0.9s+粘住 0.4s（看得清）
-     ③图标放大 ④_TA 反向也走这（from/target 换位） */
+     她 08-29 两轮都说"看不见"——真根因：飞行节点原来挂在 .gm-players 里，而 throwProp 扔完
+     立刻 renderRoom() 整页重建，节点出生即被删（💥能看到正因为 boomAt 挂的是 body）。
+     修=节点挂 body + position:fixed（视口坐标），room 怎么重渲都杀不到它（台账 L2 同宗）。 */
   function propFly(p, fromUid, toUid) {
     const host = document.querySelector('.gm-players');
     if (!host) return;
@@ -14442,20 +14402,23 @@ const Games = (function () {
     const toEl = host.querySelector('.gm-player[data-uid="' + toUid + '"]');
     if (!fromEl || !toEl) return;
     const svg = S().propsStyle === 'sticker' ? p.sticker : p.line;
-    const el = document.createElement('span');
+    const el = document.createElement('div');
     el.className = 'gm-prop-fly' + (S().propsStyle === 'sticker' ? ' sticker' : '');
-    el.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' + svg + '</svg>';
-    const hr = host.getBoundingClientRect(), fr = fromEl.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
-    el.style.left = (fr.left - hr.left + fr.width / 2 - 17) + 'px';
-    el.style.top = (fr.top - hr.top) + 'px';
-    host.appendChild(el);
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' + svg + '</svg>';
+    const fr = fromEl.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
+    el.style.left = (fr.left + fr.width / 2 - 17) + 'px';
+    el.style.top = (fr.top - 6) + 'px';
+    document.body.appendChild(el);                          // 挂 body：renderRoom 重建杀不到
     void el.offsetWidth;                                    // 强制回流：初始态必须先画完
-    el.style.setProperty('--fx', (tr.left - fr.left) + 'px');
+    el.style.setProperty('--fx', (tr.left + tr.width / 2 - (fr.left + fr.width / 2)) + 'px');
     el.style.setProperty('--fy', (tr.top - fr.top - 6) + 'px');
     el.style.transform = 'translate(var(--fx), var(--fy))';
-    setTimeout(() => { toEl.classList.add('gm-splat'); }, 900);
+    setTimeout(() => {
+      const t2 = document.querySelector('.gm-players [data-uid="' + toUid + '"]');   // 重渲后现查，防旧引用
+      if (t2) t2.classList.add('gm-splat');
+    }, 900);
     setTimeout(() => { el.style.opacity = '0'; }, 1350);
-    setTimeout(() => { el.remove(); toEl.classList.remove('gm-splat'); }, 1700);
+    setTimeout(() => { el.remove(); }, 1700);
   }
   function throwProp(id) {
     const r = curRoom(); if (!r || !taUid(r)) return;
