@@ -2484,6 +2484,45 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     radial-gradient(circle at 82% 58%, #F2CE5F 0 12%, transparent 13%);
   filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
 
+/* ---------- P40e UNO（她 08-29 排队点名） ---------- */
+.un-foes{display:flex;justify-content:center;gap:10px;padding:0 12px 4px;flex-wrap:wrap}
+.un-foe{font-size:11px;color:var(--t3)}
+.un-foe b{color:var(--t1)}
+.un-table{display:flex;align-items:center;justify-content:center;gap:18px;padding:4px 12px 8px;position:relative}
+.un-deck{position:relative;cursor:pointer}
+.un-deck.un-can .un-card{outline:2.5px solid var(--primary);outline-offset:2px;animation:un-breathe 1.2s infinite}
+@keyframes un-breathe{0%,100%{outline-color:color-mix(in srgb,var(--primary) 40%,transparent)}50%{outline-color:var(--primary)}}
+.un-deck small{position:absolute;right:-4px;bottom:-6px;font-size:10px;color:var(--t3)}
+.un-pile{position:relative}
+.un-eff{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);font-size:10px;color:#fff;
+  border-radius:8px;padding:1px 8px;white-space:nowrap}
+.un-card{width:64px;height:94px;border-radius:9px;position:relative;flex:none;
+  border:2px solid rgba(0,0,0,.28);box-shadow:0 2px 5px rgba(0,0,0,.22);
+  display:flex;align-items:center;justify-content:center}
+.un-card b{font-size:26px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);
+  font-family:'Comic Sans MS','Segoe Print',cursive}
+.un-card .un-corner{position:absolute;font-style:normal;font-size:11px;font-weight:700;color:#fff;top:3px;left:5px;opacity:.9}
+.un-card .un-corner.b{top:auto;left:auto;bottom:3px;right:5px;transform:rotate(180deg)}
+.un-card.un-c-r{background:linear-gradient(160deg,#D96A5E,#B94A40)}
+.un-card.un-c-y{background:linear-gradient(160deg,#E9C46A,#C99E3E)}
+.un-card.un-c-g{background:linear-gradient(160deg,#7FA97C,#5E8A5B)}
+.un-card.un-c-b{background:linear-gradient(160deg,#7E9CC0,#5B7AA0)}
+.un-card.un-c-w{background:linear-gradient(135deg,#4A4A52 0 25%,#D96A5E 0 50%,#7FA97C 0 75%,#E9C46A 0)}
+.un-card.un-back{background:repeating-linear-gradient(45deg,#3E3E46 0 8px,#33333B 8px 16px);color:var(--t3)}
+.un-card.un-back b{font-size:14px;letter-spacing:1px;color:var(--t3)}
+.un-card.un-empty{background:var(--fill);border:2px dashed var(--line);box-shadow:none}
+.un-hand{display:flex;overflow-x:auto;gap:7px;padding:8px 14px 10px;scroll-snap-type:x proximity;min-height:100px;align-items:center}
+.un-hand .un-card{scroll-snap-align:center;cursor:pointer}
+.un-hand .un-ok{outline:2.5px solid var(--primary);outline-offset:1px;transform:translateY(-8px)}
+.un-hand .un-dim{filter:brightness(.72)}
+.un-fly{position:fixed;z-index:1200;pointer-events:none}
+.un-fly .un-card{width:64px;height:94px}
+.un-pop{position:fixed;z-index:1202;font-size:26px;font-weight:800;font-style:italic;color:var(--t1);
+  background:var(--card);border:2px solid var(--t1);border-radius:12px;padding:4px 14px;
+  pointer-events:none;font-family:'Comic Sans MS','Segoe Print',cursive;
+  box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.un-wash{position:fixed;z-index:1198;border-radius:9px;pointer-events:none}
+
 </style>
 </head>
 <body>
@@ -5350,7 +5389,8 @@ const ICONS = {
   'quiz':          '<rect x="4.5" y="4" width="15" height="16.5" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M8.5 10.5h7M8.5 14h7M8.5 17.5h4"/>',
   'gamepad':       '<path d="M7 8.5h10a4.3 4.3 0 0 1 4.2 5.2l-.7 3.6a2.5 2.5 0 0 1-4.4 1L14.7 16.5H9.3l-1.4 1.8a2.5 2.5 0 0 1-4.4-1l-.7-3.6A4.3 4.3 0 0 1 7 8.5z"/><path d="M8 11v3.4M6.3 12.7h3.4"/><circle cx="15.8" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.6" r="0.7" fill="currentColor" stroke="none"/>',
   'go-board':      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/><circle cx="9.3" cy="9.3" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/><circle cx="14.6" cy="9.3" r="1.4" fill="currentColor" stroke="none"/>',
-  'mine-bomb':     '<circle cx="12" cy="13.5" r="6"/><path d="M12 4v3M12 20v2.5M2.5 13.5H5M19 13.5h2.5M4.8 6.3l1.9 1.9M19.2 6.3l-1.9 1.9"/><path d="M12 7V4.8l2-1" stroke-linejoin="round"/>'
+  'mine-bomb':     '<circle cx="12" cy="13.5" r="6"/><path d="M12 4v3M12 20v2.5M2.5 13.5H5M19 13.5h2.5M4.8 6.3l1.9 1.9M19.2 6.3l-1.9 1.9"/><path d="M12 7V4.8l2-1" stroke-linejoin="round"/>',
+  'cards-uno':     '<rect x="5" y="4" width="13" height="16" rx="2.5"/><rect x="8.5" y="3" width="13" height="16" rx="2.5" fill="none"/><ellipse cx="15" cy="11" rx="3.4" ry="4.6"/>'
 };
 
 function I(name, size = 18) {
@@ -13879,6 +13919,255 @@ const Mine = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · uno.js —— UNO（P40e，她排队点名的第二个多人游戏）
+   规则：108 张标准牌（4色×数字/跳过/反转/+2 + 4换色 + 4换色+4）；
+   2 人局反转=跳过；无牌可出摸 1 张，摸到能出可出可过；先出完赢。
+   多人：发起时多选 1~5 位 TA（各自 80% 应约，拒绝者出局）；
+   先手=发起人（她没给多人协商口径，先按庄家惯例我先行，要改说话）。
+   TA 不作弊：只看自己手牌+桌面顶牌做启发式（优先打下一家手少时的功能牌、
+   换色选自己手里最多的颜色、万能牌留最后）。
+   动画（她三令五申）：出牌=卡片从手飞到桌面（WAAPI 挂 body）；摸牌=牌堆飞到手；
+   UNO=大字弹出；换色=桌面色晕一闪。全部 body 挂载，整页重建杀不到。
+   ===================================================== */
+const Uno = (function () {
+
+  const COLORS = ['r', 'y', 'g', 'b'];
+  const CNAME = { r: '红', y: '黄', g: '绿', b: '蓝' };
+  const CHEX = { r: '#D96A5E', y: '#E9C46A', g: '#7FA97C', b: '#7E9CC0' };
+
+  function uidR() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function buildDeck() {
+    const d = [];
+    COLORS.forEach(c => {
+      d.push({ c: c, v: '0', id: uidR() });
+      for (let n = 1; n <= 9; n++) { d.push({ c: c, v: String(n), id: uidR() }); d.push({ c: c, v: String(n), id: uidR() }); }
+      ['S', 'R', 'D2'].forEach(v => { d.push({ c: c, v: v, id: uidR() }); d.push({ c: c, v: v, id: uidR() }); });
+    });
+    for (let i = 0; i < 4; i++) d.push({ c: 'w', v: 'W', id: uidR() });
+    for (let i = 0; i < 4; i++) d.push({ c: 'w', v: 'D4', id: uidR() });
+    return shuffle(d);
+  }
+  function faceTxt(v) {
+    return v === 'S' ? '⊘' : v === 'R' ? '⇄' : v === 'D2' ? '+2' : v === 'D4' ? '+4' : v === 'W' ? '◎' : v;
+  }
+  function cardHtml(card, cls) {
+    if (!card) return '<div class="un-card un-empty' + (cls ? ' ' + cls : '') + '"></div>';
+    const isWild = card.c === 'w';
+    return '<div class="un-card ' + (isWild ? 'un-c-w' : 'un-c-' + card.c) + (cls ? ' ' + cls : '') + '" data-cid="' + card.id + '">' +
+      '<i class="un-corner">' + faceTxt(card.v) + '</i><b>' + faceTxt(card.v) + '</b><i class="un-corner b">' + faceTxt(card.v) + '</i>' +
+      '</div>';
+  }
+
+  /* ---------- 房间数据 ---------- */
+  function U(room) { return room.uno; }
+  function newRoom(room) {
+    const deck = buildDeck();
+    const hands = {};
+    room.players.forEach(p => { hands[p] = []; });
+    room.players.forEach(p => { for (let i = 0; i < 7; i++) hands[p].push(deck.pop()); });
+    /* 翻出首张：跳过功能牌直到数字牌（她没给口径，按常见家规：首张必须是数字牌） */
+    let top = deck.pop();
+    while (top.v !== String(+top.v)) { deck.unshift(top); top = deck.pop(); }
+    room.uno = {
+      deck: deck, hands: hands, pile: [top],
+      effColor: top.c, effVal: top.v,
+      turnIdx: Math.max(0, room.players.indexOf(room.blackUid || 'me')),
+      dir: 1, waitPass: false
+    };
+  }
+  function turnOf(room) { const u = U(room); return room.players[((u.turnIdx % room.players.length) + room.players.length) % room.players.length]; }
+  function nextIdx(room, step) { const u = U(room); const n = room.players.length; return ((u.turnIdx + u.dir * step) % n + n) % n; }
+  function canPlay(u, card) { return card.c === 'w' || card.c === u.effColor || card.v === u.effVal; }
+  function hasPlayable(room, uid) { const u = U(room); return u.hands[uid].some(c => canPlay(u, c)); }
+  function drawCards(room, uid, n) {
+    const u = U(room);
+    const got = [];
+    for (let i = 0; i < n; i++) {
+      if (!u.deck.length) {                       /* 牌堆空：桌面(留顶张)洗回 */
+        const top = u.pile.pop();
+        u.deck = shuffle(u.pile.slice());
+        u.pile = [top];
+        if (!u.deck.length) break;
+      }
+      const c = u.deck.pop();
+      u.hands[uid].push(c); got.push(c);
+    }
+    return got;
+  }
+  function advance(room, skip) { const u = U(room); u.turnIdx = nextIdx(room, skip ? 2 : 1); u.waitPass = false; }
+
+  /* 出牌：uid 出 hands[uid][idx]；wild 传 chosen 颜色。返回 {win:uid}|{uno:uid}|null */
+  function applyCard(room, uid, idx, chosen) {
+    const u = U(room);
+    if (turnOf(room) !== uid) return { err: '没轮到' };
+    const card = u.hands[uid][idx];
+    if (!card || !canPlay(u, card)) return { err: '这张出不了' };
+    u.hands[uid].splice(idx, 1);
+    u.pile.push(card);
+    u.effColor = card.c === 'w' ? (chosen || 'r') : card.c;
+    u.effVal = card.v;
+    u.lastPlay = { uid: uid, card: card, chosen: card.c === 'w' ? u.effColor : null };
+    if (!u.hands[uid].length) return { win: uid };
+    let res = null;
+    if (u.hands[uid].length === 1) res = { uno: uid };
+    const n = room.players.length;
+    if (card.v === 'S') { advance(room, true); }
+    else if (card.v === 'R') {
+      if (n === 2) advance(room, true);
+      else { u.dir = -u.dir; advance(room, false); }
+    } else if (card.v === 'D2' || card.v === 'D4') {
+      const victim = room.players[nextIdx(room, 1)];
+      drawCards(room, victim, card.v === 'D2' ? 2 : 4);
+      advance(room, true);
+    } else advance(room, false);
+    return res;
+  }
+  function applyPass(room, uid) {
+    if (turnOf(room) !== uid) return { err: '没轮到' };
+    advance(room, false);
+    return null;
+  }
+  /* TA 出牌（启发式，不开天眼）：返回 {play:idx, color?} | {draw:true} */
+  function aiPick(room, taUid) {
+    const u = U(room);
+    if (turnOf(room) !== taUid) return { err: '没轮到' };
+    const hand = u.hands[taUid];
+    const playable = [];
+    hand.forEach((c, i) => { if (canPlay(u, c)) playable.push({ c: c, i: i }); });
+    if (!playable.length) return { draw: true };
+    /* 我手里各色数量（换色选最多的颜色） */
+    const cnt = { r: 0, y: 0, g: 0, b: 0 };
+    hand.forEach(c => { if (c !== 'w') cnt[c]++; });
+    const nextVictim = room.players[nextIdx(room, 1)];
+    const victimLow = (u.hands[nextVictim] || []).length <= 2;
+    let best = null, bestScore = -1;
+    playable.forEach(p => {
+      let s = 0;
+      if (p.c.c === 'w') s = 1;                                    /* 万能牌留着 */
+      else if (p.c.v === 'D4') s = victimLow ? 90 : 2;
+      else if (p.c.v === 'D2') s = victimLow ? 80 : 8;
+      else if (p.c.v === 'S') s = victimLow ? 70 : 10;
+      else if (p.c.v === 'R') s = victimLow ? 60 : 12;
+      else s = 20 + cnt[p.c.c];                                    /* 数字牌：打自己多的色 */
+      if (s > bestScore) { bestScore = s; best = p; }
+    });
+    if (!best) return { draw: true };
+    return { play: best.i, color: best.c.c === 'w' ? COLORS[cnt.r >= cnt.y && cnt.r >= cnt.g && cnt.r >= cnt.b ? 0 :
+      cnt.y >= cnt.g && cnt.y >= cnt.b ? 1 : cnt.g >= cnt.b ? 2 : 3] : null };
+  }
+
+  /* ---------- 渲染 ---------- */
+  function render(room, el) {
+    const u = U(room);
+    const my = u.hands['me'] || [];
+    const myTurn = turnOf(room) === 'me' && room.phase === 'playing';
+    const sorted = my.map((c, i) => ({ c: c, i: i }))
+      .sort((a, b) => (a.c.c === 'w' ? 1 : 0) - (b.c.c === 'w' ? 1 : 0) || (COLORS.indexOf(a.c.c) - COLORS.indexOf(b.c.c)) || (a.c.v < b.c.v ? -1 : 1));
+    let h = '<div class="un-table">';
+    h += '<div class="un-deck' + (myTurn && !hasPlayable(room, 'me') ? ' un-can' : '') + '" id="un-deck">' +
+      '<div class="un-card un-back"><i class="un-corner">◎</i><b>UNO</b><i class="un-corner b">◎</i></div>' +
+      '<small>' + u.deck.length + '</small></div>';
+    const top = u.pile[u.pile.length - 1];
+    h += '<div class="un-pile" id="un-pile">' + cardHtml(top) +
+      (top.c === 'w' && u.effColor ? '<span class="un-eff" style="background:' + CHEX[u.effColor] + '">' + CNAME[u.effColor] + '</span>' : '') +
+      '</div>';
+    h += '</div>';
+    /* 我方手牌：可出的抬高描边，不可出的压暗；轮到我+没牌可出 → 摸牌钮呼吸 */
+    h += '<div class="un-hand" id="un-hand">' + sorted.map(o => {
+      const ok = myTurn && canPlay(u, o.c);
+      return cardHtml(o.c, ok ? ' un-ok' : (myTurn ? ' un-dim' : ''));
+    }).join('') + '</div>';
+    if (myTurn && u.waitPass) h += '<div class="gm-nego"><button class="btn btn-secondary" id="un-pass">过</button></div>';
+    el.innerHTML = h;
+    el.querySelectorAll('#un-hand .un-card').forEach((cardEl, k) => {
+      cardEl.addEventListener('click', () => {
+        const o = sorted[k];
+        if (typeof Games !== 'undefined' && Games.unoPlay) Games.unoPlay(o.i, cardEl);
+      });
+    });
+    const deckEl = el.querySelector('#un-deck');
+    if (deckEl) deckEl.addEventListener('click', () => {
+      if (typeof Games !== 'undefined' && Games.unoDraw) Games.unoDraw(deckEl);
+    });
+    const pass = el.querySelector('#un-pass');
+    if (pass) pass.addEventListener('click', () => {
+      if (typeof Games !== 'undefined' && Games.unoPass) Games.unoPass();
+    });
+  }
+  var COLORORS = COLORS;   /* 排序用别名（渲染函数在 COLORORS 声明前引用，var 提升） */
+
+  /* ---------- 动画（挂 body，WAAPI；她三令五申） ---------- */
+  function flyCard(fromRect, toEl, card) {
+    if (!fromRect || !toEl) return;
+    const tr = toEl.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'un-fly';
+    ghost.innerHTML = cardHtml(card);
+    ghost.style.left = fromRect.left + 'px';
+    ghost.style.top = fromRect.top + 'px';
+    document.body.appendChild(ghost);
+    ghost.animate([
+      { transform: 'translate(0,0) rotate(0deg) scale(1)' },
+      { transform: 'translate(' + ((tr.left + tr.width / 2) - (fromRect.left + fromRect.width / 2)) + 'px,' +
+        ((tr.top + tr.height / 2) - (fromRect.top + fromRect.height / 2) - 26) + 'px) rotate(340deg) scale(1.05)', offset: 0.6 },
+      { transform: 'translate(' + ((tr.left + tr.width / 2) - (fromRect.left + fromRect.width / 2)) + 'px,' +
+        ((tr.top + tr.height / 2) - (fromRect.top + fromRect.height / 2)) + 'px) rotate(360deg) scale(.92)' }
+    ], { duration: 620, easing: 'cubic-bezier(.3,.6,.3,1)' }).onfinish = () => ghost.remove();
+  }
+  function unoPop(uid) {
+    const chip = document.querySelector('.gm-players [data-uid="' + uid + '"]');
+    if (!chip) return;
+    const rc = chip.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'un-pop';
+    el.textContent = 'UNO!';
+    el.style.left = (rc.left + rc.width / 2 - 44) + 'px';
+    el.style.top = (rc.top - 34) + 'px';
+    document.body.appendChild(el);
+    el.animate([
+      { transform: 'scale(.3) rotate(-14deg)', opacity: 0 },
+      { transform: 'scale(1.25) rotate(6deg)', opacity: 1, offset: 0.45 },
+      { transform: 'scale(1) rotate(-3deg)', opacity: 1, offset: 0.7 },
+      { transform: 'scale(1.1)', opacity: 0 }
+    ], { duration: 1300, easing: 'ease-out' }).onfinish = () => el.remove();
+  }
+  function colorWash(hex) {
+    const pile = document.getElementById('un-pile');
+    if (!pile) return;
+    const rc = pile.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'un-wash';
+    el.style.left = rc.left + 'px'; el.style.top = rc.top + 'px';
+    el.style.width = rc.width + 'px'; el.style.height = rc.height + 'px';
+    el.style.background = hex;
+    document.body.appendChild(el);
+    el.animate([{ opacity: .85 }, { opacity: 0 }], { duration: 800 }).onfinish = () => el.remove();
+  }
+  function afterPlay(room, info) {
+    const u = U(room);
+    const pile = document.getElementById('un-pile');
+    if (pile) flyCard(info.fromRect, pile, info.card);
+    if (info.card && info.card.c === 'w' && info.uid !== undefined) colorWash(CHEX[u.effColor]);
+  }
+
+  function def() {
+    return {
+      id: 'uno', name: 'UNO', icon: 'cards-uno', playersTxt: '2~6 人', multi: true,
+      newRoom, turnOf, hasPlayable, applyCard, applyPass, applyDraw: drawCards, aiPick,
+      render, afterPlay, unoPop, handCount: (room, uid) => (U(room).hands[uid] || []).length
+    };
+  }
+  return { def };
+})();
+
+/* =====================================================
    LOVE♡X · game.js —— 游戏板块（P40，她 08-28 晚拍板「动工」）
    发现页「游戏」行 → 大厅（线稿卡牌架）→ 开局（选人→邀请 80/20→先手协商 70/30）→ 对局页
    对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
@@ -14018,20 +14307,76 @@ const Games = (function () {
     if (!pool.length) return UI.toast('先创建 AI 联系人再开局');
     const mask = document.createElement('div');
     mask.className = 'dialog-mask';
-    mask.innerHTML = '<div class="dialog"><div class="dialog-title">选一位对手</div>' +
+    const multi = REG[gameId].multi;
+    mask.innerHTML = '<div class="dialog"><div class="dialog-title">' + (multi ? '选对手（可多选，1~5 位）' : '选一位对手') + '</div>' +
       '<div class="form-body pick-list gm-pick"></div>' +
-      '<div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button></div></div>';
+      '<div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button>' +
+      (multi ? '<button class="btn btn-primary" data-ok>开始</button>' : '') + '</div></div>';
     const list = mask.querySelector('.gm-pick');
     pool.forEach(ct => {
       const row = document.createElement('button');
-      row.className = 'pick-row';
-      row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span><span class="chevron">›</span>';
-      row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
+      row.className = 'pick-row' + (multi ? ' pick-checkable' : '');
+      row.dataset.id = ct.id;
+      row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span>' + (multi ? '<span class="pick-check"></span>' : '<span class="chevron">›</span>');
+      if (multi) {
+        row.addEventListener('click', () => row.classList.toggle('on'));
+      } else {
+        row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
+      }
       list.appendChild(row);
+    });
+    const okBtn = mask.querySelector('[data-ok]');
+    if (okBtn) okBtn.addEventListener('click', () => {
+      /* dataset.id 取勾选行（名字匹配会被重名/长名坑，她 08-29 长名压测的教训） */
+      const chosen = [...list.querySelectorAll('.pick-row.on')]
+        .map(b => pool.find(c => c.id === b.dataset.id))
+        .filter(Boolean)
+        .slice(0, 5);
+      if (!chosen.length) return UI.toast('至少选一位');
+      mask.remove();
+      inviteMulti(chosen.map(c => c.id), gameId);
     });
     mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
     document.getElementById('dialog-layer').appendChild(mask);
     UI.raise(mask);
+  }
+  /* 多人开局（UNO）：逐个 80/20 应约，拒者出局；全拒则不开局 */
+  function inviteMulti(ctIds, gameId) {
+    const accepted = [];
+    ctIds.forEach((cid, i) => {
+      const ct = Home.contactById(cid);
+      const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === cid);
+      if (Math.random() * 100 < INVITE_AGREE) {
+        accepted.push(cid);
+        if (conv && typeof Engine !== 'undefined' && Engine.pushRaw)
+          Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: name(cid) + ' 加入了 UNO 局' });
+      } else if (conv && typeof Engine !== 'undefined' && Engine.pushRaw) {
+        Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: name(cid) + ' 婉拒了这局 UNO' });
+      }
+    });
+    if (!accepted.length) return UI.toast('都被婉拒了，另请几位吧');
+    const players = ['me'].concat(accepted);
+    const room = {
+      id: 'gm' + uidR(), game: gameId, players: players, blackUid: 'me',
+      phase: 'playing', moves: [], plans: [], feed: [], winLine: [],
+      status: 'playing', winner: null, spun: false,
+      stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
+    };
+    S().rooms[room.id] = room;
+    const d0 = REG[gameId]; if (d0 && d0.newRoom) d0.newRoom(room);
+    feed(room, 'sys', 'UNO 开局：' + players.map(p => esc(name(p))).join('、'));
+    scheduleFirstTurn(room);
+    openRoom(room.id);
+  }
+  function scheduleFirstTurn(room) {
+    const d = defOf(room);
+    if (room.game === 'gomoku' || room.game === 'mine') {
+      room.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+      if (room.blackUid !== 'me') room.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+    } else if (room.game === 'uno' && d.turnOf(room) !== 'me') {
+      room.plans.push({ kind: 'unoTurn', at: Date.now() + rand(3, 8) * 1000, done: false });
+    }
+    DB.save(); scheduleTimers(room);
   }
   function invite(ctId, gameId) {
     const room = {
@@ -14251,6 +14596,7 @@ const Games = (function () {
         else if (p.kind === 'say') execSay(r, p);
         else if (p.kind === 'urge') execUrge(r);
         else if (p.kind === 'taProp') execTaProp(r, p);
+        else if (p.kind === 'unoTurn') execUnoTurn(r);
         acted = true;
       });
       r.plans = (r.plans || []).filter(p => !p.done);
@@ -14293,6 +14639,11 @@ const Games = (function () {
       (thinking ? '<span class="gm-thinking">' + esc(name(ta)) + ' 正在想…</span>' : '') +
       '</div>';
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
+    /* UNO：对手手牌数横排（她要看谁快没了） */
+    if (r.game === 'uno') {
+      h += '<div class="un-foes">' + (r.players || []).filter(p => p !== 'me').map(p =>
+        '<span class="un-foe">' + esc(name(p)) + ' <b>' + (r.uno.hands[p] || []).length + '</b> 张</span>').join('') + '</div>';
+    }
     /* 短语/道具面板开在玩家条正下方（她 08-29：双击头像却要划到最底下才看得到，来回划） */
     h += '<div class="gm-chips hidden" id="room-chips"></div>' +
          '<div class="gm-chips gm-proprow hidden" id="room-props"></div>';
@@ -14324,7 +14675,7 @@ const Games = (function () {
       '<button class="gm-chip-btn" id="room-quick">短语</button>' +
       '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
       '<button class="gm-send" id="room-send">发</button>' +
-      '<button class="gm-resign" id="room-resign">认输</button>' +
+      (r.game === 'uno' ? '<button class="gm-resign" id="room-resign">认输</button>' : '<button class="gm-resign" id="room-resign">认输</button>') +
       '</div>';
     body.innerHTML = h;
     /* 棋盘 */
@@ -14521,6 +14872,109 @@ const Games = (function () {
     feed(r, 'sys', esc(name(taUid(r))) + ' ' + verb + ' ' + esc(name('me')) + (back.id === 'flower' ? ' 一束花' : back.id === 'hammer' ? ' 桌面' : ' 脸上'));
     propFly(back, taUid(r), 'me');
   }
+
+  /* ---------- UNO：回合执行 + 我方操作 ---------- */
+  function execUnoTurn(r) {
+    const d = defOf(r);
+    const uid = d.turnOf(r);
+    if (r.phase !== 'playing' || uid === 'me') return;
+    const mv = d.aiPick(r, uid);
+    if (mv.err) return;
+    if (mv.draw) {
+      d.applyDraw(r, uid, 1);
+      feed(r, 'sys', esc(name(uid)) + ' 摸了一张牌');
+      const u = r.uno;
+      const hand = u.hands[uid];
+      const last = hand[hand.length - 1];
+      const uno2 = typeof Uno !== 'undefined' ? Uno.def() : null;
+      if (uno2 && uno2.hasPlayable(r, uid)) {           /* 摸到能出 → 稍候打出 */
+        r.plans.push({ kind: 'unoTurn', at: Date.now() + rand(2, 5) * 1000, done: false });
+      } else {
+        r.plans.push({ kind: 'unoPass', at: Date.now() + rand(1, 3) * 1000, done: false, uid: uid });
+      }
+      DB.save();
+      return;
+    }
+    playUnoCard(r, uid, mv.play, mv.color, null);
+  }
+  function execUnoPass(r, p) {
+    const d = defOf(r);
+    d.applyPass(r, p.uid || d.turnOf(r));
+    feed(r, 'sys', esc(name(p.uid || d.turnOf(r))) + ' 过');
+    scheduleNextUno(r);
+  }
+  function playUnoCard(r, uid, idx, color, fromRect) {
+    const d = defOf(r);
+    const before = (r.uno.hands[uid] || []).length;
+    const res = d.applyCard(r, uid, idx, color);
+    if (res && res.err) return UI.toast(res.err);
+    const card = r.uno.pile[r.uno.pile.length - 1];
+    if (fromRect) d.afterPlay(r, { fromRect: fromRect, card: card });
+    feed(r, 'sys', esc(name(uid)) + ' 打出 ' + esc(cardLabel(card)));
+    if (res && res.uno) { d.unoPop(res.uno); feed(r, 'sys', esc(name(res.uno)) + ' 只剩一张——UNO！'); }
+    if (res && res.win) return endGame(r, { win: res.win, line: [] });
+    scheduleNextUno(r);
+  }
+  function scheduleNextUno(r) {
+    const d = defOf(r);
+    if (d.turnOf(r) !== 'me') {
+      r.plans.push({ kind: 'unoTurn', at: Date.now() + rand(3, 8) * 1000, done: false });
+    } else {
+      r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+    }
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function cardLabel(card) {
+    const CN2 = { r: '红', y: '黄', g: '绿', b: '蓝' };
+    const face = card.v === 'S' ? '跳过' : card.v === 'R' ? '反转' : card.v === 'D2' ? '+2' : card.v === 'D4' ? '+4' : card.v === 'W' ? '换色' : card.v;
+    return (card.c === 'w' ? '' : CN2[card.c]) + face;
+  }
+  /* 我方操作（render 里的点击回调） */
+  function unoPlay(idx, cardEl) {
+    const r = curRoom(); if (!r || r.game !== 'uno' || r.phase !== 'playing') return;
+    const d = defOf(r);
+    const card = r.uno.hands['me'][idx];
+    if (!card) return;
+    let color = null;
+    if (card.c === 'w') {
+      UI.actionSheet('换成什么颜色？', [
+        { key: 'r', label: '红' }, { key: 'y', label: '黄' },
+        { key: 'g', label: '绿' }, { key: 'b', label: '蓝' }
+      ]).then(k => {
+        if (!k) return;
+        playUnoCard(r, 'me', idx, k, cardEl ? cardEl.getBoundingClientRect() : null);
+      });
+      return;
+    }
+    playUnoCard(r, 'me', idx, null, cardEl ? cardEl.getBoundingClientRect() : null);
+  }
+  function unoDraw(deckEl) {
+    const r = curRoom(); if (!r || r.game !== 'uno' || r.phase !== 'playing') return;
+    if (defOf(r).turnOf(r) !== 'me') return UI.toast('还没轮到你');
+    const d = defOf(r);
+    const got = d.applyDraw(r, 'me', 1);
+    if (deckEl && got[0]) d.afterPlay(r, { fromRect: deckEl.getBoundingClientRect(), card: got[0] });
+    feed(r, 'sys', '你摸了一张牌');
+    const u = r.uno;
+    if (d.hasPlayable(r, 'me')) {
+      UI.toast('摸到了能出的牌，点它打出，或点「过」');
+      r.uno.waitPass = true;
+    } else {
+      d.applyPass(r, 'me');
+      feed(r, 'sys', '你过');
+      scheduleNextUno(r);
+      return;
+    }
+    DB.save(); renderRoom(); scheduleTimers(r);
+  }
+  function unoPass() {
+    const r = curRoom(); if (!r || r.game !== 'uno') return;
+    const d = defOf(r);
+    d.applyPass(r, 'me');
+    feed(r, 'sys', '你过');
+    scheduleNextUno(r);
+  }
+
 
   /* ---------- 悬浮聊天窗（游戏里正常聊天：真会话，走各 TA 聊天回复设置） ---------- */
   /* 悬浮窗气泡：真图真字（她 08-29：满屏"[图片]"不行） */
@@ -14892,6 +15346,7 @@ const Games = (function () {
   function init() {
     register(Gomoku.def());
     register(Mine.def());
+    register(Uno.def());
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
@@ -14902,8 +15357,9 @@ const Games = (function () {
   }
 
   return {
-    init, open, openRoom, renderHall, renderRoom, renderStats, advance, onCell,
-    viewingConv, onPushRaw, defOf, claimFirst, answerFirst, maybeInvite
+    init, open, openRoom, renderHall, renderRoom, renderStats, advance, onCell, onFlag,
+    viewingConv, onPushRaw, defOf, claimFirst, answerFirst, maybeInvite,
+    unoPlay, unoDraw, unoPass
   };
 })();
 
