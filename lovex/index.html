@@ -2319,10 +2319,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    骨架永远墨线（全走主题变量）；物件彩（道具/转盘贴纸版）
    只用独立游戏色 --g-*，不进全站三色纪律（清然 08-28 晚口径）
    ===================================================== */
-:root{
-  --g-egg:#F2CE5F; --g-flower:#F0A8B4; --g-flower2:#F6C6CF;
-  --g-hammer:#8FB3D9; --g-stick-line:#3A3A42; --g-leaf:#5E8F5A;
-}
+/* 08-30 P41：--g-egg/--g-flower/--g-flower2/--g-hammer/--g-leaf 是「道具配色」入口撤掉后的死变量
+   （还带着她禁的彩色），删；只留转盘贴纸那条真在用的描边色 */
+:root{ --g-stick-line:#3A3A42 }
 /* ---------- 大厅 ---------- */
 .gm-sec{font-size:12px;color:var(--t3);margin:2px 2px -8px}
 /* 08-30 P41 §五：原来是单行横滚（实测 shelf 可视 388 < 内容 424，第三张右缘 599 超出），
@@ -2464,8 +2463,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-prop-fly{position:fixed;z-index:1200;font-size:38px;line-height:1;opacity:1;pointer-events:none;
   will-change:transform,opacity;filter:drop-shadow(0 3px 5px rgba(0,0,0,.28))}
 .gm-prop-bit{position:fixed;z-index:1201;font-size:15px;line-height:1;pointer-events:none}
-.gm-splatface{position:fixed;z-index:1199;font-size:44px;line-height:1;pointer-events:none;
-  transform:rotate(-14deg);transition:opacity .4s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+/* 旧写法这里还有一条 .gm-splatface（font-size:44px 的 EMOJI 版），被下面的定义盖死——死规则，删（台账 L13） */
 .gm-pe{font-size:20px;line-height:1}
 .gm-pts{font-size:10px;color:var(--t3)}
 /* 扫雷：刚翻开的格子高亮（对方翻哪/谁踩雷看得见）；旗=EMOJI（她点名） */
@@ -2488,18 +2486,34 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-chips.gm-proprow{display:flex;flex-wrap:nowrap}
 .gm-chips.gm-proprow.hidden{display:none}
 .gm-chips.gm-proprow .gm-propbig{flex:1;justify-content:center}
-/* 蛋液溅开：蛋黄滴（无锅，她 08-29 定） */
-.gm-yolk-dot{position:fixed;z-index:1201;border-radius:50%;background:#F2CE5F;
-  border:1px solid #C9A227;pointer-events:none}
-/* 摊破的蛋液渍（不规则蛋黄糊，盖在头像上淡出） */
-.gm-splatface{position:fixed;z-index:1199;width:66px;height:54px;pointer-events:none;
-  transition:opacity .4s;transform:rotate(-8deg);
-  background:radial-gradient(circle at 35% 45%, #F2CE5F 0 36%, transparent 37%),
-    radial-gradient(circle at 68% 32%, #E9B93F 0 24%, transparent 25%),
-    radial-gradient(circle at 62% 70%, #F2CE5F 0 28%, transparent 29%),
-    radial-gradient(circle at 28% 74%, #E9B93F 0 16%, transparent 17%),
-    radial-gradient(circle at 82% 58%, #F2CE5F 0 12%, transparent 13%);
-  filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
+/* ---------- P41 扔鸡蛋重做（她 08-30：“壳碎之后里面啥样你自己不知道吗？”） ----------
+   规矩：黑白线稿 + 主题色点缀，不许再出现第三个色族（以前是三个黄阶）。
+   碎态=壳裂三片（带白内侧）+ 蛋液摊开（透明液体靠描边不涂白）+ 一颗完整蛋黄滑定 + 小墨点飞溅。 */
+.gm-egg{position:fixed;z-index:1200;width:34px;height:44px;pointer-events:none;
+  background:var(--card);border:1.5px solid var(--t1);
+  border-radius:50% 50% 48% 48% / 62% 62% 38% 38%;
+  box-shadow:inset -4px -5px 0 rgba(0,0,0,.05);
+  will-change:transform;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
+/* 壳片：内侧那一层薄白用 inset 阴影表示，下缘clip 成锯齿=裂口 */
+.gm-shell{position:fixed;z-index:1201;width:26px;height:19px;pointer-events:none;
+  background:var(--card);border:1.5px solid var(--t1);border-bottom-width:0;
+  border-radius:13px 13px 3px 3px / 13px 13px 2px 2px;
+  clip-path:polygon(0 0,100% 0,100% 82%,72% 100%,50% 76%,26% 100%,0 82%);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.07)}
+/* 蛋液：不涂白（白底上白看不见的），淡灰底 + 墨描边 + 一点高光 = 透明液体 */
+.gm-white{position:fixed;z-index:1199;width:74px;height:52px;pointer-events:none;
+  background:rgba(0,0,0,.045);
+  border:1.2px solid color-mix(in srgb,var(--t1) 40%,transparent);
+  border-radius:52% 48% 44% 56% / 58% 62% 38% 42%;
+  box-shadow:inset 2px 3px 0 rgba(255,255,255,.85);
+  transition:opacity .5s}
+/* 蛋黄：只一颗，落在蛋液中央，主题色淡底 + 墨边 */
+.gm-yolk{position:fixed;z-index:1200;width:17px;height:15px;pointer-events:none;
+  border-radius:50% 50% 46% 54% / 54% 46% 54% 46%;
+  background:var(--primary-ultra);border:1.2px solid color-mix(in srgb,var(--t1) 55%,transparent);
+  box-shadow:inset -2px -2px 0 rgba(0,0,0,.05);transition:opacity .45s}
+/* 飞溅：小墨点无描边（以前 12 滴黄点带 1px 边，4~11px 下描边占一半，像甜甜圈） */
+.gm-drop{position:fixed;z-index:1201;border-radius:50%;background:var(--t1);opacity:.42;pointer-events:none}
 
 /* ---------- P40e UNO（她 08-29 排队点名） ---------- */
 .un-foes{display:flex;justify-content:center;gap:10px;padding:0 12px 4px;flex-wrap:wrap}
@@ -2541,17 +2555,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .un-wash{position:fixed;z-index:1198;border-radius:9px;pointer-events:none}
 
 /* ---------- P40 补丁五（她 08-29 晚） ---------- */
-/* 半边蛋壳：CSS 弧形壳，迸开+旋转+坠落（她：蛋壳要碎开） */
-.gm-shell-half{position:fixed;z-index:1201;width:32px;height:24px;pointer-events:none;
-  background:#FBF3E4;border:1.7px solid #D9C79E;border-radius:50% 50% 8% 8% / 92% 92% 8% 8%;
-  clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);
-  animation:gm-shell-fly .8s cubic-bezier(.3,.5,.6,1) forwards;
-  transform-origin:50% 100%}
-.gm-shell-half::after{content:'';position:absolute;left:22%;top:26%;width:7px;height:4px;
-  background:#D9C79E;border-radius:50%}
-@keyframes gm-shell-fly{
-  0%{transform:translate(0,0) rotate(0);opacity:1}
-  100%{transform:translate(calc(var(--sx) * 46px),52px) rotate(var(--rot));opacity:0}}
+/* 08-30 P41：旧的 .gm-shell-half / gm-shell-fly 整块已死（扔鸡蛋重做后改用 .gm-shell + WAAPI），
+   里面还带 #FBF3E4/#D9C79E 两个奶油色——死代码不留（台账 L13） */
 /* 花瓣落地继续用 EMOJI；蛋全链路（飞行🥚→壳迸开+蛋液溅+糊脸）零 EMOJI 脸 */
 
 </style>
@@ -14726,10 +14731,10 @@ const Games = (function () {
   const DEF_TA = ['让我想想哈', '这步有讲究啊', '嘿嘿', '哎呀，手滑了', '你今天状态很好啊', '就差一点点'];
   /* 道具（她 08-29 点名：斗地主那套——飞行要抛物线、命中要碎开；EMOJI 是她亲自允许的） */
   const PROPS = [
-    { id: 'egg', name: '扔鸡蛋', emoji: '🥚', color: '#F2CE5F' },
-    { id: 'flower', name: '献花', emoji: '💐', color: '#F0A8B4' },
-    { id: 'hammer', name: '敲一敲', emoji: '🔨', color: '#9AA7B5' }
-  ];
+    { id: 'egg', name: '扔鸡蛋', emoji: '🥚' },
+    { id: 'flower', name: '献花', emoji: '💐' },
+    { id: 'hammer', name: '敲一敲', emoji: '🔨' }
+  ];   // 08-30：color 字段是「道具配色」入口撤掉后的死数据，删
 
   function S() {
     const g = DB.state.games = DB.state.games || {};
@@ -15318,37 +15323,47 @@ const Games = (function () {
     if (line) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: line });
     DB.save(); renderRoom(); scheduleTimers(r);
   }
-  /* 道具动画（斗地主式，她 08-29 两轮打回后重写）：EMOJI 本体从 from 头像**抛物线**飞到
-     to 头像（中途升至最高点再落下+旋转两圈），onfinish 碎开：碎片四溅 + 蛋黄糊脸/花瓣/冲击
-     + 目标抖动。挂 body + fixed（整页重建杀不到——上一轮的真根因）；WAAPI 关键帧（不是线性平移） */
+  /* 道具动画（08-30 P41 重做）：抛物线飞行 + 接触那一帧碎开。
+     鸡蛋不再用 EMOJI：它是“功能物件”，按她的规矩走黑白线稿（白底 + 墨边）；
+     花/锤保留 EMOJI（她 08-29 亲自放行过，本轮只修时序，不自作主张改风格）。
+     挂 body + fixed：整页重建杀不到（上一轮的真根因）。 */
   function propFly(p, fromUid, toUid) {
     const host = document.querySelector('.gm-players');
     if (!host) return;
     const fromEl = host.querySelector('.gm-player[data-uid="' + fromUid + '"]');
     const toEl = host.querySelector('.gm-player[data-uid="' + toUid + '"]');
     if (!fromEl || !toEl) return;
+    const egg = p.id === 'egg';
     const el = document.createElement('div');
-    el.className = 'gm-prop-fly';
-    el.textContent = p.emoji;
+    const half = egg ? 17 : 19;
+    if (egg) el.className = 'gm-egg';
+    else { el.className = 'gm-prop-fly'; el.textContent = p.emoji; }
     const fr = fromEl.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
-    const x0 = fr.left + fr.width / 2 - 19, y0 = fr.top - 6;
+    const x0 = fr.left + fr.width / 2 - half, y0 = fr.top - 6;
     el.style.left = x0 + 'px';
     el.style.top = y0 + 'px';
-    document.body.appendChild(el);                        // 挂 body：整页重建杀不到
-    const dx = (tr.left + tr.width / 2 - 19) - x0;
+    document.body.appendChild(el);
+    const dx = (tr.left + tr.width / 2 - half) - x0;
     const dy = (tr.top - 4) - y0;
+    /* 抛体缓动：出手快 → 到顶慢 → 下落快（旧写法整体 ease-in，全程像在吸下去） */
+    const spin = egg ? 260 : 720;
     const fly = el.animate([
-      { transform: 'translate(0,0) rotate(0deg) scale(1)' },
-      { transform: 'translate(' + (dx * 0.5) + 'px,' + (dy * 0.5 - 110) + 'px) rotate(380deg) scale(1.15)', offset: 0.5, easing: 'ease-out' },
-      { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(720deg) scale(1)' }
-    ], { duration: 1000, easing: 'ease-in' });
+      { transform: 'translate(0,0) rotate(0deg) scale(1)', offset: 0, easing: 'ease-out' },
+      { transform: 'translate(' + (dx * 0.5) + 'px,' + (dy * 0.5 - 112) + 'px) rotate(' + (spin * 0.55) + 'deg) scale(1.1)', offset: 0.46, easing: 'ease-in' },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + spin + 'deg) scale(1)', offset: 1 }
+    ], { duration: 900 });
     fly.onfinish = () => {
       hitAvatar(toUid, p);
-      setTimeout(() => el.remove(), 450);                 // 命中后本体再留一瞬，碎片接棒
+      /* 旧写法命中后本体还挂 450ms：完整的蛋贴在脸上、旁边已在喷——这是“最假的一帧”。
+         蛋在接触那一帧就没了（它碎了）；花/锤不碎，只留 240ms 的贴住感再淡出。 */
+      if (egg) el.remove();
+      else {
+        el.style.transition = 'opacity .24s'; el.style.opacity = '0';
+        setTimeout(() => el.remove(), 260);
+      }
     };
   }
-  /* 命中（她 08-29 二次打回：蛋要"壳碎+蛋液溅开"，不要 EMOJI 脸）：
-     🥚 本体飞到 → 换成两半蛋壳向两侧迸开旋转坠落 + 12 滴蛋液四溅下坠 + 蛋渍糊脸 + 目标抖动 */
+  /* 命中：目标抖一下 + 碎态。鸡蛋的碎态画全：壳裂三片（带白内侧）+ 蛋液摊开 + 蛋黄滑定 + 墨点飞溅 */
   function hitAvatar(toUid, p) {
     const host = document.querySelector('.gm-players');
     const tEl = host && host.querySelector('.gm-player[data-uid="' + toUid + '"]');
@@ -15358,41 +15373,66 @@ const Games = (function () {
     const rc = tEl.getBoundingClientRect();
     const cx = rc.left + rc.width / 2, cy = rc.top + rc.height / 2;
     if (p.id === 'egg') {
-      /* 两半蛋壳：CSS 画的弧形壳，向左右迸开+旋转+坠落 */
-      [['-1', '72deg'], ['1', '-72deg']].forEach(pair => {
-        const shell = document.createElement('span');
-        shell.className = 'gm-shell-half';
-        shell.style.setProperty('--sx', pair[0]);
-        shell.style.setProperty('--rot', pair[1]);
-        shell.style.left = (cx - 16) + 'px';
-        shell.style.top = (cy - 18) + 'px';
-        document.body.appendChild(shell);
-        setTimeout(() => shell.remove(), 900);
-      });
-      /* 蛋液滴 12 滴四溅下坠 */
-      for (let i = 0; i < 12; i++) {
+      /* 三片壳：左、右、下，各自打转坠地 */
+      [['-1', -64, 30], ['1', 58, 34], ['0', 168, 26]].forEach(sh => {
         const s = document.createElement('span');
-        s.className = 'gm-yolk-dot';
-        const sz = 4 + Math.random() * 7;
-        s.style.width = sz + 'px'; s.style.height = sz + 'px';
-        s.style.left = (cx - sz / 2) + 'px';
-        s.style.top = (cy - sz / 2) + 'px';
+        s.className = 'gm-shell';
+        s.style.left = (cx - 13) + 'px';
+        s.style.top = (cy - 20) + 'px';
         document.body.appendChild(s);
-        const ang = (Math.PI * 2) * (i / 12) + Math.random() * 0.8;
-        const dist = 30 + Math.random() * 52;
         s.animate([
-          { transform: 'translate(0,0) scale(1)', opacity: 1 },
-          { transform: 'translate(' + (Math.cos(ang) * dist) + 'px,' + (Math.sin(ang) * dist * 0.6 + 34) + 'px) scale(' + (0.4 + Math.random() * 0.7) + ')', opacity: 0 }
-        ], { duration: 460 + Math.random() * 340, easing: 'cubic-bezier(.2,.6,.4,1)' }).onfinish = () => s.remove();
+          { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+          { transform: 'translate(' + (sh[0] * 26) + 'px,' + (sh[2] * 0.35) + 'px) rotate(' + sh[1] + 'deg)', opacity: 1, offset: .45 },
+          { transform: 'translate(' + (sh[0] * 40) + 'px,' + (sh[2] + 46) + 'px) rotate(' + (sh[1] * 1.5) + 'deg)', opacity: 0 }
+        ], { duration: 760, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => s.remove();
+        /* 双保险：onfinish 之外再挂一个定时清理——动画被打断（切后台/元素被重建）也得消失，
+           不然脸上永远贴着一堆碎片（这类“特效没收回”的坑她踩过） */
+        setTimeout(() => s.remove(), 900);
+      });
+      /* 蛋液：贴在脸上摊开（0.18s 内 scale 0.35→1），1.5s 后淡出 */
+      const w = document.createElement('span');
+      w.className = 'gm-white';
+      w.style.left = (cx - 37) + 'px';
+      w.style.top = (cy - 20) + 'px';
+      document.body.appendChild(w);
+      w.animate([
+        { transform: 'scale(.35)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1 }
+      ], { duration: 180, easing: 'cubic-bezier(.15,.9,.3,1)', fill: 'forwards' });
+      setTimeout(() => { w.style.opacity = '0'; }, 1500);
+      setTimeout(() => w.remove(), 2050);
+      /* 蛋黄：从蛋液里滑 7px 定住——她点名的就是这一步：壳碎了里面得画出来 */
+      const y = document.createElement('span');
+      y.className = 'gm-yolk';
+      y.style.left = (cx - 8) + 'px';
+      y.style.top = (cy - 12) + 'px';
+      document.body.appendChild(y);
+      y.animate([
+        { transform: 'translateY(-7px) scale(.7)', opacity: 0 },
+        { transform: 'translateY(0) scale(1.06)', opacity: 1, offset: .62 },
+        { transform: 'translateY(0) scale(1)', opacity: 1 }
+      ], { duration: 320, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(() => { y.style.opacity = '0'; }, 1500);
+      setTimeout(() => y.remove(), 2050);
+      /* 飞溅：9 滴小墨点，主要往左右两侧散、带着下坠（不是绕一圈的黄点） */
+      for (let i = 0; i < 9; i++) {
+        const d = document.createElement('span');
+        d.className = 'gm-drop';
+        const sz = 2 + Math.random() * 3.5;
+        d.style.width = sz + 'px'; d.style.height = sz + 'px';
+        d.style.left = (cx - sz / 2) + 'px';
+        d.style.top = (cy - sz / 2) + 'px';
+        document.body.appendChild(d);
+        const side = i % 2 ? 0 : Math.PI;
+        const ang = side + (-0.42 + Math.random() * 0.84);
+        const dist = 26 + Math.random() * 40;
+        d.animate([
+          { transform: 'translate(0,0)', opacity: .5 },
+          { transform: 'translate(' + (Math.cos(ang) * dist) + 'px,' +
+            (Math.sin(ang) * dist * 0.5 + 26) + 'px) scale(.7)', opacity: 0 }
+        ], { duration: 420 + Math.random() * 260, easing: 'cubic-bezier(.2,.7,.35,1)' }).onfinish = () => d.remove();
+        setTimeout(() => d.remove(), 820);          // 同上：不靠 onfinish 一条腿
       }
-      /* 摊破的蛋液渍糊在头像上 1.4 秒 */
-      const blob = document.createElement('span');
-      blob.className = 'gm-splatface';
-      blob.style.left = (cx - 33) + 'px';
-      blob.style.top = (cy - 27) + 'px';
-      document.body.appendChild(blob);
-      setTimeout(() => { blob.style.opacity = '0'; }, 1100);
-      setTimeout(() => blob.remove(), 1500);
       return;
     }
     const bits = p.id === 'flower' ? ['🌸', '✨'] : ['💥', '⚡'];
@@ -15409,6 +15449,7 @@ const Games = (function () {
         { transform: 'translate(0,0) scale(1)', opacity: 1 },
         { transform: 'translate(' + (Math.cos(ang) * dist) + 'px,' + (Math.sin(ang) * dist * 0.7 + 30) + 'px) scale(' + (0.5 + Math.random() * 0.9) + ')', opacity: 0 }
       ], { duration: 480 + Math.random() * 320, easing: 'cubic-bezier(.2,.6,.4,1)' }).onfinish = () => s.remove();
+      setTimeout(() => s.remove(), 900);            // 同上：双保险
     }
   }
   function throwProp(id) {
