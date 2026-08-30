@@ -3176,14 +3176,20 @@ const DB = (function () {
   }
 
   let state;
+  let mainRaw = null;      // 本次装载用的原文（水合时用来找 'idb:' 视频引用）
   try {
     const raw = localStorage.getItem(KEY);
+    mainRaw = raw;
     state = raw ? deepMerge(defaults(), JSON.parse(raw)) : defaults();
   } catch (e) {
     /* 主数据损坏时自动用上一份快照顶上 */
     try {
       const bak = localStorage.getItem(BAK);
-      state = bak ? deepMerge(defaults(), JSON.parse(bak)) : defaults();
+      const b = bak ? JSON.parse(bak) : null;
+      /* 备份位里存的是未转义的原文（08-30 瘦身），老存档是 {raw:字符串} —— 两种都读 */
+      const rawB = b && b.raw ? (typeof b.raw === 'string' ? b.raw : JSON.stringify(b.raw)) : bak;
+      mainRaw = rawB || null;
+      state = rawB ? deepMerge(defaults(), JSON.parse(rawB)) : defaults();
     } catch (e2) {
       state = defaults();
     }
@@ -3426,6 +3432,14 @@ const DB = (function () {
 
   /* 启动幂等迁移：老存档里「人已经不在、数据还在」的孤儿，一次抹平（不碰现存联系人） */
   function sweepOrphans() {
+    /* 08-30 P41 R4 守卫：联系人空了（半损坏档）时「孤儿」等于全部数据，照原逻辑会把每个人的
+       记录真删并写盘 —— 一次写盘失败就被升级成永久删除。所以：联系人空、或一次要清掉一大片，
+       都不扫，只报黑匣子让她看得见。 */
+    if (!(state.contacts || []).length) {
+      if (Object.keys(state.msgs || {}).length && typeof logErr === 'function')
+        logErr('孤儿清理暂停：联系人为空但还有聊天数据（可能刚经历写盘失败或半损坏档）');
+      return 0;
+    }
     const live = new Set(['me'].concat((state.contacts || []).map(c => c.id)));
     const dead = new Set();
     const mark = u => { if (u && u !== 'me' && !live.has(u)) dead.add(u); };
@@ -3445,6 +3459,12 @@ const DB = (function () {
     Object.keys((state.wallet && state.wallet.bal) || {}).forEach(mark);
     Object.values((state.kinship && state.kinship.cards) || {}).forEach(c => { if (c) { mark(c.fromUid); mark(c.toUid); } });
     ((state.moments && state.moments.posts) || []).forEach(p => { if (p) mark(p.uid); });
+    if (dead.size > 8) {
+      /* 一刷就是一整套帐号：宁可停下报信，也不替谁做“全删”这个决定 */
+      if (typeof logErr === 'function')
+        logErr('孤儿清理暂停：一次要清 ' + dead.size + ' 个帐号的残留，超出常规（导入换档请手动处理）');
+      return 0;
+    }
     let touched = 0;
     dead.forEach(u => { touched += purgeContact(u); });
     /* 单聊会话指向已不存在的人（早期删好友漏删 conv）一并收掉 */
@@ -3461,13 +3481,39 @@ const DB = (function () {
      档案涨满 5MB 后每次写盘静默失败，当次会话的新消息只在内存里，关页即回档。
      三层防护：①写失败先清备份位再重试一次（备份位占着近半配额）②每日聊天快照（可找回）
      ③多标签互相覆盖时留远程快照。快照只留两天控容量，写不进就逐档降级，绝不弹窗（P33 口径）。 */
-  const SNAP_KEY = 'LOVEX_MSGSNAP';
+  /* ============ 08-30 P41 存储根治（清然 07:20 问「为啥总丢失聊天记录」）============
+     根因不在某个函数，在布局：图片/语音的 base64 直接躺在主档里，旁边还挂着转义备份、
+     两天快照、多标签远程位——副本系数≈3.4×，5MB 配额下主档只能长到 ~1.4MB，
+     四五张图见底 → setItem 抛错 → 按 P33 口径静默 → 关页整段回档。
+     现在：媒体本体进 IndexedDB（MediaVault），主档只留 '@mv哈希' 引用串；
+     备份位不再转义一整档；快照从 localStorage 搬进 IDB（不再只敢留两天）；
+     配额写满不再拿删备份当自救，而是整档进 IDB 影子，下次开页影子顶上。
+     IDB 不可用（隐私模式）→ MediaVault.enabled()=false，全部退回老写法，功能不坏。 */
+  const SNAP_KEY = 'LOVEX_MSGSNAP';            // 旧快照位：只用于迁一次再删（把配额还给主档）
   const SNAP_REMOTE = 'LOVEX_MSGSNAP_REMOTE';
+  const SHADOW_AT = 'LOVEX_SHADOW_AT';          // 上一次“主档没写进去、整档进了影子”的时刻
+  const BAK_AT = 'LOVEX_DB_BAK_AT';             // 备份位的时刻（以前把它转义嵌在备份里，白占地方）
   function todayKey() {
     const d = new Date(), p = n => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
-  function snapMsgs() {
+  /* db.js 比 media.js 先执行，装载期 MediaVault 还在 TDZ（碰一下就抛），
+     所以取它必须走这个带兑底的口子：拿不到就当没 IDB，退回老写法。 */
+  const vault = () => {
+    try { return (typeof MediaVault !== 'undefined' && MediaVault && MediaVault.enabled()) ? MediaVault : null; }
+    catch (e) { return null; }
+  };
+
+  /* 每日快照：写进 IDB（没 5MB 天花板），每会话只留当天那一份 */
+  async function snapMsgs() {
+    const V = vault();
+    try {
+      if (!V) { legacySnapMsgs(); return; }
+      await V.snap(todayKey(), V.pack(state.msgs).doc);
+    } catch (e) {}
+  }
+  /* 老写法（只存 localStorage、只敢留两天）：没 IDB 时的退路，不是主路径 */
+  function legacySnapMsgs() {
     try {
       const day = todayKey();
       const raw = localStorage.getItem(SNAP_KEY);
@@ -3484,58 +3530,134 @@ const DB = (function () {
       }
     } catch (e) {}
   }
-  function listSnaps() {
+  /* 旧位里的两天快照：迁进 IDB 后把旧位删掉（已经存过的东西一分不丢，但不能再占主档配额） */
+  async function migrateLegacySnaps() {
+    const V = vault();
+    if (!V) return 0;
+    let n = 0;
+    try {
+      const raw = localStorage.getItem(SNAP_KEY);
+      if (!raw) return 0;
+      const cur = JSON.parse(raw);
+      for (const x of (cur.days || [])) {
+        if (!x || !x.day || !x.msgs) continue;
+        await V.snap(x.day, x.msgs, x.savedAt);
+        n++;
+      }
+      localStorage.removeItem(SNAP_KEY);
+    } catch (e) {}
+    return n;
+  }
+  async function listSnaps() {
+    const V = vault();
+    if (V) { try { return await V.listSnaps(); } catch (e) { return []; } }
     try {
       const cur = JSON.parse(localStorage.getItem(SNAP_KEY) || '{"days":[]}');
       return (cur.days || []).map(x => ({ day: x.day, savedAt: x.savedAt, convs: Object.keys(x.msgs || {}).length }));
     } catch (e) { return []; }
   }
-  function getSnapMsgs(day) {
+  async function getSnapMsgs(day) {
+    const V = vault();
+    if (V) { const hit = await V.readSnap(day); return hit && hit.msgs ? hit.msgs : null; }
     try {
       const cur = JSON.parse(localStorage.getItem(SNAP_KEY) || '{"days":[]}');
       const hit = (cur.days || []).find(x => x.day === day);
       return hit ? hit.msgs : null;
     } catch (e) { return null; }
   }
-  /* 多标签防护：别的标签页写了主档 → 先把那份新数据存进远程快照位，防被本页旧内存覆盖后无从找回 */
+  /* 按会话合并：只并“我缺的那几条”（按 msg.id 去重），不整档覆盖。
+     两个出口共用：别的标签页写入 + 影子顶上。只有真并到东西才补写盘，
+     否则两个标签页会互相触发成死循环（这是以前整档覆盖把对面挤掉的根子）。 */
+  function mergeForeign(doc) {
+    if (!doc || !doc.msgs) return 0;
+    let added = 0;
+    Object.keys(doc.msgs).forEach(cid => {
+      const theirs = doc.msgs[cid] || [];
+      const mine = state.msgs[cid];
+      if (!Array.isArray(mine)) {
+        if (theirs.length) { state.msgs[cid] = theirs.slice(); added += theirs.length; }
+        return;
+      }
+      const has = new Set(mine.map(m => m && m.id));
+      let g = 0;
+      theirs.forEach(m => { if (m && !has.has(m.id)) { mine.push(m); g++; } });
+      if (g) { mine.sort((a, b) => (a.ts || 0) - (b.ts || 0)); added += g; }
+    });
+    if (added) save();
+    return added;
+  }
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', function (e) {
-      if (e.key === KEY && e.newValue) {
-        try { localStorage.setItem(SNAP_REMOTE, e.newValue); } catch (x) {}
-      }
+      if (e.key !== KEY || !e.newValue) return;
+      try { localStorage.setItem(SNAP_REMOTE, e.newValue); } catch (x) {}
+      try { mergeForeign(JSON.parse(e.newValue)); } catch (x) {}
     });
   }
 
   function writeNow() {
-    /* 落盘前把当前主数据滚入备份位（写入失败则静默跳过，不阻塞主写） */
-    try {
-      const curRaw = localStorage.getItem(KEY);
-      if (curRaw) localStorage.setItem(BAK, JSON.stringify({ savedAt: Date.now(), raw: curRaw }));
-    } catch (e) {}
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch (e) {
-      /* 头号根因的解法：写满先清备份位（占近半配额的旧拷贝）再重试一次；
-         成功=这批消息保住了；仍失败才走静默黑匣子（P33 口径不弹窗，但快照已兜底） */
-      try { localStorage.removeItem(BAK); } catch (x) {}
+    clearTimeout(saveTimer); saveTimer = null;
+    const V = vault();
+    if (!V) {                                  // 没 IDB：退回老写法，行为与 08-29 之前一致
       try {
-        localStorage.setItem(KEY, JSON.stringify(state));
-        if (onQuota) onQuota(e);
-        return;
-      } catch (e2) {
-        if (onQuota) onQuota(e2);
+        const curRaw = localStorage.getItem(KEY);
+        if (curRaw) localStorage.setItem(BAK, JSON.stringify({ savedAt: Date.now(), raw: curRaw }));
+      } catch (e) {}
+      try { localStorage.setItem(KEY, JSON.stringify(state)); }
+      catch (e) { if (onQuota) onQuota(e); }
+      return;
+    }
+    const pk = V.pack(state);
+    if (pk.pending.length) {
+      /* 先把新媒体落进 IDB，再写主档。反过来（先写内联）一批大图会把主档撑到写不进去，
+         写不进去就永远搬不走，下次接着撑爆 —— 老 bug 原地复活（08-30 验收 S9 实抓到）。
+         但 IDB 在部分隐私模式下会“永远不回来”，所以这里最多等 2.5 秒就必须落盘，
+         不能把“存不进去”换成“存不了”。 */
+      const done = () => commit(V);
+      Promise.race([V.flush(pk.pending), new Promise(r => setTimeout(r, 2500))]).then(done, done);
+      return;
+    }
+    commit(V);
+  }
+
+  /* 真正落盘的那一步：能换成引用的已经换掉了（图在 IDB 里），主档只剩文字 */
+  function commit(V) {
+    const pk = V.pack(state);
+    let text;
+    try { text = JSON.stringify(pk.doc); } catch (e) { return; }
+    const curRaw = localStorage.getItem(KEY);   // 主档被盖掉前抓走上一份，备份位要用
+    try {
+      localStorage.setItem(KEY, text);
+      /* 备份位：直接存上一份原文串（不再 JSON 套一层转义，那层转义让副本比主档还大 1.17×） */
+      if (curRaw) {
+        localStorage.setItem(BAK, curRaw);
+        localStorage.setItem(BAK_AT, String(Date.now()));
       }
+      if (pk.pending.length) V.flush(pk.pending);  // 仍未搬动的后台接着搬，下次写盘换引用
+    } catch (e) {
+      /* 写满不再删备份位：媒体已不在主档里，真写满只可能是文字本身超大。
+         整档进 IDB 影子（那边没天花板）+ 记一笔，下次开页影子把这份新的顶上 */
+      V.shadow(pk.doc, Date.now()).then(ok => {
+        if (ok) { try { localStorage.setItem(SHADOW_AT, String(Date.now())); } catch (x) {} }
+        snapMsgs();
+        if (onQuota) onQuota(e);
+      });
     }
   }
 
   function backupInfo() {
     try {
-      const raw = localStorage.getItem(BAK);
+      let raw = localStorage.getItem(BAK);
       if (!raw) return null;
-      const o = JSON.parse(raw);
-      const d = o.raw ? JSON.parse(o.raw) : null;
+      let savedAt = +(localStorage.getItem(BAK_AT) || 0);
+      /* 老存档的备份位是 {savedAt, raw转义串}，新存档是裸原文串 */
+      if (raw.charAt(0) === '{' && raw.indexOf('"raw"') > 0) {
+        const o = JSON.parse(raw);
+        savedAt = o.savedAt || savedAt;
+        raw = o.raw;
+      }
+      const d = raw ? JSON.parse(raw) : null;
       return {
-        savedAt: o.savedAt || 0,
+        savedAt: savedAt,
         convs: d && d.convs ? d.convs.length : 0,
         msgs: d && d.msgs
           ? Object.keys(d.msgs).reduce((n, k) => n + ((d.msgs[k] || []).length), 0)
@@ -3545,11 +3667,14 @@ const DB = (function () {
   }
 
   function recoverFromBackup() {
-    const raw = localStorage.getItem(BAK);
+    let raw = localStorage.getItem(BAK);
     if (!raw) return false;
-    const o = JSON.parse(raw);
-    if (!o || !o.raw) return false;
-    state = deepMerge(defaults(), JSON.parse(o.raw));
+    if (raw.charAt(0) === '{' && raw.indexOf('"raw"') > 0) {
+      const o = JSON.parse(raw);
+      raw = o && o.raw;
+    }
+    if (!raw) return false;
+    state = deepMerge(defaults(), JSON.parse(raw));
     clearTimeout(saveTimer);
     writeNow();
     return true;
@@ -3580,12 +3705,88 @@ const DB = (function () {
     return true;
   }
 
-  /* 装载完就扫一次：孤儿数据不留到下一次；当天聊天快照顺手落一份（找回兜底） */
+  /* 08-30 P41 R8：跟浏览器要「持久化」权。默认 localStorage 是 best-effort，
+     磁盘紧张时浏览器可以自己把整个源的存储清掉——她的症状“下次打开少了以前的记录”
+     有一条就是这里来的。persist() 成功=这块存储受保护不被自动清理。 */
+  let persistFlag = '未查';
+  function askPersist() {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) { persistFlag = '这浏览器不支持'; return Promise.resolve(persistFlag); }
+      return navigator.storage.persist()
+        .then(() => (navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)))
+        .then(p => { persistFlag = p ? '已受保护（浏览器不会自己清）' : '未授权（磁盘紧张时浏览器可能自己清掉）'; return persistFlag; })
+        .catch(() => { persistFlag = '查不到'; return persistFlag; });
+    } catch (e) { persistFlag = '查不到'; return Promise.resolve(persistFlag); }
+  }
+
+  /* 装载完：先扫孤儿（不依赖媒体），再把引用串换回真数据；旧快照位迁进 IDB。
+     渲染入口（app.js）等 DB.ready 再起，闪不了空图。 */
   try { sweepOrphans(); } catch (e) { /* 收尾失败不能堵住启动链 */ }
-  try { snapMsgs(); } catch (e) {}
+
+  /* 装载后要做的事（引用串换回真数据 / 快照 / 影子顶上）：lazy 起，
+     等 app.js 在 DOMContentLoaded 里读 DB.ready 时 media.js 已经执行完了。 */
+  let readyP = null;
+  function startReady() {
+    if (readyP) return readyP;
+    readyP = (async function () {
+      try { await askPersist(); } catch (e) {}
+      const V = vault();
+      if (!V) { try { snapMsgs(); } catch (e) {} return true; }
+      try { await V.unpack(state); } catch (e) {}
+      try { await V.snap(todayKey(), V.pack(state.msgs).doc); } catch (e) {}
+      try { await migrateLegacySnaps(); } catch (e) {}
+      /* 上次主档没写进去（配额）而整档进了影子：影子更新就把那份新的顶上，一条不丢 */
+      try {
+        const at = +(localStorage.getItem(SHADOW_AT) || 0);
+        if (at) {
+          const sh = await V.readShadow();
+          if (sh && sh.savedAt >= at && sh.doc) {
+            const n = mergeForeign(sh.doc);
+            localStorage.removeItem(SHADOW_AT);
+            if (n && typeof logErr === 'function') logErr('影子顶上：从 IDB 找回 ' + n + ' 条');
+          }
+        }
+      } catch (e) {}
+      /* 空闲时回收没人引用的媒体 blob（主档/备份/快照都不引用的才删） */
+      setTimeout(() => {
+        (async function () {
+          try {
+            const parts = [JSON.stringify(V.pack(state).doc),
+                           localStorage.getItem(KEY) || '', localStorage.getItem(BAK) || ''];
+            const days = await listSnaps();
+            for (const d of days) { try { parts.push(JSON.stringify(await V.readSnap(d.day))); } catch (e) {} }
+            await V.sweep(parts.join('\n'));
+          } catch (e) {}
+        })();
+      }, 4000);
+      return true;
+    })();
+    return readyP;
+  }
+
+  /* 面板要直接拿到可用串：引用串就地解一次（小图/单项场景，如存储页预览） */
+  async function resolveMedia(v) {
+    const V = vault();
+    if (!V) return v;
+    if (typeof v === 'string' && v.indexOf('@mv') === 0) {
+      try { return (await MediaStore.get(v)) || v; } catch (e) { return v; }
+    }
+    return v;
+  }
+
+  function vaultStats() {
+    const V = vault();
+    return V ? V.stats() : { packed: 0, kb: 0, refs: 0, missing: 0, off: true };
+  }
+  async function restoreSnap(day) {
+    const msgs = await getSnapMsgs(day);
+    if (!msgs) return 0;
+    return mergeForeign({ msgs });
+  }
 
   return {
     get state() { return state; },
+    get ready() { return startReady(); },
     purgeContact,
     dropConv,
     sweepOrphans,
@@ -3597,6 +3798,10 @@ const DB = (function () {
     recoverFromBackup,
     listSnaps,
     getSnapMsgs,
+    restoreSnap,
+    resolveMedia,
+    vaultStats,
+    persistState: () => persistFlag,
     set onQuota(fn) { onQuota = fn; }
   };
 })();
@@ -6482,6 +6687,14 @@ const MediaStore = (function () {
       t.onerror = t.onabort = () => reject(t.error || new Error('idb-tx'));
     }));
   }
+  function keys() {
+    return db().then(d => new Promise((resolve, reject) => {
+      const t = d.transaction(ST, 'readonly');
+      const rq = t.objectStore(ST).getAllKeys();
+      rq.onsuccess = () => resolve(rq.result || []);
+      rq.onerror = () => reject(rq.error || new Error('idb-keys'));
+    }));
+  }
   return {
     available() { return !!window.indexedDB; },
     put(key, blob) { return run('readwrite', s => s.put(blob, key)); },
@@ -6493,6 +6706,8 @@ const MediaStore = (function () {
     },
     /* 引用串判定：'idb:xxx' */
     isRef(v) { return typeof v === 'string' && /^idb:/.test(v); },
+    /* 全部键（清扫用） */
+    keys() { return keys(); },
     /* 渲染就绪 URL：idb引用→objectURL；兼容旧存档的 dataURL 直返；丢了返空串由调用方降级 */
     async src(v) {
       if (!v) return '';
@@ -6510,6 +6725,168 @@ const MediaStore = (function () {
   };
 })();
 
+
+/* =====================================================
+   P41 MediaVault —— 把媒体本体从 localStorage 搬进 IndexedDB
+   （2026-08-30 立项。她问「为啥总丢失聊天记录」的根因就在这：图片和语音的 base64
+   直接躺在主档里，5MB 配额四六张图见底 -> setItem 静默失败 -> 关页整段回档。）
+
+   三条规矩：
+   1) 两头不空：只把「已经确认写进 IDB」的东西换成引用串。第一次保存仍写内联，
+      落库成功后补一次保存才换成 '@mv哈希'——沿用 P36d moments 的拆雷口径，不许有中间态丢图。
+   2) 装载时把引用串换回 dataURL（unpack）：内存里仍是真数据，渲染层一行不用改，
+      只有写盘那一刻是引用。备份位/每日快照/整档影子共用同一套 pack/unpack，副本不再比主档胖。
+   3) IDB 不可用（隐私模式等）-> off=true 整体退回老写法：功能不坏，只是仍受配额限制。
+   ===================================================== */
+const MediaVault = (function () {
+  const P = '@mv';                 // 引用串前缀，也是 IDB 键前缀（清扫只认它，不碰 moments 的 idb: 视频）
+  const SHADOW = '@shadow';        // 整档影子：IDB 没有 5MB 天花板，主档写满时它就是找回口
+  const SNAP = '@snap:';           // 每日聊天快照（08-30 从 localStorage 搬进来，不再挤配额）
+  const SNAPIDX = '@snapidx';      // 快照日期索引（找回界面直接读它）
+  const MIN = 4096;                // 小于 4KB 的 data: 串不值得搬，留在主档
+  let off = !(window.indexedDB);
+  const armed = new Map();         // ref -> 1：本会话已确认在库里，不重复写
+  const st = { packed: 0, bytes: 0, missing: 0, refs: 0 };
+
+  function hash(s) {
+    let h1 = 0x811c9dc5, h2 = 0x9e3779b9;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      h1 = Math.imul(h1 ^ c, 0x01000193);
+      h2 = Math.imul(h2 ^ c, 0x85ebca6b);
+      h1 = (h1 << 13) | (h1 >>> 19);
+      h2 = ((h2 << 7) | (h2 >>> 25)) ^ c;
+    }
+    return P + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36) + s.length.toString(36);
+  }
+  const isMedia = v => !off && typeof v === 'string' && v.length > MIN && v.indexOf('data:') === 0;
+  const isRef = v => typeof v === 'string' && v.indexOf(P) === 0;
+  const re = /@mv[0-9a-z]+/g;
+  function refsIn(text) {
+    const out = []; if (!text) return out;
+    let m; re.lastIndex = 0;
+    while ((m = re.exec(text))) out.push(m[0]);
+    return out;
+  }
+
+  /* 写盘前：能换引用的换引用；没入库的排队等落库 */
+  function pack(node) {
+    const pending = [];
+    const walk = v => {
+      if (typeof v === 'string') {
+        if (!isMedia(v)) return v;
+        const key = hash(v);
+        if (armed.has(key)) { st.refs++; return key; }
+        pending.push([key, v]);
+        return v;                       // 这次仍内联，落库后下次换引用
+      }
+      if (Array.isArray(v)) return v.map(walk);
+      if (v && typeof v === 'object') {
+        const o = {};
+        for (const k in v) if (Object.prototype.hasOwnProperty.call(v, k)) o[k] = walk(v[k]);
+        return o;
+      }
+      return v;
+    };
+    const doc = walk(node);
+    return { doc, pending };
+  }
+
+  async function flush(pending) {
+    if (off || !pending || !pending.length) return 0;
+    let n = 0;
+    for (const [key, text] of pending) {
+      try {
+        await MediaStore.put(key, text);
+        armed.set(key, 1);
+        st.packed++; st.bytes += text.length; n++;
+      } catch (e) { /* 这一个没搬动：下次保存还是内联，坏不了 */ }
+    }
+    return n;                      // 落库后的补写交给 db.js 的 commit，不在这里绕 save
+  }
+
+  /* 装载后：引用串就地换回 dataURL */
+  async function unpack(node) {
+    if (off || !node) return { found: 0, missing: 0 };
+    const jobs = [];
+    let found = 0, missing = 0;
+    const take = (parent, key) => {
+      const v = parent[key];
+      if (typeof v !== 'string' || !isRef(v)) return false;
+      st.refs++;
+      jobs.push(MediaStore.get(v).then(text => {
+        if (text == null) { missing++; st.missing++; return; }   // 实体没了：保留引用串，界面上报，不静默抹掉
+        armed.set(v, 1); parent[key] = text; found++;
+      }).catch(() => { missing++; st.missing++; }));
+      return true;
+    };
+    const walk = v => {
+      if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) if (!take(v, i)) walk(v[i]); return; }
+      if (v && typeof v === 'object') {
+        for (const k in v) if (Object.prototype.hasOwnProperty.call(v, k)) { if (!take(v, k)) walk(v[k]); }
+      }
+    };
+    walk(node);
+    await Promise.all(jobs);
+    return { found, missing };
+  }
+
+  /* 孤儿回收：主档/备份/快照都不引用的 '@mv' 键才删（启动空闲时跑一次） */
+  async function sweep(liveText) {
+    if (off) return 0;
+    let all;
+    try { all = await MediaStore.keys(); } catch (e) { return 0; }
+    const keep = new Set(refsIn(liveText));
+    let n = 0;
+    for (const k of all) {
+      if (typeof k !== 'string' || k.indexOf(P) !== 0) continue;   // 只清自己的
+      if (keep.has(k)) continue;
+      try { await MediaStore.del(k); armed.delete(k); n++; } catch (e) {}
+    }
+    return n;
+  }
+
+  /* ---- 整档影子（配额写满 / 主档损坏 / 被别的标签页覆盖时的找回口） ---- */
+  async function shadow(doc, savedAt) {
+    if (off) return false;
+    try { await MediaStore.put(SHADOW, { savedAt: savedAt || Date.now(), doc }); return true; }
+    catch (e) { return false; }
+  }
+  async function readShadow() {
+    if (off) return null;
+    try { return (await MediaStore.get(SHADOW)) || null; } catch (e) { return null; }
+  }
+
+  /* ---- 每日聊天快照：从 localStorage 搬进 IDB，留 14 天（原来 2 天是被配额逼的） ---- */
+  async function snap(day, msgs, savedAt) {
+    if (off) return false;
+    try {
+      await MediaStore.put(SNAP + day, { day, savedAt: savedAt || Date.now(), msgs });
+      const idx = (await MediaStore.get(SNAPIDX)) || [];
+      const next = [{ day, savedAt: savedAt || Date.now(), convs: Object.keys(msgs || {}).length }]
+        .concat(idx.filter(x => x.day !== day)).slice(0, 14);
+      const gone = idx.filter(x => !next.some(y => y.day === x.day)).map(x => x.day);
+      await MediaStore.put(SNAPIDX, next);
+      for (const d of gone) { try { await MediaStore.del(SNAP + d); } catch (e) {} }
+      return true;
+    } catch (e) { return false; }
+  }
+  async function listSnaps() {
+    if (off) return [];
+    try { return (await MediaStore.get(SNAPIDX)) || []; } catch (e) { return []; }
+  }
+  async function readSnap(day) {
+    if (off) return null;
+    try { return (await MediaStore.get(SNAP + day)) || null; } catch (e) { return null; }
+  }
+
+  return {
+    enabled() { return !off; },
+    hash, pack, flush, unpack, sweep, refsIn,
+    shadow, readShadow, snap, listSnaps, readSnap,
+    stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; }
+  };
+})();
 /* =====================================================
    LOVE♡X · status.js —— AI状态自动轮换引擎（P5，决策#29）
    规则（源策划「AI状态体系【最终绝对定稿】」）：
@@ -17447,7 +17824,7 @@ const History = (function () {
       localStorage.setItem(ERRKEY, JSON.stringify(arr));
     } catch (e) {}
   }
-  /* 必须挂到全局：logErr 写在 app.js 的 IIFE 里，chat.js 等其仙模块直接调会 ReferenceError，
+  /* 必须挂到全局：logErr 写在 app.js 的 IIFE 里，chat.js 等其他模块直接调会 ReferenceError，
      把“降级兼容”分支本身炸掉（2026-08-27 她“一直转圈”的真根因之一） */
   window.logErr = logErr;
   /* P30：外部脚本错误（浏览器插件/扩展注入，如 plug.js）标注来源，与 LOVEX 自身错误区分 */
@@ -17775,13 +18152,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       this.value = '';
     });
 
-    /* --- 存储管理：本地占用概览（策划页面3） --- */
+    /* --- 存储管理：占用概览 + 按天找回（08-30 P41 R6：快照有函数无界面的补口） --- */
     /* 黑匣子错误计数（P28：quota 等系统级异常也入档，这里可见） */
     function blackboxLine() {
       try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
         return a.length ? '黑匣子错误 ' + a.length + ' 条（长按心事簿标题可看）\n' : ''; } catch (e) { return ''; }
     }
-    document.getElementById('cell-storage').addEventListener('click', () => {
+    function storageOverview() {
       let bytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -17796,6 +18173,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         stickerN += ((l && l.items) || []).length);
       Object.values(st.msgs || {}).forEach(arr =>
         letterN += arr.filter(m => m.type === 'letter').length);
+      const vs = (typeof DB.vaultStats === 'function') ? DB.vaultStats() : { packed: 0, kb: 0, missing: 0, off: true };
       UI.confirmBox({
         title: '存储管理',
         okText: '知道了',
@@ -17803,9 +18181,32 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           + 'AI 好友 ' + st.contacts.length + ' 位 · 群聊 ' + st.groups.length + ' 个\n'
           + '聊天消息 ' + msgN + ' 条 · 往来信件 ' + letterN + ' 封\n'
           + '图片表情 ' + stickerN + ' 张\n'
+          + (vs.off
+              ? '媒体：本机没开 IndexedDB，图片仍直存（受配额限制）\n'
+              : '图片/语音已托管 ' + vs.packed + ' 个·' + vs.kb + ' KB（不占主档配额）\n'
+                + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了\n' : ''))
+          + '存储受浏览器保护：' + (typeof DB.persistState === 'function' ? DB.persistState() : '未知') + '\n'
           + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
       });
+    }
+    document.getElementById('cell-storage').addEventListener('click', async () => {
+      let snaps = [];
+      try { snaps = await DB.listSnaps(); } catch (e) {}
+      const act = await UI.actionSheet('存储管理', [
+        { key: 'info', label: '本机占用概览' },
+        { key: 'snap', label: snaps.length ? ('按天找回聊天记录（' + snaps.length + ' 天快照）') : '按天找回聊天记录（暂无快照）' }
+      ]);
+      if (act === 'info') { storageOverview(); return; }
+      if (act !== 'snap') return;
+      if (!snaps.length) return UI.toast('还没得快照：每天开页时存一份，只留最近 14 天');
+      const day = await UI.actionSheet('选一天合并回来（只补我缺的那几条，不整档覆盖）',
+        snaps.map(s => ({ key: s.day, label: s.day + ' · ' + (s.convs || 0) + ' 个会话' })));
+      if (!day) return;
+      let n = 0;
+      try { n = await DB.restoreSnap(day); } catch (e) {}
+      UI.toast(n ? ('已并回 ' + n + ' 条') : '这一天没有新东西可并');
+      if (n) setTimeout(() => location.reload(), 800);
     });
 
     /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 --- */
@@ -18080,10 +18481,19 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     fill();
   }
 
+  /* 08-30 P41：主档里的媒体现在是 '@mv' 引用串，得先从 IDB 换回真数据再渲染，
+     否则首屏图片是空的。DB.ready 没 IDB 时立刻 resolve；最多等 1.5 秒就起页，
+     不能让“存储卡住”变成“页面打不开”（她最恨喊人不应）。 */
+  const boot = () => {
+    Promise.race([Promise.resolve(DB.ready), new Promise(r => setTimeout(r, 1500))]).then(init, e => {
+      if (typeof logErr === 'function') logErr('装载：' + ((e && e.message) || e));
+      init();
+    });
+  };
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 })();
 
