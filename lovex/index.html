@@ -1733,8 +1733,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-vthumb.vid-lost video{display:none}
 .mo-vthumb.vid-lost{background:var(--fill)!important;display:flex;align-items:center;justify-content:center}
 .mo-vthumb.vid-lost::after{content:'视频不在本机';font-size:10px;color:var(--t2)}
-.mo-item-link{cursor:pointer}
-.mo-item-link{border-left:3px solid var(--line);background:var(--fill);padding:6px 10px;margin-bottom:6px;font-size:var(--fs-small);color:var(--primary);word-break:break-all}
+.mo-item-link{cursor:pointer;border-left:3px solid var(--line);background:var(--fill);padding:6px 10px;margin-bottom:6px;font-size:var(--fs-small);color:var(--primary);word-break:break-all}
 .mo-item-loc{font-size:var(--fs-small);color:var(--primary);margin-bottom:4px}
 .mo-item-meta{display:flex;align-items:center;gap:12px;font-size:var(--fs-small);color:var(--t3);margin-bottom:6px}
 .mo-ops{position:absolute;right:0;margin-top:-32px;display:flex;align-items:center;gap:6px;background:var(--fill);border-radius:999px;padding:2px 4px}
@@ -2134,17 +2133,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   padding:1px 5px;margin-right:7px;font-weight:600}
 .qz-imp-item small{float:right;color:var(--t2);font-size:11.5px}
 #qz-imp-ok:disabled{opacity:.4}
-/* 卷详情页 */
-.qzv-paper{margin-top:10px;padding:12px 14px}
-.qzv-name{display:flex;align-items:center;gap:6px;font-size:14.5px;color:var(--t1);font-weight:600}
-.qzv-waiting{padding:18px 0;text-align:center;color:var(--t2);font-size:13px}
-.qzv-q{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
-.qzv-q-t{font-size:14px;color:var(--t1);line-height:1.55}
-.qzv-q-t em{font-style:normal;font-size:11px;color:var(--t2);border:1px solid var(--line);
-  border-radius:6px;padding:1px 5px;margin-left:5px}
-.qzv-comment{margin-top:12px;font-size:13.5px;color:var(--t1);background:var(--bg);
-  border-radius:10px;padding:9px 12px;line-height:1.6}
-.qzv-comment span{display:block;font-size:11.5px;color:var(--t2);margin-bottom:3px}
+/* 卷详情页（09-01 清扫）：这个块里原来有 8 条规则被下面「P34 详情页重做」块逐条压住，
+   已删旧条；旧块里新块没写的几条（.qzv-name 的 font-size/color/font-weight、
+   .qzv-q-t em 的 margin-left、.qzv-comment 的 background）已折进新块，所以渲染像素不变。
+   这里只留新块没写的规矩。 */
 .qzv-rate{margin-top:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .qzv-rate>span{font-size:13.5px;color:var(--t2);flex:none}
 .qzv-rate .chip-row{flex:1}
@@ -2190,7 +2182,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .qzv-dots i.on{background:var(--primary);border-color:var(--primary)}
 .qzv-hero-meta em{margin-left:auto;font-style:normal;font-size:11.5px}
 .qzv-paper{margin-top:10px;padding:13px 15px}
-.qzv-name{display:flex;align-items:center;gap:8px}
+.qzv-name{display:flex;align-items:center;gap:8px;font-size:14.5px;color:var(--t1);font-weight:600}
 .qzv-name .avatar-sm{width:26px;height:26px;font-size:12px;flex:none}
 .qzv-name b{font-size:14.5px;color:var(--t1)}
 .qzv-name time{margin-left:auto;font-size:11.5px;color:var(--t2)}
@@ -2204,11 +2196,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   align-items:baseline;gap:7px}
 .qzv-q-t .qz-no{transform:translateY(-1px)}
 .qzv-q-t em{font-style:normal;font-size:10.5px;color:var(--t2);border:1px solid var(--line);
-  border-radius:6px;padding:1px 5px;flex:none}
+  border-radius:6px;padding:1px 5px;margin-left:5px;flex:none}
 .qzv-a{margin-top:8px;margin-left:24px;font-size:14.5px;line-height:1.65;color:var(--t1);
   background:var(--bg);border-left:3px solid var(--primary);border-radius:0 10px 10px 0;
   padding:8px 12px;word-break:break-all}
-.qzv-comment{margin-top:15px;font-size:13.5px;color:var(--t1);border:1.5px dashed var(--line);
+.qzv-comment{margin-top:15px;font-size:13.5px;color:var(--t1);background:var(--bg);
+  border:1.5px dashed var(--line);
   border-radius:12px 3px 12px 3px;padding:10px 12px;line-height:1.65}
 .qzv-comment span{display:flex;align-items:center;gap:4px;font-size:11.5px;
   color:var(--t2);margin-bottom:4px}
@@ -2341,7 +2334,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* ---------- 对局页 ---------- */
 #page-room .page-body-flush{gap:0;padding:0}
 .gm-players{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 12px 6px;position:relative}
-.gm-player{display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45;transition:opacity .2s}
+.gm-player{display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45;transition:opacity .2s;width:80px}   /* 定宽 80px：09-01 从 2001 行的 P40 补丁块拢回来，同一类名只留一处户口 */
 .gm-player.on{opacity:1}
 .gm-ava{width:40px;height:40px;border-radius:8px;background:var(--fill);overflow:hidden;display:flex;align-items:center;justify-content:center;
   font-size:16px;color:var(--t2);border:2px solid transparent}
@@ -2513,8 +2506,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   65%{transform:scale(1.05) rotate(8deg);opacity:1}100%{transform:scale(.85);opacity:0}}
 
 /* ---------- P40 补丁四（她 08-29 傍晚） ---------- */
-/* 玩家 chip 定宽 + 名字/先手点一行 + 分数一行：行不再被撑乱 */
-.gm-player{width:80px}
+/* 玩家 chip 定宽 + 名字/先手点一行 + 分数一行：行不再被撑乱（width 已归到上面的 .gm-player） */
 .gm-name-row{display:flex;align-items:center;justify-content:center;gap:3px;max-width:80px}
 .gm-pts{font-size:10px;color:var(--t3);max-width:80px;text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -5280,18 +5272,8 @@ var Quiz = (function () {
       });
     });
     gbox.querySelector('#qz-addgroup').addEventListener('click', () => {
-      Home.openForm({
-        title: '新建分组',
-        fields: [{ key: 'n', label: '分组名', placeholder: '例如：感情 / 日常 / 趣味', maxlength: 12 }],
-        okText: '建好',
-        onSubmit(v) {
-          const name = (v.n || '').trim();
-          if (!name) return '分组名不能为空';
-          if (l.groups.some(g => g.name === name)) return '已有同名分组';
-          l.groups.push({ id: uid(), name });
-          DB.save(); renderLib();
-        }
-      });
+      Library.newGroupForm(l.groups, renderLib,
+        { okText: '建好', placeholder: '例如：感情 / 日常 / 趣味' });
     });
 
     /* 题目列表（倒序） */
@@ -5342,18 +5324,7 @@ var Quiz = (function () {
       l.questions.filter(q => q.gid === g.id).length + ' 题', opts);
     if (!k) return;
     if (k === 'edit') {
-      Home.openForm({
-        title: '重命名分组',
-        fields: [{ key: 'n', label: '分组名', maxlength: 12 }],
-        okText: '保存',
-        onSubmit(v) {
-          const name = (v.n || '').trim();
-          if (!name) return '分组名不能为空';
-          if (l.groups.some(x => x !== g && x.name === name)) return '已有同名分组';
-          g.name = name;
-          DB.save(); renderLib();
-        }
-      });
+      Library.renameGroupForm(l.groups, g, renderLib);   // 09-01 拢条：表单住在 Library
     } else if (k === 'del') {
       const cnt = l.questions.filter(q => q.gid === g.id).length;
       const ok = await UI.confirmBox({
@@ -8965,60 +8936,43 @@ const Chat = (function () {
     UI.toast('已移动 ' + n + ' 张到「' + gname + '」');
   }
 
-  function edMoveSelected(lib) {
+  /* 选分组（嫌列表里没合适的就当场建一个）——09-01 优化：原来三处手抄的
+     “actionSheet + 新建分组 + 同名查重”拢成这一条，调用方只管拿着 gid 干事。
+     opt = { title, verb, onPick(gid, gname) } */
+  function pickGroupTo(lib, opt) {
+    const verb = opt.verb || '移到';
     const opts = lib.groups.filter(g => !g.blocked).map(g =>
-      ({ key: g.id, label: '移到「' + g.name + '」' }));
+      ({ key: g.id, label: verb + '「' + g.name + '」' }));
     opts.push({ key: '__new', label: '新建分组…' });
-    UI.actionSheet('移动到分组', opts).then(k => {
+    UI.actionSheet(opt.title, opts).then(k => {
       if (!k) return;
-      if (k === '__new') {
-        Home.openForm({
-          title: '新建分组', okText: '创建',
-          fields: [{ key: 'name', label: '分组名', required: true }],
-          onSubmit(v) {
-            const name = (v.name || '').trim();
-            if (!name) return '先输入分组名';
-            const dup = lib.groups.find(g => g.name === name);
-            if (dup) { edApplyMove(lib, dup.id, dup.name); return; }
-            const ng = { id: gidLocal(), name, blocked: false };
-            lib.groups.push(ng);
-            edApplyMove(lib, ng.id, name);
-          }
-        });
+      if (k !== '__new') {
+        const g = lib.groups.find(x => x.id === k);
+        opt.onPick(k, g ? g.name : '默认');
         return;
       }
-      const g = lib.groups.find(x => x.id === k);
-      edApplyMove(lib, k, g ? g.name : '默认');
+      Library.newGroupForm(lib.groups,
+        ng => opt.onPick(ng.id, ng.name),
+        { onDup: dup => opt.onPick(dup.id, dup.name) });   // 移动场景：同名不重建，直接归到旧组
+    });
+  }
+
+  function edMoveSelected(lib) {
+    pickGroupTo(lib, {
+      title: '移动到分组', verb: '移到',
+      onPick: (gid, gname) => edApplyMove(lib, gid, gname)
     });
   }
 
   /* P27（清然 10:16：全 tab 都要能编辑分组和删除）：浏览态长按单张表情＝
      移动分组/屏蔽/删除，emoji/颜文字/我的/专属/图片五栏一致，不用进管理模式 */
   function edMoveOne(lib, it) {
-    const opts = lib.groups.filter(g => !g.blocked).map(g =>
-      ({ key: g.id, label: '移到「' + g.name + '」' }));
-    opts.push({ key: '__new', label: '新建分组…' });
-    UI.actionSheet('移动到分组', opts).then(k => {
-      if (!k) return;
-      const apply = (gid, gname) => { it.groupId = gid; DB.save(); renderEmojiDrawer(); UI.toast('已移到「' + gname + '」'); };
-      if (k === '__new') {
-        Home.openForm({
-          title: '新建分组', okText: '创建',
-          fields: [{ key: 'name', label: '分组名', required: true }],
-          onSubmit(v) {
-            const name = (v.name || '').trim();
-            if (!name) return '先输入分组名';
-            const dup = lib.groups.find(g => g.name === name);
-            if (dup) { apply(dup.id, dup.name); return; }
-            const ng = { id: gidLocal(), name, blocked: false };
-            lib.groups.push(ng);
-            apply(ng.id, name);
-          }
-        });
-        return;
+    pickGroupTo(lib, {
+      title: '移动到分组', verb: '移到',
+      onPick(gid, gname) {
+        it.groupId = gid; DB.save(); renderEmojiDrawer();
+        UI.toast('已移到「' + gname + '」');
       }
-      const g = lib.groups.find(x => x.id === k);
-      apply(k, g ? g.name : '默认');
     });
   }
 
@@ -9132,17 +9086,7 @@ const Chat = (function () {
     document.getElementById('ed-grps').addEventListener('click', e => {
       const nw = e.target.closest('[data-gnew]');
       if (nw) {
-        const lib = stickerLib(edTab);
-        Home.openForm({
-          title: '新建分组', okText: '创建',
-          fields: [{ key: 'name', label: '分组名', required: true }],
-          onSubmit(v) {
-            const name = v.name.trim();
-            if (lib.groups.some(g => g.name === name)) { UI.toast('已有同名分组'); return; }
-            lib.groups.push({ id: gidLocal(), name, blocked: false });
-            DB.save(); renderEmojiDrawer();
-          }
-        });
+        Library.newGroupForm(stickerLib(edTab).groups, renderEmojiDrawer);
         return;
       }
       const c = e.target.closest('[data-g]');
@@ -9165,17 +9109,7 @@ const Chat = (function () {
         { key: 'del', label: '删除分组', danger: true }
       ]).then(k => {
         if (k === 'rename') {
-          Home.openForm({
-            title: '重命名分组', okText: '保存',
-            fields: [{ key: 'name', label: '分组名', value: g.name, required: true }],
-            onSubmit(v) {
-              const name = (v.name || '').trim();
-              if (!name) return '分组名不能为空';
-              if (lib.groups.some(x => x !== g && x.name === name)) return '已有同名分组';
-              g.name = name;
-              DB.save(); renderEmojiDrawer();
-            }
-          });
+          Library.renameGroupForm(lib.groups, g, renderEmojiDrawer);
         } else if (k === 'del') {
           if (lib.groups.length <= 1) { UI.toast('至少要留一个分组哦'); return; }
           UI.confirmBox({ title: '删除分组', text: '「' + g.name + '」里的表情将回到未分组。', danger: true, okText: '删除' })
@@ -9250,29 +9184,9 @@ const Chat = (function () {
 
     /* ＋添加：emoji/颜文字批量文本导入；图片走归属→分组两步再选文件 */
     const fileInput = document.getElementById('ed-file');
+    /* 09-01 优化：本函数只剩一层皮，实体在 pickGroupTo */
     function pickGroup(lib, then) {
-      const opts = lib.groups.filter(g => !g.blocked).map(g =>
-        ({ key: g.id, label: '传到「' + g.name + '」' }));
-      opts.push({ key: '__new', label: '新建分组…' });
-      UI.actionSheet('选择分组', opts).then(k => {
-        if (!k) return;
-        if (k === '__new') {
-          Home.openForm({
-            title: '新建分组', okText: '创建',
-            fields: [{ key: 'name', label: '分组名', required: true }],
-            onSubmit(v) {
-              const name = (v.name || '').trim();
-              if (!name) return '先输入分组名';
-              let dup = lib.groups.find(g => g.name === name);
-              if (dup) { then(dup.id); return; }
-              const ng = { id: gidLocal(), name, blocked: false };
-              lib.groups.push(ng); DB.save(); then(ng.id);
-            }
-          });
-          return;
-        }
-        then(k);
-      });
+      pickGroupTo(lib, { title: '选择分组', verb: '传到', onPick: (gid) => then(gid) });
     }
     /* emoji/颜文字/拍一拍文案批量导入；emoji整堆识别拆分，其余一行一条 */
     function bulkTextImport() {
@@ -9444,7 +9358,8 @@ const Chat = (function () {
       renderEmojiDrawer();
     });
   }
-  function gidLocal() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  /* 09-01 拢条：以前这儿又抄了一份 gid()，现在只皮一层 */
+  function gidLocal() { return Library.newGroupId(); }
 
   /* ---------------- 底栏：语音模式 ---------------- */
   function setVoiceMode(on) {
@@ -9926,7 +9841,7 @@ const Engine = (function () {
     const imgProb = Math.min(100, Math.max(0, Math.round(+p.imgProb || 0)));
     const imgMode = p.imgMode || 'single';
     const soloImgOK = imgMode !== 'attach';
-    const stickers = usableStickers(ct);
+    const stickers = Library.usableStickerPool(ct);
 
     /* 对方20%随机引用最近10条：每轮最多附一次，落在首条上 */
     let quote = null;
@@ -10063,16 +9978,6 @@ const Engine = (function () {
     const s = m.senderId ? Home.contactById(m.senderId)
                          : Home.contactById(conv.peerId);
     return s ? Home.displayName(s) : '?';
-  }
-
-  /* 图片表情抽取池：角色专属 + 共用，等概率（决策#34） */
-  function usableStickers(ct) {
-    const out = [];
-    const cs = DB.state.libs.contactStickers && DB.state.libs.contactStickers[ct.id];
-    if (cs && cs.items) cs.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
-    const sh = DB.state.libs.sharedStickers;
-    if (sh && sh.items) sh.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
-    return out;
   }
 
   function pushAi(conv, text, ct, quote) {
@@ -10728,7 +10633,7 @@ const Library = (function () {
     let h = '';
 
     /* 分组栏：横向胶囊行，固定一行高度不随组数增长（决策#28）
-       点胶囊=筛选本组；长洨/右键=管理菜单；末尾＋=新建分组 */
+       点胶囊=筛选本组；长按/右键=管理菜单；末尾＋=新建分组 */
     h += '<div class="chip-row" id="chip-row">';
     h += chipHtml('', '全部', lib.items.length, view.group === null);
     lib.groups.forEach(g => {
@@ -10813,19 +10718,7 @@ const Library = (function () {
 
     const addBtn = body.querySelector('#lib-addgroup');
     if (addBtn) addBtn.addEventListener('click', () => {
-      Home.openForm({
-        title: '新建分组',
-        fields: [{ key: 'n', label: '分组名', placeholder: '例如：日常闲聊', maxlength: 12 }],
-        okText: '创建',
-        onSubmit(v) {
-          const name = (v.n || '').trim();
-          if (!name) return '分组名不能为空';
-          if (currentLib().groups.some(g => g.name === name)) return '已有同名分组';
-          currentLib().groups.push({ id: gid(), name, blocked: false });
-          DB.save(); render();
-          UI.toast('分组已创建');
-        }
-      });
+      newGroupForm(currentLib().groups, render, { placeholder: '例如：日常闲聊' });
     });
 
     /* 批量操作 */
@@ -10919,6 +10812,66 @@ const Library = (function () {
     if (k) groupOp(k, g);
   }
 
+  /* ---------- 分组表单两条（09-01 拢条） ----------
+     以前“新建分组”四处各写一份、“重命名分组”三处各写一份，字段名、提示、
+     连“同名算拒还是算并进旧组”都不一致（有一处还漏了空名判断）。统一到这两条：
+     空名拒、同名拒（除非给了 onDup）、改完 DB.save() + after() + toast。 */
+  function newGroupForm(groups, after, opt) {
+    const o = opt || {};
+    Home.openForm({
+      title: '新建分组', okText: o.okText || '创建',
+      fields: [{ key: 'name', label: '分组名', maxlength: 12, placeholder: o.placeholder || '' }],
+      onSubmit(v) {
+        const name = (v.name || '').trim();
+        if (!name) return '分组名不能为空';
+        const dup = groups.find(g => g.name === name);
+        if (dup) {
+          if (!o.onDup) return '已有同名分组';
+          o.onDup(dup);      // 调用方接走同名组（openForm 看没报错就自己收窗）
+          return;
+        }
+        const ng = { id: gid(), name, blocked: false };
+        groups.push(ng);
+        DB.save();
+        if (after) after(ng);          // 新建完把新组交给调用方，省得对方去猜数组尾部
+        UI.toast('分组已创建');
+      }
+    });
+  }
+
+  /* 分组重命名表单（09-01 拢条：文件管理、题库、表情抽屉原来各写了一份，
+     一边有 toast 一边没有、一边预填原名一边空着，就是手抄开始飘的样子）
+     groups=同库的分组数组（查同名用），after=改完怎么刷 */
+  function renameGroupForm(groups, g, after) {
+    Home.openForm({
+      title: '重命名分组', okText: '保存',
+      fields: [{ key: 'name', label: '分组名', maxlength: 12, value: g.name }],
+      onSubmit(v) {
+        const name = (v.name || '').trim();
+        if (!name) return '分组名不能为空';
+        if (groups.some(x => x !== g && x.name === name)) return '已有同名分组';
+        g.name = name;
+        DB.save();
+        if (after) after();
+        UI.toast('分组已重命名');
+      }
+    });
+  }
+
+  function newGroupId() { return gid(); }
+
+  /* 该联系人可用图片表情池：专属 + 共用，未屏蔽等概率混合（决策#34）。
+     09-01 拢条：engine.js 与 moments.js 原来各抄一份，口径写两遍就会飘 */
+  function usableStickerPool(ct) {
+    const out = [];
+    const libs = DB.state.libs || {};
+    const cs = ct && libs.contactStickers ? libs.contactStickers[ct.id] : null;
+    if (cs && cs.items) cs.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
+    const sh = libs.sharedStickers;
+    if (sh && sh.items) sh.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
+    return out;
+  }
+
   async function groupOp(op, g) {
     const lib = currentLib();
     if (op === 'block') {
@@ -10927,19 +10880,7 @@ const Library = (function () {
       UI.toast(g.blocked ? '已屏蔽「' + g.name + '」整组' : '已解除「' + g.name + '」屏蔽');
     }
     else if (op === 'edit') {
-      Home.openForm({
-        title: '重命名分组',
-        fields: [{ key: 'n', label: '分组名', maxlength: 12 }],
-        okText: '保存',
-        onSubmit(v) {
-          const name = (v.n || '').trim();
-          if (!name) return '分组名不能为空';
-          if (lib.groups.some(x => x !== g && x.name === name)) return '已有同名分组';
-          g.name = name;
-          DB.save(); render();
-          UI.toast('分组已重命名');
-        }
-      });
+      renameGroupForm(lib.groups, g, render);
     }
     else if (op === 'del') {
       if (g.name === '默认') { UI.toast('默认分组不能删除'); return; }
@@ -11053,7 +10994,7 @@ const Library = (function () {
 
   function init() {}
 
-  return { open, init, usableCardPool, usableVoicePool };
+  return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId };
 })();
 
 /* =====================================================
@@ -11081,23 +11022,50 @@ const Group = (function () {
       UI.toast('至少需要两位AI联系人才能组一个群');
       return;
     }
+    pickPeople({
+      title: '发起群聊', cands: DB.state.contacts, min: 2,
+      onDone(ids) {
+        const g = {
+          id: 'cv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+          type: 'group',
+          memberIds: ids,
+          name: null,             // 自定义群名，空=自动拼接成员昵称
+          cover: null, coverShape: 'round',
+          bg: null,               // 本群聊天背景
+          lastMsg: '', lastTime: Date.now(),
+          unread: 0, pinned: false, muted: false
+        };
+        DB.state.convs.push(g);
+        DB.save();
+        Home.render();
+        Home.openConv(g.id);
+        UI.toast('群聊已创建');
+      }
+    });
+  }
+
+  /* 选人弹窗（09-01 优化）：建群与“往群里加人”原来是两份手抄，
+     只差候选人来源与最少人数。勾选/计数/取消/点遮罩关掉只写这一次。
+     opt = { title, cands, min, onDone(ids) } */
+  function pickPeople(opt) {
     const sel = new Set();
+    const min = opt.min || 1;
     const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
     mask.className = 'dialog-mask';
     const dlg = document.createElement('div');
     dlg.className = 'dialog';
     dlg.innerHTML =
-      '<div class="dialog-title">发起群聊</div>' +
+      '<div class="dialog-title"></div>' +
       '<div class="pick-list"></div>' +
       '<div class="dialog-btns">' +
         '<button class="btn btn-secondary" data-x>取消</button>' +
         '<button class="btn btn-primary" data-ok disabled>完成(0)</button>' +
       '</div>';
+    dlg.querySelector('.dialog-title').textContent = opt.title;   // 走 textContent，不拼 HTML
     const pl = dlg.querySelector('.pick-list');
     const okBtn = dlg.querySelector('[data-ok]');
-
-    DB.state.contacts.forEach(c => {
+    opt.cands.forEach(c => {
       const b = document.createElement('button');
       b.className = 'pick-row pick-checkable';
       const av = document.createElement('span');
@@ -11115,29 +11083,15 @@ const Group = (function () {
       b.addEventListener('click', () => {
         if (sel.has(c.id)) { sel.delete(c.id); b.classList.remove('checked'); chk.innerHTML = ''; }
         else { sel.add(c.id); b.classList.add('checked'); chk.innerHTML = I('check', 14); }
-        okBtn.disabled = sel.size < 2;
+        okBtn.disabled = sel.size < min;
         okBtn.textContent = '完成(' + sel.size + ')';
       });
       pl.appendChild(b);
     });
-
     okBtn.addEventListener('click', () => {
-      const g = {
-        id: 'cv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-        type: 'group',
-        memberIds: [...sel],
-        name: null,             // 自定义群名，空=自动拼接成员昵称
-        cover: null, coverShape: 'round',
-        bg: null,               // 本群聊天背景
-        lastMsg: '', lastTime: Date.now(),
-        unread: 0, pinned: false, muted: false
-      };
-      DB.state.convs.push(g);
-      DB.save();
+      if (sel.size < min) return;
       mask.remove();
-      Home.render();
-      Home.openConv(g.id);
-      UI.toast('群聊已创建');
+      opt.onDone([...sel]);
     });
     dlg.querySelector('[data-x]').addEventListener('click', () => mask.remove());
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
@@ -11255,60 +11209,20 @@ const Group = (function () {
     grid.appendChild(add);
   }
 
-  /* 往已有群添加成员（微信同款＋，不重复选已在群内的） */
+  /* 往已有群添加成员（微信同款＋，不重复选已在群内的）
+     09-01 优化：弹窗手抄已拢进 pickPeople */
   function addMembersFlow(g) {
     const candidates = DB.state.contacts.filter(c => !g.memberIds.includes(c.id));
     if (!candidates.length) { UI.toast('所有AI联系人都已经在群里了'); return; }
-    const sel = new Set();
-    const layer = document.getElementById('dialog-layer');
-    const mask = document.createElement('div');
-    mask.className = 'dialog-mask';
-    const dlg = document.createElement('div');
-    dlg.className = 'dialog';
-    dlg.innerHTML =
-      '<div class="dialog-title">添加成员</div>' +
-      '<div class="pick-list"></div>' +
-      '<div class="dialog-btns">' +
-        '<button class="btn btn-secondary" data-x>取消</button>' +
-        '<button class="btn btn-primary" data-ok disabled>完成(0)</button>' +
-      '</div>';
-    const pl = dlg.querySelector('.pick-list');
-    const okBtn = dlg.querySelector('[data-ok]');
-    candidates.forEach(c => {
-      const b = document.createElement('button');
-      b.className = 'pick-row pick-checkable';
-      const av = document.createElement('span');
-      av.className = 'avatar pick-ava';
-      if (c.avatar) {
-        const im = document.createElement('img'); im.src = c.avatar; av.appendChild(im);
-      } else {
-        av.textContent = (Home.displayName(c) || '?').slice(0, 1);
+    pickPeople({
+      title: '添加成员', cands: candidates, min: 1,
+      onDone(ids) {
+        g.memberIds.push(...ids);
+        DB.save();
+        fill(); Home.render();
+        UI.toast('已添加 ' + ids.length + ' 位成员');
       }
-      const nm = document.createElement('span');
-      nm.className = 'pick-name'; nm.textContent = Home.displayName(c);
-      const chk = document.createElement('span');
-      chk.className = 'pick-check';
-      b.appendChild(av); b.appendChild(nm); b.appendChild(chk);
-      b.addEventListener('click', () => {
-        if (sel.has(c.id)) { sel.delete(c.id); b.classList.remove('checked'); chk.innerHTML = ''; }
-        else { sel.add(c.id); b.classList.add('checked'); chk.innerHTML = I('check', 14); }
-        okBtn.disabled = sel.size < 1;
-        okBtn.textContent = '完成(' + sel.size + ')';
-      });
-      pl.appendChild(b);
     });
-    okBtn.addEventListener('click', () => {
-      g.memberIds.push(...sel);
-      DB.save();
-      mask.remove();
-      fill(); Home.render();
-      UI.toast('已添加 ' + sel.size + ' 位成员');
-    });
-    dlg.querySelector('[data-x]').addEventListener('click', () => mask.remove());
-    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
-    mask.appendChild(dlg);
-    layer.appendChild(mask);
-    UI.raise(mask);
   }
 
   /* 改完资料后，若该群正在聊天页则即时刷新标题与背景 */
@@ -13734,15 +13648,7 @@ function coverTap(e) {
     let minS = Math.max(0, +p.minSec || 0);
     return { minS, maxS: Math.max(minS, +p.maxSec || minS) };
   }
-  /* 该联系人可用表情池：专属+共用未屏蔽等概率混合（同聊天 usableStickers 口径） */
-  function stickerPool(ct) {
-    const out = [];
-    const cs = DB.state.libs.contactStickers && DB.state.libs.contactStickers[ct.id];
-    if (cs && cs.items) cs.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
-    const sh = DB.state.libs.sharedStickers;
-    if (sh && sh.items) sh.items.forEach(it => { if (!it.blocked && it.img) out.push(it.img); });
-    return out;
-  }
+  /* 可用表情池：专属 + 共用，未屏蔽等概率混合——实体在 Library.usableStickerPool（09-01 拢条） */
   function contactsAll() { return (DB.state.contacts || []).filter(c => !c.isGroup); }
   function canSee(post, ct) {
     if (post.visibility === 'private') return false;
@@ -13805,7 +13711,7 @@ function coverTap(e) {
       const ip = isFinite(ipRaw) ? ipRaw : 20;
       let img = null;
       if (ip > 0 && Math.random() * 100 < ip) {
-        const sp = stickerPool(ct);
+        const sp = Library.usableStickerPool(ct);
         if (sp.length) img = pick(sp);
       }
       if (text || img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text, img, ts: Date.now() });
@@ -16344,7 +16250,7 @@ const Games = (function () {
     });
   }
   /* ---------- 游戏模块的唯一回写口 ----------
-     存盘 + 重绘 + 重排定时器这三件以前每个游戏各拄一遍，漏一个就是
+     存盘 + 重绘 + 重排定时器这三件以前每个游戏各抄一遍，漏一个就是
      “点了没反应”（没重绘）或“关页回档”（没存盘）——uno.js 等一律调 touch() */
   function touch(r) {
     DB.save();
