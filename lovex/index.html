@@ -16052,6 +16052,7 @@ const Soup = (function () {
     el.innerHTML = h;
     if (room.phase === 'ended') return;
     const inp = el.querySelector('#sp-q');
+    /* 草稿保留不在这管：重绘前接住正在敲的那格，是壳（game.js renderRoom）统一做的 */
     const go = () => { const v = inp.value; inp.value = ''; ask(room, v); };
     el.querySelector('#sp-go').addEventListener('click', go);
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
@@ -16068,6 +16069,7 @@ const Soup = (function () {
     return {
       id: 'soup', name: '海龟汤', icon: 'soup-bowl', playersTxt: '双人',
       first: 'ta',                 // 出题方固定是 TA：不走先手协商（game.js 的 joined 认这个字段）
+      ownIpt: true,                // 提问框就是这局的操作本身，壳子不再另画一条“游戏里也能聊”（两个输入框＝同件事两处）
       thinkKind: 'soupAnswer',     // 玩家条上那句“TA 正在想…”靠它点亮（以前只认 taMove）
       note: 'TA 出题，你只问「是 / 不是」能答的；问满 ' + MAX_ASKS + ' 个就收摊',
       newRoom, onPlan, render: render2, turnOf, settleTable,
@@ -16778,12 +16780,20 @@ const Games = (function () {
     }
     h += '<div class="gm-feed" id="room-feed">' + (r.feed || []).map(f =>
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
-    h += '<div class="gm-ipt">' +
-      '<button class="gm-chip-btn" id="room-quick">短语</button>' +
-      '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
-      '<button class="gm-send" id="room-send">发</button>' +
-      (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
-      '</div>';
+    if (!defOf(r).ownIpt) {
+      h += '<div class="gm-ipt">' +
+        '<button class="gm-chip-btn" id="room-quick">短语</button>' +
+        '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
+        '<button class="gm-send" id="room-send">发</button>' +
+        (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
+        '</div>';
+    }
+    /* 重绘前把“已经有字的输入框”接住，重绘后按 id 装回去：海龟汤 TA 那句迟到会引发整块重绘，
+       以前她打到一半的字直接被抹。不靠焦点判断（她可能已经点了其他地方），也不让各游戇6 自己拄一份 */
+    const act = document.activeElement;
+    const wasActiveId = act && act.tagName === 'INPUT' && act.id ? act.id : '';
+    const caret = wasActiveId ? (act.selectionStart || 0) : 0;
+    const keep = [...body.querySelectorAll('input')].filter(x => x.id && x.value).map(x => ({ id: x.id, v: x.value }));
     body.innerHTML = h;
     /* 棋盘：定序阶段也得交给游戏自己画（UNO 的先手面板就在棋盘里） */
     const bel = document.getElementById('room-board');
@@ -16812,6 +16822,14 @@ const Games = (function () {
         if (now - lastTap < 450) { lastTap = 0; propTarget = chip.dataset.uid; toggleRow('room-props', buildPropsHtml); }
         else lastTap = now;
       });
+    });
+    /* 装回去放在最后：游戏自己的输入框是上面 defOf(r).render() 里的（海龟汤的提问框就在棋盘内），
+       在 innerHTML 那一秒它还根本不存在——第一轮就是这么没装上的 */
+    keep.forEach(k => {
+      const back = document.getElementById(k.id);
+      if (!back || back.tagName !== 'INPUT' || back.value) return;
+      back.value = k.v;
+      if (k.id === wasActiveId) runSafe('room.keepDraft', () => { back.focus(); back.setSelectionRange(caret, caret); });   // 光标回到原位，不然接着打字会插到开头
     });
     renderFloat(r);
     tick();
