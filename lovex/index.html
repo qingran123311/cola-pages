@@ -2350,7 +2350,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-splat .gm-ava{animation:gm-shake .45s}
 @keyframes gm-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}55%{transform:translateX(3px)}80%{transform:translateX(-2px)}}
 /* 道具飞行主体样式在文件尾 P40 补丁段（EMOJI 本体 fixed 挂 body） */
-.gm-board-wrap{display:flex;flex-direction:column;align-items:center;padding:2px 12px}
+.gm-board-wrap{display:flex;flex-direction:column;align-items:center;padding:2px 12px;
+  /* 牌桌与手牌自己保证不溢出，整页就不该能左右摇（她 08-30：“下面还能左右滑，滑了还是看不见”） */
+  max-width:100%;overflow-x:clip}
 .gm-timer{height:16px;font-size:11px;color:var(--t3)}
 .gk-board{display:grid;grid-template-columns:repeat(15,1fr);width:min(92vw,430px);aspect-ratio:1;
   background:var(--card);border:2px solid var(--t2);border-radius:6px}
@@ -2456,7 +2458,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* ---------- P40 补丁（她 08-29 夜） ---------- */
 .gm-ava img{width:100%;height:100%;object-fit:cover}
 .gm-propbig{padding:8px 12px;font-size:12.5px;gap:6px}
-.gm-propbig .gm-pe{margin-right:2px}
 .gm-fimg{max-width:150px;max-height:120px;border-radius:8px;display:block}
 .gm-fsmile{border:none;background:none;color:var(--t2);padding:4px;display:flex}
 .gm-fstg{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-top:1px solid var(--line);max-height:132px;overflow-y:auto;
@@ -2478,13 +2479,21 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mn-cell.mn-boom{color:var(--t1);background:color-mix(in srgb,var(--fill) 70%,var(--t2))}
 
 /* ---------- P40 补丁三（她 08-29 日间实测） ---------- */
-/* 道具飞行：0.9s 可见的弧线飞行 + 到达粘住，再淡出（她两轮说看不见动画） */
-/* 道具动画（斗地主式）：EMOJI 本体抛物线飞行（WAAPI 关键帧在 game.js）+ 碎片四溅 + 蛋黄糊脸 */
-.gm-prop-fly{position:fixed;z-index:1200;font-size:38px;line-height:1;opacity:1;pointer-events:none;
-  will-change:transform,opacity;filter:drop-shadow(0 3px 5px rgba(0,0,0,.28))}
-.gm-prop-bit{position:fixed;z-index:1201;font-size:15px;line-height:1;pointer-events:none}
-/* 旧写法这里还有一条 .gm-splatface（font-size:44px 的 EMOJI 版），被下面的定义盖死——死规则，删（台账 L13） */
-.gm-pe{font-size:20px;line-height:1}
+/* 道具（08-30 纠察三）：花/锤不再用 EMOJI 贴图，与蛋同一画法——墨线为骨 + 低饱和填色；
+   飞行/碎开的关键帧在 game.js，尺只住这里一处 */
+.gm-ico{position:relative;display:inline-block;width:1em;height:1em;font-size:20px;flex:none;line-height:1}
+.gm-prop-fly{position:fixed;z-index:1200;display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;opacity:1;pointer-events:none;will-change:transform,opacity;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.28))}
+.gm-prop-fly .gm-ico{font-size:38px}
+.gm-propbig .gm-ico{font-size:22px;margin-right:2px}
+/* 面板里那颗蛋：与飞行体同一个形体，只是小一号 */
+.gm-ico.gm-ico-egg{width:.72em;height:1em;background:#FDF9EE;border:1.4px solid var(--t1);
+  border-radius:50% 50% 48% 48% / 62% 62% 38% 38%}
+/* “扔给谁”：多人桌双击哪个座位就写谁 */
+.gm-prop-to{font-size:11px;color:var(--t3);align-self:center;padding:0 2px}
+.gm-proprow{flex-wrap:wrap}
+.gm-prop-bit{position:fixed;z-index:1201;pointer-events:none}
 .gm-pts{font-size:10px;color:var(--t3)}
 /* 扫雷：刚翻开的格子高亮（对方翻哪/谁踩雷看得见）；旗=EMOJI（她点名） */
 .mn-cell.mn-last{box-shadow:inset 0 0 0 2px var(--primary);animation:mn-flash 1.1s}
@@ -2510,35 +2519,37 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    规矩：黑白线稿 + 主题色点缀，不许再出现第三个色族（以前是三个黄阶）。
    碎态=壳裂三片（带白内侧）+ 蛋液摊开（透明液体靠描边不涂白）+ 一颗完整蛋黄滑定 + 小墨点飞溅。 */
 .gm-egg{position:fixed;z-index:1200;width:34px;height:44px;pointer-events:none;
-  background:var(--card);border:1.5px solid var(--t1);
+  background:#FDF9EE;border:1.5px solid var(--t1);
   border-radius:50% 50% 48% 48% / 62% 62% 38% 38%;
   box-shadow:inset -4px -5px 0 rgba(0,0,0,.05);
   will-change:transform;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
 /* 壳片：内侧那一层薄白用 inset 阴影表示，下缘clip 成锯齿=裂口 */
 .gm-shell{position:fixed;z-index:1201;width:26px;height:19px;pointer-events:none;
-  background:var(--card);border:1.5px solid var(--t1);border-bottom-width:0;
+  background:#FBF4E6;border:1.5px solid var(--t1);border-bottom-width:0;
   border-radius:13px 13px 3px 3px / 13px 13px 2px 2px;
   clip-path:polygon(0 0,100% 0,100% 82%,72% 100%,50% 76%,26% 100%,0 82%);
-  box-shadow:inset 0 -3px 0 rgba(0,0,0,.07)}
-/* 蛋液：不涂白（白底上白看不见的），淡灰底 + 墨描边 + 一点高光 = 透明液体 */
+  box-shadow:inset 0 -3px 0 rgba(255,255,255,.9)}
+/* 蛋液：08-30 她点名“道具动画可以彩色”→ 白但不靠纯白（黑底主题上纯白太硬），暖白 + 淡墨边 */
 .gm-white{position:fixed;z-index:1199;width:74px;height:52px;pointer-events:none;
-  background:rgba(0,0,0,.045);
-  border:1.2px solid color-mix(in srgb,var(--t1) 40%,transparent);
+  background:rgba(253,249,238,.92);
+  border:1.2px solid color-mix(in srgb,var(--t1) 34%,transparent);
   border-radius:52% 48% 44% 56% / 58% 62% 38% 42%;
-  box-shadow:inset 2px 3px 0 rgba(255,255,255,.85);
+  box-shadow:inset 2px 3px 0 rgba(255,255,255,.95);
   transition:opacity .5s}
-/* 蛋黄：只一颗，落在蛋液中央，主题色淡底 + 墨边 */
+/* 蛋黄：只一颗，落在蛋液中央——暖黄低饱和（不引入新色族，与 UNO 黄带同档） */
 .gm-yolk{position:fixed;z-index:1200;width:17px;height:15px;pointer-events:none;
   border-radius:50% 50% 46% 54% / 54% 46% 54% 46%;
-  background:var(--primary-ultra);border:1.2px solid color-mix(in srgb,var(--t1) 55%,transparent);
-  box-shadow:inset -2px -2px 0 rgba(0,0,0,.05);transition:opacity .45s}
-/* 飞溅：小墨点无描边（以前 12 滴黄点带 1px 边，4~11px 下描边占一半，像甜甜圈） */
+  background:#EFB93F;border:1.2px solid color-mix(in srgb,var(--t1) 55%,transparent);
+  box-shadow:inset -2px -2px 0 rgba(150,96,10,.22),inset 2px 2px 0 rgba(255,255,255,.45);transition:opacity .45s}
+/* 飞溅：小墨点无描边（以前 12 滴黄点带 1px 边，4~11px 下描边占一半，像甜甜圈）
+   08-30 纠察三：九滴里三滴蛋黄色——碎开不只有一团黑 */
 .gm-drop{position:fixed;z-index:1201;border-radius:50%;background:var(--t1);opacity:.42;pointer-events:none}
+.gm-drop.gm-drop-y{background:#EFB93F;opacity:.8}
 
 /* ---------- P42 UNO（08-30 整块重做：黑白线稿牌面 + 环形牌桌，她嫌旧版"丑陋不堪"） ----------
    牌面规矩：白底 + 1.5px 墨边 + 斜白带（UNO 招牌那条），四色只上带子和角标，
    不整张涂色、不加第三种装饰；座位环由 uno.js 按人数算角度摆，人越多卡越小。 */
-.un-board{position:relative;width:min(94vw,470px);margin:0 auto;overflow:hidden;
+.un-board{position:relative;width:100%;max-width:470px;margin:0 auto;overflow:hidden;
   background:radial-gradient(120% 92% at 50% 40%,color-mix(in srgb,var(--card) 96%,transparent),var(--fill) 130%);
   border:1.5px solid var(--t2);border-radius:18px}
 /* 座位环：容器借 .gm-players 这个名字，游戏壳的道具动画/双击开面板照旧找得到人 */
@@ -2580,13 +2591,14 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   background:color-mix(in srgb,var(--card) 84%,transparent)}
 .un-pen-x{border:none;background:none;color:var(--danger);font-size:10px;text-decoration:underline;
   padding:0 0 0 5px;cursor:pointer;font-family:inherit}
-/* 牌面本体 */
-.un-card{width:56px;height:82px;border-radius:8px;position:relative;flex:none;background:var(--card);
+/* 牌面本体（08-30 纠察三：尺均乘 --uq，由 uno.js 按牌桌实测宽度写入，手机上看得到整张牌） */
+.un-card{width:calc(56px * var(--uq,1));height:calc(82px * var(--uq,1));border-radius:calc(8px * var(--uq,1));
+  position:relative;flex:none;background:var(--card);
   border:1.5px solid var(--t1);box-shadow:0 1px 0 rgba(0,0,0,.14);transition:transform .16s}
 .un-card .un-band{position:absolute;left:9%;right:9%;top:17%;bottom:17%;border-radius:50%/44%;
   transform:rotate(-24deg);background:var(--un-c,transparent)}
 .un-card b{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;
-  font-size:22px;font-weight:800;font-style:italic;color:var(--t1);line-height:1}
+  font-size:calc(22px * var(--uq,1));font-weight:800;font-style:italic;color:var(--t1);line-height:1}
 .un-card .un-cor{position:absolute;font-style:normal;font-size:9px;font-weight:700;color:var(--t1);top:3px;left:5px}
 .un-card .un-cor.b{top:auto;left:auto;bottom:3px;right:5px;transform:rotate(180deg)}
 .un-card .un-wild{position:absolute;left:5px;bottom:4px;right:5px;height:3px;border-radius:2px;
@@ -2596,17 +2608,16 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .un-card.un-c-g{--un-c:#7FA97C}
 .un-card.un-c-b{--un-c:#7E9CC0}
 .un-card.un-c-w .un-band{background:conic-gradient(from 220deg,#D96A5E 0 25%,#E9C46A 0 50%,#7FA97C 0 75%,#7E9CC0 0);opacity:.92}
-.un-card.un-c-w b{font-size:17px}
+.un-card.un-c-w b{font-size:calc(17px * var(--uq,1))}
 .un-card.un-back{background:var(--card)}
 .un-card.un-back .un-band{background:var(--t1);opacity:.07;left:6%;right:6%;top:32%;bottom:32%}
 .un-card.un-back b{font-size:13px;letter-spacing:1.5px;color:var(--t2)}
 .un-card.un-empty{border:1.5px dashed var(--line);box-shadow:none;background:var(--fill)}
-/* 手牌：底部扇形（角度/抬升由 uno.js 按张数算），可出的描边、不能出的压暗 */
-.un-hand{display:flex;justify-content:center;align-items:flex-end;gap:2px;padding:2px 10px 12px;
-  min-height:100px;flex-wrap:nowrap}
-.un-hand .un-slot{transform-origin:50% 132%}
-.un-hand.pack .un-slot{margin-right:-16px}
-.un-hand.pack .un-slot:last-child{margin-right:0}
+/* 手牌：底部扇形（角度/抬升/重叠量全由 uno.js 按容器实测宽度算，--uq 由容器继承 → 永不会撑出屏外） */
+.un-hand{display:flex;justify-content:center;align-items:flex-end;gap:0;padding:2px calc(10px * var(--uq,1)) calc(12px * var(--uq,1));
+  min-height:calc(100px * var(--uq,1));flex-wrap:nowrap;overflow:hidden}
+.un-hand .un-slot{transform-origin:50% 132%;margin-right:var(--ugap,2px)}
+.un-hand .un-slot:last-child{margin-right:0}
 .un-hand .un-card{cursor:pointer}
 .un-hand .un-ok{outline:2px solid var(--primary);outline-offset:1px}
 .un-hand .un-ok:hover{transform:translateY(-4px)}
@@ -2626,6 +2637,58 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .un-order-p b{font-size:17px;line-height:1}
 .un-order-p.win{border-color:var(--primary);box-shadow:0 0 0 1.5px var(--primary);background:var(--card)}
 .un-order-note{font-size:11px;color:var(--t3)}
+/* ---------- 08-30 纠察三：定序过程动画（猜拳/掷骰/抽签） ----------
+   结果先算好存 room.uno.orderResult，下面只播“过场”：刷新不丢、点一下可跳过 */
+.un-stage{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}
+.un-fx{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);
+  border-radius:12px;padding:6px 9px;background:var(--fill);min-width:62px}
+.un-fx-nm{font-size:10px;color:var(--t3);max-width:66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.un-fx-h{font-size:26px;line-height:1.1;min-height:29px;font-weight:700}
+.un-fx-h.small{font-size:16px;letter-spacing:1px}
+.un-fx.win{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary);background:var(--card)}
+.un-fx.lose{opacity:.45}
+.un-fx.roll .un-fx-h{animation:un-shk .36s}
+.un-fx.pop .un-fx-h{animation:un-jump .42s cubic-bezier(.2,.7,.3,1)}
+@keyframes un-shk{0%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-9px) rotate(-18deg)}
+  50%{transform:translateY(0) rotate(14deg)}75%{transform:translateY(-5px) rotate(-8deg)}100%{transform:translateY(0) rotate(0deg)}}
+@keyframes un-jump{0%{transform:scale(.35) rotate(-12deg)}58%{transform:scale(1.42) rotate(8deg)}100%{transform:scale(1) rotate(0deg)}}
+.un-tie{font-size:11px;color:var(--t3)}
+.un-skip{border:1px solid var(--line);background:var(--card);color:var(--t3);border-radius:9px;
+  font-size:10px;padding:2px 9px;cursor:pointer;font-family:inherit}
+/* 结算记分表：一人一行、列对齐（以前拼成一长条文字，她说“有点乱”） */
+.un-scoretab{width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:2px}
+.un-scr-h,.un-scr-row{display:grid;grid-template-columns:22px 1fr 46px 40px 50px;gap:4px;padding:4px 8px;
+  font-variant-numeric:tabular-nums}
+.un-scr-h{font-size:10px;color:var(--t3);background:var(--fill);border-bottom:1px solid var(--line)}
+.un-scr-row{font-size:12px;border-top:1px solid var(--line)}
+.un-scr-row:first-of-type{border-top:none}
+.un-scr-h span,.un-scr-row span{text-align:right;white-space:nowrap;overflow:hidden}
+.un-scr-h .nm,.un-scr-row .nm{text-align:left;display:flex;align-items:center;gap:4px;min-width:0}
+.un-scr-row .nm i{font-style:normal;color:var(--t3);font-size:10px;flex:none}
+.un-scr-row .nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.un-scr-row.win{border-left:3px solid var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent)}
+.un-scr-row.win .sc{font-weight:800}
+/* ---------- 08-30 纠察三：道具图标的彩色（花=粉+绿、锤=木栈柄+中性灰头；不引入紫、不加第四色族）
+   尺与容器在上方 .gm-ico 那一段，这里只画内容 */
+.gm-ico.flower{background:
+  radial-gradient(circle at 26% 24%,#E7A6AE 0 .16em,var(--t1) .16em .21em,transparent .21em),
+  radial-gradient(circle at 50% 15%,#EFBDC4 0 .16em,var(--t1) .16em .21em,transparent .21em),
+  radial-gradient(circle at 74% 26%,#E7A6AE 0 .16em,var(--t1) .16em .21em,transparent .21em)}
+.gm-ico.flower::before{content:'';position:absolute;left:50%;top:.42em;width:.08em;height:.4em;
+  background:var(--t1);transform:translateX(-50%) rotate(4deg)}
+.gm-ico.flower::after{content:'';position:absolute;left:50%;bottom:.02em;width:.62em;height:.3em;
+  border:1.2px solid var(--t1);border-radius:.06em .06em .3em .3em;background:#7FA97C;
+  transform:translateX(-50%);box-shadow:inset 0 .06em 0 rgba(255,255,255,.35)}
+.gm-ico.hammer::before{content:'';position:absolute;left:.08em;top:.1em;width:.66em;height:.34em;
+  border:1.2px solid var(--t1);border-radius:.08em;background:linear-gradient(#AEB6BD,#8E979E);
+  transform:rotate(-18deg)}
+.gm-ico.hammer::after{content:'';position:absolute;left:.44em;top:.4em;width:.14em;height:.52em;
+  background:#B98A57;border:1.2px solid var(--t1);border-radius:.06em;transform:rotate(-18deg)}
+/* 碎开/飞点的颜色：花=瓣粉，锤=灰白火星（不再是 🌸✨/💥⚡ 贴图）；尺与容器住在上面 .gm-ico 那一段，不重复定 */
+.gm-bit-petal{width:.42em;height:.3em;border-radius:.2em .04em .2em .04em;background:#E7A6AE;
+  border:1px solid color-mix(in srgb,var(--t1) 55%,transparent);font-size:15px}
+.gm-bit-spark{width:.3em;height:.3em;border-radius:50%;background:#9AA4AC;
+  border:1px solid color-mix(in srgb,var(--t1) 45%,transparent);font-size:15px}
 /* 动画层（挂 body） */
 .un-fx{position:fixed;z-index:1200;pointer-events:none}
 .un-fx.un-fly .un-card{width:56px;height:82px}
@@ -3428,6 +3491,8 @@ const DB = (function () {
       st.games.records = st.games.records.filter(r => !(r.players || []).includes(cid));
       n += before - st.games.records.length;
     }
+    /* UNO 累计记分牌按人存：人不在了那一行也得消失，不然战绩页永远挂着“已删除联系人 +N 分” */
+    if (st.games && st.games.unoScore && has(st.games.unoScore, cid)) { delete st.games.unoScore[cid]; n++; }
 
     /* 3) 角色专属子库：字卡 / 表情 / 私语 / 红包封面 / 朋友圈封面 */
     kill(st.libs && st.libs.contactCards, cid);
@@ -7846,6 +7911,8 @@ const Chat = (function () {
       if (!room) st = '<span class="ks-state">已失效</span>';
       else if (room.phase === 'inviting') st = '<span class="ks-state">等待应答…</span>';
       else if (room.phase === 'negotiate') st = '<span class="ks-state go">商定先手中 · 进入 ›</span>';
+      /* UNO 这类有定序阶段的游戏：猜拳/掷骰时卡片不能报“已结束” */
+      else if (room.phase === 'order') st = '<span class="ks-state go">定先手中 · 进入 ›</span>';
       else if (room.phase === 'playing') st = '<span class="ks-state go">对局中 · 进入 ›</span>';
       else if (room.phase === 'dead') st = '<span class="ks-state">对方婉拒了</span>';
       else st = '<span class="ks-state done">已结束</span>';
@@ -14632,6 +14699,10 @@ const Uno = (function () {
   const CHALLENGE_RATE = 45;                // TA 会质疑 +4 的概率%（建议值）
   const TURN_SEC = [1.2, 3];                // TA 每手间隔（多人局要快节奏，比五子棋的 0~30s 紧得多）
 
+  /* 定序动画正在播的房间 id：只存内存（不进存档）——存进存档的话，她刷一次页
+     就停在“动画中”永远开不了局 */
+  let fxRoom = null;
+
   function taUidOf(room) { return (room.players || []).find(x => x !== 'me') || null; }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -14704,13 +14775,21 @@ const Uno = (function () {
   }
 
   function seatOf(room, uidStr) { return U(room).order.indexOf(uidStr); }
-  function curUid(room) { const u = U(room); return u.order[((u.idx % u.order.length) + u.order.length) % u.order.length]; }
+  /* 没发牌之前（邀请中）环还不存在：问“轮到谁”要答得出“谁也没轮到”，
+     不能摸 room.uno.order 抛 TypeError（壳重绘房间时会无条件问这个） */
+  function curUid(room) {
+    const u = U(room);
+    if (!u || !u.order || !u.order.length) return null;
+    return u.order[((u.idx % u.order.length) + u.order.length) % u.order.length];
+  }
   function stepTo(room, steps) {
     const u = U(room), n = u.order.length;
     u.idx = ((u.idx + u.dir * steps) % n + n) % n;
   }
   function nextUid(room, step) {
-    const u = U(room), n = u.order.length;
+    const u = U(room);
+    if (!u || !u.order || !u.order.length) return null;
+    const n = u.order.length;
     return u.order[((u.idx + u.dir * (step || 1)) % n + n) % n];
   }
   function top(room) { const u = U(room); return u.pile[u.pile.length - 1] || null; }
@@ -14780,46 +14859,43 @@ const Uno = (function () {
 
   /* ---------- 定序：猜拳 / 掷骰 / 抽签 ---------- */
   function rpsBeat(a, b) { return (a === 0 && b === 1) || (a === 1 && b === 2) || (a === 2 && b === 0); }
-  function orderWin(room, mode) {
-    const u = U(room), n = u.order.length;
-    const res = { mode: mode, picks: [], winner: null, dir: Math.random() < 0.5 ? 1 : -1, rounds: 0 };
-    if (mode === 'rand') {
-      res.winner = u.order[rand(0, n - 1)];
-      res.picks = u.order.map(id => ({ uid: id, label: '签' }));
-    } else {
-      for (let round = 0; round < 3 && !res.winner; round++) {
-        res.rounds = round + 1;
-        const rolls = u.order.map(id => ({
-          uid: id,
-          v: mode === 'rps' ? rand(0, 2) : rand(1, 6)
-        }));
-        res.picks = rolls.map(x => ({ uid: x.uid, label: mode === 'rps' ? RPS[x.v] : '⚀⚁⚂⚃⚄⚅'[x.v - 1], v: x.v }));
-        if (mode === 'rps') {
-          const kinds = {};
-          rolls.forEach(x => { kinds[x.v] = (kinds[x.v] || 0) + 1; });
-          const keys = Object.keys(kinds).map(Number);
-          if (keys.length === 1) continue;                        // 全平，加赛
-          if (keys.length === 3) break;                            // 三足鼎立，谁也没赢 → 交抽签
-          const win = keys.find(k => keys.every(o => o === k || rpsBeat(k, o)));
-          if (win == null) break;
-          const group = rolls.filter(x => x.v === win);
-          res.winner = group[0].uid;                              // 胜者组里取座位最靠前的
-        } else {
-          const best = Math.max.apply(null, rolls.map(x => x.v));
-          const group = rolls.filter(x => x.v === best);
-          if (group.length === 1) res.winner = group[0].uid;      // 同点则加赛一轮
-        }
-        if (res.winner) break;
-        if (round === 2) res.winner = u.order[rand(0, n - 1)];
+  function fxGlyph(mode, v) {
+    return mode === 'rps' ? RPS[v] : mode === 'dice' ? '⚀⚁⚂⚃⚄⚅'[v - 1] : v + ' 号';
+  }
+  /* 定序：结果先算好、一轮一条存进 res.hist（动画播的是真数据，不是现掷），
+     再把“怎么定”交给 playOrderFx 播。defer=true 时不立即开局（等动画放完）。 */
+  function orderWin(room, mode, defer) {
+    const u = U(room);
+    const res = { mode: mode, picks: [], winner: null, dir: Math.random() < 0.5 ? 1 : -1, rounds: 0, hist: [] };
+    const roll = () => mode === 'rps' ? rand(0, 2) : mode === 'dice' ? rand(1, 6) : rand(1, 99);
+    for (let round = 0; round < 3 && !res.winner; round++) {
+      res.rounds = round + 1;
+      const rolls = u.order.map(id => ({ uid: id, v: roll() }));
+      res.hist.push({ picks: rolls.map(x => ({ uid: x.uid, v: x.v, label: mode === 'rps' ? RPS[x.v] : mode === 'dice' ? x.v + ' 点' : x.v + ' 号' })) });
+      res.picks = res.hist[res.hist.length - 1].picks;
+      if (mode === 'rps') {
+        const kinds = {};
+        rolls.forEach(x => { kinds[x.v] = (kinds[x.v] || 0) + 1; });
+        const keys = Object.keys(kinds).map(Number);
+        /* 全平、或石头剪刀布齐了（谁也吃不掉谁）都算平局 → 加赛，最多 3 轮后兜底 */
+        if (keys.length === 1 || keys.length === 3) continue;
+        const win = keys.find(k => keys.every(o => o === k || rpsBeat(k, o)));
+        if (win == null) continue;
+        res.winner = rolls.filter(x => x.v === win)[0].uid;         // 胜者组里取座位最靠前的
+      } else {
+        const best = Math.max.apply(null, rolls.map(x => x.v));
+        const group = rolls.filter(x => x.v === best);
+        if (group.length === 1) res.winner = group[0].uid;         // 同点则加赛一轮
       }
-      if (!res.winner) { res.winner = u.order[rand(0, n - 1)]; res.fallback = true; }
+      if (res.winner) break;
     }
+    if (!res.winner) { res.winner = u.order[rand(0, u.order.length - 1)]; res.fallback = true; }
     u.orderResult = res;
     u.idx = Math.max(0, u.order.indexOf(res.winner));
     u.dir = res.dir;
     say(room, esc(nameOf(res.winner)) + (mode === 'rps' ? ' 猜拳赢了' : mode === 'dice' ? ' 掷骰最大' : ' 抽到先手') +
       ' —— 先出 · ' + (res.dir === 1 ? '顺时针' : '逆时针') + (res.rounds > 1 ? '（加赛 ' + (res.rounds - 1) + ' 轮）' : ''));
-    beginPlay(room);
+    if (!defer) beginPlay(room);
     return res;
   }
 
@@ -15142,14 +15218,25 @@ const Uno = (function () {
     if (typeof Games !== 'undefined' && Games.finish) Games.finish(room, { win: winner, line: [] });
     else touch(room);
   }
-  function settleLines(room) {
+  /* 结算记分表：赢家第一、其余按本局得分升序（分低=手上牌少）；列对齐，不再拼一长条文字 */
+  function settleRows(room) {
     const u = U(room), rows = room.unoScores || {};
     const t = ((DB.state.games || {}).unoScore) || {};
-    return u.order.map(id => {
-      const hand = (u.hands[id] || []).length;
-      const d = rows[id] || 0;
-      return esc(nameOf(id)) + ' ' + (d > 0 ? '+' + d : d) + ' 分 · 手上 ' + hand + ' 张 · 累计 ' + (t[id] || 0);
-    });
+    const win = room.winner;
+    return u.order.map(id => ({
+      id: id, sc: rows[id] || 0, hand: (u.hands[id] || []).length, all: t[id] || 0,
+      seat: seatLabel(u.order.length, u.order.indexOf(id))
+    })).sort((a, b) => (a.id === win ? -1 : b.id === win ? 1 : a.sc - b.sc || a.id.localeCompare(b.id)));
+  }
+  function settleTable(room) {
+    const list = settleRows(room);
+    return '<div class="un-scoretab"><div class="un-scr-h"><span>#</span><span class="nm">玩家</span><span>本局</span><span>手上</span><span>累计</span></div>' +
+      list.map((x, i) => '<div class="un-scr-row' + (x.id === room.winner ? ' win' : '') + '">' +
+        '<span>' + (i + 1) + '</span>' +
+        '<span class="nm"><i>' + esc(x.seat) + '</i><b>' + esc(nameOf(x.id)) + '</b></span>' +
+        '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span>' +
+        '<span>' + x.hand + '</span>' +
+        '<span>' + (x.all > 0 ? '+' + x.all : x.all) + '</span></div>').join('') + '</div>';
   }
 
   /* ---------- 计划派发 ----------
@@ -15174,13 +15261,22 @@ const Uno = (function () {
     const k = n - i;
     return k === 1 ? '右家' : '右' + k + '家';
   }
-  function seatGeom(n) {
-    /* 环的尺寸与座位档位：人越多卡越小。rx/ry 按“最宽的座位也不探出牌桌”算的
-       （名字最长那档要留 ~13% 边距），别凭感觉调大 */
-    if (n <= 2) return { h: 232, cls: 'sz2', rx: 34, ry: 36 };
-    if (n <= 4) return { h: 262, cls: 'sz4', rx: 36, ry: 39 };
-    if (n <= 6) return { h: 302, cls: 'sz6', rx: 38, ry: 40 };
-    return { h: 348, cls: 'sz8', rx: 38, ry: 38 };
+  /* 环的尺寸与座位几何：08-30 纠察三——以前 rx/ry 是照 470px 桌面调好的固定百分比，
+     牌桌宽却是 min(94vw,470px)：手机 367px 宽时座位卡（固定 px）相对变大，左右两家就被
+     .un-board 的 overflow 裁掉，滑页面也滑不出来（她：“周边都被遮盖、滑也看不见”）。
+     现在按实测宽度反算：整体缩放 q，半径取“最宽那张座位卡也不探出牌桌”的值。 */
+  function seatFit(n, boardW) {
+    const base = n <= 2 ? { cls: 'sz2', av: 46, nm: 96, ratio: .50 }
+      : n <= 4 ? { cls: 'sz4', av: 34, nm: 78, ratio: .60 }
+      : n <= 6 ? { cls: 'sz6', av: 28, nm: 70, ratio: .72 }
+      : { cls: 'sz8', av: 26, nm: 58, ratio: .80 };
+    const q = Math.max(.62, Math.min(1, boardW / 470));
+    const seatW = (base.av + base.nm + 16) * q;        // 头像 + 名字行 + 内边距/边框
+    const seatH = (base.av + 42) * q;                   // 头像 + 名字 + 张数胶囊
+    const h = Math.max(Math.round(boardW * base.ratio), Math.round(seatH + 26));
+    const rx = Math.max(22, Math.min(40, (boardW / 2 - 5 - seatW / 2) / boardW * 100));
+    const ry = Math.max(20, Math.min(40, (h / 2 - 4 - seatH / 2) / h * 100));
+    return { q: q, h: h, cls: base.cls, rx: rx, ry: ry };
   }
   function cardFace(card, cls, extra) {
     if (!card) return '<div class="un-card un-empty' + (cls ? ' ' + cls : '') + '"></div>';
@@ -15196,46 +15292,109 @@ const Uno = (function () {
   function renderOrder(room, el) {
     const u = U(room);
     const res = u.orderResult;
-    let h = '<div class="un-order"><div class="un-order-t">先手怎么定？</div><div class="un-order-btns">' +
-      '<button class="btn btn-secondary" data-order="rps">猜拳</button>' +
-      '<button class="btn btn-secondary" data-order="dice">掷骰子</button>' +
-      '<button class="btn btn-secondary" data-order="rand">随机抽签</button></div>';
-    if (res) {
+    const playing = fxRoom === room.id;
+    let h = '<div class="un-order"><div class="un-order-t">先手怎么定？</div>' +
+      (playing ? '<div class="un-stage" id="un-stage"></div>' : '<div class="un-order-btns">' +
+        '<button class="btn btn-secondary" data-order="rps">猜拳</button>' +
+        '<button class="btn btn-secondary" data-order="dice">掷骰子</button>' +
+        '<button class="btn btn-secondary" data-order="rand">随机抽签</button></div>');
+    if (res && !playing) {
       h += '<div class="un-order-rows">' + res.picks.map(p =>
         '<span class="un-order-p' + (p.uid === res.winner ? ' win' : '') + '"><i>' + esc(nameOf(p.uid)) + '</i><b>' + esc(p.label) + '</b></span>').join('') + '</div>';
+    }
+    if (res && !playing) {
       h += '<div class="un-order-note">' + esc(nameOf(res.winner)) + ' 先出 · ' + (res.dir === 1 ? '顺时针' : '逆时针') + '</div>';
-    } else {
+    } else if (!playing) {
       h += '<div class="un-order-note">' + u.order.length + ' 个人围桌坐，选一个吧</div>';
     }
     h += '</div>';
     el.innerHTML = h;
-    el.querySelectorAll('[data-order]').forEach(b => b.addEventListener('click', () => {
-      const res2 = orderWin(room, b.dataset.order);
-      revealOrder(room, res2);
-    }));
+    el.querySelectorAll('[data-order]').forEach(b => b.addEventListener('click', () => runOrder(room, b.dataset.order)));
   }
-  /* 逐个揭晓只是放动画：结果早就算好了，中途刷新不丢 */
-  function revealOrder(room, res) {
-    const host = document.querySelector('#room-board .un-order-rows');
-    if (!host || !res) { touch(room); return; }
-    const cells = [...host.children];
-    cells.forEach((c, i) => {
-      c.style.opacity = '0';
-      setTimeout(() => {
-        c.style.opacity = '';
-        c.animate([{ transform: 'scale(.4) rotate(-16deg)' }, { transform: 'scale(1.16) rotate(4deg)', offset: .55 },
-          { transform: 'scale(1) rotate(0deg)' }], { duration: 420, easing: 'cubic-bezier(.2,.7,.3,1)' });
-        if (i === cells.length - 1) setTimeout(() => touch(room), 260);
-      }, 260 * i + 60);
+  /* 点一下定序按钮：先算结果、落库，再播过程；动画只在内存里标“正在播”（fxRoom），
+     不存进存档——否则她刷到一半回来就卡在“动画中”永远开不了局 */
+  function runOrder(room, mode) {
+    const u = U(room);
+    if (u.started) return;
+    if (u.orderResult) { beginPlay(room); touch(room); return; }
+    const res = orderWin(room, mode, true);
+    fxRoom = room.id;
+    touch(room);
+    playOrderFx(room, res, () => { fxRoom = null; beginPlay(room); touch(room); });
+  }
+  /* 逐个揭晓：手先抖三下再定格（猜拳），骰子跳面、签逐张翻号；平局写“加赛”并再播一轮 */
+  function playOrderFx(room, res, done) {
+    const host = document.querySelector('#room-board .un-stage');
+    const order = U(room).order;
+    const n = Math.max(1, order.length);
+    let timers = [];
+    if (!host) { done(); return; }
+    const per = Math.max(110, Math.round(420 / n));
+    const finish = () => { timers.forEach(clearTimeout); timers = []; done(); };
+    host.innerHTML = order.map(id =>
+      '<div class="un-fx" data-uid="' + id + '"><span class="un-fx-nm">' + esc(nameOf(id)) + '</span>' +
+      '<b class="un-fx-h">' + (res.mode === 'rps' ? '✊' : res.mode === 'dice' ? '⚀' : '·') + '</b></div>').join('') +
+      '<div class="un-tie" id="un-tie"></div><button class="un-skip" id="un-skip">跳过</button>';
+    const skip = host.querySelector('#un-skip');
+    if (skip) skip.addEventListener('click', finish);
+    const tie = host.querySelector('#un-tie');
+    let at = 0;
+    res.hist.forEach((hh, ri) => {
+      const last = ri === res.hist.length - 1;
+      hh.picks.forEach((p, i) => {
+        timers.push(setTimeout(() => {
+          const cell = host.querySelector('.un-fx[data-uid="' + p.uid + '"]');
+          if (!cell) return;
+          cell.className = 'un-fx roll';
+          const g = cell.querySelector('.un-fx-h');
+          g.className = 'un-fx-h' + (res.mode === 'rps' ? '' : ' small');
+          g.textContent = res.mode === 'rps' ? RPS[rand(0, 2)] : '⚀⚁⚂⚃⚄⚅'[rand(0, 5)];
+        }, at + i * per));
+      });
+      at += n * per + 140;
+      hh.picks.forEach((p, i) => {
+        timers.push(setTimeout(() => {
+          const cell = host.querySelector('.un-fx[data-uid="' + p.uid + '"]');
+          if (!cell) return;
+          const g = cell.querySelector('.un-fx-h');
+          g.textContent = fxGlyph(res.mode, p.v);
+          cell.className = 'un-fx pop' + (last && res.winner ? (p.uid === res.winner ? ' win' : ' lose') : '');
+        }, at + i * per));
+      });
+      if (!last) timers.push(setTimeout(() => { if (tie) tie.textContent = '平局，加赛一轮…'; }, at + n * per));
+      at += n * per + 300;
     });
+    if (res.rounds > 1) timers.push(setTimeout(() => { if (tie) tie.textContent = res.rounds + ' 轮才定下来'; }, at));
+    timers.push(setTimeout(finish, at + 700));
   }
   function render(room, el) {
     if (!room.uno) return;
-    if (room.phase === 'order') { renderOrder(room, el); return; }
+    if (room.phase === 'order') {
+      /* 动画只在内存里标着：刷新回来 fxRoom 为空，直接把已算好的先手用掉开局，不重播也不卡局 */
+      const ur = room.uno;
+      if (ur.orderResult && fxRoom !== room.id) { beginPlay(room); return; }
+      renderOrder(room, el); return;
+    }
     const u = U(room);
-    const n = u.order.length, g = seatGeom(n);
+    const n = u.order.length;
+    /* 牌桌实测宽度→缩放系数与环半径（不再拿固定 px 碰巧适配桌面）
+       量宽得量“能给多少”：#room-board 坐在 .gm-board-wrap（flex + align-items:center）里，
+       默认按内容收缩，量它的 clientWidth 就是量上一帧的内容宽——09-01 实测 458/308/250 乱跳，
+       手机上越缩越小。改成量外层可用宽，再把容器宽定下来，牌桌/手牌/操作条共用一个数。 */
+    const wrap = (el && el.closest) ? el.closest('.gm-board-wrap') : null;
+    let avail = 0;
+    if (wrap) {
+      const ws = window.getComputedStyle(wrap);
+      avail = wrap.clientWidth - (parseFloat(ws.paddingLeft) || 0) - (parseFloat(ws.paddingRight) || 0);
+    }
+    const boxW = Math.max(280, Math.min(470, Math.round(avail) || (el && el.clientWidth) || (window.innerWidth - 24) || 360));
+    if (el && Math.abs((el.clientWidth || 0) - boxW) > 1) el.style.width = boxW + 'px';
+    const g = seatFit(n, boxW);
     const myTurn = room.phase === 'playing' && curUid(room) === 'me';
     const myHand = u.hands['me'] || [];
+    /* 缩放变量要写在容器上、不只写在牌桌上：手牌与操作条在牌桌外面，
+       只给 .un-board 设 --uq 的话手牌永远 56px，手机上就是它溢出屏外的 */
+    el.style.setProperty('--uq', g.q.toFixed(3));
     let h = '<div class="un-board ' + g.cls + '" style="height:' + g.h + 'px">';
     /* 座位环：容器带上 gm-players / gm-player，游戏壳的道具动画与双击开面板照旧能找到人 */
     h += '<div class="gm-players un-seats">';
@@ -15279,8 +15438,12 @@ const Uno = (function () {
       (a.c.c === 'w' ? 1 : 0) - (b.c.c === 'w' ? 1 : 0) ||
       (COLORS.indexOf(a.c.c) - COLORS.indexOf(b.c.c)) || (a.c.v < b.c.v ? -1 : a.c.v > b.c.v ? 1 : 0));
     const m = sorted.length;
-    const step = Math.min(4.2, 54 / Math.max(1, m));
-    h += '<div class="un-hand' + (m > 9 ? ' pack' : '') + '">' + sorted.map((o, j) => {
+    /* 扇形张角与重叠量按实测宽度算：牌多到装不下就互相压，而不是溢出牌桌（溢出去了她也滑不回来） */
+    const cw = 56 * g.q;
+    let gap = 2;
+    if (m > 1 && m * cw + (m - 1) * gap > boxW - 32) gap = Math.max(-cw * .86, (boxW - 32 - m * cw) / (m - 1));
+    const step = Math.min(4.2, 54 / Math.max(1, m)) * (gap < -6 ? .5 : 1);
+    h += '<div class="un-hand" style="--ugap:' + gap.toFixed(1) + 'px">' + sorted.map((o, j) => {
       const mid = (m - 1) / 2;
       const rot = (j - mid) * step;
       const lift = Math.pow(Math.abs(j - mid), 2) * 1.15;
@@ -15297,6 +15460,35 @@ const Uno = (function () {
     if (acts.length) h += '<div class="un-acts">' + acts.join('') + '</div>';
     el.innerHTML = h;
     bindTable(room, el, sorted);
+    fitRing(el);
+  }
+  /* 画完再量一次：座位环半径、牌桌高、中央牌堆缩放全按**实测尺寸**定。
+     公式估座位高永远差那几像素——她手机上“周边被裁、横向滑也看不见”就是这几像素，实测才准。 */
+  function fitRing(el) {
+    const board = el.querySelector('.un-board');
+    if (!board) return;
+    const seats = [].slice.call(board.querySelectorAll('.un-seat'));
+    if (!seats.length) return;
+    const bw = board.clientWidth;
+    let hw = 0, hh = 0;
+    seats.forEach(s => { hw = Math.max(hw, s.offsetWidth / 2); hh = Math.max(hh, s.offsetHeight / 2); });
+    const bh = Math.max(board.clientHeight, Math.ceil(hh * 2 + 10));
+    if (bh > board.clientHeight) board.style.height = bh + 'px';
+    const n = seats.length;
+    const rx = Math.min(46, Math.max(12, (bw / 2 - hw - 4) / bw * 100));
+    const ry = Math.min(46, Math.max(12, (bh / 2 - hh - 4) / bh * 100));
+    seats.forEach((s, i) => {
+      const a = (90 + i * (360 / n)) * Math.PI / 180;
+      s.style.left = (50 + rx * Math.cos(a)).toFixed(2) + '%';
+      s.style.top = (50 + ry * Math.sin(a)).toFixed(2) + '%';
+    });
+    /* 中央那一堆（牌堆+弃牌堆+方向）装进座位环剩下的空档；装不下就缩，不裁牌 */
+    const mid = board.querySelector('.un-mid');
+    if (mid) {
+      const freeW = rx / 100 * bw - hw - 6, freeH = ry / 100 * bh - hh - 6;
+      const k = Math.max(.5, Math.min(1, Math.min(freeW * 2 / Math.max(1, mid.offsetWidth), freeH * 2 / Math.max(1, mid.offsetHeight))));
+      mid.style.transform = 'translate(-50%,-50%) scale(' + k.toFixed(3) + ')';
+    }
   }
   function ava(id) {
     if (id === 'me') {
@@ -15492,7 +15684,7 @@ const Uno = (function () {
       newRoom, startPlay: beginPlay, turnOf: curUid, hasPlayable, playableOf, canPlay,
       applyCard, applyPass, applyDraw, callUno, challenge4, orderWin,
       aiTurn,          // 给验收探针驱动“TA 这一手”用（也是 onPlan 的唯一实现）
-      onPlan, render, settleLines, scoreTable,
+      onPlan, render, settleTable, scoreTable,
       end: endGame, paintEvents: renderEvents,   // 给验收探针：计分收尾 / 事件→播报
       seats: true,          // 座位环画在牌桌里，游戏壳不再另起玩家条
       /* 转盘背锅的人：手牌最多的输家（并列取座位靠前的） */
@@ -15545,12 +15737,14 @@ const Games = (function () {
   const WHEEL_NAMES = { red: '红包', truth: '真心话', dare: '大冒险', errand: '使唤卡', blank: '空门' };
   const DEF_QUICK = ['快点啦', '厉害啊', '不服再来一局', '让我悔一步棋嘛', '稳住稳住', '差一点就赢了'];
   const DEF_TA = ['让我想想哈', '这步有讲究啊', '嘿嘿', '哎呀，手滑了', '你今天状态很好啊', '就差一点点'];
-  /* 道具（她 08-29 点名：斗地主那套——飞行要抛物线、命中要碎开；EMOJI 是她亲自允许的） */
+  /* 道具（她 08-29 点名：斗地主那套——飞行要抛物线、命中要碎开）
+     08-30 纠察三：花/锤不再用 EMOJI 贴图，三个道具统一“墨线 + 低饱和彩”画出来（pages.css .gm-ico），
+     不然蛋是画的、花锤是系统表情，一张脸上两种风格 */
   const PROPS = [
-    { id: 'egg', name: '扔鸡蛋', emoji: '🥚' },
-    { id: 'flower', name: '献花', emoji: '💐' },
-    { id: 'hammer', name: '敲一敲', emoji: '🔨' }
-  ];   // 08-30：color 字段是「道具配色」入口撤掉后的死数据，删
+    { id: 'egg', name: '扔鸡蛋' },
+    { id: 'flower', name: '献花', ico: 'flower' },
+    { id: 'hammer', name: '敲一敲', ico: 'hammer' }
+  ];
 
   function S() {
     const g = DB.state.games = DB.state.games || {};
@@ -15622,11 +15816,23 @@ const Games = (function () {
   /* ---------- 大厅 ---------- */
   let cur = null;          // 当前房间 id
   let floatConv = null;    // 悬浮聊天窗当前会话 id（null=收起）
+  let propTarget = null;   // 双击哪个座位开的面板，道具就扔给谁（多人局不能只认第一位）
   let tickI = null;        // 倒计时 interval
   let overlay = null;      // 结算/转盘浮层
 
   function open() { Router.go('game'); renderHall(); }
-  function openRoom(roomId) { cur = roomId; Router.go('room'); renderRoom(); }
+  function openRoom(roomId) {
+    cur = roomId;
+    /* 悬浮窗记的是会话 id，切房间不跟着换就会串台：在 B 的牌桌里看到 A 的聊天，
+       而 A 还被当成“正在看”而免打扰（08-30 纠察二） */
+    const rr = S().rooms[roomId];
+    if (floatConv && rr) {
+      const mine = (rr.players || []).filter(u => u !== 'me').map(u => (convOf(u) || {}).id);
+      if (mine.indexOf(floatConv) < 0) floatConv = null;
+    }
+    if (rr) propTarget = null;
+    Router.go('room'); renderRoom();
+  }
   function curRoom() { return S().rooms[cur] || null; }
   function renderHall() {
     const box = document.getElementById('gm-hall');
@@ -15638,7 +15844,10 @@ const Games = (function () {
     if (rooms.length) {
       h += '<div class="gm-sec">继续对局</div><div class="card cell-group">' + rooms.map(r => {
         const ta = taUid(r);
-        const turn = r.phase === 'playing' ? (currentTurn(r) === 'me' ? '轮到你了' : 'TA 在想…') : (r.phase === 'negotiate' ? '商定先手中' : '等 TA 应答…');
+        const turn = r.phase === 'playing' ? (currentTurn(r) === 'me' ? '轮到你了' : 'TA 在想…')
+          : r.phase === 'negotiate' ? '商定先手中'
+          : r.phase === 'order' ? '先定个先手'
+          : '等 TA 应答…';
         return '<button class="cell" data-room="' + r.id + '"><span class="cell-icon"><i data-icon="' + defOf(r).icon + '" data-size="20"></i></span>' +
           '<span class="cell-text"><b>' + esc(defOf(r).name) + ' · ' + esc(name(ta)) + '</b><small>' + esc(turn) + '</small></span><span class="chevron">›</span></button>';
       }).join('') + '</div>';
@@ -15661,6 +15870,16 @@ const Games = (function () {
   }
 
   /* ---------- 开局：选人 → 邀请（80/20）→ 房间 ---------- */
+  function convOf(cid) { return DB.state.convs.find(c => c.type === 'single' && c.peerId === cid) || null; }
+  /* 哪些 TA 已经在局里：同一个 TA 同时只能有一局（两局并行会让 TA 在两个房间各排各的回合，
+     结算互相覆盖、播报串台——她 08-28 定的口径：数据归属模糊就是 bug） */
+  function busyRivals() {
+    const s = {};
+    Object.values(S().rooms).forEach(r => {
+      if (r.status === 'playing') (r.players || []).forEach(u => { if (u !== 'me') s[u] = 1; });
+    });
+    return s;
+  }
   function startFlow(gameId) {
     if (!REG[gameId]) return;
     const pool = (DB.state.contacts || []).filter(c => !c.isGroup);
@@ -15683,11 +15902,15 @@ const Games = (function () {
       okBtn.textContent = n ? '开始(' + n + ')' : '开始';
       okBtn.disabled = n === 0;
     }
+    const busy = busyRivals();
     pool.forEach(ct => {
       const row = document.createElement('button');
       row.className = 'pick-row' + (multi ? ' pick-checkable' : '');
       row.dataset.id = ct.id;
-      row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span>' + (multi ? '<span class="pick-check"></span>' : '<span class="chevron">›</span>');
+      row.innerHTML = '<span class="pick-name">' + esc(Home.displayName(ct)) + '</span>' +
+        (busy[ct.id] ? '<small class="pick-busy">对局中</small>' : (multi ? '<span class="pick-check"></span>' : '<span class="chevron">›</span>'));
+      /* 已在局里的先摆明，不让她点了才知道不行 */
+      if (busy[ct.id]) { row.disabled = true; list.appendChild(row); return; }
       if (multi) {
         /* 她 08-30：UNO 选人“点不动”。真因是勾选看不见（白底上画白勾，components.css 已根治）；
            这里再补「开始(N)」计数 + 未选够置灰，上限走 def.maxRivals */
@@ -15700,7 +15923,7 @@ const Games = (function () {
           syncPick();
         });
       } else {
-        row.addEventListener('click', () => { mask.remove(); invite(ct.id, gameId); });
+        row.addEventListener('click', () => { mask.remove(); startGame(gameId, [ct.id], {}); });
       }
       list.appendChild(row);
     });
@@ -15713,96 +15936,121 @@ const Games = (function () {
         .slice(0, cap);
       if (!chosen.length) return UI.toast('至少选一位');
       mask.remove();
-      inviteMulti(chosen.map(c => c.id), gameId);
+      startGame(gameId, chosen.map(c => c.id), {});
     });
     mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
     document.getElementById('dialog-layer').appendChild(mask);
     UI.raise(mask);
   }
-  /* 多人开局（UNO）：逐个 80/20 应约，拒者出局；全拒则不开局 */
-  function inviteMulti(ctIds, gameId) {
-    const accepted = [];
-    const d0 = REG[gameId] || {};
-    ctIds.forEach(cid => {
-      const ct = Home.contactById(cid);
-      const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === cid);
-      if (Math.random() * 100 < INVITE_AGREE) {
-        accepted.push(cid);
-        if (conv && typeof Engine !== 'undefined' && Engine.pushRaw)
-          Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: name(cid) + ' 加入了 ' + (d0.name || '游戏') + ' 局' });
-      } else if (conv && typeof Engine !== 'undefined' && Engine.pushRaw) {
-        Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: name(cid) + ' 婉拒了这局 ' + (d0.name || '游戏') });
-      }
-    });
-    if (!accepted.length) {
-      /* 08-30 P41 §四：只说「都被婉拒了」容易让她当成“点了没反应”，报名字 + 说清概率 */
-      return UI.toast(ctIds.map(name).join('、') + ' 这局都不来（每人 ' + INVITE_AGREE + '% 应约）');
+  /* 开局唯一入口（08-30 纠察二）：大厅、再来一局、TA 邀玩三处都走这里，所有游戏同一条链路——
+     先把邀请卡发进每位 TA 的会话，TA 各自隔 5~10 秒 80/20 定夺（她 08-28 给五子棋/扫雷定的机制，
+     UNO 以前绕开这套直接瞬间建房，“邀请”在 UNO 这边根本没有）。
+     以前这三处还各拼一遍房间对象：UNO 只邀到一位 TA 时点「再来一局」被塞进五子棋那套先手协商，
+     phase 一路走到 playing 却没经过定序，首张没翻、双方都不动，整局永远开始不了。 */
+  function startGame(gameId, ctIds, opt) {
+    const d0 = REG[gameId]; if (!d0) return null;
+    opt = opt || {};
+    const busy = busyRivals();
+    const ids = (ctIds || []).filter(cid => cid && cid !== 'me' && Home.contactById(cid) && !busy[cid]);
+    if (!ids.length) { if (!opt.quiet) UI.toast('现在开不了局（选的人不在了，或还有一局没打完）'); return null; }
+    /* 人没齐之前不建棋盘：players 先只放我，谁应约谁上桌（发牌/雷区等人齐才生成） */
+    const room = makeRoom(gameId, ['me'], { invited: ids, answers: {} });
+    ids.forEach(cid => sendInviteCard(room, cid, opt.fromTa ? 'ai' : 'me'));
+    if (opt.fromTa) {
+      feed(room, 'sys', esc(name(ids[0])) + ' 邀你来一局' + esc(d0.name || '游戏'));
+      settlePlayers(room, ids, { fromTa: true });
+    } else {
+      ids.forEach((cid, i) => room.plans.push({
+        kind: 'invite', cid: cid, at: Date.now() + (rand(QUICK_SEC[0], QUICK_SEC[1]) + i * 4) * 1000, done: false
+      }));
+      feed(room, 'sys', '邀请了 ' + ids.map(x => esc(name(x))).join('、') + '，等他们答话…');
     }
-    const players = ['me'].concat(accepted);
-    const room = {
+    DB.save();
+    /* noOpen：TA 在聊天里邀你玩，只建房 + 发卡片，不能把她正在看的页面一抽就到牌桌 */
+    if (!opt.noOpen) openRoom(room.id);
+    scheduleTimers(room);
+    return room;
+  }
+  /* 房间对象只在这里拼一次；各游戏自己的数据等人齐了再生成（见 settlePlayers） */
+  function makeRoom(gameId, players, ext) {
+    const room = Object.assign({
       id: 'gm' + uidR(), game: gameId, players: players,
       /* 有定序阶段的游戏（UNO）不能默认我先行：先手靠猜拳/掷骰/抽签定 */
-      blackUid: d0.opening ? null : 'me',
-      phase: d0.opening ? 'order' : 'playing',
+      blackUid: null, phase: 'inviting',
       moves: [], plans: [], feed: [], winLine: [],
-      status: 'playing', winner: null, spun: false, invited: ctIds.slice(),
+      status: 'playing', winner: null, spun: false, invited: players.filter(u => u !== 'me'),
       stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
-    };
+    }, ext || {});
+    room.invited = (ext && ext.invited) || players.filter(u => u !== 'me');
     S().rooms[room.id] = room;
-    if (d0.newRoom) d0.newRoom(room);
-    feed(room, 'sys', (d0.name || '游戏') + ' 开局：' + players.map(p => esc(name(p))).join('、') +
-      (d0.opening ? ' · 先定个先手' : ''));
-    if (!d0.opening) scheduleFirstTurn(room);
-    openRoom(room.id);
+    return room;
   }
-  function scheduleFirstTurn(room) {
-    if (room.game === 'gomoku' || room.game === 'mine') {
-      room.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
-      if (room.blackUid !== 'me') room.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+  /* 邀请卡进会话（像默契挑战：点卡片入局，状态实时读房间） */
+  function sendInviteCard(room, cid, from) {
+    const conv = convOf(cid);
+    if (!conv) return;
+    if (from === 'ai') {
+      if (typeof Engine !== 'undefined' && Engine.pushRaw)
+        Engine.pushRaw(conv, { from: 'ai', type: 'game', roomId: room.id, senderId: cid });
+      return;
     }
-    /* UNO 不再从这儿插手：它的回合节奏由 uno.js 自己排（定序完才会开始） */
+    const arr = DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || [];
+    const m = { id: 'm' + uidR(), from: 'me', type: 'game', roomId: room.id, ts: Date.now() };
+    arr.push(m);
+    conv.lastMsg = '[游戏邀请]'; conv.lastTime = m.ts;
+    const visPage = document.querySelector('.page.active');
+    if (visPage && visPage.id === 'page-chat' && typeof Chat !== 'undefined' && Chat.conv && Chat.conv.id === conv.id)
+      Chat.appendMessage(m);
+  }
+  /* 人齐（或只剩几个人）才生成各游戏自己的数据，再交给 joined 定先手 */
+  function settlePlayers(room, accepted, opt) {
+    room.players = ['me'].concat(accepted);
+    const d0 = defOf(room);
+    if (d0.newRoom) d0.newRoom(room);
+    const out = (room.invited || []).filter(x => accepted.indexOf(x) < 0).map(name);
+    feed(room, 'sys', (d0.name || '游戏') + ' 开局：' + room.players.map(p => esc(name(p))).join('、') +
+      (out.length ? '（' + out.join('、') + ' 没来）' : ''));
+    joined(room, opt || {});
+  }
+  /* 人齐了之后干什么也只定这一次：
+     · 有定序阶段 → 交给游戏自己（UNO 的先手面板在牌桌里）
+     · 两人局且是我邀的 → 先手协商（她定的 70/30）
+     · TA 邀我 / 三人以上 → 我先行，直接开 */
+  function joined(room, opt) {
+    opt = opt || {};
+    const d0 = defOf(room);
+    if (d0.opening) { room.phase = 'order'; DB.save(); return; }
+    const ta = taUid(room);
+    if ((room.players || []).length === 2 && !opt.fromTa) {
+      room.phase = 'negotiate';
+      feed(room, 'sys', esc(name(ta)) + ' 加入了' + esc(d0.name) + '，先商量谁先手');
+      room.plans.push({ kind: 'negotiate', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, by: 'ta' });
+    } else {
+      setBlack(room, 'me', opt.fromTa ? esc(name(ta)) + ' 说这局你先行' : '你先行，直接开');
+    }
     DB.save(); scheduleTimers(room);
   }
-  function invite(ctId, gameId) {
-    const room = {
-      id: 'gm' + uidR(), game: gameId, players: ['me', ctId], blackUid: null,
-      phase: 'inviting', moves: [], plans: [], feed: [], winLine: [],
-      status: 'playing', winner: null, spun: false,
-      stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
-    };
-    S().rooms[room.id] = room;
-    const d0 = REG[gameId]; if (d0 && d0.newRoom) d0.newRoom(room);   // 各游戏棋盘数据初始化（扫雷的雷区/计分挂这）
-    /* 邀请卡进会话（像默契挑战：点卡片入局，状态实时读房间） */
-    const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ctId);
-    if (conv) {
-      const arr = DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || [];
-      const m = { id: 'm' + uidR(), from: 'me', type: 'game', roomId: room.id, ts: Date.now() };
-      arr.push(m);
-      conv.lastMsg = '[游戏邀请]'; conv.lastTime = m.ts;
-      const visPage = document.querySelector('.page.active');
-      if (visPage && visPage.id === 'page-chat' && typeof Chat !== 'undefined' && Chat.conv && Chat.conv.id === conv.id)
-        Chat.appendMessage(m);
-    }
-    room.plans.push({ kind: 'invite', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false });
-    DB.save();
-    openRoom(room.id);
-    scheduleTimers(room);
-  }
-  function execInvite(r) {
-    if (r.phase !== 'inviting') return;
-    const ta = taUid(r);
-    if (Math.random() * 100 < INVITE_AGREE) {
-      r.phase = 'negotiate';
-      feed(r, 'sys', esc(name(ta)) + ' 加入了' + esc(defOf(r).name) + '，先商量谁先手');
-      r.plans.push({ kind: 'negotiate', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, by: 'ta' });
-      DB.save();
+  /* 逐个应答：每位 TA 一条计划（r.plans 里带 cid），全答完才开席 */
+  function execInvite(r, p) {
+    const cid = p && p.cid;
+    if (r.phase !== 'inviting' || !cid || (r.answers || {})[cid]) return;
+    r.answers[cid] = Math.random() * 100 < INVITE_AGREE ? 'in' : 'no';
+    if (r.answers[cid] === 'in') {
+      feed(r, 'sys', esc(name(cid)) + ' 应了，坐下');
     } else {
-      r.phase = 'dead'; r.status = 'dead';
-      const line = pickLine('胜负感言', ta, ['改天吧，今天不太行']);
-      feed(r, 'sys', esc(name(ta)) + ' 婉拒了这局' + (line ? '：' + esc(line) : ''));
-      DB.save();
-      UI.toast(name(ta) + ' 婉拒了这局，另请一位吧');
+      const line = pickLine('胜负感言', cid, ['改天吧，今天不太行']);
+      feed(r, 'sys', esc(name(cid)) + ' 婉拒了这局' + (line ? '：' + esc(line) : ''));
     }
+    const left = (r.invited || []).filter(x => !(r.answers || {})[x]);
+    if (!left.length) {
+      const acc = (r.invited || []).filter(x => r.answers[x] === 'in');
+      if (!acc.length) {
+        r.phase = 'dead'; r.status = 'dead';
+        /* 只说「都被婉拒了」容易让她当成“点了没反应”，报名字 + 说清概率（08-30 P41 §四） */
+        UI.toast((r.invited || []).map(name).join('、') + ' 这局都不来（每人 ' + INVITE_AGREE + '% 应约）');
+      } else settlePlayers(r, acc, {});
+    }
+    DB.save();
   }
 
   /* ---------- 先手协商（确认式，最多拉扯一轮） ---------- */
@@ -15843,9 +16091,9 @@ const Games = (function () {
     else { setBlack(r, 'me'); feed(r, 'ta', esc(name(ta)) + '：行吧行吧，你先（小声：下局轮我）'); }
     DB.save(); renderRoom();
   }
-  function setBlack(r, uid) {
+  function setBlack(r, uid, line) {
     r.blackUid = uid; r.pendingFirst = null; r.phase = 'playing';
-    feed(r, 'sys', '商定好了——' + esc(name(uid)) + ' 先手');
+    feed(r, 'sys', line || ('商定好了——' + esc(name(uid)) + ' 先手'));
     r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
     if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
     scheduleTimers(r);
@@ -15875,6 +16123,12 @@ const Games = (function () {
   function execTaMove(r) {
     if (r.phase !== 'playing' || currentTurn(r) !== taUid(r)) return;
     const d = defOf(r);
+    /* 自己有回合环的游戏（UNO）不吃壳的“下一步”：壳里没有它的 legal/applyMove，
+       硬发只能摸到 undefined 抛错。入口先拦住，并把“为什么拦”记进黑匣子 */
+    if (!d || typeof d.aiPick !== 'function' || typeof d.applyMove !== 'function') {
+      logErr('game.taMove ' + r.game + ' 自己管回合，壳不该代它落子');
+      return;
+    }
     /* 她 08-29："TA 不会追击，太痴呆"真根因在这——漏传 taUid，AI 拿 undefined 当自己的棋，
        进攻分恒为 0，只会堵永远不会连（阶梯与打分全是好的，就是没喂对参数） */
     const mv = d.aiPick(r, taUid(r));
@@ -15891,7 +16145,12 @@ const Games = (function () {
       if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
     }
   }
-  function execSay(r, p) { const t = p.text || pickLine('快捷短语', taUid(r), DEF_TA); if (t) feed(r, 'ta', esc(name(taUid(r))) + '：' + esc(t)); }
+  function execSay(r, p) {
+    /* 多人局：谁接话就写谁的名字（以前一律写 taUid，八人桌里变成“永远只有左家说话”） */
+    const who = (p && p.by && (r.players || []).indexOf(p.by) >= 0) ? p.by : taUid(r);
+    const t = (p && p.text) || pickLine('快捷短语', who, DEF_TA);
+    if (t) feed(r, 'ta', esc(name(who)) + '：' + esc(t));
+  }
   function execUrge(r) {
     if (r.phase !== 'playing' || currentTurn(r) !== 'me') return;
     feed(r, 'ta', esc(name(taUid(r))) + '：该你了吧，都等半天啦');
@@ -15964,11 +16223,10 @@ const Games = (function () {
   }
   function again() {
     const r = curRoom(); if (!r) return;
-    const ta = taUid(r);
-    S().rooms[r.id] && (S().rooms[r.id].status = 'ended');
-    /* 多人局（UNO）重开要把原来那桌人一起再邀一次，不是只拉 taUid 那一位 */
-    if ((r.invited || []).length > 1) return inviteMulti(r.invited, r.game);
-    invite(ta, r.game);   // 走同一套邀请流（TA 仍 20% 可拒绝）
+    if (S().rooms[r.id]) S().rooms[r.id].status = 'ended';
+    /* 原来那桌人一起再邀（TA 仍可 20% 拒）；单人局也走同一个入口，不再退回五子棋那套先手协商 */
+    const cts = (r.invited && r.invited.length) ? r.invited : (r.players || []).filter(u => u !== 'me');
+    return startGame(r.game, cts, {});
   }
 
   /* ---------- 播报线 ---------- */
@@ -15989,21 +16247,27 @@ const Games = (function () {
         /* 先问游戏模块自己：它注册了 onPlan 就自己派自己的计划（UNO 的回合/过牌）。
            08-30 之前计划种类集在中段 if 链里，unoPass 写了执行函数却忘了接线，
            TA 摸到能出的牌就永远不过牌——现在漏接线由 build.ps1 的 PLAN-WIRE 门禁拦 */
-        const d0 = defOf(r);
-        if (d0 && d0.onPlan && d0.onPlan(r, p)) { acted = true; return; }
-        if (p.kind === 'invite') execInvite(r);
-        else if (p.kind === 'negotiate') execNegotiate(r, p);
-        else if (p.kind === 'taMove') execTaMove(r);
-        else if (p.kind === 'say') execSay(r, p);
-        else if (p.kind === 'urge') execUrge(r);
-        else if (p.kind === 'taProp') execTaProp(r, p);
-        acted = true;
+        /* 一条坏计划不能连坐：以前这里没兼，一个 TypeError 就把整轮（所有房间）的派发打断，
+           而且只留得下 setTimeout 那一层的一行日志 */
+        try {
+          const d0 = defOf(r);
+          if (d0 && d0.onPlan && d0.onPlan(r, p)) { acted = true; return; }
+          if (p.kind === 'invite') execInvite(r, p);
+          else if (p.kind === 'negotiate') execNegotiate(r, p);
+          else if (p.kind === 'taMove') execTaMove(r);
+          else if (p.kind === 'say') execSay(r, p);
+          else if (p.kind === 'urge') execUrge(r);
+          else if (p.kind === 'taProp') execTaProp(r, p);
+          acted = true;
+        } catch (e) { logErr('game.plan ' + r.game + '/' + p.kind + ' ' + ((e && e.message) || e)); acted = true; }
       });
       r.plans = (r.plans || []).filter(p => !p.done);
       /* 收尾：婉拒的房 30 分钟后清掉；已结束且转过战利品的房 24h 后清（records 里都留着） */
       const now = Date.now();
+      /* ended 房间不论转没转盘都回收（以前只清 spun 的 → 没转战利品的局永久留着，
+         每局十几 KB 的手牌+播报会慢慢吃主档；战绩 records 不动） */
       if ((r.phase === 'dead' && now - r.createdAt > 18e5) ||
-          (r.phase === 'ended' && r.spun && now - r.createdAt > 864e5)) { delete S().rooms[r.id]; acted = true; }
+          (r.phase === 'ended' && now - r.createdAt > 864e5)) { delete S().rooms[r.id]; acted = true; }
     });
     if (acted) {
       DB.save();
@@ -16015,7 +16279,8 @@ const Games = (function () {
     (r.plans || []).forEach(p => {
       if (p.done) return;
       const wait = Math.max(0, p.at - Date.now());
-      setTimeout(() => { try { advance(); } catch (e) {} }, wait + 30);
+      /* 不能只吞不记：以前这里 catch(e){} ——UNO 卡局那类错在黑匣子里一片干净，什么痕都留不下 */
+      setTimeout(() => { try { advance(); } catch (e) { logErr('game.timer ' + ((e && e.message) || e)); } }, wait + 30);
     });
   }
   /* ---------- 游戏模块的唯一回写口 ----------
@@ -16041,7 +16306,6 @@ const Games = (function () {
     const turn = currentTurn(r);
     const thinking = (r.plans || []).some(p => p.kind === 'taMove' && !p.done);
     const lastTaSay = (() => { const f = (r.feed || []).slice().reverse().find(x => x.uid === 'ta'); return f ? f.text : ''; })();
-    const urgeP = (r.plans || []).find(p => p.kind === 'urge' && !p.done);
 
     /* UNO 的座位环就画在牌桌里（谁在哪边、几个人怎么排一目了然），不再另起一条玩家条；
        旧 .un-foes 那排“XX N 张”也删——同一个信息不许在页上出现两次 */
@@ -16059,7 +16323,10 @@ const Games = (function () {
          '<div class="gm-chips gm-proprow hidden" id="room-props"></div>';
     /* 阶段提示：她 08-29 定——别写机制说明（"80%会来""商定先手"那类删掉），只留必要状态 */
     if (r.phase === 'inviting') {
-      h += '<div class="gm-banner">等待 ' + esc(name(ta)) + ' 应答…</div>';
+      const wait = (r.invited || []).filter(x => !(r.answers || {})[x]);
+      h += '<div class="gm-banner">' + (wait.length
+        ? '等 ' + esc(wait.map(name).join('、')) + ' 答话…（已坐下 ' + ((r.players || []).length - 1) + ' 位）'
+        : '人齐了就开…') + '</div>';
     } else if (r.phase === 'dead') {
       h += '<div class="gm-banner">' + esc(name(ta)) + ' 婉拒了这局，返回再请一位吧</div>';
     } else if (r.phase === 'negotiate') {
@@ -16085,7 +16352,7 @@ const Games = (function () {
       '<button class="gm-chip-btn" id="room-quick">短语</button>' +
       '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
       '<button class="gm-send" id="room-send">发</button>' +
-      (r.game === 'uno' ? '<button class="gm-resign" id="room-resign">认输</button>' : '<button class="gm-resign" id="room-resign">认输</button>') +
+      (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
       '</div>';
     body.innerHTML = h;
     /* 棋盘：定序阶段也得交给游戏自己画（UNO 的先手面板就在棋盘里） */
@@ -16106,16 +16373,16 @@ const Games = (function () {
     if (ipt) ipt.addEventListener('keydown', e => { if (e.key === 'Enter') { roomSay(ipt.value); ipt.value = ''; } });
     const rs = document.getElementById('room-resign'); if (rs) rs.addEventListener('click', resign);
     const qb = document.getElementById('room-quick'); if (qb) qb.addEventListener('click', () => toggleRow('room-chips', buildQuickHtml));
-    /* 她 08-29 定：道具入口=双击对方头像（双击 450ms 内两下；手机点两下同效） */
-    const taChipEl = body.querySelector('.gm-player[data-uid]:not([data-uid="me"])');
-    if (taChipEl) {
+    /* 她 08-29 定：道具入口=双击对方头像（双击 450ms 内两下；手机点两下同效）
+       08-30 纠察二：八人桌要每一格都点得动（以前只绑了第一个），并且记住双击的是谁 */
+    body.querySelectorAll('.gm-player[data-uid]:not([data-uid="me"])').forEach(chip => {
       let lastTap = 0;
-      taChipEl.addEventListener('click', () => {
+      chip.addEventListener('click', () => {
         const now = Date.now();
-        if (now - lastTap < 450) { lastTap = 0; toggleRow('room-props', buildPropsHtml); }
+        if (now - lastTap < 450) { lastTap = 0; propTarget = chip.dataset.uid; toggleRow('room-props', buildPropsHtml); }
         else lastTap = now;
       });
-    }
+    });
     renderFloat(r);
     tick();
   }
@@ -16149,6 +16416,7 @@ const Games = (function () {
     if (row.classList.contains('hidden')) {
       if (!row.dataset.built) { row.innerHTML = buildHtml(); bindRow(row); row.dataset.built = '1'; }
       row.classList.remove('hidden');
+      syncPropLabel();
     } else row.classList.add('hidden');
   }
   function buildQuickHtml() {
@@ -16156,8 +16424,17 @@ const Games = (function () {
     return quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
   }
   function buildPropsHtml() {
-    return PROPS.map(p => '<button class="gm-chip gm-propbig" data-prop="' + p.id + '">' +
-      '<span class="gm-pe">' + p.emoji + '</span>' + esc(p.name) + '</button>').join('');
+    return '<span class="gm-prop-to" id="gm-prop-to"></span>' + PROPS.map(p => '<button class="gm-chip gm-propbig" data-prop="' + p.id + '">' +
+      (p.id === 'egg' ? '<span class="gm-ico gm-ico-egg"></span>' : '<span class="gm-ico ' + p.ico + '"></span>') +
+      esc(p.name) + '</button>').join('');
+  }
+  /* 面板标题写清“扔给谁”：多人桌双击的是哪个座位就是谁（她 08-30：要能自己选对象） */
+  function syncPropLabel() {
+    const lab = document.getElementById('gm-prop-to');
+    if (!lab) return;
+    const r = curRoom();
+    const t = [propTarget, r && taUid(r)].find(u => u && r && (r.players || []).indexOf(u) >= 0);
+    lab.textContent = t ? '→ ' + name(t) : '还没选对象';
   }
   function bindRow(row) {
     row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
@@ -16192,7 +16469,7 @@ const Games = (function () {
     const el = document.createElement('div');
     const half = egg ? 17 : 19;
     if (egg) el.className = 'gm-egg';
-    else { el.className = 'gm-prop-fly'; el.textContent = p.emoji; }
+    else { el.className = 'gm-prop-fly'; el.innerHTML = '<i class="gm-ico ' + (p.ico || '') + '"></i>'; }
     const fr = fromEl.getBoundingClientRect(), tr = toEl.getBoundingClientRect();
     const x0 = fr.left + fr.width / 2 - half, y0 = fr.top - 6;
     el.style.left = x0 + 'px';
@@ -16269,10 +16546,10 @@ const Games = (function () {
       ], { duration: 320, easing: 'ease-out', fill: 'forwards' });
       setTimeout(() => { y.style.opacity = '0'; }, 1500);
       setTimeout(() => y.remove(), 2050);
-      /* 飞溅：9 滴小墨点，主要往左右两侧散、带着下坠（不是绕一圈的黄点） */
+      /* 飞溅：9 滴——六滴墨点 + 三滴蛋黄（08-30 她要彩色：碎开不能只有一团黑） */
       for (let i = 0; i < 9; i++) {
         const d = document.createElement('span');
-        d.className = 'gm-drop';
+        d.className = 'gm-drop' + (i % 3 === 1 ? ' gm-drop-y' : '');
         const sz = 2 + Math.random() * 3.5;
         d.style.width = sz + 'px'; d.style.height = sz + 'px';
         d.style.left = (cx - sz / 2) + 'px';
@@ -16290,11 +16567,10 @@ const Games = (function () {
       }
       return;
     }
-    const bits = p.id === 'flower' ? ['🌸', '✨'] : ['💥', '⚡'];
+    const bits = p.id === 'flower' ? 'gm-bit-petal' : 'gm-bit-spark';
     for (let i = 0; i < 10; i++) {
       const s = document.createElement('span');
-      s.className = 'gm-prop-bit';
-      s.textContent = i % 2 === 0 ? bits[0] : bits[1];
+      s.className = 'gm-prop-bit ' + bits;
       s.style.left = (cx - 10) + 'px';
       s.style.top = (cy - 10) + 'px';
       document.body.appendChild(s);
@@ -16307,28 +16583,33 @@ const Games = (function () {
       setTimeout(() => s.remove(), 900);            // 同上：双保险
     }
   }
-  function throwProp(id) {
-    const r = curRoom(); if (!r || !taUid(r)) return;
+  function throwProp(id, toUid) {
+    const r = curRoom(); if (!r) return;
+    /* 多人局：扔给刚双击的那一位，不是永远只打 taUid 那一个（张冠李戴她一眼看出） */
+    const target = [toUid, propTarget].find(u => u && (r.players || []).indexOf(u) >= 0) || taUid(r);
+    if (!target) return;
     const p = PROPS.find(x => x.id === id); if (!p) return;
     const verb = { egg: '把鸡蛋扔到了', flower: '给', hammer: '敲了敲' }[id];
-    feed(r, 'sys', esc(name('me')) + ' ' + verb + ' ' + esc(name(taUid(r))) + (id === 'flower' ? ' 一束花' : id === 'hammer' ? ' 桌面' : ' 脸上'));
-    propFly(p, 'me', taUid(r));
+    feed(r, 'sys', esc(name('me')) + ' ' + verb + ' ' + esc(name(target)) + (id === 'flower' ? ' 一束花' : id === 'hammer' ? ' 桌面' : ' 脸上'));
+    propFly(p, 'me', target);
     /* 她 08-29：TA 会反击/回礼——六成概率隔几秒扔回来一个（建议值，要调说话我） */
     if (Math.random() < 0.6) {
       const back = PROPS[Math.floor(Math.random() * PROPS.length)];
-      r.plans.push({ kind: 'taProp', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, prop: back.id });
+      r.plans.push({ kind: 'taProp', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, prop: back.id, by: target });
     }
     if (Math.random() < 0.5) {
-      const t = pickLine('胜负感言', taUid(r), DEF_TA);
-      if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
+      const t = pickLine('胜负感言', target, DEF_TA);
+      if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t, by: target });
     }
     DB.save(); renderRoom(); scheduleTimers(r);
   }
   function execTaProp(r, p) {
+    const from = (p.by && (r.players || []).indexOf(p.by) >= 0) ? p.by : taUid(r);
+    if (!from) return;
     const back = PROPS.find(x => x.id === p.prop) || PROPS[0];
     const verb = { egg: '把鸡蛋扔到了', flower: '给', hammer: '敲了敲' }[back.id];
-    feed(r, 'sys', esc(name(taUid(r))) + ' ' + verb + ' ' + esc(name('me')) + (back.id === 'flower' ? ' 一束花' : back.id === 'hammer' ? ' 桌面' : ' 脸上'));
-    propFly(back, taUid(r), 'me');
+    feed(r, 'sys', esc(name(from)) + ' ' + verb + ' ' + esc(name('me')) + (back.id === 'flower' ? ' 一束花' : back.id === 'hammer' ? ' 桌面' : ' 脸上'));
+    propFly(back, from, 'me');
   }
 
   /* ---------- UNO：本文件不再插手 ----------
@@ -16484,9 +16765,16 @@ const Games = (function () {
   }
 
   /* ---------- 结算 + 战利品转盘 ---------- */
+  /* 赢家与“执行者”只在这里算一次（08-30 纠察二）：以前文案拿 rivalOf（手牌最多的那位）、
+     发奖拿 r.winner 反推，赢家不是我的时候两边对不上——她看到的就是“写着 XX 的名字、挨罚的是我” */
+  function prizeRoles(r) {
+    const winner = r.winner;
+    return { winner: winner, loser: winner === 'me' ? rivalOf(r) : 'me' };
+  }
   function showSettle(r) {
     closeOverlay();
     const won = r.winner === 'me', draw = r.winner === 'draw';
+    const role = prizeRoles(r);
     overlay = document.createElement('div');
     overlay.className = 'dialog-mask gm-ovl';
     overlay.innerHTML =
@@ -16495,14 +16783,17 @@ const Games = (function () {
         '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' + esc(name(draw ? '' : r.winner)) + ' 拿下</div>' +
         /* 结算统计要看得见（她 08-29）；文案由游戏自己出（扫雷报踩雷个数，UNO 报记分表） */
         (r.finalScores ? '<div class="gm-settle-prize">' +
-          (defOf(r).settleLines ? defOf(r).settleLines(r).join('<br>') :
+          /* 表格由游戏自己出（UNO 的记分表）；没提供的回到逐行文字 */
+          (defOf(r).settleTable ? defOf(r).settleTable(r) :
             Object.keys(r.finalScores.scores || {}).map(u =>
               esc(name(u)) + ' ' + (r.finalScores.scores[u] || 0) + ' 分（踩雷 ' + (r.finalScores.hits[u] || 0) + '）').join('<br>')) +
           '</div>' : '') +
         /* 她 08-29：转完的战利品要直接看得见，别让她退出去翻 */
         (r.lastPrize ? '<div class="gm-settle-prize">战利品 · ' + esc(r.lastPrize) + '</div>' : '') +
-        (draw || r.spun ? '' : '<button class="btn btn-primary" id="gm-spin">转战利品（' +
-          (won ? esc(name(rivalOf(r))) + ' 陪你玩' : '看 ' + esc(name(rivalOf(r))) + ' 手气') + '）</button>') +
+        (draw || r.spun ? '' : '<button class="btn btn-primary" id="gm-spin">转战利品（'
+          /* 名字用同一个 role：谁执行就写谁，不再拿“手牌最多的人”顶替 */
+          + (role.loser === 'me' ? '你受罚，看 ' + esc(name(role.winner)) + ' 手气' : '赢家 ' + esc(name(role.winner)) + ' 转，' + esc(name(role.loser)) + ' 执行')
+          + '）</button>') +
         '<button class="btn btn-secondary" id="gm-again">再来一局</button>' +
         '<button class="btn btn-secondary" data-x>收下</button>' +
       '</div>';
@@ -16553,7 +16844,7 @@ const Games = (function () {
   }
   function applyWheel(r, kind) {
     r.spun = true;
-    const loser = r.winner === 'me' ? rivalOf(r) : 'me';
+    const loser = prizeRoles(r).loser;
     let resultText = '';
     if (kind === 'red') {
       const cfg = S().wheelCfg;
@@ -16684,31 +16975,15 @@ const Games = (function () {
      同一 TA 两小时内最多一次（工程防抖）；已有没下完的对局不重复邀；TA 发起所以你执黑先行 */
   function maybeInvite(conv, ct) {
     if (Math.random() * 100 >= INVITE_CHAT_RATE) return;
-    const busy = Object.values(S().rooms).some(r => r.status === 'playing' && (r.players || []).includes(ct.id));
-    if (busy) return;
     const g = DB.state.gameInviteAt = DB.state.gameInviteAt || {};
     if (Date.now() - (g[ct.id] || 0) < INVITE_COOLDOWN) return;
     g[ct.id] = Date.now();
     const ids = Object.keys(REG);
     const gameId = ids[Math.floor(Math.random() * ids.length)] || 'gomoku';
-    const room = {
-      id: 'gm' + uidR(), game: gameId, players: ['me', ct.id], blackUid: 'me',
-      phase: 'playing', moves: [], plans: [], feed: [], winLine: [],
-      status: 'playing', winner: null, spun: false,
-      stateRoll: Math.floor(Math.random() * 101), createdAt: Date.now()
-    };
-    S().rooms[room.id] = room;
-    const dm = REG[room.game] || {};
-    room.blackUid = dm.opening ? null : 'me';
-    room.phase = dm.opening ? 'order' : 'playing';
-    room.invited = [ct.id];
-    if (dm.newRoom) dm.newRoom(room);
-    feed(room, 'sys', esc(name(ct.id)) + ' 邀你来一局' + esc(dm.name || '游戏') + (dm.opening ? '，先定个先手' : '，你执黑先行'));
-    if (!dm.opening) room.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
-    if (typeof Engine !== 'undefined' && Engine.pushRaw)
-      Engine.pushRaw(conv, { from: 'ai', type: 'game', roomId: room.id, senderId: ct.id });
-    DB.save();
-    scheduleTimers(room);
+    /* 建房、上桌、发卡片全走开局唯一入口（08-30 纠察二）：这儿以前自己又拼了一遍房间对象，
+       口径散在三处就是「再来一局」把 UNO 当成五子棋开局那个坑的源头 */
+    const room = startGame(gameId, [ct.id], { fromTa: true, noOpen: true, quiet: true });
+    if (!room) delete (DB.state.gameInviteAt || {})[ct.id];   // 开不起来就不占 2 小时冷却
   }
 
   /* ---------- 战绩档案 ---------- */
@@ -18721,6 +18996,13 @@ const History = (function () {
   /* 必须挂到全局：logErr 写在 app.js 的 IIFE 里，chat.js 等其他模块直接调会 ReferenceError，
      把“降级兼容”分支本身炸掉（2026-08-27 她“一直转圈”的真根因之一） */
   window.logErr = logErr;
+  /* “跑一下，坏了别拖垮后面的”这类调用以前在全站心跳里有十三处 try{…}catch(e){}（08-31 纠察三拢成一处）：
+     吞异常可以，不留痕不行——UNO 卡局那类错在黑匣子里一片干净，什么痕都留不下 */
+  function runSafe(tag, fn) {
+    try { return fn(); }
+    catch (e) { logErr('safe.' + tag + ' ' + ((e && e.message) || e)); return null; }
+  }
+  window.runSafe = runSafe;
   /* P30：外部脚本错误（浏览器插件/扩展注入，如 plug.js）标注来源，与 LOVEX 自身错误区分 */
   window.addEventListener('error', e => {
     const f = (e.filename || '');
@@ -18786,28 +19068,28 @@ const History = (function () {
     bindSettings();
     StatusEngine.init();
     /* 对方主动发消息结算：启动时对每位联系人掷一次（她 11:17，默认 0=不主动） */
-    DB.state.contacts.forEach(ct => { try { Engine.maybeProactive(ct); } catch (e) {} });
+    DB.state.contacts.forEach(ct => runSafe('proactive', () => Engine.maybeProactive(ct)));
     /* 心事簿引擎结算（P22）：生成今日计划+落库到点计划+戳戳链，幂等；
        挂在启动而非 openBook，戳戳②的聊天消息离簿也能送达 */
-    DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
+    DB.state.contacts.forEach(ct => runSafe('diary', () => Diary.settle(ct)));
     /* P25 报备引擎结算：TA 自动报备/查岗排程+到点落库+我查岗的应答，计划时刻制幂等 */
-    DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
+    DB.state.contacts.forEach(ct => runSafe('report', () => Report.settle(ct)));
     /* 亲属卡月度赠送（她 08-28 晚定）：每位联系人每月掷一次 60% 送/40% 不发，monthKey 幂等 */
-    try { Kinship.settleMonthly(); } catch (e) {}
+    runSafe('kinship', () => Kinship.settleMonthly());
     /* 朋友圈互动结算（08-28“回评要补”）：TA 的赞/评/回评落库排程，到点补跑，幂等 */
-    try { Moments.settle(); } catch (e) {}
+    runSafe('moments', () => Moments.settle());
     Report.init();   /* P25 报备页按钮接线 */
     Quiz.init();     /* P34 灵魂拷问：主页/题库/出卷按钮接线 */
     /* P34 交卷引擎结算：启动时把到点的卷子落库（幂等，与心跳同源） */
-    try { Quiz.advanceAll(); } catch (e) {}
+    runSafe('quiz', () => Quiz.advanceAll());
     /* P31（清然 12:57“设置了怎么没触发”）：运行中自驱落库——之前只在启动/回前台跑
        advance，网页一直开着时到点的报备/查岗会干等；30s 轻扫一次（纯内存比较，幂等） */
     setInterval(() => {
-      DB.state.contacts.forEach(ct => { try { Report.advance(ct); } catch (e) {} });
-      try { Quiz.advanceAll(); } catch (e) {}   /* P34：到点的试卷交卷落库 */
-      try { Moments.settle(); } catch (e) {}    /* 朋友圈到点的赞/评/回评落库 */
-      try { Kinship.settleMonthly(); } catch (e) {}  /* 跨月时补掷亲属卡月度赠送 */
-      try { Games.advance(); } catch (e) {}     /* P40：到点的落子/接话/协商落库（存档续局） */
+      DB.state.contacts.forEach(ct => runSafe('report', () => Report.advance(ct)));
+      runSafe('quiz', () => Quiz.advanceAll());   /* P34：到点的试卷交卷落库 */
+      runSafe('moments', () => Moments.settle());    /* 朋友圈到点的赞/评/回评落库 */
+      runSafe('kinship', () => Kinship.settleMonthly());  /* 跨月时补掷亲属卡月度赠送 */
+      runSafe('games', () => Games.advance());     /* P40：到点的落子/接话/协商落库（存档续局） */
     }, 30000);
     /* 她 09:36：切后台手机冻结网页，TA 的消息引擎跟着睡；回前台的瞬间
        把所有引擎补跑一遍，错过的消息立刻落库（她 09:58：只补跑不弹摘要，
@@ -18831,11 +19113,11 @@ const History = (function () {
         try { localStorage.setItem('LOVEX_BGPROBE', JSON.stringify({
           hideMin: Math.round(mins * 10) / 10, ticks: bgTicks.length, at: Date.now() })); } catch (e) {}
       }
-      DB.state.contacts.forEach(ct => { try { Diary.settle(ct); } catch (e) {} });
-      DB.state.contacts.forEach(ct => { try { Report.settle(ct); } catch (e) {} });
-      try { Quiz.advanceAll(); } catch (e) {}   /* P34：回前台补跑到点卷子 */
-      try { Moments.settle(); } catch (e) {}    /* 朋友圈错过的赞/评/回评立刻补跑 */
-      try { Games.advance(); } catch (e) {}     /* P40：错过的落子/接话立刻补跑 */
+      DB.state.contacts.forEach(ct => runSafe('diary', () => Diary.settle(ct)));
+      DB.state.contacts.forEach(ct => runSafe('report', () => Report.settle(ct)));
+      runSafe('quiz', () => Quiz.advanceAll());   /* P34：回前台补跑到点卷子 */
+      runSafe('moments', () => Moments.settle());    /* 朋友圈错过的赞/评/回评立刻补跑 */
+      runSafe('games', () => Games.advance());     /* P40：错过的落子/接话立刻补跑 */
       Home.render();
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
