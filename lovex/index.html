@@ -1939,11 +1939,14 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   font-family:'Comic Sans MS','Ink Free','Segoe Script',cursive;transform:rotate(-.6deg)}
 .dy-poke-btn:active{transform:rotate(-.6deg) scale(.96)}
 .dy-rate-note{font-size:11px;color:var(--t3);margin-top:8px;line-height:1.5}
-/* 戳戳亮点：加号按钮 + 心事簿格子右上小实心圆（功能性信号用主题主色，无彩色） */
-#btn-plus-chat.has-poke::after,.more-tile[data-more="diary"].has-poke .tile-ico::after{
-  content:'';position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;
-  background:var(--primary)}
-.more-tile[data-more="diary"] .tile-ico,#btn-plus-chat{position:relative}
+/* 一颗点，全站共用（09-01 拢成一条）：这个入口里有还没看过的新东西就亮。
+   心事簿那颗（08-28）与发现页朋友圈那颗（09-01）以前各写各的，再加第三个入口就得再抄一遍几何。
+   谁要点亮，把 has-fresh 加在「点贴在哪个元素」上；行（.cell）里的点跟右箭头走，方块里的点贴右上角。
+   功能性信号用主题主色，不开第四色 */
+.has-fresh{position:relative}
+.has-fresh::after{content:'';position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;
+  background:var(--primary);pointer-events:none}
+.cell.has-fresh::after{top:50%;right:30px;margin-top:-3.5px}
 
 /* TA 侧：封纸 / 偷看 / 空态 */
 .dy-sealed{border:2px dashed var(--t2);padding:16px 14px;text-align:center;
@@ -2698,13 +2701,15 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   border:1px solid color-mix(in srgb,var(--t1) 55%,transparent);font-size:15px}
 .gm-bit-spark{width:.3em;height:.3em;border-radius:50%;background:#9AA4AC;
   border:1px solid color-mix(in srgb,var(--t1) 45%,transparent);font-size:15px}
-/* 动画层（挂 body） */
-.un-fx{position:fixed;z-index:1200;pointer-events:none}
-.un-fx.un-fly .un-card{width:56px;height:82px}
-.un-fx.un-pop{font-size:22px;font-weight:800;font-style:italic;color:var(--primary);
+/* 动画层（挂 body）—— 09-01 纠察：以前也叫 .un-fx，跟上面定序格子那个 .un-fx 撞名，
+   两边互相串味：五格被顺带挂上 position:fixed+pointer-events（全叠在舞台左上角），
+   飞牌与 UNO! 泡也被套上灰底+边框。层改叫 .un-ghost，各回各家 */
+.un-ghost{position:fixed;z-index:1200;pointer-events:none}
+.un-ghost.un-fly .un-card{width:56px;height:82px}
+.un-ghost.un-pop{font-size:22px;font-weight:800;font-style:italic;color:var(--primary);
   background:var(--card);border:1.5px solid var(--t1);border-radius:12px;padding:3px 12px;
   box-shadow:0 3px 10px rgba(0,0,0,.2)}
-.un-fx.un-wash{border-radius:9px;opacity:.8}
+.un-ghost.un-wash{border-radius:9px;opacity:.8}
 
 /* ---------- P40 补丁五（她 08-29 晚） ---------- */
 /* 08-30 P41：旧的 .gm-shell-half / gm-shell-fly 整块已死（扔鸡蛋重做后改用 .gm-shell + WAAPI），
@@ -3561,6 +3566,8 @@ const DB = (function () {
         st.moments.posts = st.moments.posts.filter(p => p.uid !== cid);
         n += gone.length;
       }
+      /* 09-01：发帖钟跟着人走——不删就留一个没人认领的到点时间，settle 白排 */
+      if (st.moments.nextPost) delete st.moments.nextPost[cid];
       st.moments.posts.forEach(p => {
         if (Array.isArray(p.likes) && p.likes.includes(cid)) { p.likes = p.likes.filter(x => x !== cid); n++; }
         if (Array.isArray(p.visList) && p.visList.includes(cid)) { p.visList = p.visList.filter(x => x !== cid); n++; }
@@ -4085,14 +4092,14 @@ var Notify = (function () {
         elog('notify.direct: ' + (e && e.message));
         swShow(title, opt);
       }
-    } catch (e) {}
+    } catch (e) { elog('notify.show: ' + ((e && e.message) || e)); }
   }
 
   /* 裸构造器直发（旧站同款）：点击聚焦并跳进会话 */
   function direct(title, opt) {
     var n = new Notification(title, opt);
     n.onclick = function () {
-      try { window.focus(); Home.openConv(opt.data.convId); } catch (e) {}
+      runSafe('notify.click', () => { window.focus(); Home.openConv(opt.data.convId); });
       n.close();
     };
   }
@@ -4106,15 +4113,9 @@ var Notify = (function () {
     }).catch(function (e) { elog('notify.sw: ' + (e && e.message)); });
   }
 
-  /* P28 黑匣子写入（与 app.js logErr 同键同格式，精简版） */
-  function elog(msg) {
-    try {
-      var a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-      a.push({ t: Date.now(), msg: String(msg).slice(0, 300) });
-      while (a.length > 20) a.shift();
-      localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a));
-    } catch (e) {}
-  }
+  /* P28 黑匣子写入（09-01：这儿以前又手抄了一份 logErr，同键同格式两份实现——改一份漏一份。
+     logErr 已提到 ui.js 全站最前，这里只留个转发） */
+  function elog(msg) { if (typeof logErr === 'function') logErr(msg); }
 
   /* SW 通知点击回页：接住 sw.js postMessage，跳进对应会话 */
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -4288,7 +4289,7 @@ var Report = (function () {
       }   // 没中：不查，安静等下一轮
     }
     DB.save();
-    if (curCid) try { render(); } catch (e) {}   // 报备页开着就跟手刷新
+    if (curCid) runSafe('report.render', render);   // 报备页开着就跟手刷新
   }
 
   /* P33：关闭 TA 进行中的旧状态（被新行程或查岗应答顶替） */
@@ -4350,7 +4351,7 @@ var Report = (function () {
     DB.save();
     UI.toast('去问问 TA～');
     const ct2 = ct;
-    setTimeout(() => { try { advance(ct2); } catch (e) {} }, (hi + 2) * 1000);
+    setTimeout(() => runSafe('report.advance', () => advance(ct2)), (hi + 2) * 1000);
   }
 
   /* 应答查岗卡片：卡片翻面+我的报备落记录+聊天回文本 */
@@ -4529,7 +4530,7 @@ var Report = (function () {
       const pl = (DB.state.repPlans || {})[curCid];
       if (pl) pl.day = '';
       const cc = Home.contactById(curCid);
-      if (cc) try { settle(cc); } catch (e) {}
+      if (cc) runSafe('report.settle', () => settle(cc));
       DB.save();
     };
     ['cfg-reprate','cfg-repmin','cfg-repmax','cfg-chkrate','cfg-chkmin','cfg-chkmax'].forEach(id =>
@@ -5643,7 +5644,7 @@ const Router = (function () {
      各页在 app.init 里 Router.register(页id, 渲染fn)，渲染函数必须幂等 */
   const REFRESH = {};
   function register(id, fn) { if (typeof fn === 'function') REFRESH[id] = fn; }
-  function fireRefresh(id) { const fn = REFRESH[id]; if (fn) { try { fn(); } catch (e) {} } }
+  function fireRefresh(id) { const fn = REFRESH[id]; if (fn) runSafe('router.' + id, fn); }
 
   function pageEl(id) { return document.getElementById('page-' + id); }
 
@@ -5686,6 +5687,27 @@ const Router = (function () {
    LOVE♡X · ui.js —— 通用组件
    Toast（顶部居中2秒）/ 二次确认弹窗（Promise）
    ===================================================== */
+/* ============ 全局错误黑匣子 + “坏了别拖垮后面的”跑法（09-01 从 app.js 提到全站最前） ============
+   logErr：任何脚本错误立即入档（决策记录#14）；P28（清然 10:57 拍板“一直弹出错了这个消息不要了吧”）
+     只进 LOVEX_ERRLOG 不弹 toast，查看口＝长按心事簿标题。
+   runSafe：吞异常可以，不留痕不行——UNO 卡局那类错以前在黑匣子里一片干净，什么痕都留不下。
+   为何住 ui.js：它比所有业务模块都早注进页面（app.js 是最后一个），其他模块启动阶段也能直接调。*/
+const ERRKEY = 'LOVEX_ERRLOG';
+function logErr(msg) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(ERRKEY) || '[]');
+    arr.push({ t: Date.now(), msg: String(msg).slice(0, 300) });
+    while (arr.length > 20) arr.shift();
+    localStorage.setItem(ERRKEY, JSON.stringify(arr));
+  } catch (e) {}
+}
+function runSafe(tag, fn) {
+  try { return fn(); }
+  catch (e) { logErr('safe.' + tag + ' ' + ((e && e.message) || e)); return null; }
+}
+window.logErr = logErr;
+window.runSafe = runSafe;
+
 const UI = (function () {
 
   /* ============ 浮层显隐三件套的唯一实现（全站入口）============
@@ -7200,9 +7222,9 @@ const StatusEngine = (function () {
 
   function persist() {
     DB.save();
-    try { Home.render(); } catch (e) { /* 页面未就绪则跳过 */ }
-    try { Chat.refreshStatus && Chat.refreshStatus(); } catch (e) {}
-    try { Profile.refreshStatus && Profile.refreshStatus(); } catch (e) {}
+    runSafe('status.render', () => Home.render());   /* 09-01：刷新挂了不能无声吃掉（页面未就绪也记一笔，事后查得到） */
+    runSafe('status.chat', () => { if (Chat.refreshStatus) Chat.refreshStatus(); });
+    runSafe('status.profile', () => { if (Profile.refreshStatus) Profile.refreshStatus(); });
   }
 
   /* 设置变更：立即生效并重排下次判定（策划：设置完成自动生成下次判定时间戳） */
@@ -7661,10 +7683,11 @@ const Chat = (function () {
     if (cur && cur.type === 'single' && typeof Diary !== 'undefined') {
       on = !!Diary.pokeState(cur.peerId) || !!(Diary.hasFresh && Diary.hasFresh(cur.peerId));
     }
+    /* 09-01 拢条：点不再挂在格子上，而是挂在格子图标上——与发现页朋友圈那颗共用同一条 .has-fresh 几何 */
     const plus = document.getElementById('btn-plus-chat');
-    if (plus) plus.classList.toggle('has-poke', !!on);
-    const tile = document.querySelector('.more-tile[data-more="diary"]');
-    if (tile) tile.classList.toggle('has-poke', !!on);
+    if (plus) plus.classList.toggle('has-fresh', !!on);
+    const ico = document.querySelector('.more-tile[data-more="diary"] .tile-ico');
+    if (ico) ico.classList.toggle('has-fresh', !!on);
   }
 
   /* 顶栏标题+状态副行（私聊显示AI当前状态，群聊隐藏） */
@@ -9850,7 +9873,7 @@ const Engine = (function () {
     /* 她 08-29 定：群成员发言差距太大就"拉一丢丢"（10% 阈值她定），最沉默的隔一阵补一句，
        拉到均值 10% 以内就不管；等哪次又超了再拉。不摆明面（她：这个做就行了） */
     if (conv.type === 'group') {
-      setTimeout(() => { try { balanceGroup(conv); } catch (e) {} }, rand(8000, 20000));
+      setTimeout(() => runSafe('group.balance', () => balanceGroup(conv)), rand(8000, 20000));
     }
   }
 
@@ -9937,29 +9960,17 @@ const Engine = (function () {
          60% 送/40% 不发——旧「回复链 2%」钩子已拆（台账 L12：拢新口必拆旧口） */
       /* 红包（二期P15）：params.giftRedRate 开启后主动发红包，同一钩子链；群聊三模式在 maybeGift 内部分支（L24） */
       if (typeof Redpacket !== 'undefined' && Redpacket.maybeGift) {
-        try { Redpacket.maybeGift(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'rp.gift: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-        }
+        runSafe('rp.gift', () => Redpacket.maybeGift(conv, ct));
       }
       /* P40（她 08-29 定 1%）：TA 聊天里邀你玩一局游戏，邀请卡进会话点卡入局 */
       if (conv.type === 'single' && typeof Games !== 'undefined' && Games.maybeInvite) {
-        try { Games.maybeInvite(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'game.invite: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-        }
+        runSafe('game.invite', () => Games.maybeInvite(conv, ct));
       }
       /* 撤回钩子不在循环内：她 20:17 定的是“手滑撤回刚发的消息”，必须在整批回复落库后掷（见 fireBatch 尾部） */
       /* 灵魂拷问（二期P34）：params.quizRate 开启后 TA 聊着聊着突然考你；
          V3.6 起 quizDuetRate 已并入（她 19:29 定）：掷中后在 Quiz.maybeAsk 内部二段分流单独试卷/默契挑战 */
       if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
-        try { Quiz.maybeAsk(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'quiz.ask: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-        }
+        runSafe('quiz.ask', () => Quiz.maybeAsk(conv, ct));
       }
       if (r < 15) {
         text = pickDeco(Math.random() < 0.5 ? 'em' : 'kao');       // 单独emoji/颜文字
@@ -10005,13 +10016,7 @@ const Engine = (function () {
        maybeRevoke 内部另有 1.2~3.5s “反应过来”延迟 */
     if (conv.type === 'single' && typeof Chat !== 'undefined' && Chat.maybeRevoke) {
       const revokeAt = t + rand(800, 2200);
-      later(conv.id, revokeAt, () => {
-        try { Chat.maybeRevoke(conv, ct); } catch (e) {
-          try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
-            a.push({ t: Date.now(), msg: 'chat.revoke: ' + (e && e.message) });
-            localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
-        }
-      });
+      later(conv.id, revokeAt, () => runSafe('chat.revoke', () => Chat.maybeRevoke(conv, ct)));
     }
 
     return t;
@@ -10137,7 +10142,7 @@ const Engine = (function () {
     }
     /* P40：游戏悬浮聊天窗实时进气泡（Games 缺席/异常都不能影响主链路） */
     if (typeof Games !== 'undefined' && Games.onPushRaw) {
-      try { Games.onPushRaw(conv, m); } catch (e) {}
+      runSafe('games.onPushRaw', () => Games.onPushRaw(conv, m));
     }
     DB.save();
     Home.render();
@@ -13586,6 +13591,20 @@ const Moments = (function () {
     if (moved) DB.save();
   }
 
+  /* ---------- 发现页入口墨点（清然 09-01 17:23：「给发现页朋友圈也加个墨点，方便我知道有人发朋友圈」）
+     口径与心事簿那颗一致：最新一条 TA 动态的 ts 比上次翻开这页的时刻新 → 亮；我自己发的不算。
+     样式与心事簿共用 .has-fresh（一颗点一条几何，不各抄一遍） */
+  function hasFresh() {
+    const s = store();
+    const seen = s.seenAt || 0;
+    return (s.posts || []).some(p => p && p.uid !== 'me' && p.ts > seen);
+  }
+  function markSeen() { const s = store(); s.seenAt = Date.now(); DB.save(); }
+  function dotDiscover() {
+    const el = document.getElementById('disc-moments');
+    if (el) el.classList.toggle('has-fresh', hasFresh());
+  }
+
   /* ---------- 打开朋友圈 ---------- */
   function open() {
     viewUid = null;               // 从发现页进=全部人，清掉可能残留的相册态
@@ -13595,7 +13614,7 @@ const Moments = (function () {
     renderCover();
     renderList();
     bindOnce();
-    maybeAiPosts();
+    markSeen(); dotDiscover();   /* 翻过一遍=墨点灭 */
   }
   /* P24（清然 20:31）：从联系人资料卡进 TA 的朋友圈 —— 只显 TA 的动态，封面用 TA 独立那张 */
   function openUser(uid) {
@@ -13812,7 +13831,8 @@ function coverTap(e) {
   function settle() {
     const now = Date.now();
     let acted = false;
-    (store().posts || []).forEach(p => {
+    const s = store();
+    (s.posts || []).forEach(p => {
       if (!p.plans || !p.plans.length) return;
       const due = p.plans.filter(pl => pl.at <= now);
       if (!due.length) return;
@@ -13828,7 +13848,31 @@ function coverTap(e) {
       });
       acted = true;
     });
+    /* ---------- TA 自主发圈也挂在这条落库链上（09-01） ----------
+       以前只有 open() 里那句 maybeAiPosts：你不翻开朋友圈，就永远不会有人发帖——
+       发现页那颗“有人发朋友圈”的墨点就是盏点不亮的灯。改由心跳（30s）到点落帖：
+       每人一个 nextPost 钟，不管这轮掷中没掷中都先把下一班钟排上，免得每 30s 掷一次变刷屏。 */
+    const nc = (s.nextPost = s.nextPost || {});
+    contactsAll().forEach(ct => {
+      const due = +nc[ct.id] || 0;
+      if (due && now < due) return;
+      nc[ct.id] = now + postDelayMs(ct);
+      acted = true;
+      if (!due) return;                                  /* 头一回见这个人：只排钟，不追发 */
+      let rate = Math.round(+((ct.params || {}).moPostRate));
+      if (!isFinite(rate)) rate = 60;
+      if (Math.random() * 100 >= Math.min(100, Math.max(0, rate))) return;
+      const text = cardText(ct, 80);
+      if (!text) return;
+      const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4), uid: ct.id, ts: now, text, images: [], likes: [], comments: [] };
+      s.posts.unshift(post);
+      scheduleReactions(post.id);
+    });
     if (acted) { DB.save(); renderList(); }
+    /* 她正盯着这页 → 到点的动态当场就算看过，别让墨点亮在已经读了的人脸上 */
+    const pg = document.getElementById('page-moments');
+    if (pg && pg.classList.contains('active')) markSeen();
+    dotDiscover();
   }
   /* 08-27 晚 #41 重构把“我的动态”误伤成全程零互动（scheduleReactions 对 uid='me' 早退），
      窗口内发出的动态一个赞/评都没排上。补排只挑受害窗口内、零赞零评、还没排过计划的；
@@ -13846,8 +13890,7 @@ function coverTap(e) {
     if (n) DB.save();
     return n;
   }
-  /* AI 自主发圈：掷发帖概率%（默认60%，资料卡可调），命中后在各自间隔区间内等概率取延迟落帖 */
-  const postedOnce = {};
+  /* 发帖间隔：每人各自在 [moPostMin, moPostMax] 区间内等概率取一班钟（09-01 起由 settle 排，不再只在开页时掷一次） */
   function postDelayMs(ct) {
     const p = ct.params || {};
     let mn = parseFloat(p.moPostMin), mx = parseFloat(p.moPostMax);
@@ -13856,24 +13899,6 @@ function coverTap(e) {
     if (mx < mn) mx = mn;
     const unit = p.moPostUnit === 'min' ? 60000 : 3600000;   // 区间支持小数，单位分钟/小时
     return Math.round((mn + Math.random() * (mx - mn)) * unit);
-  }
-  function maybeAiPosts() {
-    contactsAll().forEach(ct => {
-      if (postedOnce[ct.id]) return;
-      postedOnce[ct.id] = true;
-      let rate = Math.round(+((ct.params || {}).moPostRate));
-      if (!isFinite(rate)) rate = 60;
-      if (Math.random() * 100 >= Math.min(100, Math.max(0, rate))) return;
-      setTimeout(() => {
-        const text = cardText(ct, 80);
-        if (!text) return;
-        const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999), uid: ct.id, ts: Date.now(), text, images: [], likes: [], comments: [] };
-        store().posts.unshift(post);
-        DB.save();
-        if (document.getElementById('mo-list')) renderList();
-        scheduleReactions(post.id);
-      }, postDelayMs(ct));
-    });
   }
 
   /* 极简输入模态（所在位置/链接）：ui-modal(1190) 保证压过一切业务壳 */
@@ -14293,20 +14318,13 @@ function coverTap(e) {
   function init() {
     migrateStoredVideos();
     backfillMissed();   /* 08-27 晚起我的动态全程零互动，受害动态一次性补排（幂等） */
+    /* 切到发现页就重算一次墨点（Router 的页面刷新钩子，渲染幂等） */
+    if (typeof Router !== 'undefined' && Router.register) Router.register('discover', dotDiscover);
+    dotDiscover();
   }
 
-  return { init, open, openUser, settle, backfillMissed };
+  return { init, open, openUser, settle, backfillMissed, hasFresh, markSeen, dotDiscover };
 })();
-
-/* =====================================================
-   LOVE♡X · cards.js —— 已退役（P4 起并入 library.js）
-   原最小全局字卡管理器由「文件管理·四库统一弹窗」取代：
-   见 src/js/library.js（决策记录#23）。
-   保留本文件仅为占位说明；模板仍注入但不再暴露任何接口。
-   ===================================================== */
-const Cards = {
-  open() { Library.open({ kind: 'globalCards' }); }
-};
 
 /* =====================================================
    LOVE♡X · gomoku.js —— 五子棋（P40 首发游戏，她 08-28 晚拍板）
@@ -15624,7 +15642,7 @@ const Uno = (function () {
   /* ---------- 动画（挂 body；onfinish + 定时双保险）---------- */
   function ghost(html, cls) {
     const el = document.createElement('div');
-    el.className = 'un-fx ' + (cls || '');
+    el.className = 'un-ghost ' + (cls || '');   /* 09-01：以前叫 un-fx，跟定序舞台的格子撞名，格子被顺带 fixed 掉、飞牌被套上灰底 */
     el.innerHTML = html;
     document.body.appendChild(el);
     return el;
@@ -17453,6 +17471,7 @@ const Profile = (function () {
       cid = null;
       Router.switchTab('home');
       Home.render();
+      if (typeof Moments !== 'undefined' && Moments.dotDiscover) Moments.dotDiscover();   /* 09-01：删了人，发现页那颗点当场重算，不要等心跳 */
       UI.toast('已删除');
     });
   }
@@ -19031,28 +19050,9 @@ const History = (function () {
    ===================================================== */
 (function () {
 
-  /* 全局错误黑匣子：任何脚本错误立即入档（决策记录#14）。
-     P28（清然 10:57 拍板“一直弹出错了这个消息不要了吧”）：不再弹 toast 轰炸，
-     只进 LOVEX_ERRLOG；查看口＝长按心事簿标题 */
-  const ERRKEY = 'LOVEX_ERRLOG';
-  function logErr(msg) {
-    try {
-      const arr = JSON.parse(localStorage.getItem(ERRKEY) || '[]');
-      arr.push({ t: Date.now(), msg: String(msg).slice(0, 300) });
-      while (arr.length > 20) arr.shift();
-      localStorage.setItem(ERRKEY, JSON.stringify(arr));
-    } catch (e) {}
-  }
-  /* 必须挂到全局：logErr 写在 app.js 的 IIFE 里，chat.js 等其他模块直接调会 ReferenceError，
-     把“降级兼容”分支本身炸掉（2026-08-27 她“一直转圈”的真根因之一） */
-  window.logErr = logErr;
-  /* “跑一下，坏了别拖垮后面的”这类调用以前在全站心跳里有十三处 try{…}catch(e){}（08-31 纠察三拢成一处）：
-     吞异常可以，不留痕不行——UNO 卡局那类错在黑匣子里一片干净，什么痕都留不下 */
-  function runSafe(tag, fn) {
-    try { return fn(); }
-    catch (e) { logErr('safe.' + tag + ' ' + ((e && e.message) || e)); return null; }
-  }
-  window.runSafe = runSafe;
+  /* 全局错误黑匣子 logErr + 容错跑法 runSafe：09-01 搬到 ui.js 最前面（全站共用，
+     住在 app.js 这个最后注进来的 IIFE 里，别的模块启动阶段根本拿不到） */
+
   /* P30：外部脚本错误（浏览器插件/扩展注入，如 plug.js）标注来源，与 LOVEX 自身错误区分 */
   window.addEventListener('error', e => {
     const f = (e.filename || '');
