@@ -2353,8 +2353,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-board-wrap{display:flex;flex-direction:column;align-items:center;padding:2px 12px;
   /* 牌桌与手牌自己保证不溢出，整页就不该能左右摇（她 08-30：“下面还能左右滑，滑了还是看不见”） */
   max-width:100%;overflow-x:clip}
+/* 棋盘容器要占满 wrap：wrap 是 flex + align-items:center，子元素默认按内容收缩，
+   量它的宽就是量“上一帧画了多宽”，缩放自反馈、手机上越缩越小（09-01 实测 458/308/250 乱跳） */
+#room-board{width:100%;max-width:470px;margin:0 auto}
 .gm-timer{height:16px;font-size:11px;color:var(--t3)}
-.gk-board{display:grid;grid-template-columns:repeat(15,1fr);width:min(92vw,430px);aspect-ratio:1;
+/* 棋盘尺寸跟容器走，不跟视口走：壳宽 420、窗口 1200 时 92vw 会把盘顶出壳外（同 UNO 那个病） */
+.gk-board{display:grid;grid-template-columns:repeat(15,1fr);width:100%;max-width:430px;margin:0 auto;aspect-ratio:1;
   background:var(--card);border:2px solid var(--t2);border-radius:6px}
 .gk-cell{position:relative;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer}
 .gk-cell:nth-child(15n){border-right:none}
@@ -2467,7 +2471,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-fst img{width:100%;height:100%;object-fit:contain}
 
 /* ---------- P40 扫雷（mine）---------- */
-.mn-board{display:grid;width:min(94vw,470px);aspect-ratio:1;background:var(--card);border:2px solid var(--t2);border-radius:6px;gap:1px;padding:1px}
+.mn-board{display:grid;width:100%;max-width:470px;margin:0 auto;aspect-ratio:1;background:var(--card);border:2px solid var(--t2);border-radius:6px;gap:1px;padding:1px}
 .mn-cell{position:relative;background:var(--fill);cursor:pointer;border-radius:2px;
   /* 长按标雷（08-30）：不禁 touch-action 的话，移动端一按下就当滚动，pointer 直接 cancel，
      长按永远攒不满 500ms；-webkit-touch-callout 关掉 iOS 长按弹菜单 */
@@ -2568,6 +2572,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .un-seat-cnt{font-size:11px;font-weight:700;color:var(--t1);background:var(--fill);
   border:1px solid var(--line);border-radius:8px;padding:0 5px;font-variant-numeric:tabular-nums}
 .un-seat-uno{font-style:normal;font-size:9px;font-weight:800;color:var(--primary);letter-spacing:.5px}
+/* 轮到 TA、那一手还没落：座位牌上点三颗墨点 + 虚线框，代替“啪一下就把牌打了”（她 09-01：给几秒思考） */
+.un-seat-think{font-style:normal;font-size:11px;font-weight:800;color:var(--t3);letter-spacing:1px;
+  animation:un-think 1.1s steps(1,end) infinite}
+.un-seat.think{border-style:dashed}
+@keyframes un-think{0%,32%{opacity:.25}33%,65%{opacity:.6}66%,100%{opacity:1}}
 .un-seat-pen{position:absolute;right:-7px;top:-7px;font-style:normal;font-size:9px;font-weight:700;
   color:#fff;background:var(--danger);border-radius:9px;padding:1px 5px;border:1px solid var(--card)}
 .un-board.sz2 .un-seat-av{width:46px;height:46px;font-size:16px}
@@ -9631,6 +9640,27 @@ const Engine = (function () {
   const hinted = {};          // convId -> 已提示过"无字卡"，每会话只提示一次
   const typingCnt = new Map();// convId -> 正在输入的成员数
 
+  /* 一轮回复的“代”：TA 还没回完我又发一条，不攒成一坨一起回，
+     而是打断旧批次、只按最新那条重开一轮。已落库的气泡不撒，
+     只把还没落地的那些弄哑。所有排程一律过 later()，代号一变就不再执行。 */
+  const rounds = new Map();     // convId -> 代号
+  function gen(convId) { return rounds.get(convId) || 0; }
+  function later(convId, ms, fn) {
+    const g = gen(convId);
+    return setTimeout(() => { if (gen(convId) === g) fn(); }, ms);
+  }
+  /* 本轮进行中 = 这个会话里还有成员挂着未结束的批次（timers 是排程时就占牌） */
+  function inFlight(convId) {
+    for (const k of timers.keys()) if (k.indexOf(convId + ':') === 0) return true;
+    return false;
+  }
+  function interrupt(convId) {
+    rounds.set(convId, gen(convId) + 1);
+    for (const k of [...timers.keys()]) if (k.indexOf(convId + ':') === 0) timers.delete(k);
+    typingCnt.delete(convId);
+    showTyping(false);
+  }
+
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function pick(arr) { return arr[rand(0, arr.length - 1)]; }
 
@@ -9643,6 +9673,14 @@ const Engine = (function () {
   }
 
   /* 条数抽签唯一入口：min~max 均匀掷；cap 传进来就再截一次（群聊分到的份额） */
+  /* 首条与条间隔的等待秒数：minSec~maxSec 整数秒等概率。
+     抽延时只这一个口：排程与验收抽样用同一个函数，不存在“测的一套、跑的另一套” */
+  function rollDelay(p) {
+    const minS = Math.max(0, +p.minSec || 0);
+    const maxS = Math.max(minS, +p.maxSec || minS);
+    return rand(minS, maxS) * 1000;
+  }
+
   function pickCount(p, cap) {
     const minC = Math.max(1, Math.round(+p.minCount) || 1);
     const maxC = Math.max(minC, Math.round(+p.maxCount) || minC);
@@ -9726,9 +9764,7 @@ const Engine = (function () {
         GroupManage.isMuted && GroupManage.isMuted(conv, ct.id)) return;
 
     const p = params(ct);
-    let minS = Math.max(0, +p.minSec || 0);
-    let maxS = Math.max(minS, +p.maxSec || minS);
-    const delay = rand(minS, maxS) * 1000;
+    const delay = rollDelay(p);
 
     /* 本轮要发的条数提前抽签；群聊受本轮分到的份额约束 */
     let n = null;
@@ -9744,16 +9780,16 @@ const Engine = (function () {
     typingCnt.set(conv.id, cnt);
     showTyping(true, Home.displayName(ct));
 
-    setTimeout(() => {
+    later(conv.id, delay, () => {
       const total = fireBatch(conv, p, ct, n, typeof share === 'number' ? share : null);
       // 「正在输入」持续到本批最后一条落地；全员结束才熄灭
-      setTimeout(() => {
+      later(conv.id, Math.max(total, 0) + 60, () => {
         timers.delete(key);
         const left = (typingCnt.get(conv.id) || 1) - 1;
         if (left <= 0) { typingCnt.delete(conv.id); showTyping(false); }
         else typingCnt.set(conv.id, left);
-      }, Math.max(total, 0) + 60);
-    }, delay);
+      });
+    });
   }
 
   /* 用户发来消息 → 安排AI回复
@@ -9765,6 +9801,9 @@ const Engine = (function () {
 
   function onUserMessage(convId) {
     if (!DB.state.convs.find(c => c.id === convId)) return;
+    /* TA 正在回、还没回完，我又发一条 → 打断旧批次，按最新这条重开一轮。
+       旧写法更坑：新轮次撞上「该成员本轮进行中」直接 return，等于第二句根本没人回。 */
+    if (inFlight(convId)) interrupt(convId);
     const m = merging.get(convId);
     if (m) {
       clearTimeout(m.timer);
@@ -9854,7 +9893,7 @@ const Engine = (function () {
       const text = buildCardCombo(cards, cMin, cMax);
       /* 内层额外缓冲（她 17:54 定）：多条字卡要“组合”几秒，更像真人打长句 */
       const extra = 2000 + Math.floor(Math.random() * 2000);
-      setTimeout(() => pushAi(conv, text, ct), extra);
+      later(conv.id, extra, () => pushAi(conv, text, ct));
       return extra;
  }
 
@@ -9881,10 +9920,8 @@ const Engine = (function () {
     /* 她 08-26 定口径：条间隔=回复设置的秒区间逐条重新掷、累加——
        首条在 minSec~maxSec 内随机，第二条在首条基础上再掷一段，第三条同理。
        之前固定 600~1600ms 是错的（她抓到“只隔不到1秒”） */
-    const gapMin = Math.max(0, +p.minSec || 0);
-    const gapMax = Math.max(gapMin, +p.maxSec || gapMin);
     for (let i = 0; i < count; i++) {
-      t += (i === 0 ? 0 : rand(gapMin, gapMax) * 1000);
+      t += (i === 0 ? 0 : rollDelay(p));
       const r = Math.random() * 100;
       let text = null, img = null;
       /* 语音回复（二期P12）：每个气泡位独立 6%，命中且池非空则本位发一条语音（格式同我方语音条） */
@@ -9892,8 +9929,8 @@ const Engine = (function () {
         ? Library.usableVoicePool(ct ? ct.id : null) : [];
       if (Math.random() * 100 < 6 && vp.length) {
         const vItem = pick(vp);
-        setTimeout(() => pushRaw(conv, { from: 'ai', type: 'voice',
-          dur: vItem.dur || 1, audio: vItem.audio, senderId: ct ? ct.id : null }), t);
+        later(conv.id, t, () => pushRaw(conv, { from: 'ai', type: 'voice',
+          dur: vItem.dur || 1, audio: vItem.audio, senderId: ct ? ct.id : null }));
         continue;
       }
       /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
@@ -9931,10 +9968,10 @@ const Engine = (function () {
       } else {
         text = maybeDecorate(pick(cards));                         // 字卡文本
       }
-      setTimeout(() => {
+      later(conv.id, t, () => {
         if (img) pushAiImg(conv, img, ct);
         else pushAi(conv, text, ct, i === 0 ? quote : null);
-      }, t);
+      });
     }
 
     /* 附带/混合模式：文本后随机追加一张图。
@@ -9945,14 +9982,14 @@ const Engine = (function () {
         Math.random() * 100 < imgProb && stickers.length) {
       t += 300;
       const attachImg = pick(stickers);
-      setTimeout(() => pushAiImg(conv, attachImg, ct), t);
+      later(conv.id, t, () => pushAiImg(conv, attachImg, ct));
     }
 
     /* AI主动拍一拍（策划 736-739）：固定7%（#39p 撤用户可调） */
     const patProb = 7;
     if (patProb > 0 && Math.random() * 100 < patProb) {
       t += rand(600, 1600);
-      setTimeout(() => aiPatNow(conv, ct), t);
+      later(conv.id, t, () => aiPatNow(conv, ct));
     }
     /* AI主动视频通话（策719）：固定3%（#39p 撤用户可调），会话级互斥 */
     const vidProb = 3;
@@ -9960,7 +9997,7 @@ const Engine = (function () {
       /* #39y补：若该联系人正在某群通话中等待未接，此次视频触发改为判定是否补入该通话 */
       if (Call.tryJoinActiveGroup && Call.tryJoinActiveGroup(ct)) return t;
       t += rand(3000, 15000);
-      setTimeout(() => Call.incoming(conv, ct), t);
+      later(conv.id, t, () => Call.incoming(conv, ct));
     }
 
     /* 撤回（二期P35，她 20:17 定）：params.revokeRate 开启后 TA 偶尔手滑撤回自己最近的消息。
@@ -9968,13 +10005,13 @@ const Engine = (function () {
        maybeRevoke 内部另有 1.2~3.5s “反应过来”延迟 */
     if (conv.type === 'single' && typeof Chat !== 'undefined' && Chat.maybeRevoke) {
       const revokeAt = t + rand(800, 2200);
-      setTimeout(() => {
+      later(conv.id, revokeAt, () => {
         try { Chat.maybeRevoke(conv, ct); } catch (e) {
           try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
             a.push({ t: Date.now(), msg: 'chat.revoke: ' + (e && e.message) });
             localStorage.setItem('LOVEX_ERRLOG', JSON.stringify(a)); } catch (_) {}
         }
-      }, revokeAt);
+      });
     }
 
     return t;
@@ -10136,7 +10173,7 @@ const Engine = (function () {
   }
 
   return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate,
-           params, pickCount };
+           params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt };
 })();
 
 /* =====================================================
@@ -14697,7 +14734,8 @@ const Uno = (function () {
   const UNO_PENALTY = 2;                    // 该喊没喊被抓：罚摸 2（官方）
   const CALL_RATE = 90;                     // TA 记得喊 UNO 的概率%（建议值）
   const CHALLENGE_RATE = 45;                // TA 会质疑 +4 的概率%（建议值）
-  const TURN_SEC = [1.2, 3];                // TA 每手间隔（多人局要快节奏，比五子棋的 0~30s 紧得多）
+  const TURN_SEC = [2.5, 5.5];              // TA 每手“想一下”的区间（她 09-01：几秒以后再出牌，模拟思考）
+  const DRAW_PLAY_SEC = [1.4, 3.0];         // 摸到能出的，再停一下才打（与上一手错开，不像机器人）
 
   /* 定序动画正在播的房间 id：只存内存（不进存档）——存进存档的话，她刷一次页
      就停在“动画中”永远开不了局 */
@@ -15139,7 +15177,7 @@ const Uno = (function () {
       const got = drawTo(room, taUid, 1);
       renderEvents(room, [{ type: 'draw', uid: taUid, cards: got }]);
       if (got.some(c => canPlay(room, taUid, c))) {
-        plan(room, 'unoTurn', rand(8, 20) / 10);          // 摸到能出的，稍候打出来
+        plan(room, 'unoTurn', rand(DRAW_PLAY_SEC[0] * 10, DRAW_PLAY_SEC[1] * 10) / 10);   // 摸到能出的，停一下再打
         return;
       }
       const p = applyPass(room, taUid);
@@ -15404,11 +15442,15 @@ const Uno = (function () {
       const cnt = (u.hands[id] || []).length;
       const isCur = room.phase === 'playing' && curUid(room) === id;
       const victim = u.pending && nextUid(room, 1) === id;
-      h += '<div class="gm-player un-seat' + (isCur ? ' on' : '') + (id === 'me' ? ' me' : '') + '" data-uid="' + id + '"' +
+      /* 轮到这位且手里挂着一手未落的 unoTurn → 把“在想”标在牌桌上，
+         不然手机上只看到牌一张接一张飞，根本不知道轮到谁 */
+      const think = isCur && id !== 'me' && (room.plans || []).some(p => !p.done && p.kind === 'unoTurn');
+      h += '<div class="gm-player un-seat' + (isCur ? ' on' : '') + (think ? ' think' : '') + (id === 'me' ? ' me' : '') + '" data-uid="' + id + '"' +
         ' style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%">' +
         '<span class="un-seat-av">' + ava(id) + '</span>' +
         '<span class="un-seat-nm">' + esc(nameOf(id)) + '<em>' + seatLabel(n, i) + '</em></span>' +
         '<span class="un-seat-cnt">' + cnt + '</span>' +
+        (think ? '<i class="un-seat-think">…</i>' : '') +
         (u.called[id] && cnt === 1 ? '<i class="un-seat-uno">UNO</i>' : '') +
         (victim ? '<i class="un-seat-pen">-' + u.pending.n + '</i>' : '') +
         '</div>';
@@ -16484,7 +16526,13 @@ const Games = (function () {
       { transform: 'translate(' + (dx * 0.5) + 'px,' + (dy * 0.5 - 112) + 'px) rotate(' + (spin * 0.55) + 'deg) scale(1.1)', offset: 0.46, easing: 'ease-in' },
       { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + spin + 'deg) scale(1)', offset: 1 }
     ], { duration: 900 });
-    fly.onfinish = () => {
+    /* 命中这件事不能只挂在 onfinish 上：切后台 / 时钟被挂起时 onfinish 可以永远不来，
+       蛋就一直贴在半空（09-01 验收里 headless 就是这个状态，才把这条腿补上）。
+       两条腿都装，land 只算一次。 */
+    let landed = false;
+    const land = () => {
+      if (landed) return;
+      landed = true;
       hitAvatar(toUid, p);
       /* 旧写法命中后本体还挂 450ms：完整的蛋贴在脸上、旁边已在喷——这是“最假的一帧”。
          蛋在接触那一帧就没了（它碎了）；花/锤不碎，只留 240ms 的贴住感再淡出。 */
@@ -16494,6 +16542,8 @@ const Games = (function () {
         setTimeout(() => el.remove(), 260);
       }
     };
+    fly.onfinish = land;
+    setTimeout(land, 940);
   }
   /* 命中：目标抖一下 + 碎态。鸡蛋的碎态画全：壳裂三片（带白内侧）+ 蛋液摊开 + 蛋黄滑定 + 墨点飞溅 */
   function hitAvatar(toUid, p) {
