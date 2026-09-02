@@ -16050,7 +16050,7 @@ const Ludo = (function () {
     L.six = 0;
     const me = colOf(r, 'me'), c = colOf(r, curUid(r));
     if (c && L.stat[c]) L.stat[c].rolls++;
-    feed(r, 'sys', esc((me && c === me ? '你' : (CNAME[c] || '对方')) + ' 连掷第三个 6，这一手作废，换下一位'));
+    feed(r, 'sys', esc((me && c === me ? '你' : (CNAME[c] ? CNAME[c] + '方' : '对方')) + '连掷第三个 6，这一手作废，换下一位'));
     return true;
   }
   function sixTally(r, d) { const L = st(r); L.six = d === 6 ? L.six + 1 : 0; }
