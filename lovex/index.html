@@ -2708,6 +2708,16 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    里面还带 #FBF3E4/#D9C79E 两个奶油色——死代码不留（台账 L13） */
 /* 花瓣落地继续用 EMOJI；蛋全链路（飞行🥚→壳迸开+蛋液溅+糊脸）零 EMOJI 脸 */
 
+/* ============ 09-01 晚：游戏邀请当场可拒 + 旧局回看 ============
+   卡片上那两颗钮（只在“TA 邀我、等我回话”这个状态出现） */
+.ks-acts{display:flex;gap:8px;margin-top:9px}
+.ks-acts .btn{flex:1;padding-left:8px;padding-right:8px}
+/* 旧局回看浮层：复用结算卡的壳，只多一条“播报可能很长”的滚动 */
+.gm-replay{max-height:min(72vh,520px);overflow-y:auto}
+.gm-replay-t{margin-top:2px;font-size:11.5px;color:var(--t3);letter-spacing:.5px}
+.gm-replay-lines{margin-top:9px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;text-align:left}
+.gm-replay-lines .gm-fline+.gm-fline{margin-top:5px}
+
 </style>
 </head>
 <body>
@@ -3259,6 +3269,7 @@ const DB = (function () {
       games: {                         // P40 游戏板块（她 08-28 晚拍板）
         rooms: {},                     // roomId -> {id,game,players,blackUid,phase,moves[],plans[],feed[],status,winner,spun,createdAt}
         records: [],                   // 每局一行 {id,game,players,winner,moves,ts,dur}（战绩页渲染时聚合，不另存计数）
+      arch: [],                      // 收场对局的薄档案（09-01 晚：旧邀请点进去能回看当时是什么情况）
         wheelCfg: {                    // 战利品转盘：红包档位（分）与类别占比%（游戏内齿轮面板可调，她定红包四档）
           reds: [52, 520, 1314, 5200],
           weights: { red: 20, truth: 20, dare: 20, errand: 20, blank: 20 }
@@ -3496,6 +3507,12 @@ const DB = (function () {
       const before = st.games.records.length;
       st.games.records = st.games.records.filter(r => !(r.players || []).includes(cid));
       n += before - st.games.records.length;
+    }
+    /* 旧局回看档案也跟着人走（09-01 晚）：人没了还留着她的对局摘要，就是归属模糊 */
+    if (st.games && Array.isArray(st.games.arch)) {
+      const ab = st.games.arch.length;
+      st.games.arch = st.games.arch.filter(r => !(r.players || []).includes(cid));
+      n += ab - st.games.arch.length;
     }
     /* UNO 累计记分牌按人存：人不在了那一行也得消失，不然战绩页永远挂着“已删除联系人 +N 分” */
     if (st.games && st.games.unoScore && has(st.games.unoScore, cid)) { delete st.games.unoScore[cid]; n++; }
@@ -7904,35 +7921,57 @@ const Chat = (function () {
         }
       });
     } else if (m.type === 'game') {
-      /* P40 游戏邀请卡：状态实时读房间（等待应答/商定先手/对局中/已拒绝/已结束），点击入局 */
+      /* P40 游戏邀请卡：状态实时读房间。她 09-01 22:26 加的两条——
+         ① TA 邀我这局要能当场婉拒（不用点进去）；② 收场的旧局点进去能回看当时是什么情况 */
       bub.classList.add('bubble-kin');
       const room = (DB.state.games && DB.state.games.rooms) ? DB.state.games.rooms[m.roomId] : null;
-      const gdef = (typeof Games !== 'undefined' && room) ? Games.defOf(room) : null;
+      const rec = room ? null : ((DB.state.games && DB.state.games.arch) || []).find(x => x.id === m.roomId);
+      const gdef = (typeof Games === 'undefined') ? null
+        : room ? Games.defOf(room) : (rec ? Games.defOf({ game: rec.game }) : null);
       const isMine = m.from === 'me';
-      const gname = gdef ? gdef.name : '游戏';
+      const gname = (gdef && gdef.name) ? gdef.name : '游戏';
       const title = isMine
         ? '给' + Home.displayName(Home.contactById(cur.peerId)) + '的' + gname + '邀请'
         : '邀你来一局' + gname;
-      let st;
-      if (!room) st = '<span class="ks-state">已失效</span>';
-      else if (room.phase === 'inviting') st = '<span class="ks-state">等待应答…</span>';
-      else if (room.phase === 'negotiate') st = '<span class="ks-state go">商定先手中 · 进入 ›</span>';
-      /* UNO 这类有定序阶段的游戏：猜拳/掷骰时卡片不能报“已结束” */
-      else if (room.phase === 'order') st = '<span class="ks-state go">定先手中 · 进入 ›</span>';
-      else if (room.phase === 'playing') st = '<span class="ks-state go">对局中 · 进入 ›</span>';
-      else if (room.phase === 'dead') st = '<span class="ks-state">对方婉拒了</span>';
-      else st = '<span class="ks-state done">已结束</span>';
+      let st = '', acts = '';
+      if (room && room.waitMe) {
+        st = '<span class="ks-state go">等你回话</span>';
+        acts = '<div class="ks-acts"><button class="btn btn-secondary" data-decline>婉拒</button>' +
+               '<button class="btn btn-primary" data-enter>进 局</button></div>';
+      } else if (room) {
+        if (room.phase === 'inviting') st = '<span class="ks-state">等待应答…</span>';
+        else if (room.phase === 'negotiate') st = '<span class="ks-state go">商定先手中 · 进入 ›</span>';
+        /* UNO 这类有定序阶段的游戏：猜拳/掷骰时卡片不能报“已结束” */
+        else if (room.phase === 'order') st = '<span class="ks-state go">定先手中 · 进入 ›</span>';
+        else if (room.phase === 'playing') st = '<span class="ks-state go">对局中 · 进入 ›</span>';
+        else if (room.phase === 'dead') st = '<span class="ks-state">' + (isMine ? '对方婉拒了'
+          : room.deadWhy === 'expired' ? '没回话，散了'
+          : room.deadWhy === 'refused' ? '那局没人来' : '你婉拒了') + '</span>';
+        else st = '<span class="ks-state done">已结束 · 回看 ›</span>';
+      } else if (rec) {
+        st = '<span class="ks-state done">' + (rec.why === 'refused' ? '那局没人来'
+          : rec.why === 'expired' ? '没回话，散了'
+          : rec.why === 'declined' ? '你婉拒了' : '已结束') + ' · 回看 ›</span>';
+      } else st = '<span class="ks-state">已随会话删除</span>';
       bub.innerHTML =
         '<div class="ks-head"><i data-icon="gamepad" data-size="13"></i><span>游戏邀请</span></div>' +
         '<div class="ks-title"></div>' +
-        '<div class="ks-limit">输赢进战绩，赢家转战利品</div>' + st;
+        '<div class="ks-limit">' + (rec || (room && room.phase === 'ended') ? '这局走到哪一步，点进来看' : '输赢进战绩，赢家转战利品') + '</div>' + st + acts;
       bub.querySelector('.ks-title').textContent = title;
       bub.addEventListener('click', () => {
-        if (!room) return UI.toast('这场对局已失效');
-        if (room.phase === 'dead') return UI.toast('对方婉拒了这局，另请一位吧');
-        if (room.phase === 'inviting') return UI.toast('还在等应答，稍一刻');
-        if (typeof Games !== 'undefined' && Games.openRoom) Games.openRoom(room.id);
+        if (room) {
+          if (room.phase === 'dead') return UI.toast(isMine ? '对方婉拒了这局，另请一位吧' : '这局散了');
+          if (!room.waitMe && room.phase === 'inviting') return UI.toast('还在等对方答话，稍一刻');
+          if (typeof Games !== 'undefined' && Games.openRoom) Games.openRoom(room.id);
+          return;
+        }
+        if (rec) { if (typeof Games !== 'undefined' && Games.replay) Games.replay(m.roomId); return; }
+        UI.toast('这场对局已随会话一起删除');
       });
+      const dn = bub.querySelector('[data-decline]');
+      if (dn) dn.addEventListener('click', e => { e.stopPropagation(); Games.answerTaInvite(m.roomId, false); });
+      const en = bub.querySelector('[data-enter]');
+      if (en) en.addEventListener('click', e => { e.stopPropagation(); Games.answerTaInvite(m.roomId, true); });
     } else if (m.type === 'redpacket') {
       /* 红包卡片消息（二期P15）：主题化卡片，点击开红包；底部品牌行照微信（清然 22:07 参考图） */
       bub.classList.add('bubble-rp');
@@ -15702,6 +15741,8 @@ const Games = (function () {
   const CHAT_PROB = 10;          // TA 落子/接话之外主动冒一句的概率%（她 08-29："太频繁"，30→10，齿轮面板可调）
   const INVITE_CHAT_RATE = 1;    // TA 聊天里邀你玩一局的概率%（她定 1%）
   const INVITE_COOLDOWN = 7200000; // 同一 TA 两次邀请最小间隔 2 小时（工程防抖，非玩法数值）
+  const INVITE_WAIT_MS = 10 * 60 * 1000;  // TA 邀我等回话的上限：到点自动散局，不许一直占着一桌
+  const ARCH_CAP = 24;                    // 旧对局回看最多留几场（她 09-01 22:26：点进去要看得见当时是什么情况）
   const WHEEL_SECTORS = ['red', 'truth', 'dare', 'errand', 'blank'];
   const WHEEL_NAMES = { red: '红包', truth: '真心话', dare: '大冒险', errand: '使唤卡', blank: '空门' };
   const DEF_QUICK = ['快点啦', '厉害啊', '不服再来一局', '让我悔一步棋嘛', '稳住稳住', '差一点就赢了'];
@@ -15813,7 +15854,8 @@ const Games = (function () {
     if (rooms.length) {
       h += '<div class="gm-sec">继续对局</div><div class="card cell-group">' + rooms.map(r => {
         const ta = taUid(r);
-        const turn = r.phase === 'playing' ? (currentTurn(r) === 'me' ? '轮到你了' : 'TA 在想…')
+        const turn = r.waitMe ? '等你回话'
+          : r.phase === 'playing' ? (currentTurn(r) === 'me' ? '轮到你了' : 'TA 在想…')
           : r.phase === 'negotiate' ? '商定先手中'
           : r.phase === 'order' ? '先定个先手'
           : '等 TA 应答…';
@@ -15927,7 +15969,10 @@ const Games = (function () {
     ids.forEach(cid => sendInviteCard(room, cid, opt.fromTa ? 'ai' : 'me'));
     if (opt.fromTa) {
       feed(room, 'sys', esc(name(ids[0])) + ' 邀你来一局' + esc(d0.name || '游戏'));
-      settlePlayers(room, ids, { fromTa: true });
+      /* 她 09-01 22:26：TA 邀我，我得能当场回一句。以前这里直接把她在牌桌上按坐下就开局，
+         她不点进去就一直挂着一局（还占着“继续对局”那一格），连个说不了的地方都没有 */
+      room.waitMe = { cid: ids[0], since: Date.now() };
+      room.plans.push({ kind: 'inviteExpire', at: Date.now() + INVITE_WAIT_MS, done: false });
     } else {
       ids.forEach((cid, i) => room.plans.push({
         kind: 'invite', cid: cid, at: Date.now() + (rand(QUICK_SEC[0], QUICK_SEC[1]) + i * 4) * 1000, done: false
@@ -16014,9 +16059,9 @@ const Games = (function () {
     if (!left.length) {
       const acc = (r.invited || []).filter(x => r.answers[x] === 'in');
       if (!acc.length) {
-        r.phase = 'dead'; r.status = 'dead';
-        /* 只说「都被婉拒了」容易让她当成“点了没反应”，报名字 + 说清概率（08-30 P41 §四） */
+        /* 只说「都被婉拒了」容易让她当成"点了没反应"，报名字 + 说清概率（08-30 P41 §四） */
         UI.toast((r.invited || []).map(name).join('、') + ' 这局都不来（每人 ' + INVITE_AGREE + '% 应约）');
+        closeRoom(r, 'refused');
       } else settlePlayers(r, acc, {});
     }
     DB.save();
@@ -16186,6 +16231,7 @@ const Games = (function () {
       Engine.pushRaw(conv, { from: 'sys', type: 'sys', text: txt });
     });
     feed(r, 'sys', r.winner === 'draw' ? '平局！棋盘都下满了' : (r.winner === 'me' ? '你赢了！' : esc(name(r.winner)) + ' 赢了'));
+    archiveRoom(r, 'ended');
     r.plans = [];
     DB.save(); renderRoom();
     showSettle(r);
@@ -16205,6 +16251,92 @@ const Games = (function () {
     while (r.feed.length > 60) r.feed.shift();
   }
 
+  /* ---------- 收场三件事：归档 + 标死 + 存盘（一个口，不漏项） ----------
+     薄档案只留“当时是什么情况”：谁上桌、谁赢、几手、最后几句播报。
+     上限 ARCH_CAP 场，老的挤掉；删好友/删会话时跟着人抹（db.js purgeContact） */
+  function archiveRoom(r, why) {
+    const a = S().arch = S().arch || [];
+    if (a.some(x => x.id === r.id)) return;
+    /* 参与者 = 上桌的 + 被邀的：光记 players 的话，那些“还没上桌就散了”的局里
+       TA 根本不在名单上，删好友时就清不干净（无主数据） */
+    const who = (r.players || []).concat(r.invited || []).filter((u, i, arr) => u && arr.indexOf(u) === i);
+    a.unshift({
+      id: r.id, game: r.game, players: who, winner: r.winner || null,
+      why: why || 'ended', endedAt: Date.now(), moves: (r.moves || []).length,
+      lines: (r.feed || []).slice(-14).map(f => ({ uid: f.uid, text: f.text }))
+    });
+    while (a.length > ARCH_CAP) a.pop();
+  }
+  function closeRoom(r, why) {
+    r.phase = 'dead'; r.status = 'dead'; r.deadWhy = why || 'dead';
+    archiveRoom(r, why);
+    r.plans = [];
+    DB.save();
+  }
+  /* TA 邀我那局一直没人应：到点自己散，别把这一桌永久占着 */
+  function execInviteExpire(r) {
+    if (!r.waitMe) return;
+    const cid = r.waitMe.cid;
+    r.waitMe = null;
+    feed(r, 'sys', esc(name(cid)) + ' 那边没回话，这局先散了');
+    closeRoom(r, 'expired');
+  }
+  /* 她要点的那一句话：进局 / 婉拒。聊天卡片与牌桌页两条入口走同一个口，口径不会飘 */
+  function answerTaInvite(roomId, accept) {
+    const r = S().rooms[roomId];
+    if (!r || !r.waitMe) { UI.toast('这局已经不等了'); return; }
+    const cid = r.waitMe.cid;
+    r.waitMe = null;
+    r.plans = (r.plans || []).filter(p => p.kind !== 'inviteExpire');
+    if (accept) {
+      DB.save();
+      settlePlayers(r, [cid], { fromTa: true });
+      openRoom(r.id);
+      return;
+    }
+    feed(r, 'sys', '你婉拒了这局');
+    const conv = convOf(cid);
+    const line = pickLine('胜负感言', cid, ['行吧，那改天再约']);
+    if (conv && line && typeof Engine !== 'undefined' && Engine.pushRaw) {
+      Engine.pushRaw(conv, { from: 'ai', text: line, senderId: cid });
+    }
+    closeRoom(r, 'declined');
+    UI.toast('回了：这局先不玩');
+    if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender();
+  }
+  /* 旧邀请的回看：房间本体早清了，档案里那点东西够她知道当时走到哪一步 */
+  function replay(roomId) {
+    const rec = (S().arch || []).find(x => x.id === roomId);
+    if (!rec) { UI.toast('这局没留下记录'); return; }
+    closeOverlay();
+    const d0 = REG[rec.game] || { name: '游戏' };
+    const res = rec.winner === 'draw' ? '平局'
+      : rec.winner === 'me' ? '你赢了'
+      : rec.winner ? name(rec.winner) + ' 拿下' : '没开成';
+    overlay = document.createElement('div');
+    overlay.className = 'dialog-mask gm-ovl';
+    overlay.innerHTML =
+      '<div class="gm-settle gm-replay">' +
+        '<div class="gm-settle-t">' + esc(d0.name) + ' · 这一局</div>' +
+        '<div class="gm-settle-s"></div>' +
+        '<div class="gm-replay-t"></div>' +
+        '<div class="gm-replay-lines">' + (rec.lines || []).map(l =>
+          '<div class="gm-fline ' + l.uid + '">' + l.text + '</div>').join('') + '</div>' +
+        '<button class="btn btn-secondary" data-x>关掉</button>' +
+      '</div>';
+    /* 人名、时间这类文本走 textContent 填，不在 HTML 里拼——名字里有尖括号也不会串位 */
+    overlay.querySelector('.gm-settle-s').textContent =
+      (rec.players || []).map(u => name(u)).join('、') + ' · ' + (rec.moves || 0) + ' 手 · ' + res;
+    overlay.querySelector('.gm-replay-t').textContent =
+      (rec.why === 'declined' ? '你婉拒了这局'
+        : rec.why === 'expired' ? '你没回话，这局散了'
+        : rec.why === 'refused' ? '那局没人来'
+        : '这局已经收了') + ' · ' + new Date(rec.endedAt).toLocaleDateString('zh-CN');
+    document.getElementById('dialog-layer').appendChild(overlay);
+    UI.raise(overlay);
+    overlay.querySelector('[data-x]').addEventListener('click', closeOverlay);
+  }
+
   /* ---------- 计划结算（存档续局的心跳） ---------- */
   function advance() {
     let acted = false;
@@ -16222,6 +16354,7 @@ const Games = (function () {
           const d0 = defOf(r);
           if (d0 && d0.onPlan && d0.onPlan(r, p)) { acted = true; return; }
           if (p.kind === 'invite') execInvite(r, p);
+          else if (p.kind === 'inviteExpire') execInviteExpire(r);
           else if (p.kind === 'negotiate') execNegotiate(r, p);
           else if (p.kind === 'taMove') execTaMove(r);
           else if (p.kind === 'say') execSay(r, p);
@@ -16236,7 +16369,11 @@ const Games = (function () {
       /* ended 房间不论转没转盘都回收（以前只清 spun 的 → 没转战利品的局永久留着，
          每局十几 KB 的手牌+播报会慢慢吃主档；战绩 records 不动） */
       if ((r.phase === 'dead' && now - r.createdAt > 18e5) ||
-          (r.phase === 'ended' && now - r.createdAt > 864e5)) { delete S().rooms[r.id]; acted = true; }
+          (r.phase === 'ended' && now - r.createdAt > 864e5)) {
+        /* 删房间前先把这份薄档案落定：房间本体（手牌/棋盘）不能常驻，但“当时是什么情况”要留下 */
+        archiveRoom(r, r.winner ? 'ended' : 'dead');
+        delete S().rooms[r.id]; acted = true;
+      }
     });
     if (acted) {
       DB.save();
@@ -16291,7 +16428,12 @@ const Games = (function () {
     h += '<div class="gm-chips hidden" id="room-chips"></div>' +
          '<div class="gm-chips gm-proprow hidden" id="room-props"></div>';
     /* 阶段提示：她 08-29 定——别写机制说明（"80%会来""商定先手"那类删掉），只留必要状态 */
-    if (r.phase === 'inviting') {
+    if (r.waitMe) {
+      /* TA 邀的这局在等我一句话：牌桌页也得能回，不能逼她非得从聊天卡片上点 */
+      h += '<div class="gm-banner">' + esc(name(r.waitMe.cid)) + ' 邀你这一局，你来定</div>' +
+        '<div class="gm-nego"><button class="btn btn-secondary" id="gm-wait-no">婉拒</button>' +
+        '<button class="btn btn-primary" id="gm-wait-yes">进 局</button></div>';
+    } else if (r.phase === 'inviting') {
       const wait = (r.invited || []).filter(x => !(r.answers || {})[x]);
       h += '<div class="gm-banner">' + (wait.length
         ? '等 ' + esc(wait.map(name).join('、')) + ' 答话…（已坐下 ' + ((r.players || []).length - 1) + ' 位）'
@@ -16338,6 +16480,8 @@ const Games = (function () {
     const fd = document.getElementById('room-feed');
     if (fd) fd.scrollTop = fd.scrollHeight;
     /* 绑定 */
+    const wn = document.getElementById('gm-wait-no'); if (wn) wn.addEventListener('click', () => answerTaInvite(r.id, false));
+    const wy = document.getElementById('gm-wait-yes'); if (wy) wy.addEventListener('click', () => answerTaInvite(r.id, true));
     const nb = document.getElementById('gm-nego-yes'); if (nb) nb.addEventListener('click', () => answerFirst(true));
     const nn = document.getElementById('gm-nego-no'); if (nn) nn.addEventListener('click', () => answerFirst(false));
     const fb = document.getElementById('gm-first-btn'); if (fb) fb.addEventListener('click', claimFirst);
@@ -17038,6 +17182,8 @@ const Games = (function () {
   return {
     init, open, openRoom, renderHall, renderRoom, renderStats, advance, onCell, onFlag,
     viewingConv, onPushRaw, defOf, claimFirst, answerFirst, maybeInvite,
+    /* 她 09-01 22:26 两条：邀请当场可拒（answerTaInvite）、旧局点进去可回看（replay） */
+    answerTaInvite, replay,
     /* 游戏模块的三个通用口：回写、我方倒计时、终局（UNO 等全走这里，不再各自扰 UI.save/重绘） */
     touch, armUrge, feed, finish: endGame
   };
