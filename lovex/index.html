@@ -2494,7 +2494,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-prop-to{font-size:11px;color:var(--t3);align-self:center;padding:0 2px}
 .gm-proprow{flex-wrap:wrap}
 .gm-prop-bit{position:fixed;z-index:1201;pointer-events:none}
-.gm-pts{font-size:10px;color:var(--t3)}
 /* 扫雷：刚翻开的格子高亮（对方翻哪/谁踩雷看得见）；旗=EMOJI（她点名） */
 .mn-cell.mn-last{box-shadow:inset 0 0 0 2px var(--primary);animation:mn-flash 1.1s}
 @keyframes mn-flash{0%{background:color-mix(in srgb,var(--primary) 30%,var(--card))}100%{}}
@@ -2770,6 +2769,30 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .ld-rank{width:14px;font-size:11px;color:var(--t3);text-align:center}
 .ld-cname{font-weight:700}
 .ld-who-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+
+/* ---------- 09-02 补：飞行棋动画与两家区分、扫雷归属（她：“该有的动画记得有”
+   “区分我们二者的颜色棋或者下的地方”）——全是墨色，不引入第四色 ---------- */
+/* 骰子每落一个新值弹一下：写在 .ld-dice 自己身上，重绘即重放，不靠 JS 开关 */
+.ld-dice{animation:ld-dice-in .42s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes ld-dice-in{0%{transform:scale(.5) rotate(-24deg);opacity:.2}60%{transform:scale(1.16) rotate(6deg);opacity:1}}
+/* 撞子那一格：墨圈张开；回窝：自家那一格收拢一圈——挂 body + fixed，整页重建杀不到（与鸡蛋一个手法），自己定时收 */
+.ld-hit,.ld-homefx{position:fixed;z-index:1202;pointer-events:none;
+  border:1.5px solid var(--t1);border-radius:50%;opacity:.9;box-sizing:border-box}
+.ld-homefx{border-color:var(--line);border-radius:3px;box-shadow:0 0 0 1.5px var(--t1) inset}
+/* 我的那一色在图例里加重 + 带个“我”字牌：四色盘上得一眼认出哪边是自己 */
+.ld-lg.me{color:var(--t1);font-weight:700;box-shadow:inset 0 -1.5px 0 var(--t1);padding-bottom:1px}
+.ld-lg-me{font-style:normal;font-size:9.5px;line-height:1;padding:2px 4px;margin-left:1px;
+  color:var(--t2);border:1px solid var(--line);border-radius:999px}
+/* 扫雷：谁翻的一眼分得清（我=卡底白，对方=淡墨）；旗子右下角实心点=我标、空心=对方标 */
+.mn-legend{display:flex;align-items:center;gap:5px;justify-content:center;margin-top:7px;
+  font-size:11px;color:var(--t3)}
+.mn-lg{width:11px;height:11px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--line)}
+.mn-lg.by-me,.mn-cell.mn-open.by-me{background:var(--card)}
+.mn-lg.by-ta,.mn-cell.mn-open.by-ta{background:color-mix(in srgb,var(--fill) 70%,var(--t2))}
+.mn-cell.mn-flag.by-me::after,.mn-cell.mn-flag.by-ta::after{content:'';position:absolute;right:1px;bottom:1px;
+  width:4px;height:4px;border-radius:50%;box-sizing:border-box}
+.mn-cell.mn-flag.by-me::after{background:var(--t1)}
+.mn-cell.mn-flag.by-ta::after{border:1px solid var(--t1);background:transparent}
 
 </style>
 </head>
@@ -5849,8 +5872,11 @@ const UI = (function () {
     });
   }
 
+  /* 全站唯一转义口（09-02 拢条）：以前 11 个模块各自手拄一份 esc，三种写法并存——
+     chat/library 那两份用 String(s)，null 会被打成页面上的“null”字；另一批用 String(s || '')，
+     0 会被吞成空。这里统一：null/undefined → 空串，0 照实写，引号也转 */
   function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => (
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
@@ -7324,6 +7350,12 @@ const Home = (function () {
     /* 人不在了也要给个名字：群聊/列表里留着死人发的旧消息，名字不能空（空了就像渲染坏了） */
     return c ? (c.remark || c.name) : '已删除联系人';
   }
+  /* uid → 显示名，全站一个口径（09-02 拢条：以前 game/moments/kinship/redpacket/ludo 各拄一份，
+     连“人没了该说什么”都有三种说法）；'me' 走我的主页昵称 */
+  function uidName(uid) {
+    if (uid === 'me') return DB.state.profile.name || '我';
+    return displayName(contactById(uid));
+  }
   /* ---------- 群会话工具（决策记录#15） ---------- */
   function membersOf(cv) {
     return (cv.memberIds || []).map(id => contactById(id)).filter(Boolean);
@@ -7675,7 +7707,7 @@ const Home = (function () {
 
   return {
     init, render, openConv,
-    contactById, displayName, ensureConv, openForm, msgBanner,
+    contactById, displayName, uidName, ensureConv, openForm, msgBanner,
     membersOf, groupName
   };
 })();
@@ -8832,10 +8864,7 @@ const Chat = (function () {
   let edTab = 'emoji', edManage = false, edGrp = null;
   const edSel = new Set();
 
-  function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 以前这份用 String(s)，null 会被打成页面上的“null”
 
   function stickerLib(kind) {
     if (kind === 'mine') return DB.state.libs.userStickers;
@@ -9701,8 +9730,17 @@ const Engine = (function () {
 
   /* 回复参数默认值唯一出处（08-30 P41 §三）：
      这串之前散在 app.js:67 / engine.js:79 / profile.js:72,169 / home.js:278 / moments.js:250 五处，
-     改一处漏四处（台账 L13）。任何人要读回复参数，一律走 Engine.params(ct)。 */
-  const REPLY_DEF = { minSec: 3, maxSec: 15, minCount: 1, maxCount: 3 };
+     改一处漏四处（台账 L13）。任何人要读回复参数，一律走 Engine.params(ct)。
+     09-02 补齐行为项：这张表以前没有 imgProb/imgMode/拼卡/发帖钟那几项，于是「没保存过回复设置」的
+     联系人聊天发图实际按 0 走，而资料卡表单显示 20、朋友圈评论自己兜 20 —— 表单说的和跑起来的不是一回事。
+     现在表单显示值=运行值，朋友圈发帖/评论与聊天共用同一张表（她 09-02 要点的就是这条链路同源）。 */
+  const REPLY_DEF = {
+    minSec: 3, maxSec: 15, minCount: 1, maxCount: 3,
+    imgProb: 20, imgMode: 'single',
+    cardComboProb: 1, cardComboMin: 2, cardComboMax: 3,
+    readNoReply: 0, moMutual: 0,
+    moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour'
+  };
   function params(ct) {
     return Object.assign({}, REPLY_DEF, (ct && ct.params) || {});
   }
@@ -10034,8 +10072,9 @@ const Engine = (function () {
     return t;
   }
 
-  /* 拼字卡公共函数（二期P9）：供聊天引擎与朋友圈发布复用。
-     cards=字卡文本池，minN/maxN=抽取条数区间，逐位随机间隔符 */
+  /* 拼字卡公共函数（二期P9）：聊天引擎与朋友圈发帖/评论共用（09-02 起朋友圈真的接上了，
+     以前这句注释是假的——朋友圈没调过它）。cards=字卡文本池，minN/maxN=抽取条数区间，
+     逐位随机间隔符；每条自带 emoji/颜文字装饰（内部走 maybeDecorate） */
   const COMBO_SEPS = [',', '。', '、', '!', '?', ''];
   function buildCardCombo(cards, minN, maxN) {
     const lo = Math.max(2, Math.min(minN, maxN));
@@ -10214,10 +10253,7 @@ const Library = (function () {
   let fileMode = null;   // 'lib' | groupId —— 共用隐藏文件输入的当前用途
 
   /* ---------- 工具 ---------- */
-  function esc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 以前这份用 String(s)，null 会被打成页面上的“null”
   function norm(t) { return String(t || '').replace(/\s+/g, ' ').trim(); }
   function gid() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
   function iid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -11478,8 +11514,8 @@ const GroupManage = (function () {
   let chipFor = null;         // 展开时长芯片的成员 ctId | 'batch'
 
   function G() { return DB.state.convs.find(x => x.id === gid && x.type === 'group'); }
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function name(c) { return Home.displayName(c) || '?'; }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
+  function name(c) { return Home.displayName(c); }   // displayName 自管“人没了”那种情况，以前后面又兑了个 never 用得到的 '?'
 
   const CHIPS = [
     { label: '5分钟', min: 5 }, { label: '10分钟', min: 10 }, { label: '30分钟', min: 30 },
@@ -11906,7 +11942,7 @@ const Wallet = (function () {
     groupcollect: 'chat-group', consume: 'tag', refund: 'check'
   };
 
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
 
   /* ---------- 底座 ---------- */
   function ensure(uid) {
@@ -11952,10 +11988,7 @@ const Wallet = (function () {
     return t;
   }
 
-  function userName(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
-  }
+  function userName(uid) { return Home.uidName(uid); }   // 与聊天/游戏同一个人名口径（09-02 拢条）
   function viewerList() {
     return [{ uid: 'me' }].concat((DB.state.contacts || []).filter(c => !c.isGroup).map(c => ({ uid: c.id })));
   }
@@ -12283,11 +12316,15 @@ const Kinship = (function () {
   /* 她 08-26：几百块太小——“我设置的对方都是富豪首富”，档位提到千~万级（具体数值待她校准） */
   const GIFT_LIMITS = [520.0, 1314.0, 3344.0, 5200.0, 9999.0];   // AI 送出的月上限档位（元）
 
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function yuan(fen) { return Wallet.yuan(fen); }
-  function name(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
+  function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName
+  function yuan(fen) { return Wallet.yuan(fen); }   // 本模块里用得密，留个短名（口径在 Wallet.yuan）
+  /* 「每月额度」的校验只住这里（09-02 并掉两处：改额度与开卡设置各写了一份同样的 5 万上限） */
+  function toLimitFen(raw) {
+    const chk = Wallet.toFen(raw);
+    if (chk.err) return { err: chk.err };
+    if (chk.fen > 5000000) return { err: '单月最多 50000 元' };
+    return { fen: chk.fen };
   }
   function cards() {
     if (!DB.state.kinship) DB.state.kinship = { cards: {} };
@@ -12445,10 +12482,9 @@ const Kinship = (function () {
       fields: [{ key: 'lim', label: '每月额度上限（元）', type: 'number', placeholder: String(c.limitFen / 100), value: c.limitFen / 100 }],
       okText: '保存',
       onSubmit(v) {
-        const chk = Wallet.toFen(v.lim);
-        if (chk.err) return chk.err;
-        const fen = chk.fen;
-        if (fen > 5000000) return '单月最多 50000 元';
+        const r = toLimitFen(v.lim);
+        if (r.err) return r.err;
+        const fen = r.fen;
         c.limitFen = fen;
         DB.save(); render();
         UI.toast('已修改：每月 ¥' + yuan(fen));
@@ -12511,11 +12547,9 @@ const Kinship = (function () {
       fields: [{ key: 'lim', label: '每人每月额度上限（元）', type: 'number', placeholder: '如 520' }],
       okText: '下一步',
       onSubmit(v) {
-        const chk = Wallet.toFen(v.lim);
-        if (chk.err) return chk.err;
-        const fen = chk.fen;
-        if (fen > 5000000) return '单月最多 50000 元';
-        onOk(fen);
+        const r = toLimitFen(v.lim);
+        if (r.err) return r.err;
+        onOk(r.fen);
       }
     });
   }
@@ -12846,12 +12880,9 @@ const Redpacket = (function () {
   const DEF_NOTES = ['恭喜发财，大吉大利', '一点心意，请收下', '给你买点好吃的', '天天开心哦'];
   /* 默认封面不写死颜色：跟随主题变量 --rp-cover（清然 21:44 定），有自定义封面才 inline 覆盖 */
 
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function yuan(fen) { return Wallet.yuan(fen); }
-  function name(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
+  function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName
+  function yuan(fen) { return Wallet.yuan(fen); }   // 本模块用得密，留个短名（口径在 Wallet.yuan）
   function rps() { if (!DB.state.redpackets) DB.state.redpackets = {}; return DB.state.redpackets; }
   function notes() {
     const lib = (DB.state.libs && DB.state.libs.redNotes) || { items: [] };
@@ -13498,11 +13529,8 @@ const Moments = (function () {
     UI.raise(v);
   }
 
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function name(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
+  function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName（09-02 拢条）
   function avaHtml(uid) {
     const p = uid === 'me' ? DB.state.profile : Home.contactById(uid);
     if (p && p.avatar) return '<img src="' + p.avatar + '" alt="">';
@@ -13753,11 +13781,32 @@ function coverTap(e) {
     if (post.visibility === 'exclude') return !(post.visList || []).includes(ct.id);
     return true;
   }
-  function cardText(ct, maxLen) {
+  /* TA 发圈/写评论的正文与配图（她 09-02 点头：发帖与评论都要能拼字卡、能带图片表情、能带 emoji）。
+     口径与聊天回复同源，不另开一套：同一个可用字卡池、同一个 cardComboProb 拼卡闸门，
+     拼串走 Engine.buildCardCombo（内部逐条过 decorate，所以 emoji/颜文字自然混在字卡里），
+     没拼上的单条也过一道 decorate；配图按 imgProb 从其可用表情池抽一张。
+     以前这里只抽一条字卡截断，不拼、不装饰、不带图（发帖的 images 写死空数组）。 */
+  function taBody(ct, maxLen) {
+    const out = { text: '', img: null };
     try {
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
-      return pool.length ? pick(pool).slice(0, maxLen) : '';
-    } catch (e) { return ''; }
+      if (!pool.length) return out;
+      const p = Engine.params(ct);
+      const comboP = Math.min(100, Math.max(0, +p.cardComboProb || 0));
+      if (pool.length >= 2 && comboP > 0 && Math.random() * 100 < comboP) {
+        const cMin = Math.max(2, Math.round(+p.cardComboMin) || 2);
+        const cMax = Math.max(cMin, Math.round(+p.cardComboMax) || cMin);
+        out.text = Engine.buildCardCombo(pool, cMin, cMax).slice(0, maxLen);
+      } else {
+        out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool)).slice(0, maxLen);
+      }
+      const ip = Math.min(100, Math.max(0, Math.round(+p.imgProb || 0)));
+      if (ip > 0 && Math.random() * 100 < ip) {
+        const sp = Library.usableStickerPool(ct);
+        if (sp.length) out.img = pick(sp);
+      }
+    } catch (e) { logErr('moments.taBody ' + ((e && e.message) || e)); }
+    return out;
   }
   /* 首次互动延迟=每人0~1分钟缓冲+各自聊天回复设置内等概率延迟（顺序无关）；追评不加缓冲 */
   /* 她 08-26：评论人开关——关（默认）=TA 发的动态只有我能点赞评论（微信式）；
@@ -13770,11 +13819,11 @@ function coverTap(e) {
     if (target.uid !== 'me') {
       /* 互评开关按人（她 08-27：“默认就是只有我，互评放回复设置里调”）：TA 的动态主人开了才排 TA 之间的互动 */
       const owner = Home.contactById(target.uid);
-      if (!(owner && owner.params && +owner.params.moMutual)) return;
+      if (!(owner && +Engine.params(owner).moMutual)) return;
     }
     contactsAll().forEach(ct => {
       if (ct.id === target.uid || !canSee(target, ct)) return;
-      const rnr = Math.min(100, Math.max(0, +(ct.params || {}).readNoReply || 0));
+      const rnr = Math.min(100, Math.max(0, +Engine.params(ct).readNoReply || 0));
       if (rnr > 0 && Math.random() * 100 < rnr) return;
       const w = chatWindowOf(ct);
       /* 计划时刻制（她 08-28“回评要补”）：时刻预生成落库，刷新/重开到点由 settle() 补跑——
@@ -13791,7 +13840,7 @@ function coverTap(e) {
     const ct = Home.contactById(toUid);
     const w = chatWindowOf(ct);
     if (!w) return;
-    const rnr = Math.min(100, Math.max(0, +((ct.params || {}).readNoReply) || 0));
+    const rnr = Math.min(100, Math.max(0, +Engine.params(ct).readNoReply || 0));
     if (rnr > 0 && Math.random() * 100 < rnr) return;
     const post = store().posts.find(x => x.id === pid);
     if (!post) return;
@@ -13802,16 +13851,9 @@ function coverTap(e) {
     if (!post) return;
     if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
-      const text = cardText(ct, 50);   // 评论内容从 TA 可用字卡池（共用+专属混合）等概率抽取
-      /* 表情包：对标 TA 聊天 imgProb，命中则从其可用表情池等概率抽一张，文字+图合并一条 */
-      const ipRaw = +((ct.params || {}).imgProb);
-      const ip = isFinite(ipRaw) ? ipRaw : 20;
-      let img = null;
-      if (ip > 0 && Math.random() * 100 < ip) {
-        const sp = Library.usableStickerPool(ct);
-        if (sp.length) img = pick(sp);
-      }
-      if (text || img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text, img, ts: Date.now() });
+      /* 评论正文与配图：与聊天同一口径（拼卡/装饰/imgProb 都在 taBody 里算） */
+      const b = taBody(ct, 50);
+      if (b.text || b.img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.img, ts: Date.now() });
     }
     DB.save();
     renderList();
@@ -13844,10 +13886,11 @@ function coverTap(e) {
         const ct = Home.contactById(pl.ct);
         if (!ct) return;                       /* 人没了，这笔互动不补 */
         if (pl.kind === 'react') { reactOnce(p.id, ct); return; }
-        /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位） */
-        const text = cardText(ct, 50);
-        if (!text) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text, ts: Date.now() });
+        /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
+           与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
+        const b = taBody(ct, 50);
+        if (!b.text && !b.img) return;
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.img, ts: Date.now() });
       });
       acted = true;
     });
@@ -13862,12 +13905,11 @@ function coverTap(e) {
       nc[ct.id] = now + postDelayMs(ct);
       acted = true;
       if (!due) return;                                  /* 头一回见这个人：只排钟，不追发 */
-      let rate = Math.round(+((ct.params || {}).moPostRate));
-      if (!isFinite(rate)) rate = 60;
-      if (Math.random() * 100 >= Math.min(100, Math.max(0, rate))) return;
-      const text = cardText(ct, 80);
-      if (!text) return;
-      const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4), uid: ct.id, ts: now, text, images: [], likes: [], comments: [] };
+      const rate = Math.min(100, Math.max(0, Math.round(+Engine.params(ct).moPostRate || 0)));
+      if (Math.random() * 100 >= rate) return;
+      const b = taBody(ct, 80);
+      if (!b.text && !b.img) return;
+      const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4), uid: ct.id, ts: now, text: b.text, images: b.img ? [b.img] : [], likes: [], comments: [] };
       s.posts.unshift(post);
       scheduleReactions(post.id);
     });
@@ -13895,10 +13937,10 @@ function coverTap(e) {
   }
   /* 发帖间隔：每人各自在 [moPostMin, moPostMax] 区间内等概率取一班钟（09-01 起由 settle 排，不再只在开页时掷一次） */
   function postDelayMs(ct) {
-    const p = ct.params || {};
+    const p = Engine.params(ct);   // 09-02：默认值从 Engine.params 来，这里不再兑一份 1~6 小时
     let mn = parseFloat(p.moPostMin), mx = parseFloat(p.moPostMax);
-    if (!isFinite(mn)) mn = 1;
-    if (!isFinite(mx)) mx = 6;
+    if (!isFinite(mn) || mn < 0) mn = 0;
+    if (!isFinite(mx)) mx = mn;
     if (mx < mn) mx = mn;
     const unit = p.moPostUnit === 'min' ? 60000 : 3600000;   // 区间支持小数，单位分钟/小时
     return Math.round((mn + Math.random() * (mx - mn)) * unit);
@@ -14474,16 +14516,19 @@ const Gomoku = (function () {
       id: 'gomoku', name: '五子棋', icon: 'go-board', playersTxt: '双人',
       newRoom() { return {}; },
       legal, applyMove, aiPick,
-      /* 棋盘 DOM：15×15 网格，星位小点；棋子=span；最后一手描边；连五高亮由 room.winLine */
+      /* 棋盘 DOM：15×15 网格，星位小点；棋子=span；最后一手描边；连五高亮由 room.winLine
+         颜色跟先手走，不跟人（她 09-02：“对方先手应该持黑吧？怎么下棋对方还是白色”）：
+         五子棋规矩是黑先白后，所以执黑的人=room.blackUid，不是我固定 */
       render(room, el) {
         const b = boardOf(room);
+        const first = room.blackUid || 'me';
         const last = (room.moves || [])[((room.moves || []).length) - 1];
         let h = '<div class="gk-board">';
         for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) {
           const star = ((x === 3 || x === 7 || x === 11) && (y === 3 || y === 7 || y === 11)) ? ' star' : '';
           const u = b[x][y];
           h += '<div class="gk-cell' + star + '" data-x="' + x + '" data-y="' + y + '">' +
-            (u ? '<span class="gk-stone ' + (u === 'me' ? 'gk-black' : 'gk-white') +
+            (u ? '<span class="gk-stone ' + (u === first ? 'gk-black' : 'gk-white') +
               (last && last.x === x && last.y === y ? ' gk-last' : '') +
               ((room.winLine || []).some(p => p[0] === x && p[1] === y) ? ' gk-winline' : '') +
               '"></span>' : '') + '</div>';
@@ -14510,6 +14555,11 @@ const Gomoku = (function () {
    数字<周围未翻数→多余的是安全格优先翻），推理不出才随机；
    stateRoll 只影响"偷懒概率"（低状态不推理直接随机）。
    一次翻格动作 = moves 里一条记录（零格连开会一口气开一片，仍算一手）。
+   09-02 三条（她：“长按排雷这个是不是也需要”“区分我们二者的颜色”“规则还有没有完善的”）：
+     · 标雷计分只认「轮到这位 + 本回合第一次」，不拦标只拦刷分；TA 也会标雷，同一套 +3/-5
+     · 翻开格按“谁翻的”分颜（我=白底，TA=淡墨底），盘下图例说清；旗子也记标的人
+     · TA 的推理补真：旗子当已知雷参算，数字减旗=还藏几颗；以前那个 safe 数组永远为空，
+       “优先翻推理出的安全格”根本跑不到
    ===================================================== */
 const Mine = (function () {
 
@@ -14553,14 +14603,15 @@ const Mine = (function () {
       m.nums[k] = neighbors(m, x, y).filter(nk => m.mineSet.includes(nk)).length;
     }
   }
-  /* 翻开一格；零格连开一片（经典扫雷）。返回本动作开到的格子 key 数组 */
-  function flip(m, x, y) {
+  /* 翻开一格；零格连开一片（经典扫雷）。返回本动作开到的格子 key 数组；
+     by 记下是谁翻的（她 09-02：要分得清“我们二者的地方”） */
+  function flip(m, x, y, by) {
     const opened = [];
     const stack = [key(x, y)];
     while (stack.length) {
       const k = stack.pop();
       if (m.open[k]) continue;
-      m.open[k] = { mine: m.mineSet.includes(k), n: Math.max(0, m.nums[k] || 0) };
+      m.open[k] = { mine: m.mineSet.includes(k), n: Math.max(0, m.nums[k] || 0), by: by };
       opened.push(k);
       if ((m.nums[k] || 0) === 0 && !m.mineSet.includes(k)) {
         const parts = k.split(',');
@@ -14579,7 +14630,7 @@ const Mine = (function () {
     const m = room.mine;
     if (!m.mineSet) genMines(m, x, y);
     if (m.mineSet.includes(key(x, y))) {
-      flip(m, x, y);
+      flip(m, x, y, uid);
       m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
       m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
       room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
@@ -14587,7 +14638,7 @@ const Mine = (function () {
       if (m.hits[uid] >= 5) return { win: otherUid(room, uid), line: [] };
       return null;
     }
-    const opened = flip(m, x, y).filter(k => !m.mineSet.includes(k));
+    const opened = flip(m, x, y, uid).filter(k => !m.mineSet.includes(k));
     m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + opened.length * 3;
     room.moves.push({ uid, x, y, ts: Date.now() });
     room.lastMv = { uid, cells: opened, mine: false, ts: Date.now() };
@@ -14599,79 +14650,108 @@ const Mine = (function () {
     }
     return null;
   }
+  /* 轮到谁：只认 moves 条数奇偶（先手=blackUid）。壳子也读这一个口径（def.turnOf），
+     不另猜一份——以前壳拿奇偶猜、这里标雷又不看回合，两边对不上就是漏洞 */
+  function turnOf(room) {
+    const first = room.blackUid || 'me';
+    return ((room.moves || []).length % 2 === 0) ? first : (first === 'me' ? otherUid(room, 'me') : 'me');
+  }
   /* 她 08-29：长按格子标注有雷——对了 +3、错了 -5（一格只判一次分；再按取消标注不另计分）。
-     炸弹/旗子用 EMOJI 是她点名要的（游戏内容物例外） */
+     炸弹/旗子用 EMOJI 是她点名要的（游戏内容物例外）。
+     09-02 补两道闸门：计分只认“轮到这位”+“本回合第一次标”——以前 TA 想棋那几秒
+     我可以把整盘雷挨个标完白捠 +3，那叫刷分不叫推理；标不标本身不拦，只是不作数 */
   function flag(room, uid, x, y) {
     const m = room.mine;
     const k = key(x, y);
     if (!inB(m, x, y) || m.open[k]) return null;
-    m.flags = m.flags || {}; m.flagScored = m.flagScored || {};
-    if (m.flags[k]) { delete m.flags[k]; return { toggled: 'off' }; }
-    m.flags[k] = true;
+    m.flags = m.flags || {}; m.flagScored = m.flagScored || {}; m.flagBy = m.flagBy || {};
+    if (m.flags[k]) { delete m.flags[k]; delete m.flagBy[k]; return { toggled: 'off' }; }
+    m.flags[k] = true; m.flagBy[k] = uid;
     if (m.mineSet == null) return { toggled: 'on' };        // 首翻前还没有答案（导入的存档可能是 undefined），不判分
     if (m.flagScored[k]) return { toggled: 'on' };
+    const n = (room.moves || []).length;
+    if (turnOf(room) !== uid) return { toggled: 'on', skipped: 'turn' };
+    if (m.flagClock === n) return { toggled: 'on', skipped: 'once' };
+    m.flagClock = n;
     m.flagScored[k] = true;
     m.scores = m.scores || {};
     if (m.mineSet.includes(k)) { m.scores[uid] = (m.scores[uid] || 0) + 3; return { correct: true, toggled: 'on' }; }
     m.scores[uid] = (m.scores[uid] || 0) - 5; return { correct: false, toggled: 'on' };
   }
-  /* TA 翻格：先推理（数字=未翻邻数→全是雷避开；数字<未翻邻数→多余的是安全格优先），
-     推理不出/低状态偷懒 → 未翻格里随机。TA 不开天眼，只用桌面上看得见的信息 */
+  /* TA 标雷要占一手：标完把 moves 推一条，否则奇偶不翻、下面永远轮不到我（壳子靠 parity 判回合） */
+  function taFlag(room, uid, x, y) {
+    const res = flag(room, uid, x, y);
+    room.moves.push({ uid, x, y, ts: Date.now(), flag: true });
+    room.lastMv = { uid, cells: [key(x, y)], flag: true, ts: Date.now() };
+    return res;
+  }
+  /* TA 翻格：先推理（数字减去已标旗=还藏着几颗雷；等于未翻邻数→全是雷；已标完→剩下的都安全），
+     推理不出/低状态偷懒 → 未翻格里随机。TA 不开天眼，只用桌面上看得见的信息；
+     看到确凿的雷也会标（与长按我这边同一套得分口径） */
   function aiPick(room, taUid) {
     const m = room.mine, size = m.size;
+    m.flags = m.flags || {};
     const un = [];
     for (let x = 0; x < size; x++) for (let y = 0; y < size; y++) {
       if (!m.open[key(x, y)]) un.push({ x, y });
     }
     if (!un.length) return null;
+    if (!m.mineSet) return un[Math.floor(Math.random() * un.length)];   // 首翻前没答案可推
+    const danger = new Set(), sure = [];
+    /* 09-02 修：以前这里 const safe = [] 从头到尾没塞过东西，下面那句「推理出的安全格优先翻」
+       永远走不到——死机制，看着有其实没有（台账上那类“看起来真做起来假”） */
+    Object.keys(m.open).forEach(k => {
+      const o = m.open[k];
+      if (!o || o.mine || !(o.n > 0)) return;
+      const parts = k.split(',');
+      const unNb = neighbors(m, +parts[0], +parts[1]).filter(nk => !m.open[nk]);
+      if (!unNb.length) return;
+      const hidden = o.n - unNb.filter(nk => m.flags[nk]).length;   // 旗子算已知雷：标了就不用再猜
+      if (hidden <= 0) unNb.forEach(nk => { if (!m.flags[nk]) sure.push(nk); });
+      else if (hidden >= unNb.length) unNb.forEach(nk => danger.add(nk));
+    });
+    const toFlag = [...danger].filter(k => !m.flags[k]);
+    if (toFlag.length && Math.random() < 0.5) {
+      const fp = toFlag[0].split(',');
+      return { x: +fp[0], y: +fp[1], flag: true };
+    }
     const roll = typeof room.stateRoll === 'number' ? room.stateRoll : 50;
     const lazyP = ((100 - roll) / 100) * 0.5;             // 低状态懒得推理
-    const danger = new Set(), safe = [];
-    un.forEach(c => {
-      const nks = neighbors(m, c.x, c.y).filter(nk => m.open[nk] && !m.mineSet.includes(nk) && m.open[nk].n > 0);
-      nks.forEach(nk => {
-        const n = m.open[nk].n;
-        const unNb = neighbors(m, nk.split(',')[0] - 0, nk.split(',')[1] - 0)
-          .filter(k => !m.open[k]);
-        /* 已翻数字格周围：雷都在未翻邻居里（翻开的都安全） */
-        const minesHidden = n - unNb.filter(k => (m.open[k] && m.open[k].mine)).length;
-        if (unNb.length && unNb.length <= minesHidden) unNb.forEach(k => danger.add(k));
-        if (unNb.length > minesHidden) {
-          /* 有富余安全格：无法断言具体哪格安全，但 danger 概率低——只用于避开已知雷 */
-        }
-      });
+    const safeCells = sure.filter(k => !danger.has(k)).map(k => {
+      const sp = k.split(','); return { x: +sp[0], y: +sp[1] };
     });
-    const candidates = un.filter(c => !danger.has(key(c.x, c.y)));
-    const pool = candidates.length ? candidates : un;
-    if (Math.random() >= lazyP && safe.length) {
-      const hit = safe.find(c => !danger.has(key(c.x, c.y)));
-      if (hit) return { x: hit.x, y: hit.y };
-    }
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    return { x: pick.x, y: pick.y };
+    if (safeCells.length && Math.random() >= lazyP) return safeCells[Math.floor(Math.random() * safeCells.length)];
+    const pool = un.filter(c => !danger.has(key(c.x, c.y)));
+    const arr = pool.length ? pool : un;
+    return arr[Math.floor(Math.random() * arr.length)];
   }
   /* 棋盘：未翻=凸格；翻开的数字格墨色深浅随雷数；雷/旗=EMOJI（她点名要的，游戏内容物例外）；
-     刚翻开的格子 mn-last 闪一下=看得到对方翻哪/谁踩雷 */
+     刚翻开的格子 mn-last 闪一下=看得到对方翻哪/谁踩雷；
+     09-02：每一格记住是谁翻的/谁标的（by-me / by-ta），同一张盘上分得清两家下的地方 */
   function render(room, el) {
     const m = room.mine || { size: cfgOf().size, open: {} };
-    m.flags = m.flags || {};
+    m.flags = m.flags || {}; m.flagBy = m.flagBy || {};
     const last = room.lastMv;
     let h = '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr);grid-template-rows:repeat(' + m.size + ',1fr)">';
     for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
       const k = key(x, y);
       const o = m.open[k];
       const isLast = last && (last.cells || []).indexOf(k) >= 0;
+      const own = o ? (o.by === 'me' || !o.by ? ' by-me' : ' by-ta') : '';
       if (o && o.mine) {
-        h += '<div class="mn-cell mn-open mn-boom' + (isLast ? ' mn-last' : '') + '">💣</div>';
+        h += '<div class="mn-cell mn-open mn-boom' + own + (isLast ? ' mn-last' : '') + '">💣</div>';
       } else if (o) {
-        h += '<div class="mn-cell mn-open mn-n' + (isLast ? ' mn-last' : '') + '" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
+        h += '<div class="mn-cell mn-open mn-n' + own + (isLast ? ' mn-last' : '') + '" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
       } else if (m.flags[k]) {
-        h += '<div class="mn-cell mn-flag" data-x="' + x + '" data-y="' + y + '">🚩</div>';
+        h += '<div class="mn-cell mn-flag' + (m.flagBy[k] === 'me' || !m.flagBy[k] ? ' by-me' : ' by-ta') +
+          (isLast ? ' mn-last' : '') + '" data-x="' + x + '" data-y="' + y + '">🚩</div>';
       } else {
         h += '<div class="mn-cell" data-x="' + x + '" data-y="' + y + '"></div>';
       }
     }
     h += '</div>';
+    /* 图例只说“谁翻的”，不报名字也不上新颜色（名字上面玩家条已有，同一条信息不许页上出现两次） */
+    h += '<div class="mn-legend"><span class="mn-lg by-me"></span>你翻的<span class="mn-lg by-ta"></span>对方翻的</div>';
     el.innerHTML = h;
     /* 长按标雷/取消，轻点翻开——事件统一走 UI.longPress（08-30 根治：旧写法把
        pointerleave 也当“松手”清计时器，手指微抖就前功尽弃；移动端没 touch-action 又被当滚动） */
@@ -14690,7 +14770,9 @@ const Mine = (function () {
         const c = cfgOf();
         room.mine = { size: c.size, mines: c.mines, mineSet: null, open: {}, nums: {}, hits: {}, scores: {}, flags: {}, flagScored: {} };
       },
-      legal, applyMove, flag, aiPick, render
+      legal, applyMove, flag, taFlag, aiPick, render, turnOf,
+      /* 给验收探针：判定口径只这一份，不另写一套 */
+      key, neighbors, inB, flip, genMines
     };
   }
 
@@ -14776,8 +14858,7 @@ const Uno = (function () {
     if (!ct) return u;
     return ct.remark || ct.name || 'TA';
   }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g,
-    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
 
   /* ---------- 牌 ---------- */
   function buildDeck() {
@@ -15866,6 +15947,12 @@ const Ludo = (function () {
   function siOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? -1 : i % 4; }
   function toks(r, c) { const L = st(r); return c && L.toks[c] ? L.toks[c] : null; }
   function curUid(r) { const L = st(r); return (L.order || [])[L.oi] || null; }
+  /* 基地停机位的绝对格（渲染与动画都读这里，不各算一份） */
+  function slotOf(ci, k) { const sl = SLOTS[k % 4]; return [SIDE[ci].base[0] + sl[0], SIDE[ci].base[1] + sl[1]]; }
+  /* 我方回合开始：上壳子那个 30 秒时钟（同一个 urge 计划：牌桌上方那个倒计时与到点接手都读它） */
+  /* 一口钟的开与关都走壳子的口：游戏不自己遍历 plans 找 urge（口径只住 armUrge/disarmUrge） */
+  function armClock(r) { if (typeof Games !== 'undefined' && Games.armUrge) Games.armUrge(r); }
+  function clearClock(r) { if (typeof Games !== 'undefined' && Games.disarmUrge) Games.disarmUrge(r); }
   function homeCnt(r, c) { return (toks(r, c) || []).filter(t => t.s === TOTAL).length; }
   function seatOf(r, uid) { return (r.players || []).indexOf(uid); }
 
@@ -15902,16 +15989,13 @@ const Ludo = (function () {
     L.roll = null;
     L.beginAt = 0;
     r.phase = 'playing';
-    if (curUid(r) !== 'me') queueTa(r);
+    if (curUid(r) !== 'me') queueTa(r); else armClock(r);
     touch(r);
   }
 
   function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
   function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); }
-  function nm(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return (typeof Home !== 'undefined' && Home.displayName) ? (Home.displayName(Home.contactById(uid)) || 'TA') : 'TA';
-  }
+  const nm = uid => Home.uidName(uid);   // 人名口径全站一份（Home.uidName），不在游戏里再兑一个 'TA'
 
   /* ---------- 走法（判定唯一口径，探针也读这里） ---------- */
   function canGo(t, d) { return t.s === 0 ? d === 6 : t.s + d <= TOTAL; }
@@ -15937,6 +16021,10 @@ const Ludo = (function () {
     const from = t.s;
     const ns = from === 0 ? 1 : from + d;
     const hits = hitsAt(r, c, ns);
+    /* 动画要的东西在改状态前先拿住：撞飞那几架的“起飞点”一刷就没了 */
+    const fx = { c: c, k: k, from: from, to: ns, hits: hits.map(o => ({ c: o.c, k: o.k, from: o.s })), at: Date.now() };
+    const li = landIdx(c, ns);
+    if (li >= 0) fx.cell = RING[li];
     t.s = ns;
     L.stat[c].rolls++;
     /* 壳子的结算卡与战绩页都看 r.moves 的条数：不记就是永远“0 手”（数据归属不能空） */
@@ -15944,10 +16032,11 @@ const Ludo = (function () {
     let msg = CNAME[c] + ' ' + (k + 1) + ' 号';
     msg += from === 0 ? '起飞' : ns === TOTAL ? '回窝了' : ns > LASTRING ? '拐进回家道' : '前进 ' + d + ' 格';
     hits.forEach(o => {
-      o.s = 0;
+      o.s = 0;                       // fx.hits 早在改状态前就拓了快照（from 是它被撞前站的那格）
       L.stat[c].hit++;
       msg += '，把' + CNAME[o.c] + ' ' + (o.k + 1) + ' 号撞回基地';
     });
+    L.fx = fx;
     feed(r, 'sys', esc(msg));
     return { home: ns === TOTAL, again: d === 6, hits: hits.length };
   }
@@ -15956,8 +16045,9 @@ const Ludo = (function () {
     let guard = 0;
     L.dice = null;
     L.phase = 'roll';
+    clearClock(r);                  // 上一手的时钟不管轮到谁都先摘掉，留着只会乱催
     do { L.oi = (L.oi + 1) % L.order.length; guard++; } while (guard < 12 && homeCnt(r, colOf(r, curUid(r))) === 4);
-    if (curUid(r) !== 'me') queueTa(r);
+    if (curUid(r) !== 'me') queueTa(r); else armClock(r);
   }
   function queueTa(r) {
     const L = st(r);
@@ -16138,7 +16228,8 @@ const Ludo = (function () {
     }
     h += '<div class="ld-legend">' + (r.players || []).map((u, i) => {
       const cc = COLORS[i % 4];
-      return '<span class="ld-lg" style="color:' + CHEX[cc] + '"><b>' + CNAME[cc] + '</b><i></i>' +
+      return '<span class="ld-lg' + (u === 'me' ? ' me' : '') + '" style="color:' + CHEX[cc] + '"><b>' + CNAME[cc] + '</b><i></i>' +
+        (u === 'me' ? '<em class="ld-lg-me">我</em>' : '') +
         '<span class="ld-lg-n">' + homeCnt(r, cc) + '/4</span></span>';
     }).join('') + '</div>';
     el.innerHTML = h;
@@ -16154,6 +16245,8 @@ const Ludo = (function () {
     });
     fitBoard(el);
     if (typeof mountIcons === 'function') mountIcons(el);
+    /* 动画在重绘之后补放，放完就摸掉：同一手不被下一次重绘再放一遍 */
+    if (L.fx) { runSafe('ludo.playFx', () => playFx(r, el, L.fx)); L.fx = null; }
 
     const bb = el.querySelector('#ld-begin');
     if (bb) bb.addEventListener('click', () => runSafe('ludo.begin', () => begin(r)));
@@ -16210,6 +16303,8 @@ const Ludo = (function () {
         return;
       }
       if (opts.length === 1) { iMove(r, c, opts[0].k); return; }
+      /* 掷开了又要选架：时钟重新给三十秒，不能“刚落定骰子就被上一轮定时器接手”（armUrge 自己先摘旧钟） */
+      armClock(r);
       touch(r);
     }), ROLL_MS);
   }
@@ -16225,6 +16320,92 @@ const Ludo = (function () {
     if (res.again) { feed(r, 'sys', '掷到 6，再掷一次'); touch(r); return; }
     nextTurn(r);
     touch(r);
+  }
+
+  /* ---------- 30 秒到点（她 09-02：“也给我上倒计时吧”） ----------
+     牌桌上方那个“你的回合 · Ns”由壳子的 tick() 画，时钟到点回到这里：
+     没掷 → 替你掷一颗；掷了没选 → 按与 TA 同一套 pickFor 挑一架。
+     不静默代走：播报里写清“这步替你走了”，回看不冤枉人 */
+  function onTimeout(r) {
+    const L = st(r);
+    if (r.phase !== 'playing' || L.phase === 'over' || L.phase === 'order' || curUid(r) !== 'me') return false;
+    const c = colOf(r, 'me');
+    if (!c) return false;
+    if (!L.dice) {
+      const d = rand(1, 6);
+      L.dice = d; L.spin = 0;
+      L.stat[c].rolls++;
+      feed(r, 'me', '时间到，替你掷出 ' + d + ' ' + dieCh(d));
+      const opts = legalDice(r, c, d);
+      if (!opts.length) { feed(r, 'sys', '没棋可走，过这一手'); nextTurn(r); touch(r); return true; }
+      if (opts.length === 1) { iMove(r, c, opts[0].k); return true; }   // 只有一架能动就不必再等一次选择（与我手动掷同一口径）
+      armClock(r);        // 掷开了还欠一次选择，再给三十秒
+      touch(r);
+      return true;
+    }
+    const opts = legalDice(r, c, L.dice);
+    feed(r, 'me', '时间到，这步替你走了');
+    if (opts.length) iMove(r, c, pickFor(r, c, L.dice, opts).k);
+    else nextTurn(r);
+    touch(r);
+    return true;
+  }
+
+  /* ---------- 动画（她 09-02：“该有的动画记得有”） ----------
+     规矩：状态在 applyMove 里已经算完，这里只从旧格“补放”一段位移（FLIP），
+     动画没跑、被挂起、切后台都不影响棋局；特效一律用定时器收，不等 animationend */
+  function playFx(r, el, fx) {
+    if (!fx || Date.now() - (fx.at || 0) > 3000) return;      // 人不在这页时别拿旧动画重放
+    const b = el.querySelector('.ld-board');
+    if (!b) return;
+    const u = parseFloat(b.style.getPropertyValue('--u')) || 22;
+    const ci = COLORS.indexOf(fx.c);
+    const tok = el.querySelector('.ld-tok[data-c="' + fx.c + '"][data-k="' + fx.k + '"]');
+    const to = posOf(ci, fx.to) || slotOf(ci, fx.k);
+    if (tok && ci >= 0) {
+      /* 逐格跳：沿路径一格一跳，中间每跳带一点抬升；起飞那一跳从基地抬起来 */
+      const n = Math.max(0, fx.to - fx.from);
+      const kf = [];
+      for (let i = 0; i <= n; i++) {
+        const p = posOf(ci, fx.from + i) || slotOf(ci, fx.k);
+        const dx = (p[0] - to[0]) * u, dy = (p[1] - to[1]) * u;
+        const mid = i > 0 && i < n;
+        kf.push({ transform: 'translate(' + dx + 'px,' + (dy + (mid ? -u * .34 : 0)) + 'px)' +
+          (fx.from === 0 && i === 0 ? ' scale(.72)' : (i === n && fx.to === TOTAL ? ' scale(1.24)' : '')),
+          offset: n ? i / n : 1, easing: 'ease-out' });
+      }
+      tok.animate(kf, { duration: Math.min(1400, 140 * (n + 1)), fill: 'none' });
+    }
+    /* 被撞那架：从撞击格转着回去基地（它已经在基地了，这里只是补放轨迹） */
+    (fx.hits || []).forEach(h => {
+      const hi = COLORS.indexOf(h.c);
+      const t2 = el.querySelector('.ld-tok[data-c="' + h.c + '"][data-k="' + h.k + '"]');
+      const back = posOf(hi, h.from) || slotOf(hi, h.k);
+      if (!t2 || hi < 0) return;
+      const tgt = slotOf(hi, h.k);
+      const dx = (back[0] - tgt[0]) * u, dy = (back[1] - tgt[1]) * u;
+      t2.animate([
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + (dx * .5) + 'px,' + (dy * .5 - u * .9) + 'px) rotate(190deg)', opacity: .8, offset: .48 },
+        { transform: 'translate(0,0) rotate(360deg)', opacity: 1 }
+      ], { duration: 780, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'none' });
+    });
+    /* 撞击那一格：一圈墨点张开；回窝：自家那一格画个收拢的环。
+       挂 body + fixed（与鸡蛋/爆炸同一个手法）：TA 回话会引发整块重绘，挂在盘里的元素会被一拼掉；
+       纯装饰不控逻辑，自己定时收，不等 animationend */
+    [[fx.cell, 'ld-hit'], [fx.to === TOTAL ? to : null, 'ld-homefx']].forEach(x => {
+      if (!x[0]) return;
+      const rc = b.getBoundingClientRect();
+      const s = document.createElement('span');
+      s.className = x[1];
+      s.style.width = u + 'px'; s.style.height = u + 'px';
+      s.style.left = Math.round(rc.left + x[0][1] * u) + 'px';
+      s.style.top = Math.round(rc.top + x[0][0] * u) + 'px';
+      document.body.appendChild(s);
+      runSafe('ludo.fx', () => s.animate([{ transform: 'scale(.35)', opacity: .95 }, { transform: 'scale(' + (x[1] === 'ld-hit' ? 2.1 : 1.5) + ')', opacity: 0 }],
+        { duration: 560, easing: 'ease-out', fill: 'none' }));
+      setTimeout(() => s.remove(), 760);
+    });
   }
 
   /* ---------- 计划派发（build.ps1 的 PLAN-WIRE 认这两条） ---------- */
@@ -16247,9 +16428,13 @@ const Ludo = (function () {
       seats: true,                   // 四色就在盘上，不再另起一条玩家条
       note: '标准十字盘只有 4 条臂，所以做到 4 人；2 人开局对角两色',
       newRoom, render, onPlan, settleTable, onResign,
+      /* 回合归游戏自己定：壳子拿 moves 奇偶猜对飞行棋是假的（大厅那句“轮到你了”就读这里） */
+      turnOf: r => curUid(r),
+      /* 30 秒到点：替你走一步（壳子的 urge 时钟接迕 onTimeout） */
+      onTimeout,
       /* 给验收探针：判定与几何都从这份口径读，不另开一套 */
       RING, SIDE, SAFE, GOAL, TOTAL, RINGN, LASTRING, LANE, CHEX, COLORS, CNAME, posOf, ringIdx, canGo, legalDice,
-      hitsAt, applyMove, st, curUid, colOf, homeCnt, aiTurn, begin, rankRows, adj, endIt
+      hitsAt, applyMove, st, curUid, colOf, homeCnt, aiTurn, begin, rankRows, adj, endIt, playFx, slotOf, onTimeout
     };
   }
   return { def };
@@ -16261,8 +16446,8 @@ const Ludo = (function () {
    对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
    纪律（都是她的口径，别改）：
    · TA 一切行为走计划时刻制：room.plans[] 预生成、advance() 到点落库，断线续局不重算
-   · 游戏内延迟不按聊天回复设置：落子 0~30s、快捷/协商/邀请回应 5~10s；
-     唯一例外=悬浮窗里的「正常聊天」，照旧走各 TA 聊天回复设置
+   · 游戏内延迟不按聊天回复设置：TA 落子 TA_MOVE_SEC（3~10s，她 09-02 要短）、我方回合 30s 倒计时；
+     快捷/协商/邀请回应 5~10s；唯一例外=悬浮窗里的「正常聊天」，照旧走各 TA 聊天回复设置
    · 邀请同意率 80%、先手协商 TA 同意率 70%（她的 73 分）
    · 棋力零设置：每局 stateRoll 0~100 均匀随机（gomoku 内部消费）
    · 钱只走 Redpacket.giftDirect（Pay 唯一口）；弹层只走 UI.raise；
@@ -16273,7 +16458,10 @@ const Games = (function () {
 
   /* ---------- 基础 ---------- */
   const QUICK_SEC = [5, 10];     // 快捷短语/协商/邀请回应 TA 接话档（她定 5~10 秒）
-  const MOVE_SEC = 30;           // TA 每手落子上限（她定），0~30 均匀随机
+  const MOVE_SEC = 30;           // 我方回合倒计时（她定）：到点 TA 催一句，接了 onTimeout 的游戏自己接手
+  /* TA 每手思考时间（她 09-02：“五子棋对方思考时间太长了，你再短一些”）：
+     以前跟上面的 30 秒共用一个数，等于“TA 可以想半分钟”——现在两件事分开定 */
+  const TA_MOVE_SEC = [3, 10];
   const INVITE_AGREE = 80;       // 邀请同意率%（她定 20% 拒绝）
   const FIRST_AGREE = 70;        // 先手协商 TA 同意率%（她的 73 分 = 70/30）
   const CHAT_PROB = 10;          // TA 落子/接话之外主动冒一句的概率%（她 08-29："太频繁"，30→10，齿轮面板可调）
@@ -16301,13 +16489,10 @@ const Games = (function () {
     g.propsStyle = g.propsStyle || 'mono';
     return g;
   }
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function uidR() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function name(uid) {
-    if (uid === 'me') return DB.state.profile.name || '我';
-    return Home.displayName(Home.contactById(uid)) || '已删除联系人';
-  }
+  function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName（09-02 拢条，以前四个模块各拄一份）
   function taUid(room) { return (room.players || []).find(u => u !== 'me') || null; }
   function chatProb() { const v = S().chatProb; return Math.max(0, Math.min(100, (v == null ? CHAT_PROB : +v) || 0)); }
   /* 轮到谁：游戏模块自己有口径（UNO 多人是沿座位环走，不是奇偶交替）就问它；
@@ -16646,8 +16831,8 @@ const Games = (function () {
   function setBlack(r, uid, line) {
     r.blackUid = uid; r.pendingFirst = null; r.phase = 'playing';
     feed(r, 'sys', line || ('商定好了——' + esc(name(uid)) + ' 先手'));
-    r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
-    if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+    armUrge(r);        // 一口钟只住 armUrge，不在这里再拼一遗
+    if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(TA_MOVE_SEC[0], TA_MOVE_SEC[1]) * 1000, done: false });
     scheduleTimers(r);
   }
 
@@ -16657,7 +16842,7 @@ const Games = (function () {
     if (currentTurn(r) !== 'me') return;
     const d = defOf(r);
     if (!d.legal(r, x, y)) return;
-    r.plans.forEach(p => { if (p.kind === 'urge') p.done = true; });   // 走了就不催
+    disarmUrge(r);   // 走了就不催
     const res = d.applyMove(r, 'me', x, y);
     if (r.game === 'mine' && r.lastMv && r.lastMv.mine) {
       feed(r, 'sys', esc(name('me')) + ' 踩雷了（-5 分）');   // 谁踩雷看得见（她 08-29）
@@ -16665,7 +16850,7 @@ const Games = (function () {
     }
     /* 她 08-29：落子播报（"XX 落子 E5"）又吵又长，删——棋盘自己会说话 */
     if (res) return endGame(r, res);
-    r.plans.push({ kind: 'taMove', at: Date.now() + rand(2, MOVE_SEC) * 1000, done: false });
+    r.plans.push({ kind: 'taMove', at: Date.now() + rand(TA_MOVE_SEC[0], TA_MOVE_SEC[1]) * 1000, done: false });
     if (Math.random() * 100 < chatProb()) {
       const t = pickLine('快捷短语', taUid(r), DEF_TA);
       if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
@@ -16685,13 +16870,22 @@ const Games = (function () {
        进攻分恒为 0，只会堵永远不会连（阶梯与打分全是好的，就是没喂对参数） */
     const mv = d.aiPick(r, taUid(r));
     if (!mv) return endGame(r, { win: 'draw', line: [] });
+    /* 扫雷：TA 也会长按标雷（她 09-02：“这个是不是也需要”——只有我能标能得分就不叫对战）。
+       标雷要占一手（推 further 的 parity 靠 moves 条数，不记就被它卡死在 TA 回合） */
+    if (mv.flag && d.taFlag) {
+      const fr = d.taFlag(r, taUid(r), mv.x, mv.y);
+      feed(r, 'sys', esc(name(taUid(r))) + (fr && fr.correct ? ' 标对了雷（+3 分）'
+        : (fr && fr.correct === false) ? ' 标错了（-5 分）' : ' 标了一格雷'));
+      armUrge(r);
+      return;
+    }
     const res = d.applyMove(r, taUid(r), mv.x, mv.y);
     if (r.game === 'mine' && r.lastMv && r.lastMv.mine) {
       feed(r, 'sys', esc(name(taUid(r))) + ' 踩雷了（-5 分）');
       boomAt(mv.x, mv.y);
     }
     if (res) return endGame(r, res);
-    r.plans.push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+    armUrge(r);
     if (Math.random() * 100 < chatProb()) {
       const t = pickLine('快捷短语', taUid(r), DEF_TA);
       if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
@@ -16705,6 +16899,10 @@ const Games = (function () {
   }
   function execUrge(r) {
     if (r.phase !== 'playing' || currentTurn(r) !== 'me') return;
+    /* 接了 onTimeout 的游戏（飞行棋：她 09-02 要倒计时）时间到由游戏自己走一步；
+       没接的只催一句——一个时钟一个入口，不在各游戏里再拄一份 30 秒 */
+    const d = defOf(r);
+    if (d && d.onTimeout && d.onTimeout(r)) return;
     feed(r, 'ta', esc(name(taUid(r))) + '：该你了吧，都等半天啦');
   }
   function resign() {
@@ -16739,6 +16937,10 @@ const Games = (function () {
     const res = d.flag ? d.flag(r, 'me', x, y) : null;
     if (res && res.correct != null) {
       feed(r, 'sys', res.correct ? (esc(name('me')) + ' 标对了 +3 分') : (esc(name('me')) + ' 标错了 -5 分'));
+    } else if (res && res.skipped) {
+      /* 标上了却不计分：得说清为什么，不然看着像“长按坏了”（她最不能忍“看起来真做起来假”） */
+      feed(r, 'sys', res.skipped === 'turn' ? '旗子先标上了——计分要轮到你这一手'
+        : '这一手已经判过一次分了，再标只当标记');
     }
     DB.save();
     if (document.getElementById('page-room').classList.contains('active')) renderRoom();
@@ -16936,8 +17138,17 @@ const Games = (function () {
     if (visPage && visPage.id === 'page-room' && cur === r.id) renderRoom();
     scheduleTimers(r);
   }
-  /* 我方 30 秒倒计时口径只住这里：游戏自己排队列时不必知道 MOVE_SEC */
-  function armUrge(r) { (r.plans = r.plans || []).push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false }); }
+  /* 我方 30 秒倒计时口径只住这里：游戏自己排队列时不必知道 MOVE_SEC。
+     重入先摘旧钟：一手一口新钟——以前每轮我的回合都往 plans 里添一口，
+     上一口快过期的还在，tick() 拿到的是那口旧的 → UNO 从第二手起倒计时就停在 0s */
+  function armUrge(r) {
+    disarmUrge(r);
+    (r.plans = r.plans || []).push({ kind: 'urge', at: Date.now() + MOVE_SEC * 1000, done: false });
+  }
+  /* 摘钟也只有一个口：游戏模块不自己遍历 plans 找 urge */
+  function disarmUrge(r) {
+    (r.plans || []).forEach(p => { if (p.kind === 'urge' && !p.done) p.done = true; });
+  }
 
   /* ---------- 对局页渲染 ---------- */
   function renderRoom() {
@@ -17064,12 +17275,15 @@ const Games = (function () {
       if (ct) ava = ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1));
     }
     const stone = r.blackUid === uid ? '<i class="gm-stone-dot"></i>' : '';
+    /* 五子棋：颜色跟先手走，玩家条上直接写清谁拿黑子（墨点=先手，但“黑/白”得看字才知道） */
+    const gcol = (r.game === 'gomoku' && r.blackUid)
+      ? '<small class="gm-pts">' + (r.blackUid === uid ? '黑子' : '白子') + '</small>' : '';
     const pts = (r.game === 'mine' && r.mine && r.mine.scores)
       ? '<small class="gm-pts">' + (r.mine.scores[uid] || 0) + ' 分 · 雷' + (r.mine.hits[uid] || 0) + '</small>' : '';
     return '<span class="gm-player' + (active ? ' on' : '') + '" data-uid="' + uid + '">' +
       '<span class="gm-ava">' + ava + '</span>' +
       '<span class="gm-name-row"><b>' + esc(name(uid)) + '</b>' + stone + '</span>' +
-      pts + '</span>';
+      gcol + pts + '</span>';
   }
   /* 两个面板共用一套开合：开一个关另一个（她 08-29：道具要一眼找得到，独立成「道具」钮） */
   function toggleRow(rowId, buildHtml) {
@@ -17426,8 +17640,9 @@ const Games = (function () {
     if (tickI) { clearInterval(tickI); tickI = null; }
     const r = curRoom();
     if (!r || r.phase !== 'playing') return;
-    const urgeP = (r.plans || []).find(p => p.kind === 'urge' && !p.done);
-    if (!urgeP) return;
+    /* 拿最近一口还没到期的钟：别拿那口已经走完的旧钟把新回合的倒计时顶掉 */
+    const urgeP = (r.plans || []).filter(p => p.kind === 'urge' && !p.done && p.at > Date.now()).sort((a, b) => a.at - b.at)[0];
+    if (!urgeP) { const el0 = document.getElementById('room-timer'); if (el0) el0.textContent = ''; return; }
     tickI = setInterval(() => {
       const el = document.getElementById('room-timer');
       const left = Math.max(0, Math.ceil((urgeP.at - Date.now()) / 1000));
@@ -17453,7 +17668,9 @@ const Games = (function () {
     overlay.innerHTML =
       '<div class="gm-settle">' +
         '<div class="gm-settle-t">' + (draw ? '平局' : (won ? '你赢了' : esc(name(r.winner)) + ' 赢了')) + '</div>' +
-        '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' + esc(name(draw ? '' : r.winner)) + ' 拿下</div>' +
+        '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' +
+            /* 平局不能拿空 uid 去查人名（那会写成“已删除联系人 拿下”，看着像渲染坏了） */
+            (draw ? '平局收场' : esc(name(r.winner)) + ' 拿下') + '</div>' +
         /* 结算统计要看得见（她 08-29）；文案由游戏自己出（扫雷报踩雷个数，UNO 报记分表） */
         (r.finalScores ? '<div class="gm-settle-prize">' +
           /* 表格由游戏自己出（UNO 的记分表）；没提供的回到逐行文字 */
@@ -17724,7 +17941,7 @@ const Games = (function () {
     /* 她 09-01 22:26 两条：邀请当场可拒（answerTaInvite）、旧局点进去可回看（replay） */
     answerTaInvite, replay,
     /* 游戏模块的三个通用口：回写、我方倒计时、终局（UNO 等全走这里，不再各自扰 UI.save/重绘） */
-    touch, armUrge, feed, finish: endGame
+    touch, armUrge, disarmUrge, feed, finish: endGame
   };
 })();
 
@@ -17792,6 +18009,11 @@ const Profile = (function () {
     el('pf-look-val').textContent = lk.length ? lk.join(' · ') : '默认';
   }
 
+  /* 表单专属默认值（这些项引擎不读，只在资料卡表单里用）；
+     能被引擎读的那些（imgProb/imgMode/拼卡/已读不回/发帖钟…）一律从 Engine.params 拿，
+     以前这里同一张默认表拄了两遍（显示一遗、保存一遗），两遗还拄得不一样——改一处漏一处（台账 L13） */
+  const PFORM_DEF = { callLo: '', callHi: '', callUnit: 'min', letterRate: 0, ltrMinH: 1, ltrMaxH: 24, repRate: 80, repMin: 0, repMax: 0, chkRate: 80, chkMin: 0, chkMax: 0, proMin: 0, proMax: 0 };
+
   function open(contactId) {
     const c = Home.contactById(contactId);
     if (!c) return;
@@ -17809,7 +18031,7 @@ const Profile = (function () {
     el('pf-rot-rate-val').textContent = r ? r.rate : 60;
     el('pf-roth-min').value = r ? r.minH : 2;
     el('pf-roth-max').value = r ? r.maxH : 6;
-    const pc = Object.assign({ callLo: '', callHi: '', callUnit: 'min' }, c.params || {});
+    const pc = Object.assign({}, PFORM_DEF, c.params || {});
     if (c.params && (c.params.callSecMin != null || c.params.callSecMax != null ||
         c.params.patRate != null || c.params.videoRate != null || c.params.letterOn != null)) {
       /* #39o补/#39p 旧字段清理：秒数区间、可调拍一拍/视频概率、写信开关 */
@@ -17820,7 +18042,7 @@ const Profile = (function () {
     el('pf-calllo').value = pc.callLo;
     el('pf-callhi').value = pc.callHi;
     el('pf-callunit').value = pc.callUnit;
-    const pa = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0, repRate: 80, repMin: 0, repMax: 0, chkRate: 80, chkMin: 0, chkMax: 0 }, c.params || {});
+    const pa = Object.assign({}, PFORM_DEF, Engine.params(c));   // 默认值只住一处：引擎读的在 REPLY_DEF，表单专属的在 PFORM_DEF
     el('pf-imgmode').value = pa.imgMode;
     el('pf-imgprob').value = pa.imgProb;
     el('pf-letterrate').value = pa.letterRate;
@@ -18000,7 +18222,7 @@ const Profile = (function () {
     ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
-        const p = Object.assign({ imgMode: 'single', imgProb: 20, letterRate: 0, ltrMinH: 1, ltrMaxH: 24, callLo: '', callHi: '', callUnit: 'min', cardComboProb: 1, cardComboMin: 2, cardComboMax: 3, readNoReply: 0, moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour', proMin: 0, proMax: 0 }, c.params || {});
+        const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
         const oldLetterRate = (+((c.params || {}).letterRate ?? 0));
         const oldLtrMin = +((c.params || {}).ltrMinH ?? 1), oldLtrMax = +((c.params || {}).ltrMaxH ?? 24);
         p.imgMode = el('pf-imgmode').value;
@@ -18223,10 +18445,7 @@ const Call = (function () {
 
   const $ = id => document.getElementById(id);
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g,
-      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条，不再各拄一份）
 
   function busy(convId) {
     return !!(st && (!convId || st.conv.id === convId));
@@ -18949,10 +19168,7 @@ const Call = (function () {
 const Letter = (function () {
 
 
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g,
-      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+  function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
 
   /* ---------- 回信延迟 ---------- */
   function replyDelay() {
@@ -19884,7 +20100,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       nameEl.textContent = p.name || '我';
       statusEl.textContent = p.statusText || '+ 写个个性状态…';
     }
-    window.__renderMine = renderMine;
     renderMine();
 
     nameEl.addEventListener('click', () => {
@@ -20101,7 +20316,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         }
         DB.save();
         Home.render();
-        window.__renderMine && window.__renderMine();
+        renderMine();   // 同一个 IIFE 里直接调，不绕 window（09-02 拆了那个全局钩子）
         UI.toast('「' + Home.displayName(cIn) + '」导入完成');
       });
     }
@@ -20161,7 +20376,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         if (this.ctx) { try { this.ctx.close(); } catch (err) {} this.ctx = null; }
       }
     };
-    window.__keepAlive = KeepAlive;   /* 主题切换/调试用钩子 */
     function renderKaVal() {
       const on = !!DB.state.settings.keepAlive;
       document.getElementById('ka-val').textContent =
@@ -20238,7 +20452,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         try {
           DB.importAll(r.result);
           Theme.apply(DB.state.settings.theme, false);
-          window.__renderMine && window.__renderMine();
+          renderMine();
           renderMyAvatar();
           UI.toast('导入成功，数据已恢复');
         } catch (err) {
@@ -20263,7 +20477,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!ok) return;
       DB.recoverFromBackup();
       Theme.apply(DB.state.settings.theme, false);
-      window.__renderMine && window.__renderMine();
+      renderMine();
       renderMyAvatar();
       Home.render();
       UI.toast('已恢复到上次备份');
