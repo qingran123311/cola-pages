@@ -2708,35 +2708,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    里面还带 #FBF3E4/#D9C79E 两个奶油色——死代码不留（台账 L13） */
 /* 花瓣落地继续用 EMOJI；蛋全链路（飞行🥚→壳迸开+蛋液溅+糊脸）零 EMOJI 脸 */
 
-/* ============ P44 海龟汤（09-01）：汤面卡 / 问答流水 / 提问行 ============
-   全部走主题变量，不新增颜色；观感与卷详情页一致（墨线 + 不对称圆角） */
-#page-room .sp-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:12px 13px}
-.sp-tag{display:inline-block;font-size:10px;color:var(--t3);letter-spacing:1px;
-  border:1px solid var(--line);border-radius:999px;padding:1px 7px}
-.sp-surface{margin-top:8px;font-size:14.5px;line-height:1.7;color:var(--t1)}
-.sp-meta{margin-top:9px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--t2)}
-.sp-meta .sp-end{margin-left:auto;color:var(--primary);font-weight:700}
-.sp-hist{margin-top:10px;display:flex;flex-direction:column;gap:6px}
-.sp-line{display:flex;gap:7px;font-size:13px;line-height:1.6}
-.sp-line i{font-style:normal;flex:none;font-size:10px;color:var(--t3);
-  border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-top:2px}
-.sp-line span{min-width:0;word-break:break-all}
-.sp-line.me span{color:var(--t2)}
-.sp-line.ta span{color:var(--t1)}
-.sp-bottom{margin-top:10px;background:var(--fill);border:1px dashed var(--line);
-  border-radius:12px 3px 12px 3px;padding:10px 12px;font-size:13.5px;line-height:1.7;color:var(--t1)}
-.sp-ask{margin-top:10px;display:flex;gap:7px;align-items:center}
-.sp-ask .input{flex:1;min-width:0}
-.sp-ask .btn{flex:none;padding-left:14px;padding-right:14px}
-.sp-acts{margin-top:7px;display:flex;gap:8px}
-.sp-acts .btn{flex:1}
-.sp-acts .give{color:var(--t3)}
-.sp-scr{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:4px}
-.sp-scr-row{display:grid;grid-template-columns:1fr auto;padding:6px 10px;font-size:12px;
-  border-top:1px solid var(--line);color:var(--t1)}
-.sp-scr-row:first-child{border-top:none}
-.sp-scr-row span{color:var(--t2)}
-.sp-empty{padding:26px 12px;text-align:center;color:var(--t2);font-size:13px}
 </style>
 </head>
 <body>
@@ -3908,6 +3879,9 @@ const DB = (function () {
 
   /* 装载完：先扫孤儿（不依赖媒体），再把引用串换回真数据；旧快照位迁进 IDB。
      渲染入口（app.js）等 DB.ready 再起，闪不了空图。 */
+  /* 09-01 海龟汤整条下架（她 22:13「不喜欢，这部分全删」）：老档里可能还留着一格没人读的 soup，
+     顺手清掉——没人读的数据赖在主档里就是归属模糊，导入导出还会跟着走 */
+  if (state.soup) { delete state.soup; save(); }
   try { sweepOrphans(); } catch (e) { /* 收尾失败不能堵住启动链 */ }
 
   /* 装载后要做的事（引用串换回真数据 / 快照 / 影子顶上）：lazy 起，
@@ -5859,7 +5833,6 @@ const ICONS = {
   'folder':        '<path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
   'link':          '<path d="M9.8 14.2a3.8 3.8 0 0 1 0-5.4l2.6-2.6a3.8 3.8 0 0 1 5.4 5.4l-1.3 1.3"/><path d="M14.2 9.8a3.8 3.8 0 0 1 0 5.4l-2.6 2.6a3.8 3.8 0 0 1-5.4-5.4l1.3-1.3"/>',
   'database':      '<ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-13M4.5 12c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3"/>',
-  'soup-bowl':      '<path d="M4 13.2h16a8 8 0 0 1-16 0z"/><path d="M2.8 20.4h18.4"/><path d="M9.4 3.6c1.1 1.3 1.1 2.5 0 3.8M14.6 3.6c1.1 1.3 1.1 2.5 0 3.8"/>',
   'mail':          '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7.5l8.5 6 8.5-6"/>',
   'heart':         '<path d="M12 20.5S4.5 16 3 11.5A4.7 4.7 0 0 1 12 7a4.7 4.7 0 0 1 9 4.5C19.5 16 12 20.5 12 20.5z"/>',
   'mute':          '<path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4.5 1.8 5.5 1.8 5.5H4.7s1.8-1 1.8-5.5"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0"/><path d="M4 4l16 16"/>',
@@ -15706,429 +15679,6 @@ const Uno = (function () {
 })();
 
 /* =====================================================
-   LOVE♡X · soup.js —— 海龟汤（情境猜谜）P44
-   09-01 18:30 她点的下一个游戏：「飞行棋能八人吗，不能就按你的来，你接着做」
-   —— 标准十字盘只有 4 条臂，8 人就得改成放射 8 臂（那就不是那盘棋了），所以按我提的做这个。
-
-   为什么这游戏值得做：快感不在赢，在「你问、我答、你在猜我心里那个故事」——
-   这就是陪伴的核心动作；而且它不需要棋盘、不需要实时对手，一局可以像聊天一样断续聊完。
-
-   硬约束：离线、没有大模型。所以判定必须可算：
-     · 汤底不是自由文本，是线索表 clues[{k:[关键词], v:'yes|no|ask', a:'答话'}]
-     · 提问判定 = 归一化 + 关键词命中（命中多的赢，并列取命中词更长的那条）
-     · 猜汤底 = 与汤底做二字串（bigram）覆盖率，够高才算中
-   每条判定都能写成探针断言，不靠「感觉像」。规划见 docs/P44-海龟汤-规划.md
-   ===================================================== */
-const Soup = (function () {
-  const MAX_ASKS = 12;          // 限问次数（资料卡 soupMaxAsks 可覆盖）
-  const WIN_COVER = 28;         // 猜中的覆盖率门槛（实测出来的，见探针 W 段）
-  const TURN_SEC = [2.5, 5.5];  // TA 想一会儿才答（跟 UNO 同一套节奏，她 09-01 点的）
-  const HINT_SEC = [3.2, 6.0];
-
-  /* ---------- 内置汤（09-01 先给 6 则，尺度按「能截图发朋友圈」写：有反转，不见血） ----------
-     v:'yes' 是 → TA 答「是」；'no' → 「不是」；'ask' → 这条问不出什么，别绕 */
-  const BUILTIN = [
-    {
-      name: '一把伞', 
-      surface: '她每天出门都把伞放在门边。今天下雨，她没带伞，却一路笑着走到公司。',
-      bottom: '她暗恋的人今早主动发消息说「我去接你」，两个人共撑一把伞，所以她根本不需要自己那把。',
-      clues: [
-        { k: ['高兴', '开心', '笑', '心情'], v: 'yes', a: '是的，她心情特别好。' },
-        { k: ['暗恋', '喜欢', '爱的人', '男朋友', '追求'], v: 'yes', a: '是，跟一个她喜欢的人有关。' },
-        { k: ['没带伞', '不带伞', '忘带', '没伞', '不用带'], v: 'yes', a: '是的，她故意没带。' },
-        { k: ['同事', '有人接', '被接', '来接', '顺路', '接她'], v: 'yes', a: '对，有人顺路接她。' },
-        { k: ['伞坏', '伞丢', '丢了', '坏了'], v: 'no', a: '不是，伞好好的在家待着。' },
-        { k: ['迟到', '请假', '辞职', '开除'], v: 'no', a: '不是，跟上班本身没关系。' },
-        { k: ['钱', '赌', '彩票'], v: 'ask', a: '这条问不出什么，换个方向。' }
-      ],
-      hints: ['她今天有没有「不用自己扛」的底气？', '那把伞最后给谁用了？']
-    },
-    {
-      name: '第十一层',
-      surface: '他按下电梯按钮，抬头看见楼层灯亮到十一，忽然转身跑回家，把门反锁。',
-      bottom: '他住十一楼，可今天电梯从十一往上又停了一次——说明楼上还有人，而楼上是废弃的十二层。他想起自己刚把钥匙落在了走廊。',
-      clues: [
-        { k: ['电梯', '楼层', '灯'], v: 'yes', a: '是的，关键就在电梯那一下。' },
-        { k: ['家', '反锁', '锁门'], v: 'yes', a: '对，他是在保护自己。' },
-        { k: ['有人', '楼上', '陌生人', '小偷'], v: 'yes', a: '是的，那层不该有人。' },
-        { k: ['废弃', '没人住', '空层'], v: 'yes', a: '正是，那层早就不用了。' },
-        { k: ['鬼', '灵异', '诈尸', '恐怖'], v: 'no', a: '不是灵异，是能解释清楚的事。' },
-        { k: ['着火', '地震', '漏水'], v: 'no', a: '不是灾害。' },
-        { k: ['钥匙', '忘东西', '落东西'], v: 'yes', a: '对，他手里少了一样东西。' }
-      ],
-      hints: ['电梯停的那一下，多停了哪一层？', '他回家锁门，是怕什么进来？']
-    },
-    {
-      name: '多的一份饭',
-      surface: '老人每天在公园喂三只流浪猫。有一天他喂了四份，第二天起，他又只喂三份了。',
-      bottom: '第四只是他自己带来的——老伴走后他第一次觉得家里太空。第二天那只猫被他带回家养，所以公园里又只剩三只。',
-      clues: [
-        { k: ['猫', '第四只', '多一只'], v: 'yes', a: '是的，第四只猫是关键。' },
-        { k: ['带回家', '收养', '养'], v: 'yes', a: '对，那只现在有窝了。' },
-        { k: ['老伴', '妻', '老婆', '去世', '走'], v: 'yes', a: '是，跟家里少了一个人有关。' },
-        { k: ['死', '死了', '猫死'], v: 'no', a: '不是，没有谁死掉。' },
-        { k: ['钱', '买猫粮', '喂不起'], v: 'no', a: '不是钱的事。' },
-        { k: ['公园', '别人', '赶走'], v: 'ask', a: '公园那条问不出什么。' }
-      ],
-      hints: ['第四份饭，是从哪儿端过去的？', '为什么第二天不需要第四份了？']
-    },
-    {
-      name: '没响的闹钟',
-      surface: '她一觉睡到中午，醒来看到手机上有七个未接来电，却安心地继续睡了。',
-      bottom: '那七个电话都是她妈妈打来的——昨天她考试考砸了不敢接，妈妈在电话里说「没事，回来吃饭」。她看到未接也没关系，因为妈妈已经来过家里，留了饭在桌上。',
-      clues: [
-        { k: ['妈妈', '妈', '家里', '家人'], v: 'yes', a: '是，打电话的是最亲的那个人。' },
-        { k: ['安心', '不慌', '放心'], v: 'yes', a: '对，她放心是因为知道了另一件事。' },
-        { k: ['饭', '桌上', '留了饭', '菜'], v: 'yes', a: '是的，桌上有东西。' },
-        { k: ['考试', '成绩', '砸'], v: 'yes', a: '有这回事，但不是她继续睡的原因。' },
-        { k: ['死', '病重', '出事'], v: 'no', a: '不是坏消息。' },
-        { k: ['手机坏', '静音', '没电'], v: 'no', a: '手机好好的。' }
-      ],
-      hints: ['她「安心」是因为看见了什么，不是因为没接电话？', '屋里今天多过什么？']
-    },
-    {
-      name: '只买一张票',
-      surface: '他买了两张电影票，进场却只坐了一个位置，旁边那张票被他撕了。',
-      bottom: '约好的人临时来不了，他把多出的票撕掉，是不想让自己一直回头看那个空位。',
-      clues: [
-        { k: ['约', '等人', '没来', '爽约'], v: 'yes', a: '是的，有人没来。' },
-        { k: ['撕票', '空位', '不看'], v: 'yes', a: '对，他是不想一直看那个位置。' },
-        { k: ['送人', '给别人', '转卖'], v: 'no', a: '不是，票没给别人。' },
-        { k: ['省钱', '钱', '贵'], v: 'no', a: '不是钱的事。' },
-        { k: ['生气', '恼', '火'], v: 'yes', a: '有点恼，但更多是难受。' },
-        { k: ['电影', '片子', '场次'], v: 'ask', a: '片子本身不重要。' }
-      ],
-      hints: ['那个位置本来该坐谁？', '撕掉比留着容易在哪儿？']
-    },
-    {
-      name: '第三把钥匙',
-      surface: '她搬进新家，数了数钥匙串，发现多出第三把。她没扔，反而把它挂在了最外面。',
-      bottom: '前房东留了一把给楼下的快递柜——她每天收包裹最麻烦，前房东说「你用得上」。她把它挂最外面，是因为每天第一次开门就要用。',
-      clues: [
-        { k: ['钥匙', '第三把', '多一把'], v: 'yes', a: '是的，多出来的那把有用途。' },
-        { k: ['前房东', '房东', '留'], v: 'yes', a: '对，是上一家留下的。' },
-        { k: ['快递', '柜子', '包裹'], v: 'yes', a: '正是，跟收东西有关。' },
-        { k: ['最外面', '顺手', '每天'], v: 'yes', a: '是，用得很频繁。' },
-        { k: ['偷', '贼', '防盗'], v: 'no', a: '不是安全问题。' },
-        { k: ['备用', '配钥匙', '丢了'], v: 'no', a: '不是配多了的。' }
-      ],
-      hints: ['这把钥匙开的门，在屋里还是屋外？', '谁最需要它每天第一个被拿到？']
-    }
-  ];
-
-  /* ---------- 数据层：内置只在「她一动过」之前回填一次（幂等，同字卡库口径） ---------- */
-  function st() {
-    const s = DB.state.soup = DB.state.soup || {};
-    if (!s.bank) {
-      s.bank = BUILTIN.map((b, i) => Object.assign({
-        id: 'sb' + (i + 1), gid: 'default', blocked: false, builtin: true
-      }, b));
-      s.groups = [{ id: 'default', name: '默认', blocked: false }];
-      s.seen = {};
-    }
-    s.groups = s.groups && s.groups.length ? s.groups : [{ id: 'default', name: '默认', blocked: false }];
-    s.seen = s.seen || {};
-    return s;
-  }
-  const live = () => st().bank.filter(x => !x.blocked);
-  /* 抽汤：优先抽没玩过的；都玩过就挑最久没玩的（不会连着两局同一则） */
-  function pickSoup() {
-    const pool = live();
-    if (!pool.length) return null;
-    const fresh = pool.filter(x => !(st().seen[x.id] > 0));
-    const from = fresh.length ? fresh : pool.slice().sort((a, b) => (st().seen[a.id] || 0) - (st().seen[b.id] || 0));
-    return from[Math.floor(Math.random() * from.length)];
-  }
-
-  /* ---------- 判定：可算，可测 ---------- */
-  function norm(s) {
-    return String(s == null ? '' : s)
-      .replace(/[\s，。、？！；：,.?!;:"'“”‘’()（）~～\-—_*#]+/g, '')
-      .toLowerCase();
-  }
-  /* 命中：句子里出现该线索任一关键词就算中；命中线索多的赢，并列取命中的词更长的那条 */
-  function matchClue(q, soup) {
-    const s = norm(q);
-    if (!s) return { best: null, hits: 0 };
-    let best = null, bestScore = -1;
-    (soup.clues || []).forEach(c => {
-      let hitLen = 0, n = 0;
-      (c.k || []).forEach(k => {
-        const kk = norm(k);
-        if (kk && s.indexOf(kk) >= 0) { n++; if (kk.length > hitLen) hitLen = kk.length; }
-      });
-      if (!n) return;
-      const score = n * 100 + hitLen;
-      if (score > bestScore) { bestScore = score; best = c; }
-    });
-    return { best, hits: bestScore < 0 ? 0 : Math.floor(bestScore / 100) };
-  }
-  /* 猜汤底：二字串覆盖率（没有分词器就用 bigram，稳、可算） */
-  function bigrams(s) {
-    const t = norm(s);
-    const set = new Set();
-    for (let i = 0; i + 1 < t.length; i++) set.add(t.slice(i, i + 2));
-    if (!set.size && t.length) set.add(t);
-    return set;
-  }
-  function cover(guess, bottom) {
-    const b = bigrams(bottom), g = bigrams(guess);
-    if (!b.size) return 0;
-    let hit = 0;
-    b.forEach(x => { if (g.has(x)) hit++; });
-    return Math.round(hit * 100 / b.size);
-  }
-  /* 一句里到底命中几条线索（猜中判定用）：同一条只数一次 */
-  function clueHits(text, soup) {
-    const s = norm(text);
-    if (!s) return 0;
-    let n = 0;
-    (soup.clues || []).forEach(c => {
-      if ((c.k || []).some(k => { const kk = norm(k); return kk && s.indexOf(kk) >= 0; })) n++;
-    });
-    return n;
-  }
-  /* 猜中口径：覆盖率够高，或者把三条以上线索各自说中一次。
-     为何要后一条：用人话复述与原文的二字串覆盖率天然低（实测只有 16%），
-     只卡覆盖率会把真的猜中的人判输（台账 L1：把表面条件当根因） */
-  function isWin(guess, soup) {
-    const c = cover(guess, soup.bottom);
-    const m = clueHits(guess, soup);
-    return { win: c >= WIN_COVER || m >= 3, cover: c, clues: m };
-  }
-
-  /* ---------- 对局 ---------- */
-  function cfgOf(room) {
-    const ta = (room.players || []).find(u => u !== 'me');
-    const ct = ta && Home.contactById(ta);
-    const p = ct && typeof Engine !== 'undefined' ? Engine.params(ct) : {};
-    const max = +p.soupMaxAsks;
-    return { max: max > 0 ? max : MAX_ASKS };
-  }
-  function newRoom(room) {
-    const s = pickSoup();
-    if (!s) { room.phase = 'dead'; feed(room, 'sys', '汤库里没汤可端了，先去加两则'); return; }
-    room.soup = {
-      sid: s.id, asked: 0, hints: 0, misses: 0, phase: 'ask',
-      hist: [], startedAt: Date.now()
-    };
-    st().seen[s.id] = Date.now();
-    feed(room, 'sys', '今天这碗汤：「' + esc(s.surface) + '」');
-    feed(room, 'ta', '我出题，你来问。只能问「是 / 不是」能答的，问满 ' + cfgOf(room).max + ' 个我就收摊。');
-  }
-  const soupOf = room => {
-    const id = room.soup && room.soup.sid;
-    return st().bank.find(x => x.id === id) || null;
-  };
-  function turnOf(room) { return room.soup && room.soup.phase === 'ask' ? 'me' : null; }
-
-  /* 我问一句 → TA 隔几秒才答（跟 UNO 的"在想"同一味道） */
-  function ask(room, text) {
-    const s = soupOf(room);
-    if (!s || !room.soup || room.soup.phase !== 'ask') return;
-    const q = String(text || '').trim();
-    if (!q) return;
-    room.soup.hist.push({ who: 'me', text: q, ts: Date.now() });
-    room.soup.asked++;
-    feed(room, 'me', esc(q));
-    room.plans = room.plans || [];
-    room.plans.push({ kind: 'soupAnswer', at: Date.now() + rand(...TURN_SEC) * 1000, done: false, q: q });
-    Games.touch(room);
-  }
-  function answer(room, p) {
-    const s = soupOf(room);
-    if (!s) return;
-    const m = matchClue(p.q, s);
-    let a;
-    if (!m.best) {
-      room.soup.misses++;
-      a = '这条跟汤底没关系。';
-      /* 问偏了三次、又过半程 → 递个方向。以前这句直接贴在回答尾巴上，与下面的
-         soupHint 同一个作两遍；只留排程那一条（它带 3~6 秒延迟，像“看了你一下才开口”） */
-      if (room.soup.misses >= 3 && !room.soup.hintAt && room.soup.asked >= Math.ceil(cfgOf(room).max / 2)) {
-        room.soup.hintAt = 1;
-        room.plans = room.plans || [];
-        room.plans.push({ kind: 'soupHint', at: Date.now() + rand(...HINT_SEC) * 1000, done: false });
-      }
-    } else if (m.best.v === 'no') a = m.best.a || '不是。';
-    else if (m.best.v === 'ask') a = m.best.a || '这条问不出什么，换个角度。';
-    else a = m.best.a || '是。';
-    room.soup.hist.push({ who: 'ta', text: a, ts: Date.now() });
-    feed(room, 'ta', a);
-    const left = cfgOf(room).max - room.soup.asked;
-    if (left <= 0) { lose(room, s, '问数用完了'); return; }
-    if (left === 3) feed(room, 'sys', '还剩三个问题');
-    Games.touch(room);
-  }
-  function hintOf(room, s) {
-    const used = room.soup.hints || 0;
-    const arr = (s.hints && s.hints.length) ? s.hints : ['再想想谁在场。'];
-    return arr[used % arr.length];
-  }
-  function guess(room, text) {
-    const s = soupOf(room);
-    if (!s || !room.soup || room.soup.phase !== 'ask') return;
-    const g = String(text || '').trim();
-    if (!g) return;
-    room.soup.hist.push({ who: 'me', text: '（猜）' + g, ts: Date.now() });
-    feed(room, 'me', '我猜：' + esc(g));
-    const r = isWin(g, s);
-    if (r.win) {
-      room.soup.phase = 'over'; room.soup.result = 'won';
-      room.soup.hist.push({ who: 'ta', text: '对了。' , ts: Date.now() });
-      feed(room, 'ta', '对了——就是这么回事。');
-      finish(room, { win: 'me' });
-      return;
-    }
-    room.soup.hist.push({ who: 'ta', text: '还差点。', ts: Date.now() });
-    feed(room, 'ta', '还差一点。' + (s.clues && s.clues.length
-      ? '（你倒是对上了「' + esc(s.clues[0].k[0]) + '」这一头）' : ''));
-    Games.touch(room);
-  }
-  function lose(room, s, why) {
-    if (!room.soup || room.soup.phase === 'over') return;
-    room.soup.phase = 'over'; room.soup.result = 'lost';
-    feed(room, 'ta', why + '，我端汤底了：' + esc(s.bottom));
-    finish(room, { win: taUid(room) || 'ta' });
-  }
-  function giveUp(room) {
-    const s = soupOf(room);
-    if (!s || !room.soup || room.soup.phase !== 'ask') return;
-    lose(room, s, '你认了');
-  }
-  /* ---------- 结算表（跟 UNO 一样：一张表，不是一长串文字） ---------- */
-  function settleTable(room) {
-    const sp = room.soup || {};
-    const rows = [
-      ['你问了', (sp.asked || 0) + ' 个'],
-      ['TA 递提示', (sp.hints || 0) + ' 次'],
-      ['问偏了', (sp.misses || 0) + ' 次'],
-      ['结果', sp.result === 'won' ? '你猜中了' : 'TA 赢了']
-    ];
-    return '<div class="sp-scr">' + rows.map(r =>
-      '<div class="sp-scr-row"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') + '</div>';
-  }
-
-  /* ---------- 计划派发：只两种，都在自己家里 ---------- */
-  function onPlan(room, p) {
-    if (p.kind === 'soupAnswer') { answer(room, p); return true; }
-    if (p.kind === 'soupHint') {
-      const s = soupOf(room);
-      if (s && room.soup && room.soup.phase === 'ask') {
-        room.soup.hints++;
-        feed(room, 'ta', '给你个方向：' + esc(hintOf(room, s)));
-        room.soup.hist.push({ who: 'ta', text: '（提示）' + hintOf(room, s), ts: Date.now() });
-        Games.touch(room);
-      }
-      return true;
-    }
-    return false;
-  }
-
-  /* ---------- 对局页渲染 ---------- */
-  function render2(room, el) {
-    const s = soupOf(room);
-    const sp = room.soup || {};
-    const cfg = cfgOf(room);
-    if (!s) { el.innerHTML = '<div class="sp-empty">汤库空了，先去「游戏库」加两则。</div>'; return; }
-    let h = '<div class="sp-card">' +
-      '<div class="sp-tag">汤面</div>' +
-      '<div class="sp-surface">' + esc(s.surface) + '</div>' +
-      '<div class="sp-meta"><span>已问 ' + (sp.asked || 0) + '/' + cfg.max + '</span>' +
-      '<span>提示 ' + (sp.hints || 0) + '</span>' +
-      (room.phase === 'ended' ? '<span class="sp-end">' + (sp.result === 'won' ? '你猜中了' : '这局 TA 赢') + '</span>' : '') +
-      '</div></div>';
-    h += '<div class="sp-hist">' + (sp.hist || []).map(x =>
-      '<div class="sp-line ' + (x.who === 'me' ? 'me' : 'ta') + '"><i>' + (x.who === 'me' ? '你' : esc(name(taUid(room)))) + '</i><span>' +
-      (x.who === 'me' ? esc(x.text) : x.text) + '</span></div>').join('') + '</div>';
-    if (room.phase === 'ended') {
-      h += '<div class="sp-bottom"><div class="sp-tag">汤底</div><div>' + esc(s.bottom) + '</div></div>';
-    } else {
-      h += '<div class="sp-ask"><input class="input" id="sp-q" placeholder="问一个「是 / 不是」能答的问题" maxlength="60">' +
-        '<button class="btn btn-primary" id="sp-go">问</button></div>' +
-        '<div class="sp-acts"><button class="btn btn-secondary" id="sp-guess">我猜汤底</button>' +
-        '<button class="btn btn-secondary give" id="sp-give">不猜了</button></div>';
-    }
-    el.innerHTML = h;
-    if (room.phase === 'ended') return;
-    const inp = el.querySelector('#sp-q');
-    /* 草稿保留不在这管：重绘前接住正在敲的那格，是壳（game.js renderRoom）统一做的 */
-    const go = () => { const v = inp.value; inp.value = ''; ask(room, v); };
-    el.querySelector('#sp-go').addEventListener('click', go);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
-    el.querySelector('#sp-guess').addEventListener('click', () => {
-      const v = inp.value;
-      if (!String(v || '').trim()) { UI.toast('先把要猜的话写在这格'); inp.focus(); return; }
-      inp.value = ''; guess(room, v);
-    });
-    el.querySelector('#sp-give').addEventListener('click', () => giveUp(room));
-  }
-
-  /* ---------- 注册给游戏壳 ---------- */
-  function def() {
-    return {
-      id: 'soup', name: '海龟汤', icon: 'soup-bowl', playersTxt: '双人',
-      first: 'ta',                 // 出题方固定是 TA：不走先手协商（game.js 的 joined 认这个字段）
-      ownIpt: true,                // 提问框就是这局的操作本身，壳子不再另画一条“游戏里也能聊”（两个输入框＝同件事两处）
-      thinkKind: 'soupAnswer',     // 玩家条上那句“TA 正在想…”靠它点亮（以前只认 taMove）
-      note: 'TA 出题，你只问「是 / 不是」能答的；问满 ' + MAX_ASKS + ' 个就收摊',
-      newRoom, onPlan, render: render2, turnOf, settleTable,
-      /* 给验收探针直接调的口，也是聊天里回车要用的 */
-      ask, guess, giveUp, judge: matchClue, cover, isWin, norm,
-      /* 题库（数据层） */
-      bank: () => st().bank.slice(), live, pickSoup,
-      addSoup(o) {
-        const s = st();
-        const it = {
-          id: 'sb' + Date.now().toString(36), gid: o.gid || 'default',
-          name: o.name || '未命名', surface: o.surface || '', bottom: o.bottom || '',
-          clues: (o.clues || []).filter(c => c && (c.k || []).length), hints: o.hints || [],
-          blocked: false
-        };
-        if (!it.surface || !it.bottom || !it.clues.length) return null;   // 缺一条就不收，别留半截汤
-        s.bank.push(it); DB.save();
-        return it;
-      },
-      edit(id, patch) {
-        const it = st().bank.find(x => x.id === id);
-        if (!it) return null;
-        Object.assign(it, patch || {});
-        if (patch && patch.clues) it.clues = patch.clues.filter(c => c && (c.k || []).length);
-        DB.save();
-        return it;
-      },
-      block(id) {
-        const it = st().bank.find(x => x.id === id);
-        if (!it) return false;
-        it.blocked = !it.blocked; DB.save();
-        return it.blocked;
-      },
-      del(id) {
-        const s = st();
-        const n = s.bank.length;
-        s.bank = s.bank.filter(x => x.id !== id);
-        delete s.seen[id];
-        DB.save();
-        return s.bank.length < n;
-      }
-    };
-  }
-
-  /* 借用游戏壳里的几个公用口（都是运行时取，注进来时顺序无所谓） */
-  function esc(t) { return typeof UI !== 'undefined' && UI.escapeHtml ? UI.escapeHtml(String(t == null ? '' : t)) : String(t == null ? '' : t); }
-  function name(uid) {
-    if (uid === 'me') return (DB.state.profile && DB.state.profile.name) || '我';
-    return Home.displayName(Home.contactById(uid)) || 'TA';
-  }
-  function taUid(room) { return (room.players || []).find(u => u !== 'me') || null; }
-  function feed(room, uid, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(room, uid, text); }
-  function finish(room, res) { if (typeof Games !== 'undefined' && Games.finish) Games.finish(room, res); }
-  function rand(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
-
-  return { def };
-})();
-
-/* =====================================================
    LOVE♡X · game.js —— 游戏板块（P40，她 08-28 晚拍板「动工」）
    发现页「游戏」行 → 大厅（线稿卡牌架）→ 开局（选人→邀请 80/20→先手协商 70/30）→ 对局页
    对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
@@ -16440,16 +15990,6 @@ const Games = (function () {
     const d0 = defOf(room);
     if (d0.opening) { room.phase = 'order'; DB.save(); return; }
     const ta = taUid(room);
-    /* 海龟汤这种不问先手、只定“谁出题”的：def.first 说死（'ta' = TA 出题我猜）。
-       不进先手协商，也不走 setBlack——那边会给没实现 aiPick 的游戏排一条空跑的 taMove */
-    if (d0.first) {
-      room.blackUid = d0.first === 'ta' ? ta : 'me';
-      room.phase = 'playing';
-      feed(room, 'sys', esc(d0.name || '游戏') + '：' + esc(name(room.blackUid)) + ' 出题，你来猜');
-      if (d0.started) d0.started(room);
-      DB.save(); scheduleTimers(room);
-      return;
-    }
     if ((room.players || []).length === 2 && !opt.fromTa) {
       room.phase = 'negotiate';
       feed(room, 'sys', esc(name(ta)) + ' 加入了' + esc(d0.name) + '，先商量谁先手');
@@ -16733,10 +16273,7 @@ const Games = (function () {
     document.getElementById('room-title').textContent = defOf(r).name;
     const ta = taUid(r);
     const turn = currentTurn(r);
-    /* “TA 在想要说什么”不再只认 taMove：海龟汤这类自己排队列的游戏用 def.thinkKind 说名字
-       （不然玩家条上永远不亮，TA 那几秒延迟看着就像卡了） */
-    const thinkKind = defOf(r).thinkKind || 'taMove';
-    const thinking = (r.plans || []).some(p => p.kind === thinkKind && !p.done);
+    const thinking = (r.plans || []).some(p => p.kind === 'taMove' && !p.done);
     const lastTaSay = (() => { const f = (r.feed || []).slice().reverse().find(x => x.uid === 'ta'); return f ? f.text : ''; })();
 
     /* UNO 的座位环就画在牌桌里（谁在哪边、几个人怎么排一目了然），不再另起一条玩家条；
@@ -16780,16 +16317,14 @@ const Games = (function () {
     }
     h += '<div class="gm-feed" id="room-feed">' + (r.feed || []).map(f =>
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
-    if (!defOf(r).ownIpt) {
-      h += '<div class="gm-ipt">' +
-        '<button class="gm-chip-btn" id="room-quick">短语</button>' +
-        '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
-        '<button class="gm-send" id="room-send">发</button>' +
-        (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
-        '</div>';
-    }
-    /* 重绘前把“已经有字的输入框”接住，重绘后按 id 装回去：海龟汤 TA 那句迟到会引发整块重绘，
-       以前她打到一半的字直接被抹。不靠焦点判断（她可能已经点了其他地方），也不让各游戇6 自己拄一份 */
+    h += '<div class="gm-ipt">' +
+      '<button class="gm-chip-btn" id="room-quick">短语</button>' +
+      '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
+      '<button class="gm-send" id="room-send">发</button>' +
+      (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
+      '</div>';
+    /* 重绘前把“已经有字的输入框”接住，重绘后按 id 装回去：TA 那句迟到（答话、催棋）会引发整块重绘，
+       以前她打到一半的字直接被抹。不靠焦点判断（她可能已经点了其他地方），也不让各游戏自己拄一份 */
     const act = document.activeElement;
     const wasActiveId = act && act.tagName === 'INPUT' && act.id ? act.id : '';
     const caret = wasActiveId ? (act.selectionStart || 0) : 0;
@@ -16823,7 +16358,7 @@ const Games = (function () {
         else lastTap = now;
       });
     });
-    /* 装回去放在最后：游戏自己的输入框是上面 defOf(r).render() 里的（海龟汤的提问框就在棋盘内），
+    /* 装回去放在最后：页内输入框可能是上面 defOf(r).render() 里游戏自己画的，
        在 innerHTML 那一秒它还根本不存在——第一轮就是这么没装上的 */
     keep.forEach(k => {
       const back = document.getElementById(k.id);
@@ -17491,7 +17026,6 @@ const Games = (function () {
     register(Gomoku.def());
     register(Uno.def());
     register(Mine.def());
-    register(Soup.def());   // 大厅卡牌排第四（P44 海龟汤，09-01）
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
