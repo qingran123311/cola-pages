@@ -2718,6 +2718,59 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-replay-lines{margin-top:9px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;text-align:left}
 .gm-replay-lines .gm-fline+.gm-fline{margin-top:5px}
 
+/* ============ P46 飞行棋（09-01）：15×15 十字盘 / 骰子 / 定序面板 ============
+   盘面四色是内容色（沿 UNO 那一套，低饱和、无紫）；框线与文字仍走墨色变量 */
+.ld-board{position:relative;width:100%;max-width:470px;margin:0 auto;--u:28px;
+  display:grid;grid-template-columns:repeat(15,1fr);grid-template-rows:repeat(15,1fr);
+  background:var(--card);border-radius:12px 3px 12px 3px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.ld-cell{position:relative;box-sizing:border-box}
+.ld-cell.ld-r,.ld-cell.ld-lane,.ld-cell.ld-base,.ld-cell.ld-goal{border:1px solid var(--line);background:var(--card)}
+.ld-cell.ld-r{margin:1px;border-radius:3px}
+/* 着色用 ::before 而不是 background：这样格子自己的墨框不会被一起淡掉 */
+.ld-cell.ld-base::before{content:'';position:absolute;inset:0;background:currentColor;opacity:.14}
+.ld-cell.ld-slot::before{content:'';position:absolute;inset:12%;background:var(--card);
+  border:1px solid var(--line);border-radius:50%;opacity:1}
+.ld-cell.ld-lane::before{content:'';position:absolute;inset:1px;background:currentColor;opacity:.5;border-radius:2px}
+.ld-cell.ld-start::before{content:'';position:absolute;inset:1px;background:currentColor;opacity:.82;border-radius:2px}
+.ld-cell.ld-safe::after{content:'';position:absolute;inset:32%;border:1px solid var(--line);border-radius:50%;opacity:.45}
+.ld-cell.ld-goal{background:var(--fill)}
+.ld-tok{position:absolute;z-index:3;width:calc(var(--u)*.66);height:calc(var(--u)*.66);
+  left:calc(var(--c)*var(--u) + var(--u)*.17 + var(--u)*var(--ox,0));
+  top:calc(var(--r)*var(--u) + var(--u)*.17 + var(--u)*var(--oy,0));
+  padding:0;display:grid;place-items:center;cursor:pointer;
+  background:var(--card);border:1.5px solid var(--line);border-radius:50% 50% 50% 16%}
+.ld-tok[disabled]{cursor:default}
+.ld-tok svg{width:78%;height:78%}
+.ld-tok.done{opacity:.42}
+.ld-tok.able{box-shadow:0 0 0 2px var(--line);animation:ld-breathe 1.5s ease-in-out infinite}
+@keyframes ld-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.ld-bar{display:flex;align-items:center;gap:9px;margin-top:10px;padding:9px 11px;
+  border:1.5px dashed var(--line);border-radius:12px 3px 12px 3px;background:var(--card)}
+.ld-dice{flex:none;width:34px;height:34px;display:grid;place-items:center;font-size:26px;line-height:1;
+  border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--t1)}
+.ld-dice.spin{animation:ld-spin .3s linear 3}
+@keyframes ld-spin{from{transform:rotate(0)}50%{transform:rotate(180deg) scale(1.14)}to{transform:rotate(360deg)}}
+.ld-hint{flex:1;min-width:0;font-size:12.5px;color:var(--t2)}
+.ld-order{margin-top:10px;padding:11px 11px 12px;border:1.5px solid var(--line);
+  border-radius:12px 3px 12px 3px;text-align:center;background:var(--card)}
+.ld-order-t{font-size:11px;color:var(--t3);letter-spacing:2px}
+.ld-order-dice{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:9px 0 10px}
+.ld-od{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--t2);min-width:0}
+.ld-od b{font-size:26px;line-height:1;font-weight:400;color:var(--t1)}
+.ld-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:9px;font-size:11.5px;color:var(--t2)}
+.ld-lg{display:inline-flex;align-items:center;gap:5px}
+.ld-lg b{font-weight:700}
+.ld-lg i{font-style:normal;color:var(--t1)}
+.ld-lg-n{padding:0 6px;font-size:10.5px;color:var(--t1);border:1px solid var(--line);border-radius:999px}
+.ld-scr{margin-top:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ld-scr-row{display:grid;grid-template-columns:auto auto 1fr auto auto auto;gap:8px;align-items:center;
+  padding:6px 10px;font-size:12px;border-top:1px solid var(--line);color:var(--t2)}
+.ld-scr-row:first-child{border-top:none}
+.ld-scr-row.me{background:var(--fill)}
+.ld-rank{width:14px;font-size:11px;color:var(--t3);text-align:center}
+.ld-cname{font-weight:700}
+.ld-who-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+
 </style>
 </head>
 <body>
@@ -5897,7 +5950,9 @@ const ICONS = {
   'gamepad':       '<path d="M7 8.5h10a4.3 4.3 0 0 1 4.2 5.2l-.7 3.6a2.5 2.5 0 0 1-4.4 1L14.7 16.5H9.3l-1.4 1.8a2.5 2.5 0 0 1-4.4-1l-.7-3.6A4.3 4.3 0 0 1 7 8.5z"/><path d="M8 11v3.4M6.3 12.7h3.4"/><circle cx="15.8" cy="11.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="18.1" cy="13.6" r="0.7" fill="currentColor" stroke="none"/>',
   'go-board':      '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9.3h16M4 14.6h16M9.3 4v16M14.6 4v16"/><circle cx="9.3" cy="9.3" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/><circle cx="14.6" cy="9.3" r="1.4" fill="currentColor" stroke="none"/>',
   'mine-bomb':     '<circle cx="12" cy="13.5" r="6"/><path d="M12 4v3M12 20v2.5M2.5 13.5H5M19 13.5h2.5M4.8 6.3l1.9 1.9M19.2 6.3l-1.9 1.9"/><path d="M12 7V4.8l2-1" stroke-linejoin="round"/>',
-  'cards-uno':     '<rect x="5" y="4" width="13" height="16" rx="2.5"/><rect x="8.5" y="3" width="13" height="16" rx="2.5" fill="none"/><ellipse cx="15" cy="11" rx="3.4" ry="4.6"/>'
+  'cards-uno':     '<rect x="5" y="4" width="13" height="16" rx="2.5"/><rect x="8.5" y="3" width="13" height="16" rx="2.5" fill="none"/><ellipse cx="15" cy="11" rx="3.4" ry="4.6"/>',
+  /* 飞行棋：俯视喷气机，一笔画完（线稿风，不拿 EMOJI 当图标） */
+  'plane':         '<path d="M12 3c1.5 0 2.4 2.4 2.4 5.2 0 1.4-.1 2.5-.3 3.3l6.4 3.7v2.1l-6.5-2-.2 3 2.4 2.2v1.4L12 20.8l-4.2 1.1v-1.4l2.4-2.2-.2-3-6.5 2v-2.1l6.4-3.7c-.2-.8-.3-1.9-.3-3.3C9.6 5.4 10.5 3 12 3z"/>'
 };
 
 function I(name, size = 18) {
@@ -15718,6 +15773,489 @@ const Uno = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · ludo.js —— 飞行棋（P46，她 09-01 22:13 点名要的游戏）
+   ------------------------------------------------------------
+   为什么做到 4 人：标准十字盘只有 4 条臂、4 个基地。八人得改成放射 8 臂，
+   那就不是记忆里那盘棋了 —— 她那句「能做到几人就几人」按盘来定：2~4 人。
+
+   棋盘几何（每一步都可算，探针逐条钉死，不靠肉眼）
+     · 15×15 格；十字跑道 = 56 格（四臂各 14 格：顶边 2 + 一列 5 + 转角 1 + 另一臂起边 6）
+     · 跑道顺序 = RING 表（顺时针一格一格走，每步都是相邻格，不跳格）；四色起点各错开 14 格
+     · 每色一条回家道 5 格（臂的中列）；走完 55 格跑道才拐进去，尽头那一格就是家
+     · 中心十字 5 格是终点装饰（谁都不站上去）
+   位置用「相对自己起点的步数 s」记，比绝对格号好算也好验：
+     s=0 基地 · 1..55 跑道 · 56..60 回家道（60=回窝）
+   规则（砍到最简，只留认得出来的那几条）
+     · 掷到 6 才能起飞；起飞之后本回合再掷一次
+     · 必须刚好走到 60 才算回窝（多了就动不了）
+     · 同一格撞子：别人那架被打回基地；四色起点格是安全格，不撞
+     · 4 架全部回窝的人第一；第一个全回窝就收摊，其余按名次排（回窝数 → 总进度）
+   接壳子的口径：opening=true（先手由盘上掷骰定，不走五子棋那套先手协商）、
+   seats=true（四色就在盘上，不再另起玩家条）、TA 的回合走自己的计划 ludoTurn。
+   颜色：四色沿用 UNO 那套内容色（低饱和、无紫），界面本体仍是白底墨线。
+   ===================================================== */
+const Ludo = (function () {
+  const N = 15;                    // 15×15 格
+  const TOTAL = 60;                // 回窝所需步数（55 格跑道 + 5 格回家道，尽头就是家）
+  const RINGN = 56;                // 跑道总格数
+  const LASTRING = 55;             // 走完 55 格就该拐进自家回家道
+  const LANE = 5;
+  const TURN_SEC = [2.5, 5.5];     // TA 掷骰/挪棋的节奏（跟 UNO 同一档，她 09-01 定的）
+  const ROLL_MS = 900;             // 骰子滚动动画时长：只影响观感，逻辑一律不等它
+  const BEGIN_MS = 1500;           // 开局掷骰定序的停留时间（到点自己开局，也可以点「开局」）
+  const COLORS = ['r', 'y', 'g', 'b'];
+  const CNAME = { r: '红', y: '黄', g: '绿', b: '蓝' };
+  const CHEX = { r: '#D96A5E', y: '#E9C46A', g: '#7FA97C', b: '#7E9CC0' };
+  const DICE = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];   // U+2680~2685 几何方块点，不是 EMOJI（UNO 定序用的同一套）
+
+  const esc = s => UI.escapeHtml(String(s == null ? '' : s));
+  const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const dieCh = v => DICE[Math.max(1, Math.min(6, v || 1)) - 1];
+
+  /* ---------- 跑道 56 格（顺时针一圈），下标=绕圈格号 ----------
+     每个臂 14 格：顶边 2 + 一列 5 + 转角 1 + 另一臂起边 6；四段拼成 56。
+     转角那 4 格（(6,6),(6,8),(8,6),(8,8)）算跑道：不然 15×15 方格上拐角就得跳格；
+     中心十字 5 格是终点装饰，不算格子 */
+  const RING = (() => {
+    const p = [];
+    p.push([0, 7], [0, 8]);                             // 0-1   上臂顶边（(0,7) 是红家拐进点）
+    for (let r = 1; r <= 5; r++) p.push([r, 8]);      // 2-6   上臂右列，向下
+    p.push([6, 8]);                                     // 7    转角
+    for (let c = 9; c <= 14; c++) p.push([6, c]);     // 8-13  右臂上行，向右
+    p.push([7, 14], [8, 14]);                           // 14-15 右臂顶边（(7,14) 是黄家拐进点）
+    for (let c = 13; c >= 9; c--) p.push([8, c]);     // 16-20 右臂下行，向左
+    p.push([8, 8]);                                     // 21   转角
+    for (let r = 9; r <= 14; r++) p.push([r, 8]);     // 22-27 下臂右列，向下
+    p.push([14, 7], [14, 6]);                           // 28-29 下臂底边（(14,7) 是绿家拐进点）
+    for (let r = 13; r >= 9; r--) p.push([r, 6]);     // 30-34 下臂左列，向上
+    p.push([8, 6]);                                     // 35   转角
+    for (let c = 5; c >= 0; c--) p.push([8, c]);      // 36-41 左臂下行，向左
+    p.push([7, 0], [6, 0]);                             // 42-43 左臂顶边（(7,0) 是蓝家拐进点）
+    for (let c = 1; c <= 5; c++) p.push([6, c]);      // 44-48 左臂上行，向右
+    p.push([6, 6]);                                     // 49   转角
+    for (let r = 5; r >= 0; r--) p.push([r, 6]);      // 50-55 上臂左列，向上（接回 0）
+    return p;
+  })();
+  /* 每色：起点格号（s=1 落点，紧挨自家基地）· 回家道 5 格（由外向内，尽头那一格就是回窝）· 基地 6×6 左上角 */
+  const SIDE = [
+    { start: 2, lane: [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]], base: [0, 9], in: 0 },       // 红：上臂 + 右上基地
+    { start: 16, lane: [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]], base: [9, 9], in: 14 },   // 黄：右臂 + 右下基地
+    { start: 30, lane: [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]], base: [9, 0], in: 28 },   // 绿：下臂 + 左下基地
+    { start: 44, lane: [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]], base: [0, 0], in: 42 }      // 蓝：左臂 + 左上基地
+  ];
+  const SLOTS = [[1, 1], [1, 4], [4, 1], [4, 4]];
+  const GOAL = [[6, 7], [7, 6], [7, 7], [7, 8], [8, 7]];   // 中心十字 5 格：终点装饰
+  const SAFE = SIDE.map(s => s.start);            // 四色起点格=安全格（童年规则：起点不撞）
+
+  const adj = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
+  function ringIdx(si, s) { return (SIDE[si].start + s - 1) % RINGN; }
+  /* s → 格坐标；s=0（在基地）返回 null，由调用方按停机位摆 */
+  function posOf(si, s) {
+    if (s <= 0) return null;
+    if (s <= LASTRING) return RING[ringIdx(si, s)];
+    if (s <= LASTRING + LANE) return SIDE[si].lane[s - LASTRING - 1];
+    return SIDE[si].lane[LANE - 1];
+  }
+
+  /* ---------- 房间数据 ---------- */
+  function st(r) {
+    r.ludo = r.ludo || { phase: 'wait', dice: null, order: [], oi: 0, toks: {}, stat: {}, roll: null, beginAt: 0 };
+    return r.ludo;
+  }
+  function colOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
+  function siOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? -1 : i % 4; }
+  function toks(r, c) { const L = st(r); return c && L.toks[c] ? L.toks[c] : null; }
+  function curUid(r) { const L = st(r); return (L.order || [])[L.oi] || null; }
+  function homeCnt(r, c) { return (toks(r, c) || []).filter(t => t.s === TOTAL).length; }
+  function seatOf(r, uid) { return (r.players || []).indexOf(uid); }
+
+  function initToks(r) {
+    const L = st(r);
+    if (L.seeded) return L;
+    (r.players || []).forEach((u, i) => {
+      const c = COLORS[i % 4];
+      L.toks[c] = [0, 1, 2, 3].map(k => ({ c, k, s: 0 }));
+      L.stat[c] = { rolls: 0, hit: 0 };
+    });
+    L.seeded = 1;
+    return L;
+  }
+  /* 开局：先各掷一颗骰定先后（盘上滚一下，结果写进播报），人齐了就由这里说死谁先 */
+  function newRoom(room) {
+    const L = initToks(room);
+    L.phase = 'order';
+    L.dice = null;
+    L.order = (room.players || []).slice();
+    L.oi = 0;
+    L.roll = L.order.map(u => ({ u, v: rand(1, 6) }));
+    L.beginAt = Date.now() + BEGIN_MS;
+    const best = L.roll.slice().sort((a, b) => b.v - a.v || (a.u === 'me' ? -1 : 1))[0];
+    L.oi = Math.max(0, L.order.indexOf(best.u));
+    room.blackUid = best.u;
+    feed(room, 'sys', '先各掷一颗定先后：' + L.roll.map(x => nm(x.u) + ' ' + dieCh(x.v)).join('　') +
+      ' → ' + esc(nm(best.u)) + ' 先行');
+    return room;
+  }
+  function begin(r) {
+    const L = st(r);
+    L.phase = 'roll';
+    L.roll = null;
+    L.beginAt = 0;
+    r.phase = 'playing';
+    if (curUid(r) !== 'me') queueTa(r);
+    touch(r);
+  }
+
+  function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
+  function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); }
+  function nm(uid) {
+    if (uid === 'me') return DB.state.profile.name || '我';
+    return (typeof Home !== 'undefined' && Home.displayName) ? (Home.displayName(Home.contactById(uid)) || 'TA') : 'TA';
+  }
+
+  /* ---------- 走法（判定唯一口径，探针也读这里） ---------- */
+  function canGo(t, d) { return t.s === 0 ? d === 6 : t.s + d <= TOTAL; }
+  function legalDice(r, c, d) { return (toks(r, c) || []).filter(t => canGo(t, d)); }
+  function landIdx(c, ns) { return ns <= LASTRING ? ringIdx(COLORS.indexOf(c), ns) : -1; }
+  /* 落点上有谁的飞机 → 撞回基地；安全格与回家道不撞 */
+  function hitsAt(r, c, ns) {
+    const idx = landIdx(c, ns);
+    if (idx < 0 || SAFE.indexOf(idx) >= 0) return [];
+    const out = [];
+    COLORS.forEach(oc => {
+      if (oc === c || !toks(r, oc)) return;
+      toks(r, oc).forEach(o => {
+        if (o.s >= 1 && o.s <= LASTRING && ringIdx(COLORS.indexOf(oc), o.s) === idx) out.push(o);
+      });
+    });
+    return out;
+  }
+  function applyMove(r, c, k, d) {
+    const L = st(r);
+    const t = toks(r, c)[k];
+    if (!t || !canGo(t, d)) return null;
+    const from = t.s;
+    const ns = from === 0 ? 1 : from + d;
+    const hits = hitsAt(r, c, ns);
+    t.s = ns;
+    L.stat[c].rolls++;
+    /* 壳子的结算卡与战绩页都看 r.moves 的条数：不记就是永远“0 手”（数据归属不能空） */
+    (r.moves = r.moves || []).push({ c: c, k: k, from: from, to: ns, hit: hits.length, ts: Date.now() });
+    let msg = CNAME[c] + ' ' + (k + 1) + ' 号';
+    msg += from === 0 ? '起飞' : ns === TOTAL ? '回窝了' : ns > LASTRING ? '拐进回家道' : '前进 ' + d + ' 格';
+    hits.forEach(o => {
+      o.s = 0;
+      L.stat[c].hit++;
+      msg += '，把' + CNAME[o.c] + ' ' + (o.k + 1) + ' 号撞回基地';
+    });
+    feed(r, 'sys', esc(msg));
+    return { home: ns === TOTAL, again: d === 6, hits: hits.length };
+  }
+  function nextTurn(r) {
+    const L = st(r);
+    let guard = 0;
+    L.dice = null;
+    L.phase = 'roll';
+    do { L.oi = (L.oi + 1) % L.order.length; guard++; } while (guard < 12 && homeCnt(r, colOf(r, curUid(r))) === 4);
+    if (curUid(r) !== 'me') queueTa(r);
+  }
+  function queueTa(r) {
+    const L = st(r);
+    L.phase = 'roll';
+    L.dice = null;
+    (r.plans || []).forEach(p => { if (p.kind === 'ludoTurn' && !p.done) p.done = true; });
+    r.plans = (r.plans || []).filter(p => !p.done);
+    r.plans.push({ kind: 'ludoTurn', at: Date.now() + rand(TURN_SEC[0], TURN_SEC[1]) * 1000, done: false });
+  }
+
+  /* ---------- TA 一整回合：掷骰 → 挑一架 → 挪；掷到 6 再来一次 ---------- */
+  function aiTurn(r) {
+    const L = st(r);
+    if (r.phase !== 'playing' || L.phase === 'over' || L.phase === 'order') return;
+    const uid = curUid(r);
+    if (uid === 'me') return;
+    const c = colOf(r, uid);
+    if (!c) return;
+    const d = rand(1, 6);
+    L.dice = d;
+    const opts = legalDice(r, c, d);
+    if (!opts.length) {
+      L.stat[c].rolls++;
+      feed(r, 'sys', esc(CNAME[c] + ' 掷出 ' + d + '，没棋可走'));
+      nextTurn(r);
+      touch(r);
+      return;
+    }
+    const t = pickFor(r, c, d, opts);
+    feed(r, 'ta', esc(CNAME[c] + ' 掷出 ' + d + ' ' + dieCh(d)));
+    const res = applyMove(r, c, t.k, d);
+    if (res && homeCnt(r, c) === 4) { endIt(r, uid); touch(r); return; }
+    if (res && res.again) { feed(r, 'sys', esc(CNAME[c] + ' 掷到 6，再掷一次')); queueTa(r); touch(r); return; }
+    nextTurn(r);
+    touch(r);
+  }
+  /* 不痴呆：能回窝 > 能撞人 > 能起飞 > 落点安全 > 谁最领先走谁 */
+  function pickFor(r, c, d, opts) {
+    let best = null, bs = -1e9;
+    opts.forEach(t => {
+      const ns = t.s === 0 ? 1 : t.s + d;
+      let sc = ns === TOTAL ? 1000 : ns > LASTRING ? 120 : 0;
+      sc += hitsAt(r, c, ns).length * 60;
+      if (t.s === 0) sc += 40;
+      sc += ns * 1.5;
+      const idx = landIdx(c, ns);
+      if (idx >= 0 && SAFE.indexOf(idx) >= 0) sc += 14;
+      if (sc > bs) { bs = sc; best = t; }
+    });
+    return best || opts[0];
+  }
+
+  /* ---------- 结算 ---------- */
+  function rankRows(r) {
+    return (r.players || []).map(u => {
+      const c = colOf(r, u), L = st(r);
+      const tk = toks(r, c) || [];
+      return {
+        u, c, home: tk.filter(t => t.s === TOTAL).length,
+        wait: tk.filter(t => t.s === 0).length,
+        prog: tk.reduce((a, t) => a + t.s, 0),
+        hit: (L.stat[c] || {}).hit || 0, rolls: (L.stat[c] || {}).rolls || 0
+      };
+    }).sort((a, b) => b.home - a.home || b.prog - a.prog);
+  }
+  function settleTable(r) {
+    const rows = rankRows(r);
+    return '<div class="ld-scr">' + rows.map((x, i) =>
+      '<div class="ld-scr-row' + (x.u === 'me' ? ' me' : '') + '">' +
+      '<span class="ld-rank">' + (i + 1) + '</span>' +
+      '<b class="ld-cname" style="color:' + CHEX[x.c] + '">' + CNAME[x.c] + '</b>' +
+      '<span class="ld-who-n">' + esc(nm(x.u)) + '</span>' +
+      '<span>回窝 ' + x.home + '/4</span>' +
+      '<span>撞飞 ' + x.hit + '</span>' +
+      '<span>掷 ' + x.rolls + ' 次</span></div>').join('') + '</div>';
+  }
+  function endIt(r, winUid) {
+    const L = st(r);
+    L.phase = 'over';
+    L.dice = null;
+    r.finalScores = { ludo: 1 };         // 壳子的结算卡：有 finalScores 才会去调 settleTable
+    r.ludo.rankRows = rankRows(r);
+    (r.plans || []).forEach(p => { p.done = true; });
+    r.plans = (r.plans || []).filter(p => !p.done);
+    if (typeof Games !== 'undefined' && Games.finish) Games.finish(r, { win: winUid || 'me', line: [] });
+  }
+  /* 认输：我这四架全回基地，判给目前最领先的那位（多人局不能只认第一位） */
+  function onResign(r) {
+    const L = st(r);
+    if (r.phase !== 'playing' || L.phase === 'over') return true;
+    const c = colOf(r, 'me');
+    (toks(r, c) || []).forEach(t => { t.s = 0; });
+    const top = rankRows(r).find(x => x.u !== 'me');
+    feed(r, 'me', '你认输了');
+    endIt(r, top ? top.u : 'me');
+    return true;
+  }
+
+  /* ---------- 渲染 ---------- */
+  function render(r, el) {
+    const L = st(r);
+    initToks(r);
+    const turn = curUid(r);
+    const tc = colOf(r, turn);
+    const over = L.phase === 'over';
+    const mine = r.phase === 'playing' && !over && turn === 'me';
+    const opts = (mine && L.dice) ? legalDice(r, tc, L.dice) : [];
+    const able = opts.map(t => t.k);
+
+    let h = '<div class="ld-board" id="ld-board">';
+    const mark = {};
+    RING.forEach((p, i) => { mark[p[0] + ',' + p[1]] = { ring: i }; });
+    SIDE.forEach((s, ci) => {
+      s.lane.forEach((p, li) => { mark[p[0] + ',' + p[1]] = { lane: ci, li }; });
+      for (let dr = 0; dr < 6; dr++) {
+        for (let dc = 0; dc < 6; dc++) {
+          const k = (s.base[0] + dr) + ',' + (s.base[1] + dc);
+          if (!mark[k]) mark[k] = { base: ci };
+        }
+      }
+      SLOTS.forEach(p => {
+        const k = (s.base[0] + p[0]) + ',' + (s.base[1] + p[1]);
+        if (mark[k]) mark[k].slot = 1;
+      });
+    });
+    for (let row = 0; row < N; row++) {
+      for (let col = 0; col < N; col++) {
+        const m = mark[row + ',' + col];
+        let cls = 'ld-cell', sty = '';
+        if (m && m.ring !== undefined) {
+          cls += ' ld-r';
+          const own = SIDE.findIndex(s => s.start === m.ring);
+          if (own >= 0) { cls += ' ld-start'; sty = 'color:' + CHEX[COLORS[own]] + ';'; }
+          if (SAFE.indexOf(m.ring) >= 0) cls += ' ld-safe';
+        } else if (m && m.lane !== undefined) {
+          cls += ' ld-lane'; sty = 'color:' + CHEX[COLORS[m.lane]] + ';';
+        } else if (m && m.base !== undefined) {
+          cls += ' ld-base'; sty = 'color:' + CHEX[COLORS[m.base]] + ';';
+          if (m.slot) cls += ' ld-slot';
+        }
+        if (GOAL.some(g => g[0] === row && g[1] === col)) cls += ' ld-goal';
+        h += '<div class="' + cls + '" data-r="' + row + '" data-c="' + col + '"' + (sty ? ' style="' + sty + '"' : '') + '></div>';
+      }
+    }
+    /* 飞机：绝对定位到所在格中心；能走的那几架描一圈墨线 + 轻微呼吸 */
+    COLORS.forEach((cc, ci) => {
+      const tk = toks(r, cc);
+      if (!tk) return;
+      tk.forEach(t => {
+        let p = posOf(ci, t.s);
+        if (!p) { const sl = SLOTS[t.k]; p = [SIDE[ci].base[0] + sl[0], SIDE[ci].base[1] + sl[1]]; }
+        const canTap = cc === tc && able.indexOf(t.k) >= 0;
+        /* 同格两架（同色叠着）靠这点偏移分开，不然看着像只有一架 */
+        const ox = (t.k % 2 ? 0.18 : -0.03).toFixed(2), oy = (t.k > 1 ? 0.16 : -0.02).toFixed(2);
+        h += '<button type="button" class="ld-tok' + (t.s === 0 ? ' in-base' : '') + (t.s === TOTAL ? ' done' : '') +
+          (canTap ? ' able' : '') + '" style="color:' + CHEX[cc] + ';--r:' + p[0] + ';--c:' + p[1] +
+          ';--ox:' + ox + ';--oy:' + oy + '"' +
+          ' data-c="' + cc + '" data-k="' + t.k + '"' + (canTap ? '' : ' disabled') + ' aria-label="' +
+          CNAME[cc] + (t.k + 1) + ' 号"><i data-icon="plane" data-size="15"></i></button>';
+      });
+    });
+    h += '</div>';
+
+    if (L.phase === 'order') {
+      /* 定序面板：四颗骰子摆一排，到点自己开局（不等动画，她 08-30 那一课的规矩） */
+      h += '<div class="ld-order" id="ld-order"><div class="ld-order-t">掷骰定先后</div><div class="ld-order-dice">' +
+        (L.roll || []).map(x => '<span class="ld-od"><b>' + dieCh(x.v) + '</b><small></small></span>').join('') +
+        '</div><button class="btn btn-primary" id="ld-begin">开 局</button></div>';
+    } else {
+      h += '<div class="ld-bar">' +
+        '<span class="ld-dice' + (L.spin ? ' spin' : '') + '" id="ld-dice">' + (L.dice ? dieCh(L.dice) : '·') + '</span>' +
+        '<span class="ld-hint">' + (over ? '这局收了'
+          : turn === 'me' ? (L.dice ? (opts.length ? '点一架要走的飞机' : '没棋可走…') : '该你掷骰')
+          : esc(nm(turn)) + ' 在想…') + '</span>' +
+        (mine && !L.dice ? '<button class="btn btn-primary" id="ld-roll">掷 骰</button>' : '') +
+        (mine && L.dice && !opts.length ? '<button class="btn btn-secondary" id="ld-pass">过</button>' : '') +
+        '</div>';
+    }
+    h += '<div class="ld-legend">' + (r.players || []).map((u, i) => {
+      const cc = COLORS[i % 4];
+      return '<span class="ld-lg" style="color:' + CHEX[cc] + '"><b>' + CNAME[cc] + '</b><i></i>' +
+        '<span class="ld-lg-n">' + homeCnt(r, cc) + '/4</span></span>';
+    }).join('') + '</div>';
+    el.innerHTML = h;
+
+    /* 名字统一走 textContent：不在 HTML 里拼，名字带尖括号也不会串位 */
+    (L.roll || []).forEach((x, i) => {
+      const s = el.querySelectorAll('.ld-od small')[i];
+      if (s) s.textContent = nm(x.u);
+    });
+    (r.players || []).forEach((u, i) => {
+      const s = el.querySelectorAll('.ld-lg i')[i];
+      if (s) s.textContent = nm(u);
+    });
+    fitBoard(el);
+    if (typeof mountIcons === 'function') mountIcons(el);
+
+    const bb = el.querySelector('#ld-begin');
+    if (bb) bb.addEventListener('click', () => runSafe('ludo.begin', () => begin(r)));
+    const rb = el.querySelector('#ld-roll');
+    if (rb) rb.addEventListener('click', () => runSafe('ludo.roll', () => iRoll(r)));
+    const pb = el.querySelector('#ld-pass');
+    if (pb) pb.addEventListener('click', () => runSafe('ludo.pass', () => { feed(r, 'me', '你过了这一手'); nextTurn(r); touch(r); }));
+    el.querySelectorAll('.ld-tok.able').forEach(b =>
+      b.addEventListener('click', () => runSafe('ludo.move', () => iMove(r, b.dataset.c, +b.dataset.k))));
+    /* 定序到点自动开局：不靠动画回调，也不新开定时器——重绘时到点就开，
+       另外排一条计划兜底（她不在这一页时也要能开） */
+    if (L.phase === 'order' && L.beginAt) {
+      if (Date.now() >= L.beginAt) { begin(r); return; }
+      if (!L.beginQueued) {
+        L.beginQueued = 1;
+        r.plans.push({ kind: 'ludoBegin', at: L.beginAt, done: false });
+        touch(r);
+      }
+    }
+  }
+  /* 棋盘按容器宽缩放：量 wrap 的可用宽，不量被 flex 压过的自己（UNO 那两层根因的教训） */
+  function fitBoard(el) {
+    const b = el.querySelector('.ld-board');
+    if (!b) return;
+    const wrap = b.parentElement;
+    const cs = getComputedStyle(wrap);
+    const avail = Math.max(240, Math.min(470, (wrap.clientWidth || 360) - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0)));
+    b.style.width = avail + 'px';
+    b.style.height = avail + 'px';
+    b.style.setProperty('--u', (avail / N).toFixed(3) + 'px');
+  }
+
+  /* ---------- 我这边的操作 ---------- */
+  function iRoll(r) {
+    const L = st(r);
+    if (r.phase !== 'playing' || L.phase === 'over' || L.phase === 'order' || curUid(r) !== 'me' || L.dice) return;
+    const c = colOf(r, 'me');
+    L.spin = 1;
+    touch(r);
+    /* 动画只负责好看：落定点数这件事由定时器说，不等 animationend（headless 里它不放） */
+    setTimeout(() => runSafe('ludo.rollDone', () => {
+      const L2 = st(r);
+      if (L2.phase === 'over' || curUid(r) !== 'me') { L2.spin = 0; return; }
+      L2.spin = 0;
+      const d = rand(1, 6);
+      L2.dice = d;
+      L2.stat[c].rolls++;
+      feed(r, 'me', '你掷出 ' + d + ' ' + dieCh(d));
+      const opts = legalDice(r, c, d);
+      if (!opts.length) {
+        feed(r, 'sys', '没棋可走，过这一手');
+        setTimeout(() => runSafe('ludo.autoPass', () => { nextTurn(r); touch(r); }), 620);
+        touch(r);
+        return;
+      }
+      if (opts.length === 1) { iMove(r, c, opts[0].k); return; }
+      touch(r);
+    }), ROLL_MS);
+  }
+  function iMove(r, c, k) {
+    const L = st(r);
+    if (r.phase !== 'playing' || L.phase === 'over' || curUid(r) !== 'me' || !L.dice) return;
+    const d = L.dice;
+    if (legalDice(r, c, d).every(t => t.k !== k)) return;
+    const res = applyMove(r, c, k, d);
+    L.dice = null;
+    if (!res) { touch(r); return; }
+    if (homeCnt(r, c) === 4) { endIt(r, 'me'); touch(r); return; }
+    if (res.again) { feed(r, 'sys', '掷到 6，再掷一次'); touch(r); return; }
+    nextTurn(r);
+    touch(r);
+  }
+
+  /* ---------- 计划派发（build.ps1 的 PLAN-WIRE 认这两条） ---------- */
+  function onPlan(r, p) {
+    if (p.kind === 'ludoTurn') { p.done = true; aiTurn(r); return true; }
+    if (p.kind === 'ludoBegin') {
+      p.done = true;
+      const L = st(r);
+      if (L.phase === 'order') { L.beginQueued = 0; begin(r); }
+      return true;
+    }
+    return false;
+  }
+
+  function def() {
+    return {
+      id: 'ludo', name: '飞行棋', icon: 'plane', playersTxt: '2~4 人',
+      multi: true, maxRivals: 3,
+      opening: true,                 // 先手由盘上掷骰定，不走五子棋那套先手协商
+      seats: true,                   // 四色就在盘上，不再另起一条玩家条
+      note: '标准十字盘只有 4 条臂，所以做到 4 人；2 人开局对角两色',
+      newRoom, render, onPlan, settleTable, onResign,
+      /* 给验收探针：判定与几何都从这份口径读，不另开一套 */
+      RING, SIDE, SAFE, GOAL, TOTAL, RINGN, LASTRING, LANE, CHEX, COLORS, CNAME, posOf, ringIdx, canGo, legalDice,
+      hitsAt, applyMove, st, curUid, colOf, homeCnt, aiTurn, begin, rankRows, adj, endIt
+    };
+  }
+  return { def };
+})();
+
+/* =====================================================
    LOVE♡X · game.js —— 游戏板块（P40，她 08-28 晚拍板「动工」）
    发现页「游戏」行 → 大厅（线稿卡牌架）→ 开局（选人→邀请 80/20→先手协商 70/30）→ 对局页
    对局页 = 玩家条 + 棋盘 + 播报线 + 发言框 + 悬浮聊天窗 + 结算/转盘
@@ -17170,6 +17708,7 @@ const Games = (function () {
     register(Gomoku.def());
     register(Uno.def());
     register(Mine.def());
+    register(Ludo.def());    // 大厅第四张：飞行棋（P46，她 09-01 22:13 点名要的游戏）
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
