@@ -15868,6 +15868,7 @@ const Uno = (function () {
      s=0 基地 · 1..55 跑道 · 56..60 回家道（60=回窝）
    规则（砍到最简，只留认得出来的那几条）
      · 掷到 6 才能起飞；起飞之后本回合再掷一次
+     · 同一位连掷到第三个 6 作废这一手（童年规矩，也堵住“一串 6 把一架棋从基地直接推到家”那种看着假的局面）
      · 必须刚好走到 60 才算回窝（多了就动不了）
      · 同一格撞子：别人那架被打回基地；四色起点格是安全格，不撞
      · 4 架全部回窝的人第一；第一个全回窝就收摊，其余按名次排（回窝数 → 总进度）
@@ -15941,6 +15942,8 @@ const Ludo = (function () {
   /* ---------- 房间数据 ---------- */
   function st(r) {
     r.ludo = r.ludo || { phase: 'wait', dice: null, order: [], oi: 0, toks: {}, stat: {}, roll: null, beginAt: 0 };
+    /* 连掷 6 的计数：旧存档没这个字段，读进来先补 0（不靠“缺字段就当没事”） */
+    if (typeof r.ludo.six !== 'number') r.ludo.six = 0;
     return r.ludo;
   }
   function colOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
@@ -16040,10 +16043,22 @@ const Ludo = (function () {
     feed(r, 'sys', esc(msg));
     return { home: ns === TOTAL, again: d === 6, hits: hits.length };
   }
+  /* 连掷三个 6 作废：三个掷骰口都只问这一句，话也在这里说清（不在调用方各写一套） */
+  function sixVoid(r, d) {
+    const L = st(r);
+    if (d !== 6 || L.six < 2) return false;
+    L.six = 0;
+    const me = colOf(r, 'me'), c = colOf(r, curUid(r));
+    if (c && L.stat[c]) L.stat[c].rolls++;
+    feed(r, 'sys', esc((me && c === me ? '你' : (CNAME[c] || '对方')) + ' 连掷第三个 6，这一手作废，换下一位'));
+    return true;
+  }
+  function sixTally(r, d) { const L = st(r); L.six = d === 6 ? L.six + 1 : 0; }
   function nextTurn(r) {
     const L = st(r);
     let guard = 0;
     L.dice = null;
+    L.six = 0;                      // 换了人就是新的一串，不能把上一位的 6 记到这位头上
     L.phase = 'roll';
     clearClock(r);                  // 上一手的时钟不管轮到谁都先摘掉，留着只会乱催
     do { L.oi = (L.oi + 1) % L.order.length; guard++; } while (guard < 12 && homeCnt(r, colOf(r, curUid(r))) === 4);
@@ -16068,6 +16083,8 @@ const Ludo = (function () {
     if (!c) return;
     const d = rand(1, 6);
     L.dice = d;
+    if (sixVoid(r, d)) { nextTurn(r); touch(r); return; }
+    sixTally(r, d);
     const opts = legalDice(r, c, d);
     if (!opts.length) {
       L.stat[c].rolls++;
@@ -16293,6 +16310,8 @@ const Ludo = (function () {
       L2.spin = 0;
       const d = rand(1, 6);
       L2.dice = d;
+      if (sixVoid(r, d)) { nextTurn(r); touch(r); return; }
+      sixTally(r, d);
       L2.stat[c].rolls++;
       feed(r, 'me', '你掷出 ' + d + ' ' + dieCh(d));
       const opts = legalDice(r, c, d);
@@ -16334,6 +16353,8 @@ const Ludo = (function () {
     if (!L.dice) {
       const d = rand(1, 6);
       L.dice = d; L.spin = 0;
+      if (sixVoid(r, d)) { nextTurn(r); touch(r); return true; }
+      sixTally(r, d);
       L.stat[c].rolls++;
       feed(r, 'me', '时间到，替你掷出 ' + d + ' ' + dieCh(d));
       const opts = legalDice(r, c, d);
@@ -16434,7 +16455,8 @@ const Ludo = (function () {
       onTimeout,
       /* 给验收探针：判定与几何都从这份口径读，不另开一套 */
       RING, SIDE, SAFE, GOAL, TOTAL, RINGN, LASTRING, LANE, CHEX, COLORS, CNAME, posOf, ringIdx, canGo, legalDice,
-      hitsAt, applyMove, st, curUid, colOf, homeCnt, aiTurn, begin, rankRows, adj, endIt, playFx, slotOf, onTimeout
+      hitsAt, applyMove, st, curUid, colOf, homeCnt, aiTurn, begin, rankRows, adj, endIt, playFx, slotOf, onTimeout,
+      sixVoid, sixTally
     };
   }
   return { def };
