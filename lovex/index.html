@@ -2854,7 +2854,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-mini .dz-cr{font-size:calc(11px * var(--dq,1))}
 .dz-mini .dz-cs{font-size:calc(8px * var(--dq,1));left:2px;top:1px}
 .dz-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px auto 0;max-width:470px}
-.dz-lg-note{border-style:dashed}
 /* 我自己在牌桌上那颗是横着的小牌（手牌已经在下面摆开了，不再叠一层卡面） */
 .dz-seat.dz-me{flex-direction:row;gap:5px;padding:3px 8px;min-width:0}
 .dz-seat.dz-me .dz-av{width:20px;height:20px;font-size:11px}
@@ -2885,17 +2884,22 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-empty{padding:26px 12px;text-align:center;color:var(--t3);font-size:12px}
 /* 盘外这一行：谁多少钱、几座城、是不是出局了 */
 .mc-bank{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:0}
-.mc-pk{flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
-  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62}
+.mc-pk{width:auto;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:100%}
 .mc-pk.on{opacity:1;border-color:var(--t1)}
-.mc-pk b{font-weight:600;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-pk b{font-weight:600;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mc-pk small{color:var(--t3);font-size:10px}
 .mc-pk .mc-cash{color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums}
 .mc-pk .mc-cash::after{content:' 元';font-weight:400;font-size:9px;color:var(--t3)}
 .mc-dot{width:9px;height:9px;border-radius:50%;background:var(--tc,var(--t1));flex:none}
 .mc-me{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;background:var(--t1);color:var(--card)}
 .mc-out{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--line);color:var(--t3)}
-.mc-board{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);gap:2px;
+/* 5 人以上：现金条换紧凑三列（只放 名 + 资产），现金与城数并到盘外那行小字里，信息不丢只换位置 */
+.mc-bank.dense .mc-pk{flex:0 1 30%;min-width:0;justify-content:center;gap:3px;padding:2px 6px;font-size:10.5px}
+.mc-bank.dense .mc-pk b{max-width:40px}
+.mc-bank2{display:flex;flex-wrap:wrap;gap:3px 10px;justify-content:center;font-size:10px;color:var(--t3);
+  font-variant-numeric:tabular-nums;padding:0 2px}
+.mc-board{display:grid;grid-template-columns:repeat(var(--mg,6),1fr);grid-template-rows:repeat(var(--mg,6),1fr);gap:2px;
   width:100%;max-width:470px;margin:0 auto;overflow:hidden}
 .mc-cell{position:relative;min-width:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:1px;padding:2px 1px;border:1px solid var(--line);border-radius:4px;background:var(--card);overflow:hidden}
@@ -2909,15 +2913,16 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-cell.own{border-color:var(--oc,var(--t1));box-shadow:inset 0 0 0 1px var(--oc,var(--t1))}
 .mc-cell.own::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--oc,var(--t1))}
 .mc-cell.hot{background:color-mix(in srgb,var(--t1) 5%,var(--card))}
-.mc-toks{position:absolute;right:2px;top:2px;display:flex;gap:1px}
+.mc-toks{position:absolute;right:2px;top:2px;display:flex;flex-wrap:wrap;gap:1px;justify-content:flex-end;max-width:calc(100% - 4px)}
 .mc-tok{width:calc(13px * var(--mq,1));height:calc(13px * var(--mq,1));border-radius:50%;
   background:var(--tc,var(--t1));color:#fff;font-size:calc(8px * var(--mq,1));font-style:normal;line-height:1;
   display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.22)}
 .mc-tok.me{border-color:var(--t1);color:var(--card)}
 .mc-tok.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--tc,var(--t1)) 40%,transparent)}
-/* 中间调度区：骰子、该谁、刚抽到什么卡 */
-.mc-mid{grid-column:2 / 6;grid-row:2 / 6;display:flex;flex-direction:column;align-items:center;justify-content:center;
+/* 中间调度区：骰子、该谁、刚抽到什么卡（grid 范围由 JS 按环长写，人多就撑大） */
+.mc-mid{grid-column:2 / var(--mg,6);grid-row:2 / var(--mg,6);display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:4px;margin:3px;padding:6px;border:1px dashed var(--line);border-radius:8px;background:var(--card);min-height:0;overflow:hidden}
+.mc-goal{font-size:calc(10px * var(--mq,1));color:var(--t3);font-variant-numeric:tabular-nums}
 .mc-dice{display:flex;gap:8px;font-size:calc(30px * var(--mq,1));line-height:1;color:var(--t1)}
 .mc-dice span{display:inline-flex}
 .mc-dice-x{font-size:calc(22px * var(--mq,1));color:var(--t3)}
@@ -2932,8 +2937,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   padding:3px 7px;border:1px solid var(--line);border-radius:999px;max-width:100%}
 .mc-lg b{font-weight:700;color:var(--tc,var(--t1))}
 .mc-lg.me{color:var(--t1)}
-.mc-lg-note{border-style:dashed}
-.mc-lg-note i{font-style:normal}
 .mc-scr{min-width:270px;text-align:left}
 .mc-scr-h,.mc-scr-row{display:grid;grid-template-columns:20px 1fr 56px 48px 56px;gap:5px;align-items:center;
   font-size:11px;padding:4px 0;border-bottom:1px dashed var(--line)}
@@ -4848,6 +4851,23 @@ var Quiz = (function () {
   function shuffle(a) { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = randI(0, i);[r[i], r[j]] = [r[j], r[i]]; } return r; }
   function esc(s) { return UI.escapeHtml(String(s == null ? '' : s)); }
   function qById(id) { return lib().questions.find(q => q.id === id); }
+  /* 题库页与 TA 自动抽题只看“正经题”：现场写又没收进题库的（tmp）不混进来 */
+  function realQs() { return lib().questions.filter(q => !q.tmp); }
+  function tmpQs() { return lib().questions.filter(q => q.tmp); }
+  /* 当前选中的真分组（'tmp' 是现场题视图，不是个组，不能当 gid 使） */
+  function curGid() { return (libFilter && libFilter !== 'tmp' && !String(libFilter).startsWith('g:')) ? libFilter : ''; }
+  /* 没人引用的现场题不留尸体：发卷后与下次开机各扫一次（真能被触发，不是写个函数放着） */
+  function pruneTmp() {
+    const l = lib();
+    if (!l.questions.some(q => q.tmp)) return 0;
+    const used = {};
+    (DB.state.quizzes || []).concat(DB.state.quizTpls || []).forEach(z => (z && z.qids || []).forEach(id => { used[id] = 1; }));
+    const before = l.questions.length;
+    l.questions = l.questions.filter(q => !q.tmp || used[q.id]);
+    const n = before - l.questions.length;
+    if (n) DB.save();
+    return n;
+  }
   function quizById(id) { return (DB.state.quizzes || []).find(z => z.id === id); }
   function convOf(ctId) { return DB.state.convs.find(v => v.type === 'single' && v.peerId === ctId); }
   function typeName(t) { return { single: '单选', multi: '多选', sort: '排序', rate: '打分', text: '填空' }[t] || t; }
@@ -4859,12 +4879,7 @@ var Quiz = (function () {
        无联系人直接拦下，有则兕底第一个 */
     if (!DB.state.contacts.length) { UI.toast('先去加个联系人，不然考谁呀'); return; }
     if (!curCid) curCid = DB.state.contacts[0].id;
-    if (!lib().questions.length) {
-      UI.toast('题库还是空的，先去加几道题');
-      Router.go('quizlib');
-      renderLib();
-      return;
-    }
+    /* 她 09-03 11:44：题库空着也得能发卷——现场直接写，不用先跑去题库加 */
     document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());   // 防叠层：重开前清掉残留（多 actionSheet 叠加会跨 mask 点错按钮）
     composeMode = 'normal';
     const layer = document.getElementById('dialog-layer');
@@ -4881,7 +4896,8 @@ var Quiz = (function () {
         '<button class="grp-chip" data-mode="duet">默契挑战</button></div></div>' +
       '<label class="rp-f-row"><span>交卷延迟（分钟）</span><input id="qz-c-delay" type="number" min="1" step="0.1" value="1"></label>' +
       '<div class="rp-f-row"><span>问谁</span><div class="chip-row" id="qz-c-targets"></div></div>' +
-      '<div class="qz-pick-t">选题 <em id="qz-c-count">已选 0 题</em></div>' +
+      '<div class="qz-pick-t">选题 <button class="qz-mini-btn" id="qz-c-add">' + I('plus', 12) + ' 现场写一题</button>' +
+        '<em id="qz-c-count">已选 0 题</em></div>' +
       '<div class="qz-pick-list" id="qz-c-qlist"></div>' +
       '<div class="qz-c-btns"><button class="qz-mini2" id="qz-c-savetpl">' + I('download', 12) + ' 存为模板</button>' +
       '<button class="sheet-cancel qz-f-ok">发出去了</button></div></div>';
@@ -4941,12 +4957,32 @@ var Quiz = (function () {
       });
     });
 
-    /* 选题列表：点击勾选 */
+    /* 选题列表：题库里的 + 这次现场写的（现场题排在最上面，刚写完就能看见） */
     const picked = [];
+    const adHoc = [];
     const qlist = mask.querySelector('#qz-c-qlist');
-    qlist.innerHTML = lib().questions.slice().reverse().map(q =>
-      '<button class="qz-pick-item" data-q="' + q.id + '"><span class="qz-pick-type">' + typeName(q.type) + '</span>' +
-      '<span class="qz-pick-title">' + esc(q.title) + '</span><i class="qz-pick-check"></i></button>').join('');
+    function paintPick() {
+      const items = adHoc.slice().reverse().concat(realQs().slice().reverse());
+      qlist.innerHTML = items.length
+        ? items.map(q =>
+          '<button class="qz-pick-item' + (picked.includes(q.id) ? ' on' : '') + '" data-q="' + q.id + '">' +
+          '<span class="qz-pick-type">' + (q.tmp ? '现场题' : typeName(q.type)) + '</span>' +
+          '<span class="qz-pick-title">' + esc(q.title) + '</span><i class="qz-pick-check"></i></button>').join('')
+        : '<div class="rp-empty">题库还是空的<br><small>点上面「现场写一题」直接写，不用先去题库加</small></div>';
+      mask.querySelector('#qz-c-count').textContent =
+        '已选 ' + picked.length + ' 题 · ' + (picked.length <= 2 ? '将以聊天卡片发送' : '将以正式问卷发送');
+    }
+    paintPick();
+    mask.querySelector('#qz-c-add').addEventListener('click', () => {
+      editSheet(null, {
+        adhoc: true,
+        onOk(q) {
+          adHoc.push(q);
+          if (!picked.includes(q.id)) picked.push(q.id);
+          paintPick();
+        }
+      });
+    });
     qlist.addEventListener('click', e => {
       const it = e.target.closest('.qz-pick-item'); if (!it) return;
       const id = it.dataset.q;
@@ -4965,8 +5001,9 @@ var Quiz = (function () {
       mask.remove();
       /* V3.5（她 19:02）：duet 不再当场弹答题 sheet——先落「发起默契挑战」卡，点卡片再作答 */
       sendQuiz(title || '未命名问卷', delay, tIds, pids, mode, null);
+      pruneTmp();   // 没收进题库又没被这份卷子用上的，不留尸体
     });
-    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    mask.addEventListener('click', e => { if (e.target === mask) { mask.remove(); pruneTmp(); } });
     layer.appendChild(mask);
     UI.raise(mask);
   }
@@ -5151,13 +5188,17 @@ var Quiz = (function () {
      题目存快照（q 字段），题库后续改动不影响已发出的卡；我点选作答→翻面+TA 评论跟进。
      V3.6（她 19:29 定）：quizDuetRate 并入本参数——掷中后二次分流，单独试卷概率更大，
      其余发起默契挑战；挑战发不出（有没打完的/题池空）自动落回单独试卷。 */
+  /* TA 主动抽题的池子：现场题不算（它只在卷子上活着）——两处抽题共用这一个口 */
+  function askPool(ctId) {
+    return realQs().filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ctId).length));
+  }
   const QUIZ_DUET_SHARE = 30;   // 主动发问卷里默契挑战的占比%（她定“单独问卷概率更大”，具体比例待她调）
   function maybeAsk(conv, ct) {
     const rate = Math.min(100, Math.max(0, isFinite(+(ct.params || {}).quizRate) ? +(ct.params || {}).quizRate : 0));
-    if (rate <= 0 || !lib().questions.length) return;
+    if (rate <= 0 || !realQs().length) return;
     if (Math.random() * 100 >= rate) return;
     if (Math.random() * 100 < QUIZ_DUET_SHARE && tryDuet(conv, ct)) return;
-    const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
+    const pool = askPool(ct.id);
     if (!pool.length) return;
     const t = pick(pool);
     const now = Date.now();
@@ -5193,7 +5234,7 @@ var Quiz = (function () {
   function tryDuet(conv, ct) {
     const busy = (DB.state.quizzes || []).some(z => z.mode === 'duet' && z.targets.includes(ct.id) && !(z.myDuet && z.answers[ct.id]));
     if (busy) return false;
-    const pool = lib().questions.filter(q => q.type !== 'sort' && (q.type !== 'text' || cardPool(ct.id).length));
+    const pool = askPool(ct.id);
     if (!pool.length) return false;
     const t = pick(pool);
     const now = Date.now();
@@ -5503,11 +5544,13 @@ var Quiz = (function () {
     const l = lib();
     defGroup();                                  // 保证「默认」组永远存在
     const gbox = document.getElementById('qz-lib-groups');
-    const countIn = gid => l.questions.filter(q => q.gid === gid).length;
-    let gh = '<button class="grp-chip' + (libFilter === '' ? ' on' : '') + '" data-g="">全部 <em>' + l.questions.length + '</em></button>';
+    const countIn = gid => l.questions.filter(q => !q.tmp && q.gid === gid).length;
+    let gh = '<button class="grp-chip' + (libFilter === '' ? ' on' : '') + '" data-g="">全部 <em>' + realQs().length + '</em></button>';
     l.groups.forEach(g => {
       gh += '<button class="grp-chip' + (libFilter === g.id ? ' on' : '') + '" data-g="' + g.id + '">' + esc(g.name) + ' <em>' + countIn(g.id) + '</em></button>';
     });
+    /* 出卷现场写的题不混在题库里：单独一个入口，想收就收，不想收就让它跟着卷子 */
+    if (tmpQs().length) gh += '<button class="grp-chip' + (libFilter === 'tmp' ? ' on' : '') + '" data-g="tmp">卷子现场题 <em>' + tmpQs().length + '</em></button>';
     gh += '<button class="grp-chip add" id="qz-addgroup">＋</button>';
     gbox.innerHTML = gh;
 
@@ -5534,18 +5577,21 @@ var Quiz = (function () {
 
     /* 题目列表（倒序） */
     const listEl = document.getElementById('qz-lib-list');
-    const list = l.questions.filter(q => !libFilter || q.gid === libFilter).slice().reverse();
+    const list = libFilter === 'tmp' ? tmpQs().slice().reverse()
+      : l.questions.filter(q => !q.tmp && (!libFilter || q.gid === libFilter)).slice().reverse();
     if (!list.length) {
-      listEl.innerHTML = '<div class="rp-empty">这里还没有题<br><small>右上角 ＋ 加一道，或批量导入</small></div>';
+      listEl.innerHTML = '<div class="rp-empty">' + (libFilter === 'tmp' ? '没有只给卷子用的现场题' : '这里还没有题<br><small>右上角 ＋ 加一道，或批量导入</small>') + '</div>';
       bindListOps(listEl, []);
       return;
     }
     listEl.innerHTML =
-      '<div class="qz-import-row"><button id="qz-batch" class="qz-mini-btn">' + I('upload', 13) + ' 批量导入</button></div>' +
+      (libFilter === 'tmp' ? '' : '<div class="qz-import-row"><button id="qz-batch" class="qz-mini-btn">' + I('upload', 13) + ' 批量导入</button></div>') +
       list.map(q => {
         const gname = (l.groups.find(g => g.id === q.gid) || {}).name || '默认';
         return '<div class="qz-qitem card" data-q="' + q.id + '">' +
-          '<div class="qz-q-head"><b class="qz-q-type">' + typeName(q.type) + '</b><span class="qz-q-grp">' + esc(gname) + '</span>' +
+          '<div class="qz-q-head"><b class="qz-q-type">' + typeName(q.type) + '</b>' +
+          (q.tmp ? '<button class="qz-mini2" data-keep="' + q.id + '">收进题库</button><span class="qz-q-grp">只在这份卷子上</span>'
+            : '<span class="qz-q-grp">' + esc(gname) + '</span>') +
           '<i class="qz-q-del" data-del="' + q.id + '">' + I('x', 11) + '</i></div>' +
           '<div class="qz-q-title">' + esc(q.title) + '</div>' +
           ((q.options || []).length ? '<div class="qz-q-opts">' + q.options.map(o => '<span>' + esc(o) + '</span>').join('') + '</div>' : '') +
@@ -5555,6 +5601,17 @@ var Quiz = (function () {
 
     function bindListOps(box2, list2) {
       box2.onclick = async e => {
+        const keep = e.target.closest('[data-keep]');
+        if (keep) {
+          const kq = qById(keep.dataset.keep);
+          if (!kq) return;
+          kq.tmp = 0;
+          if (!kq.gid || !(lib().groups || []).some(g => g.id === kq.gid)) kq.gid = defGroup().id;
+          DB.save();
+          UI.toast('收好了');
+          renderLib();
+          return;
+        }
         const del = e.target.closest('[data-del]');
         if (del) {
           const ok = await UI.confirmBox({ title: '删除题目', text: '删了就找不回来了。已有试卷里这道题会显示为空。', danger: true, okText: '删除' });
@@ -5597,26 +5654,34 @@ var Quiz = (function () {
     }
   }
 
-  /* 加题/改题 sheet：分组 chips + 题型 chips + 题干 + 选项动态增减 */
-  function editSheet(editQ) {
-    document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());    const l = lib(); defGroup();
+  /* 加题/改题 sheet：分组 chips + 题型 chips + 题干 + 选项动态增减
+     opt.adhoc：出卷现场写题那一趟（她 09-03 11:44）——同一张表单，只是落点不同：
+     默认只给这份卷子用，按「收进题库」才入库；不另开第二套题单实现 */
+  function editSheet(editQ, opt) {
+    opt = opt || {};
+    /* 出卷 sheet 还开着：现场写题不能再清一层，不然把人家洗掉了 */
+    if (!opt.adhoc) document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());
+    const l = lib(); defGroup();
     const isNew = !editQ;
-    const q = editQ || { id: uid(), gid: (libFilter && !String(libFilter).startsWith('g:') ? libFilter : '') || defGroup().id, type: 'single', title: '', options: [] };
+    const q = editQ || { id: uid(), gid: curGid() || defGroup().id, type: 'single', title: '', options: [] };
     if (!q.gid) q.gid = defGroup().id;
     const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
     mask.className = 'sheet-mask ui-modal';
     mask.innerHTML =
       '<div class="sheet sheet-scroll qz-sheet">' +
-      '<div class="sheet-title">' + (isNew ? '加一道题' : '改这道题') + '</div>' +
-      '<div class="rp-f-row"><span>分组</span><div class="chip-row" id="qz-e-groups">' +
-      l.groups.map(g => '<button class="grp-chip' + (q.gid === g.id ? ' on' : '') + '" data-g="' + g.id + '">' + esc(g.name) + '</button>').join('') + '</div></div>' +
+      '<div class="sheet-title">' + (opt.adhoc ? '现场写一道题' : (isNew ? '加一道题' : '改这道题')) + '</div>' +
+      (opt.adhoc ? '' : '<div class="rp-f-row"><span>分组</span><div class="chip-row" id="qz-e-groups">' +
+        l.groups.map(g => '<button class="grp-chip' + (q.gid === g.id ? ' on' : '') + '" data-g="' + g.id + '">' + esc(g.name) + '</button>').join('') + '</div></div>') +
       '<div class="rp-f-row"><span>题型</span><div class="chip-row" id="qz-e-types">' +
       ['single', 'multi', 'sort', 'rate', 'text'].map(t => '<button class="grp-chip' + (q.type === t ? ' on' : '') + '" data-t="' + t + '">' + typeName(t) + '</button>').join('') + '</div></div>' +
       '<label class="rp-f-row"><span>题目</span><input id="qz-e-title" type="text" maxlength="60" placeholder="想问什么？" value="' + esc(q.title) + '"></label>' +
       '<div class="rp-f-row qz-e-opts-row" id="qz-e-opts-row"><span>选项</span><div id="qz-e-opts"></div>' +
       '<button class="qz-opt-add" id="qz-e-optadd">' + I('plus', 12) + ' 加一个选项</button></div>' +
-      '<button class="sheet-cancel qz-f-ok">' + (isNew ? '收进题库' : '保存修改') + '</button></div>';
+      (opt.adhoc
+        ? '<div class="qz-c-btns"><button class="qz-mini2" id="qz-e-keep">' + I('download', 12) + ' 收进题库</button>' +
+          '<button class="sheet-cancel qz-f-ok">加到这份卷子</button></div>'
+        : '<button class="sheet-cancel qz-f-ok">' + (isNew ? '收进题库' : '保存修改') + '</button>') + '</div>';
 
     const optBox = mask.querySelector('#qz-e-opts');
     function optRow(v) {
@@ -5638,10 +5703,11 @@ var Quiz = (function () {
     syncOptVis();
 
     mask.querySelector('#qz-e-optadd').addEventListener('click', () => { optRow(''); const ips = optBox.querySelectorAll('input'); ips[ips.length - 1].focus(); });
-    mask.querySelector('#qz-e-groups').addEventListener('click', e => {
+    const gbox = mask.querySelector('#qz-e-groups');
+    if (gbox) gbox.addEventListener('click', e => {
       const b = e.target.closest('[data-g]'); if (!b) return;
       q.gid = b.dataset.g;
-      mask.querySelectorAll('#qz-e-groups .grp-chip').forEach(x => x.classList.toggle('on', x === b));
+      gbox.querySelectorAll('.grp-chip').forEach(x => x.classList.toggle('on', x === b));
     });
     mask.querySelector('#qz-e-types').addEventListener('click', e => {
       const b = e.target.closest('[data-t]'); if (!b) return;
@@ -5650,7 +5716,7 @@ var Quiz = (function () {
       syncOptVis();
     });
 
-    mask.querySelector('.qz-f-ok').addEventListener('click', () => {
+    function commit(keep) {
       const title = mask.querySelector('#qz-e-title').value.trim();
       if (!title) { UI.toast('题目还没写呢'); return; }
       const needOpts = q.type !== 'rate' && q.type !== 'text';
@@ -5660,12 +5726,26 @@ var Quiz = (function () {
         if (opts.length < 2) { UI.toast('至少要两个选项'); return; }
       }
       q.title = title; q.options = opts; q.ts = Date.now();
+      if (opt.adhoc && isNew) {
+        /* 同一存放点，多一个 tmp 标：qById 一份口径能查到，题库页与 TA 抽题都看不见它 */
+        q.tmp = keep ? 0 : 1;
+        if (keep) q.gid = q.gid || defGroup().id;
+        lib().questions.push(q);
+        DB.save();
+        mask.remove();
+        if (opt.onOk) opt.onOk(q);
+        UI.toast(keep ? '写好也收进题库了' : '这题只在这份卷子上，没塞进题库');
+        return;
+      }
       if (isNew) lib().questions.push(q);
       DB.save();
       mask.remove();
       renderLib();
       UI.toast(isNew ? '收进题库啦' : '改好了');
-    });
+    }
+    mask.querySelector('.qz-f-ok').addEventListener('click', () => commit(false));
+    const keepBtn = mask.querySelector('#qz-e-keep');
+    if (keepBtn) keepBtn.addEventListener('click', () => commit(true));
     mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
     layer.appendChild(mask);
     UI.raise(mask);
@@ -5707,7 +5787,7 @@ var Quiz = (function () {
     const prev = mask.querySelector('#qz-imp-preview');
     let parsed = [];
     ta.addEventListener('input', () => {
-      parsed = parseImport(ta.value, libFilter || defGroup().id);
+      parsed = parseImport(ta.value, curGid() || defGroup().id);
       prev.innerHTML = parsed.length
         ? '<div class="qz-imp-count">认出 ' + parsed.length + ' 道：</div>' +
           parsed.map(p => '<div class="qz-imp-item"><b>' + typeName(p.type) + '</b>' + esc(p.title) +
@@ -5756,13 +5836,14 @@ var Quiz = (function () {
 
   /* ---------------- init：按钮接线 ---------------- */
   function init() {
+    pruneTmp();                                    // 上次写到一半没发出去的现场题，开机抹掉
     document.getElementById('qz-new').addEventListener('click', openComposer);
     document.getElementById('qz-lib').addEventListener('click', openLibPage);
     document.getElementById('qz-cfg').addEventListener('click', toggleCfg);
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, openDuetCard, sameAns };
+  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, openDuetCard, sameAns, realQs, tmpQs, pruneTmp, askPool };
 })();
 
 /* =====================================================
@@ -17507,9 +17588,7 @@ const Doudizhu = (function () {
     h += '<div class="dz-legend">' + D.order.map(u =>
       '<span class="dz-lg' + (u === 'me' ? ' me' : '') + (D.landlord === u ? ' land' : '') + '"><b>' +
       (D.landlord ? (D.landlord === u ? '地主' : '农民') : '未定') + '</b>' + esc(nm(u)) +
-      '<i>' + (D.played[u] ? D.played[u].cards : 0) + ' 张已出</i></span>').join('') +
-      /* 不吹 AI：它只看自己手上的牌，不记牌、不开天眼（这句写在牌桌上，不是写在没人读的字段里） */
-      '<span class="dz-lg dz-lg-note"><i>AI 规则式·不记牌</i></span></div>';
+      '<i>' + (D.played[u] ? D.played[u].cards : 0) + ' 张已出</i></span>').join('') + '</div>';
     el.innerHTML = h;
 
     /* 绑定 */
@@ -17667,36 +17746,36 @@ const Doudizhu = (function () {
 })();
 
 /* ============================================================
-   大富翁（P51 一期）—— 掷骰走格 → 无主的能买 → 有主的交租 → 机会/命运抽一张 → 钱不够就出局
-   她 09-03 08:30 拍的三件事：
-   ① 格子用城市名，不用她的真实地点；② 钱是虚拟分——一分别接 Pay/钱包，账单一行都不写；
-   ③ 我方回合超时按托管替走。
-   一期就这 5 条：不做建房、抵押、交易、监狱、税收、双倍骰（P49 §二写明的砍法）。
+   大富翁 —— 掷骰走格 → 无主的能买 → 有主的交租 → 机会/命运抽一张 → 钱不够就出局
+   她 09-03 08:30 拍的：① 格子用城市名，不用她的真实地点；② 钱不接支付口；③ 我方回合超时按托管替走。
+   她 09-03 11:44 追加的：
+   ④ 人数到 8（"大不了城市多一些，可调"）→ 棋盘边长按人数撑大，人多就换大环，不硬挤；
+   ⑤ 收场改成"谁先把资产做到目标数谁赢"，不靠回合数硬磨（她嫌太长）；
+   ⑥ 界面上不许出现"虚拟钱 / 不动你的钱包 / 不记账单"这类内部口径——这本来就不是给玩家看的话。
+   一期仍不做：建房、抵押、交易、监狱、税收、双倍骰（P49 §二写明的砍法）。
    ============================================================ */
 const Mono = (function () {
   const TURN_SEC = [2.2, 4.6];      // TA 一回合（掷骰 + 要不要买）想多久，跟飞行棋同一档
   const BEGIN_MS = 900;             // 人齐到开跑：让骰子在盘上站一下
-  const START_CASH = 500;           // 起始虚拟现金（不是钱包余额，别去读 Wallet）
+  const START_CASH = 500;           // 起步金（盘上这个数与钱包无关，界面上也不提钱包）
   const PASS_GO = 100;              // 经过起点领一趟
   const RENT_RATE = 0.3;            // 租金 = 地价 × 0.3（向上取整）：一张公式，不再另立租金表
   const KEEP = 80;                  // AI 买完地至少留这些现金（一轮就破产看着像 bug，不像规则）
-  const TURN_CAP = 60;              // 回合上限：到点按资产收场，不让两个人无限互踩
-  const N = 20;                     // 方环 20 格（6×6 盘的外圈）
-  const MAXP = 4;                   // 2~4 人：外圈一圈站 4 家不挤
-  const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0'];   // 玩家身份色（内容色，界面装饰不上彩）
+  const GOAL_LAPS = 2;              // 目标里的“过路钱”那一块 = 绕场两趟
+  const GOAL_CITIES = 2;            // 目标里的“地价”那一块 = 两座均价城
+  const ROUND_CAP = 14;             // 兑底：每人最多走 14 轮（按人算，不按总手数——8 人不该因此多挨一倍上限）
+  const MAXP = 8;                   // 2~8 人
+  /* 玩家身份色：4 个主色 + 各自加深一档，8 家分得开，且不碰 255°~305°（紫色会被否） */
+  const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0', '#A45B4E', '#C08A2E', '#4F7A57', '#3F6A8C'];
   const DIE = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
-  /* 外圈 20 格在盘上的位置（列,行，1 起）：顺时针，起点在右下角 */
-  const POS = [[6, 6], [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [1, 5], [1, 4], [1, 3], [1, 2],
-    [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5]];
-  /* 16 座城市：地名 + 地价（越靠后越贵，租金按 RENT_RATE 从地价推） */
-  const CITY = {
-    1: ['青岛', 60], 2: ['大连', 70], 4: ['厦门', 90], 5: ['苏州', 100],
-    6: ['南京', 110], 7: ['杭州', 130], 8: ['长沙', 140], 9: ['武汉', 160],
-    11: ['深圳', 180], 12: ['广州', 200], 13: ['成都', 220], 14: ['重庆', 240],
-    15: ['天津', 260], 16: ['西安', 280], 18: ['北京', 300], 19: ['上海', 320]
-  };
+  /* 24 座城，按地价从小到大排：小环取前 16，大环取全部——加人不加乱的口径就这一句 */
+  const CITY_LIST = [
+    ['青岛', 60], ['大连', 70], ['宁波', 80], ['厦门', 90], ['苏州', 100], ['南京', 110],
+    ['无锡', 120], ['杭州', 130], ['长沙', 140], ['合肥', 150], ['武汉', 160], ['郑州', 170],
+    ['深圳', 180], ['福州', 190], ['广州', 200], ['昆明', 210], ['成都', 220], ['济南', 230],
+    ['重庆', 240], ['哈尔滨', 250], ['天津', 260], ['西安', 280], ['北京', 300], ['上海', 320]
+  ];
   /* 3 张事件格：机会两张、命运一张（多了就成了抽卡模拟器） */
-  const EV = { 3: ['chance', '机会'], 10: ['fate', '命运'], 17: ['chance', '机会'] };
   const CHANCE = [
     { t: '地铁坐过站，退两格', mv: -2 },
     { t: '路上捡到一张优惠券', cash: 30 },
@@ -17718,6 +17797,44 @@ const Mono = (function () {
     { t: '加班费到账', cash: 60 }
   ];
   const POOL = { chance: CHANCE, fate: FATE };
+
+  /* ---------- 棋盘：边长随人数撑大，一格一格都从这一个口算出来 ---------- */
+  function sideFor(n) { return n <= 4 ? 6 : n <= 6 ? 7 : 8; }   // 6 边=20 格 / 7 边=24 格 / 8 边=28 格
+  const LAY = {};
+  /* 外圈格在盘上的位置（列,行，1 起）：顺时针，起点在右下角 */
+  function ringPos(side) {
+    const a = [];
+    for (let c = side; c >= 1; c--) a.push([c, side]);       // 底边：右 → 左
+    for (let rr = side - 1; rr >= 1; rr--) a.push([1, rr]);  // 左边：下 → 上
+    for (let c = 2; c <= side; c++) a.push([c, 1]);          // 顶边：左 → 右
+    for (let rr = 2; rr <= side - 1; rr++) a.push([side, rr]);   // 右边：上 → 下
+    return a;
+  }
+  function lay(side) {
+    side = side || 6;
+    if (LAY[side]) return LAY[side];
+    const N = 4 * (side - 1);
+    const POS = ringPos(side);
+    /* 事件格按环长的 15% / 50% / 85% 摆：20 格正好落在 3 / 10 / 17（与一期一致），大环自动摊开 */
+    const EV = {};
+    [Math.floor(N * 0.15), Math.floor(N * 0.5), Math.floor(N * 0.85)].forEach((i, k) => {
+      if (i > 0 && i < N) EV[i] = k === 1 ? ['fate', '命运'] : ['chance', '机会'];
+    });
+    const CITY = {};
+    let k = 0, total = 0;
+    for (let i = 1; i < N && k < CITY_LIST.length; i++) {
+      if (EV[i]) continue;
+      CITY[i] = CITY_LIST[k++];
+      total += CITY_LIST[k - 1][1];
+    }
+    const avg = k ? Math.round(total / k) : 0;
+    /* 目标不拿全城地价乘比例：环越大城越多，那样 8 人环的目标会遥不可及，机制就挂了。
+       绕两趟过路钱 + 两座均价城——与小环同量级，8 人也到得了 */
+    const goal = START_CASH + GOAL_LAPS * PASS_GO + avg * GOAL_CITIES;
+    LAY[side] = { side: side, N: N, POS: POS, CITY: CITY, EV: EV, cities: k, total: total, avg: avg, goal: goal };
+    return LAY[side];
+  }
+  function L(r) { return lay(st(r).side); }
 
   function esc(s) { return UI.escapeHtml(s); }
   function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -17746,22 +17863,25 @@ const Mono = (function () {
     if (!Array.isArray(M.dice)) M.dice = null;
     if (typeof M.turnNo !== 'number') M.turnNo = 0;
     if (typeof M.oi !== 'number') M.oi = 0;
+    if (!M.side) M.side = sideFor(Math.max(2, (M.order || []).length || 2));
     if (!M.deck.chance) M.deck.chance = shuffle(CHANCE.length);
     if (!M.deck.fate) M.deck.fate = shuffle(FATE.length);
     return M;
   }
   function curUid(r) { const M = st(r); return (M.order || [])[M.oi] || null; }
-  function colOf(r, uid) { const i = (st(r).order || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
+  function colOf(r, uid) { const i = (st(r).order || []).indexOf(uid); return i < 0 ? null : COLORS[i % COLORS.length]; }
   function seatOf(r, uid) { return (st(r).order || []).indexOf(uid); }
   function alive(r) { const M = st(r); return (M.order || []).filter(u => !M.out[u]); }
-  function priceOf(i) { return CITY[i] ? CITY[i][1] : 0; }
-  function rentOf(i) { return CITY[i] ? Math.ceil(CITY[i][1] * RENT_RATE) : 0; }
-  function nameOf(i) { return CITY[i] ? CITY[i][0] : (i === 0 ? '起点' : (EV[i] || ['', ''])[1]); }
+  function priceOf(r, i) { const c = L(r).CITY[i]; return c ? c[1] : 0; }
+  function rentOf(r, i) { const c = L(r).CITY[i]; return c ? Math.ceil(c[1] * RENT_RATE) : 0; }
+  function nameOf(r, i) { const l = L(r); return l.CITY[i] ? l.CITY[i][0] : (i === 0 ? '起点' : (l.EV[i] || ['', ''])[1]); }
   function ownOf(r, i) { const o = st(r).own[i]; return o && !st(r).out[o] ? o : null; }
+  function goalOf(r) { return L(r).goal; }
+  function capOf(r) { return ROUND_CAP * Math.max(2, (st(r).order || []).length); }
   function assets(r, u) {
     const M = st(r);
     let sum = M.cash[u] || 0;
-    Object.keys(M.own).forEach(i => { if (M.own[i] === u) sum += priceOf(+i); });
+    Object.keys(M.own).forEach(i => { if (M.own[i] === u) sum += priceOf(r, +i); });
     return sum;
   }
 
@@ -17769,6 +17889,7 @@ const Mono = (function () {
   function newRoom(room) {
     const M = st(room);
     M.order = (room.players || []).slice(0, MAXP);
+    M.side = sideFor(M.order.length);
     M.oi = rand(0, Math.max(0, M.order.length - 1));    // 谁先走是随机的，不是默认我先
     M.pos = {}; M.cash = {}; M.out = {}; M.own = {};
     M.order.forEach(u => { M.pos[u] = 0; M.cash[u] = START_CASH; });
@@ -17777,7 +17898,8 @@ const Mono = (function () {
     M.phase = 'begin';
     M.beginAt = Date.now() + BEGIN_MS;
     room.blackUid = M.order[M.oi] || 'me';
-    feed(room, 'sys', '棋盘是 20 城的方环：每人 ' + START_CASH + ' 虚拟元（不动你的钱包），踩到无主的城能买下，踩到别人的城交租，钱不够就出局');
+    const l = lay(M.side);
+    feed(room, 'sys', '棋盘是 ' + l.cities + ' 城的方环：每人 ' + START_CASH + ' 元起步，踩到无主的城能买下，踩到别人的城交租，钱不够就出局——谁先把资产做到 ' + l.goal + ' 元谁赢');
     return room;
   }
   function begin(r) {
@@ -17801,19 +17923,20 @@ const Mono = (function () {
   /* ---------- 走一格算一格（判定与记账只在这里，我与 TA 共用一个口） ---------- */
   function step(r, uid, d1, d2) {
     const M = st(r);
+    const l = L(r);
     const steps = (d1 | 0) + (d2 | 0);
     M.dice = [d1, d2];
     (r.moves = r.moves || []).push({ who: uid, act: 'roll', d: [d1, d2], n: steps, ts: Date.now() });
     const path = [];
     let at = M.pos[uid] | 0;
     for (let i = 1; i <= steps; i++) {
-      at = (at + 1) % N;
+      at = (at + 1) % l.N;
       if (at === 0) { M.cash[uid] = (M.cash[uid] || 0) + PASS_GO; path.push({ go: 1, at: at }); }
       else path.push({ at: at });
     }
     M.pos[uid] = at;
-    M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', path: path.slice(), at: Date.now() };
-    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(d1) + dieTxt(d2) + ' 走 ' + steps + ' 格到 ' + esc(nameOf(at)) +
+    M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', ring: l.N, path: path.slice(), at: Date.now() };
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(d1) + dieTxt(d2) + ' 走 ' + steps + ' 格到 ' + esc(nameOf(r, at)) +
       (path.some(p => p.go) ? '（过起点领 ' + PASS_GO + '）' : ''));
     return land(r, uid, false);
   }
@@ -17821,16 +17944,16 @@ const Mono = (function () {
   /* 落格：无主可买 / 有主交租 / 事件抽一张；事件把我挪走之后只再结算一次（不链式抽到手软） */
   function land(r, uid, chained) {
     const M = st(r);
+    const l = L(r);
     const at = M.pos[uid] | 0;
-    if (CITY[at]) {
+    if (l.CITY[at]) {
       const own = M.own[at];
       const host = own && !M.out[own] ? own : null;
       if (!host || host === uid) return { done: 1 };
-      const rent = rentOf(at);
-      payRent(r, uid, host, at, rent);
+      payRent(r, uid, host, at, rentOf(r, at));
       return { done: 1 };
     }
-    if (EV[at] && !chained) return draw(r, uid, EV[at][0], at);
+    if (l.EV[at] && !chained) return draw(r, uid, l.EV[at][0], at);
     return { done: 1 };
   }
   function payRent(r, uid, host, at, rent) {
@@ -17839,14 +17962,15 @@ const Mono = (function () {
     M.cash[host] = (M.cash[host] || 0) + rent;
     (r.moves = r.moves || []).push({ who: uid, act: 'rent', cell: at, to: host, amt: rent, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { cash: [{ uid: uid, amt: -rent, at: at }, { uid: host, amt: rent, at: at }] });
-    M.last = nm(uid) + ' 在 ' + nameOf(at) + ' 交租 ' + rent + ' 给 ' + nm(host);
+    M.last = nm(uid) + ' 在 ' + nameOf(r, at) + ' 交租 ' + rent + ' 给 ' + nm(host);
     feed(r, uid === 'me' ? 'me' : 'ta', esc(M.last));
     if (M.cash[uid] < 0) bankrupt(r, uid, host);
   }
   function draw(r, uid, kind, at) {
     const M = st(r);
+    const l = L(r);
     const c = popCard(r, kind);
-    M.card = (EV[at] ? EV[at][1] : '机会') + '：' + c.t;
+    M.card = (l.EV[at] ? l.EV[at][1] : '机会') + '：' + c.t;
     (r.moves = r.moves || []).push({ who: uid, act: 'card', kind: kind, text: c.t, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { card: { at: at, text: M.card } });
     let line = esc(nm(uid)) + ' 抽到' + M.card;
@@ -17857,21 +17981,21 @@ const Mono = (function () {
     }
     if (c.mv) {
       let to = (M.pos[uid] | 0) + c.mv;
-      to = ((to % N) + N) % N;
+      to = ((to % l.N) + l.N) % l.N;
       M.pos[uid] = to;
-      line += '，挪到 ' + esc(nameOf(to));
+      line += '，挪到 ' + esc(nameOf(r, to));
       M.fx.hop = { uid: uid, to: to };
     }
     if (c.to != null) {
       M.pos[uid] = c.to;
       if (c.to === 0) M.cash[uid] = (M.cash[uid] || 0) + PASS_GO;
-      line += '，回到 ' + esc(nameOf(c.to)) + (c.to === 0 ? '（领 ' + PASS_GO + '）' : '');
+      line += '，回到 ' + esc(nameOf(r, c.to)) + (c.to === 0 ? '（领 ' + PASS_GO + '）' : '');
       M.fx.hop = { uid: uid, to: c.to };
     }
     feed(r, uid === 'me' ? 'me' : 'ta', line);
     if (M.cash[uid] < 0) bankrupt(r, uid, null);
     /* 被卡挪到别人的地上照样交租：只再结算一次，不链式抽卡 */
-    if (M.fx.hop && CITY[M.pos[uid]]) return land(r, uid, true);
+    if (M.fx.hop && l.CITY[M.pos[uid]]) return land(r, uid, true);
     return { done: 1 };
   }
   function popCard(r, kind) {
@@ -17884,15 +18008,15 @@ const Mono = (function () {
   /* 买地：只在落点是无主城市时成立；钱不够就是买不起，不是报错 */
   function tryBuy(r, uid, idx) {
     const M = st(r);
-    if (!CITY[idx] || M.own[idx]) return { err: '这一格不能买' };
+    if (!L(r).CITY[idx] || M.own[idx]) return { err: '这一格不能买' };
     if (M.pos[uid] !== idx) return { err: '不在这一格，买不了' };
-    const price = priceOf(idx);
-    if ((M.cash[uid] || 0) < price) return { err: '现金不够，买不起 ' + nameOf(idx) };
+    const price = priceOf(r, idx);
+    if ((M.cash[uid] || 0) < price) return { err: '现金不够，买不起 ' + nameOf(r, idx) };
     M.cash[uid] -= price;
     M.own[idx] = uid;
     (r.moves = r.moves || []).push({ who: uid, act: 'buy', cell: idx, price: price, ts: Date.now() });
-    M.fx = Object.assign({}, M.fx, { buy: { at: idx, uid: uid } });
-    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 买下 ' + esc(nameOf(idx)) + '（' + price + '，以后踩它的人交 ' + rentOf(idx) + '）');
+    M.fx = Object.assign({}, M.fx, { buy: { at: idx, uid: uid, name: nameOf(r, idx) } });
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 买下 ' + esc(nameOf(r, idx)) + '（' + price + '，以后踩它的人交 ' + rentOf(r, idx) + '）');
     return { ok: 1 };
   }
   /* 破产：地把债主拿走（没债主就归无主），人退出这一局，不是把负数留在盘上装没事 */
@@ -17919,9 +18043,18 @@ const Mono = (function () {
     M.pending = null;
     M.turnNo++;
     if (alive(r).length <= 1) { endIt(r, alive(r)[0] || null); return; }
-    if (M.turnNo >= TURN_CAP) { rankOut(r, '跑到第 ' + TURN_CAP + ' 回合收场'); return; }
+    /* 收场主判据：谁的资产先到目标数，当场收（她嫌靠回合数磨太长） */
+    const goal = L(r).goal;
+    const champ = alive(r).filter(u => assets(r, u) >= goal)
+      .sort((a, b) => assets(r, b) - assets(r, a))[0];
+    if (champ) {
+      feed(r, 'sys', esc(nm(champ)) + ' 先把资产做到 ' + assets(r, champ) + '（目标 ' + goal + '），这局收');
+      endIt(r, champ);
+      return;
+    }
+    if (M.turnNo >= capOf(r)) { rankOut(r, '跑满 ' + ROUND_CAP + ' 轮收场'); return; }
     let guard = 0;
-    do { M.oi = (M.oi + 1) % M.order.length; guard++; } while (M.out[M.order[M.oi]] && guard < 8);
+    do { M.oi = (M.oi + 1) % M.order.length; guard++; } while (M.out[M.order[M.oi]] && guard <= M.order.length);
     M.phase = 'roll';
     if (curUid(r) !== 'me') queueTa(r); else armClock(r);
   }
@@ -17949,7 +18082,7 @@ const Mono = (function () {
         '<span>' + (i + 1) + '</span><span class="nm"><b>' + esc(nm(x.u)) + '</b>' + (x.out ? '<i class="mc-out">出局</i>' : '') + '</span>' +
         '<span>' + x.cash + '</span><span>' + x.cities + ' 座</span>' +
         '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span></div>').join('') +
-      '<div class="mc-scr-f">虚拟钱：不记进钱包，也不出账单 · 跑了 ' + M.turnNo + ' 回合</div></div>';
+      '<div class="mc-scr-f">跑了 ' + M.turnNo + ' 回合 · 目标 ' + L(r).goal + ' 元</div></div>';
   }
   function endIt(r, winUid) {
     const M = st(r);
@@ -17995,7 +18128,7 @@ const Mono = (function () {
   function askBuy(r) {
     const M = st(r);
     const at = M.pos['me'] | 0;
-    if (CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(at)) {
+    if (L(r).CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(r, at)) {
       M.phase = 'act';
       M.pending = { cell: at };
       return;
@@ -18010,7 +18143,7 @@ const Mono = (function () {
       const res = tryBuy(r, 'me', at);
       if (res && res.err) { UI.toast(res.err); return; }
     } else {
-      feed(r, 'me', '你不要 ' + esc(nameOf(at)) + '（' + priceOf(at) + '）——留给下一个踩到的人');
+      feed(r, 'me', '你不要 ' + esc(nameOf(r, at)) + '（' + priceOf(r, at) + '）——留给下一个踩到的人');
       (r.moves = r.moves || []).push({ who: 'me', act: 'skip', cell: at, ts: Date.now() });
     }
     M.pending = null;
@@ -18024,8 +18157,8 @@ const Mono = (function () {
     if (r.phase !== 'playing' || curUid(r) !== 'me' || M.out['me']) return false;
     if (M.phase === 'act') {
       const at = (M.pending || {}).cell;
-      const can = at != null && (M.cash['me'] || 0) >= priceOf(at);
-      feed(r, 'me', '时间到，替你' + (can ? '买下了 ' + nameOf(at) : '放弃这块地'));
+      const can = at != null && (M.cash['me'] || 0) >= priceOf(r, at);
+      feed(r, 'me', '时间到，替你' + (can ? '买下了 ' + nameOf(r, at) : '放弃这块地'));
       myBuy(r, can ? 1 : 0);
       return true;
     }
@@ -18034,16 +18167,15 @@ const Mono = (function () {
     step(r, 'me', rand(1, 6), rand(1, 6));
     if (M.phase === 'over') { touch(r); return true; }
     const at = M.pos['me'] | 0;
-    if (CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(at)) {
-      feed(r, 'me', '顺手替你买下 ' + nameOf(at) + '（不想买可以提前自己按）');
+    if (L(r).CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(r, at)) {
+      feed(r, 'me', '顺手替你买下 ' + nameOf(r, at) + '（不想买可以提前自己按）');
       tryBuy(r, 'me', at);
     }
-    M.phase = 'roll';
     nextTurn(r);
-    touch(r);
     return true;
   }
-  /* TA 的一手：掷骰 → 落格 → 该买就买（买完还留得住 KEEP 才买） */
+
+  /* ---------- TA 的回合 ---------- */
   function taTurn(r) {
     const M = st(r);
     if (r.phase !== 'playing' || M.phase === 'over') return;
@@ -18052,24 +18184,21 @@ const Mono = (function () {
     step(r, uid, rand(1, 6), rand(1, 6));
     if (M.phase === 'over') { touch(r); return; }
     const at = M.pos[uid] | 0;
-    if (CITY[at] && !M.own[at] && aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
+    if (L(r).CITY[at] && !M.own[at] && aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
     nextTurn(r);
     touch(r);
   }
   function aiWantsBuy(r, uid, at) {
     const M = st(r);
-    return (M.cash[uid] || 0) - priceOf(at) >= KEEP;
+    return (M.cash[uid] || 0) - priceOf(r, at) >= KEEP;
   }
   function onPlan(r, p) {
     if (!p) return false;
     if (p.kind === 'mcRoll') { p.done = true; taTurn(r); return true; }
     if (p.kind === 'mcBegin') {
-      p.done = true;
       const M = st(r);
-      /* 计划自己的 at 就是时钟（排在 beginAt 那一刻），这里不再二重校一遗时间：
-         两口钟只会把“到没到”变成两套口径 */
+      p.done = true;
       if (M.phase === 'begin') begin(r);
-      touch(r);
       return true;
     }
     return false;
@@ -18092,16 +18221,16 @@ const Mono = (function () {
       '<i class="mc-tok' + (u === 'me' ? ' me' : '') + (curUid(r) === u ? ' on' : '') + '" data-uid="' + u +
       '" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' + (u === 'me' ? '我' : esc(nm(u).slice(0, 1))) + '</i>').join('') + '</span>';
   }
-  function cellHtml(r, M, i) {
+  function cellHtml(r, M, l, i) {
     const own = M.own[i] && !M.out[M.own[i]] ? M.own[i] : null;
-    const isGo = i === 0, ev = EV[i];
+    const isGo = i === 0, ev = l.EV[i];
     const cur = M.order.filter(u => !M.out[u] && (M.pos[u] | 0) === i).length;
     return '<div class="mc-cell' + (isGo ? ' mc-go' : '') + (ev ? ' mc-ev' : '') + (own ? ' own' : '') +
-      (cur ? ' hot' : '') + '" data-idx="' + i + '" style="grid-column:' + POS[i][0] + ';grid-row:' + POS[i][1] +
+      (cur ? ' hot' : '') + '" data-idx="' + i + '" style="grid-column:' + l.POS[i][0] + ';grid-row:' + l.POS[i][1] +
       (own ? ';--oc:' + (colOf(r, own) || 'var(--t1)') : '') + '">' +
-      '<b class="mc-n">' + esc(nameOf(i)) + '</b>' +
-      (CITY[i] ? '<i class="mc-p">' + priceOf(i) + (own ? ' · 租' + rentOf(i) : '') + '</i>'
-        : isGo ? '<i class="mc-p">过一趟 +' + PASS_GO + '</i>' : '<i class="mc-p">抽一张</i>') +
+      '<b class="mc-n">' + esc(nameOf(r, i)) + '</b>' +
+      (l.CITY[i] ? '<i class="mc-p">' + priceOf(r, i) + (own ? ' · 租' + rentOf(r, i) : '') + '</i>'
+        : isGo ? '<i class="mc-p">' + (l.side > 6 ? '+' + PASS_GO : '过一趟 +' + PASS_GO) + '</i>' : '<i class="mc-p">抽一张</i>') +
       tokHtml(r, M, i) +
       '</div>';
   }
@@ -18109,27 +18238,37 @@ const Mono = (function () {
     const M = st(r);
     if (!M.order || !M.order.length) M.order = (r.players || []).slice(0, MAXP);
     if (!M.order.length) { el.innerHTML = '<div class="mc-empty">等大富翁的玩家上桌…</div>'; return; }
+    if (M.order.length > MAXP) M.order = M.order.slice(0, MAXP);
+    if (M.side !== sideFor(M.order.length)) M.side = sideFor(M.order.length);
+    const l = lay(M.side);
     M.order.forEach(u => { if (M.cash[u] == null) M.cash[u] = START_CASH; if (M.pos[u] == null) M.pos[u] = 0; });
     const boxW = boxWidth(el);
     const q = Math.max(.72, Math.min(1.06, boxW / 400));
     const myTurn = r.phase === 'playing' && curUid(r) === 'me' && M.phase !== 'over' && !M.out['me'];
     const cells = [];
-    for (let i = 0; i < N; i++) cells.push(cellHtml(r, M, i));
-    let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + '">';
-    /* 各家现金条：谁多少钱、几座城、是不是出局了，全在盘外这一行 */
-    h += '<div class="gm-players mc-bank">' + M.order.map(u =>
+    for (let i = 0; i < l.N; i++) cells.push(cellHtml(r, M, l, i));
+    let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + ';--mg:' + l.side + '">';
+    /* 盘外这一行：谁多少现金、资产做到哪了、几座城、是不是出局了 */
+    const dense = M.order.length > 4;      // 5 人以上：现金条换成“名 + 资产”的紧凑三列，不然八颗排成八行吃掉半屏
+    h += '<div class="gm-players mc-bank' + (dense ? ' dense' : '') + '">' + M.order.map(u =>
       '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
       '" data-uid="' + u + '"><i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
       '<b>' + esc(nm(u)) + '</b>' +
-      '<small class="mc-cash">' + (M.cash[u] || 0) + '</small>' +
-      '<small>' + Object.keys(M.own).filter(i => M.own[i] === u).length + ' 城</small>' +
+      '<small class="mc-cash">' + assets(r, u) + '</small>' +
+      (dense ? '' : '<small>现' + (M.cash[u] || 0) + ' · ' + Object.keys(M.own).filter(i => M.own[i] === u).length + ' 城</small>') +
       (u === 'me' ? '<em class="mc-me">我</em>' : '') +
       (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
+    if (dense) {
+      /* 紧凑档里城数与现金没地方摆，并到图例那句里（信息不丢，只换位置） */
+      const who = M.order.map(u => esc(nm(u)) + ' 现' + (M.cash[u] || 0) + '·' + Object.keys(M.own).filter(i => M.own[i] === u).length + ' 城').join('、');
+      h += '<div class="mc-bank2">' + who + '</div>';
+    }
     h += '<div class="mc-board" id="mc-board">' + cells.join('') +
-      '<div class="mc-mid" style="grid-column:2/6;grid-row:2/6">' +
+      '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
       '<div class="mc-dice">' + (M.dice ? '<span>' + DIE[M.dice[0]] + '</span><span>' + DIE[M.dice[1]] + '</span>' : '<span class="mc-dice-x">◎</span>') + '</div>' +
       '<div class="mc-state">' + (M.phase === 'begin' ? '开局准备…' : M.phase === 'over' ? '这局收了'
         : (myTurn ? (M.phase === 'act' ? '要不要买下这块？' : '轮到你，掷骰子') : esc(nm(curUid(r))) + ' 在想…')) + '</div>' +
+      '<div class="mc-goal">目标 ' + l.goal + ' · 第 ' + (M.turnNo + 1) + ' 回合</div>' +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
       '</div></div>';
@@ -18139,18 +18278,18 @@ const Mono = (function () {
     else if (M.phase === 'over') h += '<span class="mc-hint">这局收了，盈亏已进累计记分牌</span>';
     else if (myTurn && M.phase === 'act') {
       const at = (M.pending || {}).cell;
-      h += '<button class="btn btn-primary" id="mc-buy">买下 ' + esc(nameOf(at)) + ' ' + priceOf(at) + '</button>' +
+      h += '<button class="btn btn-primary" id="mc-buy">买下 ' + esc(nameOf(r, at)) + ' ' + priceOf(r, at) + '</button>' +
         '<button class="btn btn-secondary" id="mc-no">不买</button>' +
-        '<span class="mc-hint">手里 ' + (M.cash['me'] || 0) + '，买完剩 ' + ((M.cash['me'] || 0) - priceOf(at)) + '</span>';
+        '<span class="mc-hint">手里 ' + (M.cash['me'] || 0) + '，买完剩 ' + ((M.cash['me'] || 0) - priceOf(r, at)) + '</span>';
     } else if (myTurn) h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button><span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合</span>';
     else h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合 · ' + esc(nm(curUid(r))) + ' 的回合</span>';
     h += '</div>';
     /* 图例：谁是哪座城的主人（她把“区分我们二者”当硬要求） */
     h += '<div class="mc-legend">' + M.order.map(u => {
-      const list = Object.keys(M.own).filter(i => M.own[i] === u).map(i => nameOf(+i));
+      const list = Object.keys(M.own).filter(i => M.own[i] === u).map(i => nameOf(r, +i));
       return '<span class="mc-lg' + (u === 'me' ? ' me' : '') + '"><b style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' +
         esc(nm(u)) + '</b>' + (list.length ? esc(list.join('、')) : '还没的地') + '</span>';
-    }).join('') + '<span class="mc-lg mc-lg-note"><i>虚拟钱 · 不动你的钱包</i></span></div>';
+    }).join('') + '</div>';
     h += '</div>';
     el.innerHTML = h;
 
@@ -18173,7 +18312,7 @@ const Mono = (function () {
     for (let i = 0; i < 3; i++) {
       const over = bd.scrollWidth - bd.clientWidth;
       if (over <= 0 || !bd.clientWidth) return;
-      bd.parentNode.style.setProperty('--mq', Math.max(.62, +(q0 * (bd.clientWidth / (bd.clientWidth + over))).toFixed(3)));
+      bd.parentNode.style.setProperty('--mq', Math.max(.58, +(q0 * (bd.clientWidth / (bd.clientWidth + over))).toFixed(3)));
     }
   }
 
@@ -18187,9 +18326,10 @@ const Mono = (function () {
   }
   const HOP_MS = 150;
   function playFx(el, fx) {
+    const ring = fx.ring || 20;      // 环长随人数变，跟着这一手 fx 走，不回读全局
     if (fx.act === 'hop' && fx.path && fx.path.length) {
       const first = (function () {
-        const rc0 = cellRect((fx.path[0].at - 1 + N) % N);
+        const rc0 = cellRect((fx.path[0].at - 1 + ring) % ring);
         /* 拷一份可写的矩形：DOMRect 是只读的，拿它当累加器就是“看着能跑，一点就报错” */
         return rc0 ? { left: rc0.left, top: rc0.top, width: rc0.width, height: rc0.height }
           : { left: (window.innerWidth || 360) / 2, top: (window.innerHeight || 600) - 160, width: 40, height: 40 };
@@ -18230,7 +18370,7 @@ const Mono = (function () {
     if (fx.buy) {
       const rc = cellRect(fx.buy.at);
       if (rc) {
-        const g = ghost('<b>' + nameOf(fx.buy.at) + '</b>', 'mc-stamp');
+        const g = ghost('<b>' + esc(fx.buy.name || '') + '</b>', 'mc-stamp');
         g.style.left = (rc.left + rc.width / 2 - 30) + 'px'; g.style.top = (rc.top + rc.height / 2 - 12) + 'px';
         g.animate([{ transform: 'scale(1.7) rotate(-8deg)', opacity: 0 }, { transform: 'scale(1) rotate(0deg)', opacity: 1, offset: .4 },
           { transform: 'scale(1) rotate(0deg)', opacity: 0 }], { duration: 760, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
@@ -18245,16 +18385,16 @@ const Mono = (function () {
 
   function def() {
     return {
-      id: 'mono', name: '大富翁', icon: 'map-mono', playersTxt: '2~4 人',
+      id: 'mono', name: '大富翁', icon: 'map-mono', playersTxt: '2~8 人',
       multi: true, maxRivals: MAXP - 1,
-      opening: true,                 // 谁先走由随机与骰子定，不走五子棋那套先手协商（壳子那句 firstLine 在这条路上不会被读，所以不写）
+      opening: true,                 // 谁先走由随机与骰子定，不走五子棋那套先手协商
       seats: true,                   // 现金与归属画在盘上，壳子不再另起玩家条
       newRoom, render, onPlan, settleTable, onResign,
       turnOf: curUid,
       onTimeout,
       /* 给验收探针：规则、几何、账目都从这份口径读，不另开一套 */
-      N, POS, CITY, EV, CHANCE, FATE, COLORS, DIE, START_CASH, PASS_GO, RENT_RATE, KEEP, TURN_CAP, MAXP,
-      priceOf, rentOf, nameOf, ownOf, assets, alive, colOf, seatOf, st, curUid,
+      lay, sideFor, CITY_LIST, CHANCE, FATE, COLORS, DIE, START_CASH, PASS_GO, RENT_RATE, KEEP, ROUND_CAP, GOAL_LAPS, GOAL_CITIES, MAXP,
+      priceOf, rentOf, nameOf, ownOf, assets, alive, colOf, seatOf, st, curUid, goalOf, capOf,
       step, land, tryBuy, payRent, draw, bankrupt, nextTurn, begin, askBuy, rankRows, endIt, popCard,
       myRoll, myBuy, aiWantsBuy, taTurn, playFx, fitBoard
     };
@@ -21922,6 +22062,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     // 页面关闭/隐藏时把防抖中的数据立刻落盘
     window.addEventListener('beforeunload', () => DB.flushSave());
     window.addEventListener('pagehide', () => DB.flushSave());
+    /* 接线真正跑完的旗子：模块早就定义了，监听器却是现在才挂——
+       验收探针拿“全局存在”当就绪会抢跑（09-03 问卷套件就是这么误判成“钮没反”），改看这里 */
+    document.documentElement.dataset.lxBooted = '1';
   }
 
   /* ---------------- 底部页签 ---------------- */
