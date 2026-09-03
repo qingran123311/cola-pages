@@ -2880,6 +2880,78 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
 .dz-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
 
+/* ---------- 大富翁（P51）：方环 20 城 + 中间一块调度区 ---------- */
+.mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px}
+.mc-empty{padding:26px 12px;text-align:center;color:var(--t3);font-size:12px}
+/* 盘外这一行：谁多少钱、几座城、是不是出局了 */
+.mc-bank{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:0}
+.mc-pk{flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62}
+.mc-pk.on{opacity:1;border-color:var(--t1)}
+.mc-pk b{font-weight:600;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-pk small{color:var(--t3);font-size:10px}
+.mc-pk .mc-cash{color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums}
+.mc-pk .mc-cash::after{content:' 元';font-weight:400;font-size:9px;color:var(--t3)}
+.mc-dot{width:9px;height:9px;border-radius:50%;background:var(--tc,var(--t1));flex:none}
+.mc-me{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;background:var(--t1);color:var(--card)}
+.mc-out{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--line);color:var(--t3)}
+.mc-board{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);gap:2px;
+  width:100%;max-width:470px;margin:0 auto;overflow:hidden}
+.mc-cell{position:relative;min-width:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;padding:2px 1px;border:1px solid var(--line);border-radius:4px;background:var(--card);overflow:hidden}
+.mc-cell .mc-n{font-size:calc(10.5px * var(--mq,1));line-height:1.15;color:var(--t1);font-weight:600;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-cell .mc-p{font-size:calc(8.5px * var(--mq,1));line-height:1.1;color:var(--t3);white-space:nowrap}
+.mc-cell.mc-ev{border-style:dashed}
+.mc-cell.mc-ev .mc-n{letter-spacing:1px}
+.mc-cell.mc-go{background:var(--fill)}
+/* 有主的城：底部一条主人色 + 细描边，黑白主题下也能分出是谁的地 */
+.mc-cell.own{border-color:var(--oc,var(--t1));box-shadow:inset 0 0 0 1px var(--oc,var(--t1))}
+.mc-cell.own::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--oc,var(--t1))}
+.mc-cell.hot{background:color-mix(in srgb,var(--t1) 5%,var(--card))}
+.mc-toks{position:absolute;right:2px;top:2px;display:flex;gap:1px}
+.mc-tok{width:calc(13px * var(--mq,1));height:calc(13px * var(--mq,1));border-radius:50%;
+  background:var(--tc,var(--t1));color:#fff;font-size:calc(8px * var(--mq,1));font-style:normal;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.22)}
+.mc-tok.me{border-color:var(--t1);color:var(--card)}
+.mc-tok.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--tc,var(--t1)) 40%,transparent)}
+/* 中间调度区：骰子、该谁、刚抽到什么卡 */
+.mc-mid{grid-column:2 / 6;grid-row:2 / 6;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;margin:3px;padding:6px;border:1px dashed var(--line);border-radius:8px;background:var(--card);min-height:0;overflow:hidden}
+.mc-dice{display:flex;gap:8px;font-size:calc(30px * var(--mq,1));line-height:1;color:var(--t1)}
+.mc-dice span{display:inline-flex}
+.mc-dice-x{font-size:calc(22px * var(--mq,1));color:var(--t3)}
+.mc-state{font-size:calc(11px * var(--mq,1));color:var(--t2);text-align:center}
+.mc-card,.mc-last{font-size:calc(10px * var(--mq,1));color:var(--t1);text-align:center;
+  padding:2px 6px;border-radius:6px;background:var(--fill);max-width:100%;overflow-wrap:anywhere}
+.mc-last{background:none;color:var(--t3)}
+.mc-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:center;margin:2px auto 0;max-width:470px}
+.mc-hint{font-size:11px;color:var(--t3)}
+.mc-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px auto 0;max-width:470px}
+.mc-lg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--t3);
+  padding:3px 7px;border:1px solid var(--line);border-radius:999px;max-width:100%}
+.mc-lg b{font-weight:700;color:var(--tc,var(--t1))}
+.mc-lg.me{color:var(--t1)}
+.mc-lg-note{border-style:dashed}
+.mc-lg-note i{font-style:normal}
+.mc-scr{min-width:270px;text-align:left}
+.mc-scr-h,.mc-scr-row{display:grid;grid-template-columns:20px 1fr 56px 48px 56px;gap:5px;align-items:center;
+  font-size:11px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.mc-scr-h{color:var(--t3);border-bottom:1px solid var(--line);font-size:10.5px}
+.mc-scr-row .nm{display:flex;align-items:center;gap:4px;overflow:hidden}
+.mc-scr-row .nm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-scr-row .sc{font-weight:700}
+.mc-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
+.mc-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
+/* 飞子与飘钱：挂 body + fixed，定时器自收（不挂 onfinish） */
+.mc-ghost{position:fixed;z-index:980;pointer-events:none}
+.mc-hop{display:inline-flex}
+.mc-cash{padding:2px 7px;border:1px solid var(--t1);border-radius:999px;background:var(--card);
+  font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap}
+.mc-cash.up{border-style:dashed}
+.mc-stamp{padding:2px 7px;border:1.4px solid var(--t1);border-radius:6px;background:var(--card);
+  font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -3677,7 +3749,7 @@ const DB = (function () {
       n += ab - st.games.arch.length;
     }
     /* 累计记分牌按人存（UNO / 斗地主）：人不在了那一行也得消失，不然战绩页永远挂着“已删除联系人 +N 分” */
-    ['unoScore', 'dzScore'].forEach(k => {
+    ['unoScore', 'dzScore', 'monoScore'].forEach(k => {
       if (st.games && st.games[k] && has(st.games[k], cid)) { delete st.games[k][cid]; n++; }
     });
 
@@ -6067,7 +6139,9 @@ const ICONS = {
   'cards-uno':     '<rect x="5" y="4" width="13" height="16" rx="2.5"/><rect x="8.5" y="3" width="13" height="16" rx="2.5" fill="none"/><ellipse cx="15" cy="11" rx="3.4" ry="4.6"/>',
   'cards-ddz':     '<rect x="3.2" y="7.4" width="9.4" height="13.2" rx="2"/><rect x="11.4" y="4" width="9.4" height="13.2" rx="2"/><path d="M16.1 8.4c1.5 1.4 2.2 2.2 2.2 3a1.2 1.2 0 0 1-2.2.7 1.2 1.2 0 0 1-2.2-.7c0-.8.7-1.6 2.2-3z"/><path d="M12.4 19.6h7.4"/>',
   /* 飞行棋：俯视喷气机，一笔画完（线稿风，不拿 EMOJI 当图标） */
-  'plane':         '<path d="M12 3c1.5 0 2.4 2.4 2.4 5.2 0 1.4-.1 2.5-.3 3.3l6.4 3.7v2.1l-6.5-2-.2 3 2.4 2.2v1.4L12 20.8l-4.2 1.1v-1.4l2.4-2.2-.2-3-6.5 2v-2.1l6.4-3.7c-.2-.8-.3-1.9-.3-3.3C9.6 5.4 10.5 3 12 3z"/>'
+  'plane':         '<path d="M12 3c1.5 0 2.4 2.4 2.4 5.2 0 1.4-.1 2.5-.3 3.3l6.4 3.7v2.1l-6.5-2-.2 3 2.4 2.2v1.4L12 20.8l-4.2 1.1v-1.4l2.4-2.2-.2-3-6.5 2v-2.1l6.4-3.7c-.2-.8-.3-1.9-.3-3.3C9.6 5.4 10.5 3 12 3z"/>',
+  /* 大富翁：一张方环棋盘（外圈画格、中间一颗骰子），线稿风 */
+  'map-mono':    '<rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.4"/><rect x="7.4" y="7.4" width="9.2" height="9.2" rx="1.6"/><path d="M3.2 7.4h4.2M16.6 7.4h4.2M3.2 16.6h4.2M16.6 16.6h4.2M7.4 3.2v4.2M7.4 16.6v4.2M16.6 3.2v4.2M16.6 16.6v4.2"/><circle cx="10.4" cy="10.4" r=".8"/><circle cx="13.6" cy="13.6" r=".8"/>'
 };
 
 function I(name, size = 18) {
@@ -15814,19 +15888,11 @@ const Uno = (function () {
     touch(room);
   }
 
-  /* ---------- 动画（挂 body；onfinish + 定时双保险）---------- */
-  function ghost(html, cls) {
-    const el = document.createElement('div');
-    el.className = 'un-ghost ' + (cls || '');   /* 09-01：以前叫 un-fx，跟定序舞台的格子撞名，格子被顺带 fixed 掉、飞牌被套上灰底 */
-    el.innerHTML = html;
-    document.body.appendChild(el);
-    return el;
-  }
-  function kill(el, ms) {
-    setTimeout(() => { if (el && el.parentNode) el.remove(); }, ms);
-    const a = el.getAnimations ? el.getAnimations()[0] : null;
-    if (a) a.onfinish = () => el.remove();
-  }
+  /* ---------- 动画（挂 body；自收两件套 09-03 拢进壳子）---------- */
+  /* 同一写法以前在 uno / 斗地主 / 大富翁 各一份：于今只留一行转调，
+     类名仍归各自 CSS（un-ghost 不能改名：09-01 与定序舞台的格子撞过名） */
+  function ghost(html, cls) { return Games.fxGhost(html, 'un-ghost ' + (cls || '')); }
+  function kill(el, ms) { Games.fxKill(el, ms); }
   function rectOf(sel) { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; }
   function flyRect(from, to, card, dur, arc) {
     if (!from || !to || !card) return null;
@@ -17199,7 +17265,8 @@ const Doudizhu = (function () {
     if (p.kind === 'dzBegin') {
       p.done = true;
       const D = st(r);
-      if (D.phase === 'begin' && Date.now() >= (D.beginAt || 0) - 60) beginCall(r);
+      /* 与 mono 同一口径：计划自己的 at 就是那口钟，不在派发时再校一遗时间（两口钟会把“到没到”变成两套说法） */
+      if (D.phase === 'begin') beginCall(r);
       touch(r);
       return true;
     }
@@ -17466,7 +17533,7 @@ const Doudizhu = (function () {
     /* 发牌到点自动开叫：不靠动画回调，另外排一条计划兜底（她不在这一页时也要能开） */
     if (D.phase === 'begin') {
       if (D.beginAt && Date.now() >= D.beginAt) { beginCall(r); touch(r); return; }
-      if (!D.beginQueued) { D.beginQueued = 1; r.plans.push({ kind: 'dzBegin', at: (D.beginAt || Date.now()) + BEGIN_MS, done: false }); touch(r); }
+      if (!D.beginQueued) { D.beginQueued = 1; r.plans.push({ kind: 'dzBegin', at: (D.beginAt || Date.now()), done: false }); touch(r); }
     } else { D.beginQueued = 0; }
   }
   /* 量完再收：先按比例缩牌；缩到头还差几像素就把 gap 再压紧一点。
@@ -17509,18 +17576,10 @@ const Doudizhu = (function () {
   }
 
   /* ---------- 动画（挂 body + fixed + 定时器自收，不挂 onfinish） ---------- */
-  function ghost(html, cls) {
-    const el = document.createElement('div');
-    el.className = 'dz-ghost ' + (cls || '');
-    el.innerHTML = html;
-    document.body.appendChild(el);
-    return el;
-  }
-  function kill(el, ms) {
-    setTimeout(() => { if (el && el.parentNode) el.remove(); }, ms);
-    const a = el.getAnimations ? el.getAnimations()[0] : null;
-    if (a) a.onfinish = () => { if (el && el.parentNode) el.remove(); };
-  }
+  /* 自收两件套拢进壳子（Games.fxGhost / fxKill）：uno、斗地主、大富翁各写一份是同一个写法摊在三处，
+     早晚飘——这里只留一行转调，类名还归各自 CSS */
+  function ghost(html, cls) { return Games.fxGhost(html, 'dz-ghost ' + (cls || '')); }
+  function kill(el, ms) { Games.fxKill(el, ms); }
   function rectOf(sel) { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; }
   function seatRect(uid) {
     const el = document.querySelector('#room-board .dz-seat[data-uid="' + uid + '"]');
@@ -17602,6 +17661,602 @@ const Doudizhu = (function () {
       planBeat, planLead, callScore, callBid, grabBid, planDouble, deal, st, curUid, teamOf, doCall, doGrab, doPlay, doPass,
       beginCall, takeLand, startPlay, doDouble, myDouble, taTurn, myCall, myPlay, myPass, myHint, toggleSel,
       multOf, unitOf, dblLine, settleRows, endIt, playFx
+    };
+  }
+  return { def };
+})();
+
+/* ============================================================
+   大富翁（P51 一期）—— 掷骰走格 → 无主的能买 → 有主的交租 → 机会/命运抽一张 → 钱不够就出局
+   她 09-03 08:30 拍的三件事：
+   ① 格子用城市名，不用她的真实地点；② 钱是虚拟分——一分别接 Pay/钱包，账单一行都不写；
+   ③ 我方回合超时按托管替走。
+   一期就这 5 条：不做建房、抵押、交易、监狱、税收、双倍骰（P49 §二写明的砍法）。
+   ============================================================ */
+const Mono = (function () {
+  const TURN_SEC = [2.2, 4.6];      // TA 一回合（掷骰 + 要不要买）想多久，跟飞行棋同一档
+  const BEGIN_MS = 900;             // 人齐到开跑：让骰子在盘上站一下
+  const START_CASH = 500;           // 起始虚拟现金（不是钱包余额，别去读 Wallet）
+  const PASS_GO = 100;              // 经过起点领一趟
+  const RENT_RATE = 0.3;            // 租金 = 地价 × 0.3（向上取整）：一张公式，不再另立租金表
+  const KEEP = 80;                  // AI 买完地至少留这些现金（一轮就破产看着像 bug，不像规则）
+  const TURN_CAP = 60;              // 回合上限：到点按资产收场，不让两个人无限互踩
+  const N = 20;                     // 方环 20 格（6×6 盘的外圈）
+  const MAXP = 4;                   // 2~4 人：外圈一圈站 4 家不挤
+  const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0'];   // 玩家身份色（内容色，界面装饰不上彩）
+  const DIE = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
+  /* 外圈 20 格在盘上的位置（列,行，1 起）：顺时针，起点在右下角 */
+  const POS = [[6, 6], [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [1, 5], [1, 4], [1, 3], [1, 2],
+    [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5]];
+  /* 16 座城市：地名 + 地价（越靠后越贵，租金按 RENT_RATE 从地价推） */
+  const CITY = {
+    1: ['青岛', 60], 2: ['大连', 70], 4: ['厦门', 90], 5: ['苏州', 100],
+    6: ['南京', 110], 7: ['杭州', 130], 8: ['长沙', 140], 9: ['武汉', 160],
+    11: ['深圳', 180], 12: ['广州', 200], 13: ['成都', 220], 14: ['重庆', 240],
+    15: ['天津', 260], 16: ['西安', 280], 18: ['北京', 300], 19: ['上海', 320]
+  };
+  /* 3 张事件格：机会两张、命运一张（多了就成了抽卡模拟器） */
+  const EV = { 3: ['chance', '机会'], 10: ['fate', '命运'], 17: ['chance', '机会'] };
+  const CHANCE = [
+    { t: '地铁坐过站，退两格', mv: -2 },
+    { t: '路上捡到一张优惠券', cash: 30 },
+    { t: '临时加班，罚款 40', cash: -40 },
+    { t: '顺风车直达，前进三格', mv: 3 },
+    { t: '想起没关煤气，回起点查一趟', to: 0 },
+    { t: '朋友请吃火锅', cash: 50 },
+    { t: '行李超重，付 60', cash: -60 },
+    { t: '排队买到了最后一份', cash: 20 }
+  ];
+  const FATE = [
+    { t: '航班延误，住了一晚酒店', cash: -50 },
+    { t: '房东涨租，付 30', cash: -30 },
+    { t: '旧物卖了笔小钱', cash: 40 },
+    { t: '走错路，退一格', mv: -1 },
+    { t: '高速免费，前进两格', mv: 2 },
+    { t: '抽了个空气，什么也没发生', cash: 0 },
+    { t: '捡到红包，回起点存起来', to: 0 },
+    { t: '加班费到账', cash: 60 }
+  ];
+  const POOL = { chance: CHANCE, fate: FATE };
+
+  function esc(s) { return UI.escapeHtml(s); }
+  function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function nm(uid) { return Home.uidName(uid); }
+  function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
+  function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); }
+  function armClock(r) { if (typeof Games !== 'undefined' && Games.armUrge) Games.armUrge(r); }
+  function clearClock(r) { if (typeof Games !== 'undefined' && Games.disarmUrge) Games.disarmUrge(r); }
+  function shuffle(n) {
+    const a = []; for (let i = 0; i < n; i++) a.push(i);
+    for (let i = n - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[k]; a[k] = t; }
+    return a;
+  }
+
+  /* ---------- 房间数据 ---------- */
+  function st(r) {
+    r.mc = r.mc || {
+      phase: 'wait', order: [], oi: 0, pos: {}, cash: {}, own: {}, out: {},
+      deck: {}, turnNo: 0, dice: null, pending: null, card: '', last: '', fx: null,
+      beginAt: 0, beginQueued: 0, rankRows: null
+    };
+    /* 半路接手/老存档可能缺项：补齐，不靠“缺字段就当没事” */
+    const M = r.mc;
+    ['pos', 'cash', 'own', 'out', 'deck'].forEach(k => { if (!M[k]) M[k] = {}; });
+    if (!Array.isArray(M.order)) M.order = [];
+    if (!Array.isArray(M.dice)) M.dice = null;
+    if (typeof M.turnNo !== 'number') M.turnNo = 0;
+    if (typeof M.oi !== 'number') M.oi = 0;
+    if (!M.deck.chance) M.deck.chance = shuffle(CHANCE.length);
+    if (!M.deck.fate) M.deck.fate = shuffle(FATE.length);
+    return M;
+  }
+  function curUid(r) { const M = st(r); return (M.order || [])[M.oi] || null; }
+  function colOf(r, uid) { const i = (st(r).order || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
+  function seatOf(r, uid) { return (st(r).order || []).indexOf(uid); }
+  function alive(r) { const M = st(r); return (M.order || []).filter(u => !M.out[u]); }
+  function priceOf(i) { return CITY[i] ? CITY[i][1] : 0; }
+  function rentOf(i) { return CITY[i] ? Math.ceil(CITY[i][1] * RENT_RATE) : 0; }
+  function nameOf(i) { return CITY[i] ? CITY[i][0] : (i === 0 ? '起点' : (EV[i] || ['', ''])[1]); }
+  function ownOf(r, i) { const o = st(r).own[i]; return o && !st(r).out[o] ? o : null; }
+  function assets(r, u) {
+    const M = st(r);
+    let sum = M.cash[u] || 0;
+    Object.keys(M.own).forEach(i => { if (M.own[i] === u) sum += priceOf(+i); });
+    return sum;
+  }
+
+  /* ---------- 开局 ---------- */
+  function newRoom(room) {
+    const M = st(room);
+    M.order = (room.players || []).slice(0, MAXP);
+    M.oi = rand(0, Math.max(0, M.order.length - 1));    // 谁先走是随机的，不是默认我先
+    M.pos = {}; M.cash = {}; M.out = {}; M.own = {};
+    M.order.forEach(u => { M.pos[u] = 0; M.cash[u] = START_CASH; });
+    M.deck = { chance: shuffle(CHANCE.length), fate: shuffle(FATE.length) };
+    M.turnNo = 0; M.dice = null; M.pending = null; M.card = ''; M.rankRows = null;
+    M.phase = 'begin';
+    M.beginAt = Date.now() + BEGIN_MS;
+    room.blackUid = M.order[M.oi] || 'me';
+    feed(room, 'sys', '棋盘是 20 城的方环：每人 ' + START_CASH + ' 虚拟元（不动你的钱包），踩到无主的城能买下，踩到别人的城交租，钱不够就出局');
+    return room;
+  }
+  function begin(r) {
+    const M = st(r);
+    M.phase = 'roll';
+    M.beginAt = 0;
+    r.phase = 'playing';
+    feed(r, 'sys', esc(nm(curUid(r))) + ' 先走');
+    if (curUid(r) !== 'me') queueTa(r); else armClock(r);
+    touch(r);
+  }
+  function killPlans(r, kind) {
+    (r.plans || []).forEach(p => { if (p.kind === kind && !p.done) p.done = true; });
+    r.plans = (r.plans || []).filter(p => !p.done);
+  }
+  function queueTa(r) {
+    killPlans(r, 'mcRoll');
+    r.plans.push({ kind: 'mcRoll', at: Date.now() + rand(TURN_SEC[0], TURN_SEC[1]) * 1000, done: false });
+  }
+
+  /* ---------- 走一格算一格（判定与记账只在这里，我与 TA 共用一个口） ---------- */
+  function step(r, uid, d1, d2) {
+    const M = st(r);
+    const steps = (d1 | 0) + (d2 | 0);
+    M.dice = [d1, d2];
+    (r.moves = r.moves || []).push({ who: uid, act: 'roll', d: [d1, d2], n: steps, ts: Date.now() });
+    const path = [];
+    let at = M.pos[uid] | 0;
+    for (let i = 1; i <= steps; i++) {
+      at = (at + 1) % N;
+      if (at === 0) { M.cash[uid] = (M.cash[uid] || 0) + PASS_GO; path.push({ go: 1, at: at }); }
+      else path.push({ at: at });
+    }
+    M.pos[uid] = at;
+    M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', path: path.slice(), at: Date.now() };
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(d1) + dieTxt(d2) + ' 走 ' + steps + ' 格到 ' + esc(nameOf(at)) +
+      (path.some(p => p.go) ? '（过起点领 ' + PASS_GO + '）' : ''));
+    return land(r, uid, false);
+  }
+  function dieTxt(v) { return (DIE[v] || '') + ' ' + v; }
+  /* 落格：无主可买 / 有主交租 / 事件抽一张；事件把我挪走之后只再结算一次（不链式抽到手软） */
+  function land(r, uid, chained) {
+    const M = st(r);
+    const at = M.pos[uid] | 0;
+    if (CITY[at]) {
+      const own = M.own[at];
+      const host = own && !M.out[own] ? own : null;
+      if (!host || host === uid) return { done: 1 };
+      const rent = rentOf(at);
+      payRent(r, uid, host, at, rent);
+      return { done: 1 };
+    }
+    if (EV[at] && !chained) return draw(r, uid, EV[at][0], at);
+    return { done: 1 };
+  }
+  function payRent(r, uid, host, at, rent) {
+    const M = st(r);
+    M.cash[uid] = (M.cash[uid] || 0) - rent;
+    M.cash[host] = (M.cash[host] || 0) + rent;
+    (r.moves = r.moves || []).push({ who: uid, act: 'rent', cell: at, to: host, amt: rent, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { cash: [{ uid: uid, amt: -rent, at: at }, { uid: host, amt: rent, at: at }] });
+    M.last = nm(uid) + ' 在 ' + nameOf(at) + ' 交租 ' + rent + ' 给 ' + nm(host);
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(M.last));
+    if (M.cash[uid] < 0) bankrupt(r, uid, host);
+  }
+  function draw(r, uid, kind, at) {
+    const M = st(r);
+    const c = popCard(r, kind);
+    M.card = (EV[at] ? EV[at][1] : '机会') + '：' + c.t;
+    (r.moves = r.moves || []).push({ who: uid, act: 'card', kind: kind, text: c.t, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { card: { at: at, text: M.card } });
+    let line = esc(nm(uid)) + ' 抽到' + M.card;
+    if (c.cash) {
+      M.cash[uid] = (M.cash[uid] || 0) + c.cash;
+      line += '（' + (c.cash > 0 ? '+' : '') + c.cash + '）';
+      M.fx.cash = [{ uid: uid, amt: c.cash, at: at }];
+    }
+    if (c.mv) {
+      let to = (M.pos[uid] | 0) + c.mv;
+      to = ((to % N) + N) % N;
+      M.pos[uid] = to;
+      line += '，挪到 ' + esc(nameOf(to));
+      M.fx.hop = { uid: uid, to: to };
+    }
+    if (c.to != null) {
+      M.pos[uid] = c.to;
+      if (c.to === 0) M.cash[uid] = (M.cash[uid] || 0) + PASS_GO;
+      line += '，回到 ' + esc(nameOf(c.to)) + (c.to === 0 ? '（领 ' + PASS_GO + '）' : '');
+      M.fx.hop = { uid: uid, to: c.to };
+    }
+    feed(r, uid === 'me' ? 'me' : 'ta', line);
+    if (M.cash[uid] < 0) bankrupt(r, uid, null);
+    /* 被卡挪到别人的地上照样交租：只再结算一次，不链式抽卡 */
+    if (M.fx.hop && CITY[M.pos[uid]]) return land(r, uid, true);
+    return { done: 1 };
+  }
+  function popCard(r, kind) {
+    const M = st(r);
+    const pool = POOL[kind] || CHANCE;
+    /* 一轮内不重样：抽完一整档再洗一轮回队（抽干了就抽不到，算假机制） */
+    if (!M.deck[kind] || !M.deck[kind].length) M.deck[kind] = shuffle(pool.length);
+    return pool[M.deck[kind].shift()];
+  }
+  /* 买地：只在落点是无主城市时成立；钱不够就是买不起，不是报错 */
+  function tryBuy(r, uid, idx) {
+    const M = st(r);
+    if (!CITY[idx] || M.own[idx]) return { err: '这一格不能买' };
+    if (M.pos[uid] !== idx) return { err: '不在这一格，买不了' };
+    const price = priceOf(idx);
+    if ((M.cash[uid] || 0) < price) return { err: '现金不够，买不起 ' + nameOf(idx) };
+    M.cash[uid] -= price;
+    M.own[idx] = uid;
+    (r.moves = r.moves || []).push({ who: uid, act: 'buy', cell: idx, price: price, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { buy: { at: idx, uid: uid } });
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 买下 ' + esc(nameOf(idx)) + '（' + price + '，以后踩它的人交 ' + rentOf(idx) + '）');
+    return { ok: 1 };
+  }
+  /* 破产：地把债主拿走（没债主就归无主），人退出这一局，不是把负数留在盘上装没事 */
+  function bankrupt(r, uid, creditor) {
+    const M = st(r);
+    const got = Object.keys(M.own).filter(i => M.own[i] === uid);
+    got.forEach(i => {
+      if (creditor && !M.out[creditor]) M.own[i] = creditor; else delete M.own[i];
+    });
+    M.out[uid] = 1;
+    M.pending = null;
+    (r.moves = r.moves || []).push({ who: uid, act: 'out', cells: got.length, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { out: uid });
+    feed(r, 'sys', esc(nm(uid)) + ' 现金见底，出局' + (got.length ? '（' + got.length + ' 座城' + (creditor ? '归 ' + esc(nm(creditor)) : '收回无主') + '）' : ''));
+    if (alive(r).length <= 1) endIt(r, alive(r)[0] || null);
+  }
+
+  /* ---------- 回合推进 ---------- */
+  function nextTurn(r) {
+    const M = st(r);
+    if (M.phase === 'over') return;
+    clearClock(r);
+    killPlans(r, 'mcRoll');
+    M.pending = null;
+    M.turnNo++;
+    if (alive(r).length <= 1) { endIt(r, alive(r)[0] || null); return; }
+    if (M.turnNo >= TURN_CAP) { rankOut(r, '跑到第 ' + TURN_CAP + ' 回合收场'); return; }
+    let guard = 0;
+    do { M.oi = (M.oi + 1) % M.order.length; guard++; } while (M.out[M.order[M.oi]] && guard < 8);
+    M.phase = 'roll';
+    if (curUid(r) !== 'me') queueTa(r); else armClock(r);
+  }
+  function rankOut(r, why) {
+    const M = st(r);
+    const best = M.order.slice().sort((a, b) => assets(r, b) - assets(r, a))[0];
+    feed(r, 'sys', why + '，按资产定名次');
+    endIt(r, best);
+  }
+  function rankRows(r) {
+    const M = st(r);
+    /* 盈亏就这里算一处：出局那位按 -起始 记（钱见底就是赔光），
+       不在 endIt 里再改一遍——结算表与记分牌读到两份数就假了 */
+    return M.order.map(u => ({
+      u: u, cash: M.cash[u] || 0, cities: Object.keys(M.own).filter(i => M.own[i] === u).length,
+      assets: assets(r, u), out: M.out[u] ? 1 : 0, sc: M.out[u] ? -START_CASH : assets(r, u) - START_CASH
+    })).sort((a, b) => (b.out ? 0 : 1) - (a.out ? 0 : 1) || b.assets - a.assets);
+  }
+  function settleTable(r) {
+    const M = st(r);
+    const rows = M.rankRows || rankRows(r);
+    return '<div class="mc-scr">' +
+      '<div class="mc-scr-h"><span>#</span><span class="nm">玩家</span><span>现金</span><span>城市</span><span>盈亏</span></div>' +
+      rows.map((x, i) => '<div class="mc-scr-row' + (i === 0 ? ' win' : '') + (x.u === 'me' ? ' me' : '') + '">' +
+        '<span>' + (i + 1) + '</span><span class="nm"><b>' + esc(nm(x.u)) + '</b>' + (x.out ? '<i class="mc-out">出局</i>' : '') + '</span>' +
+        '<span>' + x.cash + '</span><span>' + x.cities + ' 座</span>' +
+        '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span></div>').join('') +
+      '<div class="mc-scr-f">虚拟钱：不记进钱包，也不出账单 · 跑了 ' + M.turnNo + ' 回合</div></div>';
+  }
+  function endIt(r, winUid) {
+    const M = st(r);
+    M.phase = 'over';
+    M.pending = null;
+    r.winner = winUid || M.order[0] || 'me';
+    const rows = M.rankRows || rankRows(r);
+    const sc = {};
+    rows.forEach(x => { sc[x.u] = x.sc; });
+    r.mcScore = sc;
+    r.finalScores = { scores: sc };
+    M.rankRows = rows;
+    killPlans(r, 'mcRoll'); killPlans(r, 'mcBegin');
+    clearClock(r);
+    const g = (DB.state.games = DB.state.games || {});
+    const t = g.monoScore = g.monoScore || {};
+    Object.keys(sc).forEach(u => { t[u] = (t[u] || 0) + sc[u]; });
+    feed(r, 'sys', esc(nm(r.winner)) + ' 拿下这局（资产 ' + assets(r, r.winner) + '）');
+    if (typeof Games !== 'undefined' && Games.finish) Games.finish(r, { win: r.winner, line: [] });
+    else touch(r);
+  }
+  function onResign(r) {
+    const M = st(r);
+    if (r.phase !== 'playing' || M.phase === 'over') return true;
+    const foe = alive(r).filter(u => u !== 'me');
+    feed(r, 'me', '你不玩了——这局判给' + (foe.length ? '资产最高的 ' + esc(nm(foe.slice().sort((a, b) => assets(r, b) - assets(r, a))[0])) : '场上的人') + '，各家按资产结算');
+    const best = foe.slice().sort((a, b) => assets(r, b) - assets(r, a))[0] || foe[0] || M.order[0];
+    endIt(r, best);
+    return true;
+  }
+
+  /* ---------- 我这边的动作 ---------- */
+  function myRoll(r) {
+    const M = st(r);
+    if (r.phase !== 'playing' || M.phase !== 'roll' || curUid(r) !== 'me' || M.out['me']) return;
+    clearClock(r);
+    step(r, 'me', rand(1, 6), rand(1, 6));
+    if (M.phase === 'over') { touch(r); return; }
+    askBuy(r);
+    touch(r);
+  }
+  /* 落点能买才问一句；不能买直接换手，不摆一个点了没反应的钮 */
+  function askBuy(r) {
+    const M = st(r);
+    const at = M.pos['me'] | 0;
+    if (CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(at)) {
+      M.phase = 'act';
+      M.pending = { cell: at };
+      return;
+    }
+    nextTurn(r);
+  }
+  function myBuy(r, yes) {
+    const M = st(r);
+    if (M.phase !== 'act' || !M.pending) return;
+    const at = M.pending.cell;
+    if (yes) {
+      const res = tryBuy(r, 'me', at);
+      if (res && res.err) { UI.toast(res.err); return; }
+    } else {
+      feed(r, 'me', '你不要 ' + esc(nameOf(at)) + '（' + priceOf(at) + '）——留给下一个踩到的人');
+      (r.moves = r.moves || []).push({ who: 'me', act: 'skip', cell: at, ts: Date.now() });
+    }
+    M.pending = null;
+    M.phase = 'roll';
+    nextTurn(r);
+    touch(r);
+  }
+  /* 30 秒到点：托管替走，播报写清是哪一步替的（与飞行棋/斗地主同一口径） */
+  function onTimeout(r) {
+    const M = st(r);
+    if (r.phase !== 'playing' || curUid(r) !== 'me' || M.out['me']) return false;
+    if (M.phase === 'act') {
+      const at = (M.pending || {}).cell;
+      const can = at != null && (M.cash['me'] || 0) >= priceOf(at);
+      feed(r, 'me', '时间到，替你' + (can ? '买下了 ' + nameOf(at) : '放弃这块地'));
+      myBuy(r, can ? 1 : 0);
+      return true;
+    }
+    if (M.phase !== 'roll') return false;
+    feed(r, 'me', '时间到，替你掷了骰子');
+    step(r, 'me', rand(1, 6), rand(1, 6));
+    if (M.phase === 'over') { touch(r); return true; }
+    const at = M.pos['me'] | 0;
+    if (CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(at)) {
+      feed(r, 'me', '顺手替你买下 ' + nameOf(at) + '（不想买可以提前自己按）');
+      tryBuy(r, 'me', at);
+    }
+    M.phase = 'roll';
+    nextTurn(r);
+    touch(r);
+    return true;
+  }
+  /* TA 的一手：掷骰 → 落格 → 该买就买（买完还留得住 KEEP 才买） */
+  function taTurn(r) {
+    const M = st(r);
+    if (r.phase !== 'playing' || M.phase === 'over') return;
+    const uid = curUid(r);
+    if (!uid || uid === 'me' || M.out[uid]) { nextTurn(r); return; }
+    step(r, uid, rand(1, 6), rand(1, 6));
+    if (M.phase === 'over') { touch(r); return; }
+    const at = M.pos[uid] | 0;
+    if (CITY[at] && !M.own[at] && aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
+    nextTurn(r);
+    touch(r);
+  }
+  function aiWantsBuy(r, uid, at) {
+    const M = st(r);
+    return (M.cash[uid] || 0) - priceOf(at) >= KEEP;
+  }
+  function onPlan(r, p) {
+    if (!p) return false;
+    if (p.kind === 'mcRoll') { p.done = true; taTurn(r); return true; }
+    if (p.kind === 'mcBegin') {
+      p.done = true;
+      const M = st(r);
+      /* 计划自己的 at 就是时钟（排在 beginAt 那一刻），这里不再二重校一遗时间：
+         两口钟只会把“到没到”变成两套口径 */
+      if (M.phase === 'begin') begin(r);
+      touch(r);
+      return true;
+    }
+    return false;
+  }
+
+  /* ---------- 渲染 ---------- */
+  function boxWidth(el) {
+    const wrap = (el && el.closest) ? el.closest('.gm-board-wrap') : null;
+    let avail = 0;
+    if (wrap) {
+      const ws = window.getComputedStyle(wrap);
+      avail = wrap.clientWidth - (parseFloat(ws.paddingLeft) || 0) - (parseFloat(ws.paddingRight) || 0);
+    }
+    return Math.max(272, Math.min(470, Math.round(avail) || (window.innerWidth - 24) || 360));
+  }
+  function tokHtml(r, M, i) {
+    const here = M.order.filter(u => !M.out[u] && (M.pos[u] | 0) === i);
+    if (!here.length) return '';
+    return '<span class="mc-toks">' + here.map(u =>
+      '<i class="mc-tok' + (u === 'me' ? ' me' : '') + (curUid(r) === u ? ' on' : '') + '" data-uid="' + u +
+      '" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' + (u === 'me' ? '我' : esc(nm(u).slice(0, 1))) + '</i>').join('') + '</span>';
+  }
+  function cellHtml(r, M, i) {
+    const own = M.own[i] && !M.out[M.own[i]] ? M.own[i] : null;
+    const isGo = i === 0, ev = EV[i];
+    const cur = M.order.filter(u => !M.out[u] && (M.pos[u] | 0) === i).length;
+    return '<div class="mc-cell' + (isGo ? ' mc-go' : '') + (ev ? ' mc-ev' : '') + (own ? ' own' : '') +
+      (cur ? ' hot' : '') + '" data-idx="' + i + '" style="grid-column:' + POS[i][0] + ';grid-row:' + POS[i][1] +
+      (own ? ';--oc:' + (colOf(r, own) || 'var(--t1)') : '') + '">' +
+      '<b class="mc-n">' + esc(nameOf(i)) + '</b>' +
+      (CITY[i] ? '<i class="mc-p">' + priceOf(i) + (own ? ' · 租' + rentOf(i) : '') + '</i>'
+        : isGo ? '<i class="mc-p">过一趟 +' + PASS_GO + '</i>' : '<i class="mc-p">抽一张</i>') +
+      tokHtml(r, M, i) +
+      '</div>';
+  }
+  function render(r, el) {
+    const M = st(r);
+    if (!M.order || !M.order.length) M.order = (r.players || []).slice(0, MAXP);
+    if (!M.order.length) { el.innerHTML = '<div class="mc-empty">等大富翁的玩家上桌…</div>'; return; }
+    M.order.forEach(u => { if (M.cash[u] == null) M.cash[u] = START_CASH; if (M.pos[u] == null) M.pos[u] = 0; });
+    const boxW = boxWidth(el);
+    const q = Math.max(.72, Math.min(1.06, boxW / 400));
+    const myTurn = r.phase === 'playing' && curUid(r) === 'me' && M.phase !== 'over' && !M.out['me'];
+    const cells = [];
+    for (let i = 0; i < N; i++) cells.push(cellHtml(r, M, i));
+    let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + '">';
+    /* 各家现金条：谁多少钱、几座城、是不是出局了，全在盘外这一行 */
+    h += '<div class="gm-players mc-bank">' + M.order.map(u =>
+      '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
+      '" data-uid="' + u + '"><i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
+      '<b>' + esc(nm(u)) + '</b>' +
+      '<small class="mc-cash">' + (M.cash[u] || 0) + '</small>' +
+      '<small>' + Object.keys(M.own).filter(i => M.own[i] === u).length + ' 城</small>' +
+      (u === 'me' ? '<em class="mc-me">我</em>' : '') +
+      (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
+    h += '<div class="mc-board" id="mc-board">' + cells.join('') +
+      '<div class="mc-mid" style="grid-column:2/6;grid-row:2/6">' +
+      '<div class="mc-dice">' + (M.dice ? '<span>' + DIE[M.dice[0]] + '</span><span>' + DIE[M.dice[1]] + '</span>' : '<span class="mc-dice-x">◎</span>') + '</div>' +
+      '<div class="mc-state">' + (M.phase === 'begin' ? '开局准备…' : M.phase === 'over' ? '这局收了'
+        : (myTurn ? (M.phase === 'act' ? '要不要买下这块？' : '轮到你，掷骰子') : esc(nm(curUid(r))) + ' 在想…')) + '</div>' +
+      (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
+      (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
+      '</div></div>';
+    /* 操作条 */
+    h += '<div class="mc-bar">';
+    if (M.phase === 'begin') h += '<span class="mc-hint">马上开跑…</span>';
+    else if (M.phase === 'over') h += '<span class="mc-hint">这局收了，盈亏已进累计记分牌</span>';
+    else if (myTurn && M.phase === 'act') {
+      const at = (M.pending || {}).cell;
+      h += '<button class="btn btn-primary" id="mc-buy">买下 ' + esc(nameOf(at)) + ' ' + priceOf(at) + '</button>' +
+        '<button class="btn btn-secondary" id="mc-no">不买</button>' +
+        '<span class="mc-hint">手里 ' + (M.cash['me'] || 0) + '，买完剩 ' + ((M.cash['me'] || 0) - priceOf(at)) + '</span>';
+    } else if (myTurn) h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button><span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合</span>';
+    else h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合 · ' + esc(nm(curUid(r))) + ' 的回合</span>';
+    h += '</div>';
+    /* 图例：谁是哪座城的主人（她把“区分我们二者”当硬要求） */
+    h += '<div class="mc-legend">' + M.order.map(u => {
+      const list = Object.keys(M.own).filter(i => M.own[i] === u).map(i => nameOf(+i));
+      return '<span class="mc-lg' + (u === 'me' ? ' me' : '') + '"><b style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' +
+        esc(nm(u)) + '</b>' + (list.length ? esc(list.join('、')) : '还没的地') + '</span>';
+    }).join('') + '<span class="mc-lg mc-lg-note"><i>虚拟钱 · 不动你的钱包</i></span></div>';
+    h += '</div>';
+    el.innerHTML = h;
+
+    const rb = el.querySelector('#mc-roll'); if (rb) rb.addEventListener('click', () => runSafe('mc.roll', () => myRoll(r)));
+    const bb = el.querySelector('#mc-buy'); if (bb) bb.addEventListener('click', () => runSafe('mc.buy', () => myBuy(r, 1)));
+    const nb = el.querySelector('#mc-no'); if (nb) nb.addEventListener('click', () => runSafe('mc.no', () => myBuy(r, 0)));
+    fitBoard(el, boxW);
+    if (M.fx) { runSafe('mc.playFx', () => playFx(el, M.fx)); M.fx = null; }
+    if (M.phase === 'begin') {
+      if (M.beginAt && Date.now() >= M.beginAt) { begin(r); touch(r); return; }
+      if (!M.beginQueued) { M.beginQueued = 1; r.plans.push({ kind: 'mcBegin', at: (M.beginAt || Date.now()), done: false }); touch(r); }
+    } else { M.beginQueued = 0; }
+  }
+  /* 棋盘按容器宽收：量 .gm-board-wrap，别量被 flex 压过的自己（UNO 那两层根因） */
+  function fitBoard(el, boxW) {
+    const bd = el.querySelector('#mc-board');
+    if (!bd) return;
+    bd.style.width = boxW + 'px';
+    const q0 = parseFloat(String(bd.parentNode.style.getPropertyValue('--mq') || '1')) || 1;
+    for (let i = 0; i < 3; i++) {
+      const over = bd.scrollWidth - bd.clientWidth;
+      if (over <= 0 || !bd.clientWidth) return;
+      bd.parentNode.style.setProperty('--mq', Math.max(.62, +(q0 * (bd.clientWidth / (bd.clientWidth + over))).toFixed(3)));
+    }
+  }
+
+  /* ---------- 动画：逻辑先落定、效果补放、定时器自收（不挂 onfinish） ---------- */
+  /* 自收两件套走壳子那一份（与斗地主/UNO 同一个口，不再抄第三遍） */
+  function ghost(html, cls) { return Games.fxGhost(html, 'mc-ghost ' + (cls || '')); }
+  function kill(el, ms) { Games.fxKill(el, ms); }
+  function cellRect(i) {
+    const el = document.querySelector('#room-board .mc-cell[data-idx="' + i + '"]');
+    return el ? el.getBoundingClientRect() : null;
+  }
+  const HOP_MS = 150;
+  function playFx(el, fx) {
+    if (fx.act === 'hop' && fx.path && fx.path.length) {
+      const first = (function () {
+        const rc0 = cellRect((fx.path[0].at - 1 + N) % N);
+        /* 拷一份可写的矩形：DOMRect 是只读的，拿它当累加器就是“看着能跑，一点就报错” */
+        return rc0 ? { left: rc0.left, top: rc0.top, width: rc0.width, height: rc0.height }
+          : { left: (window.innerWidth || 360) / 2, top: (window.innerHeight || 600) - 160, width: 40, height: 40 };
+      })();
+      const stepN = fx.path.length > 10 ? Math.ceil(fx.path.length / 10) : 1;   // 走得远就隔几格补一帧，别拖成一分钟
+      let cur = first, d = 0;
+      fx.path.forEach((p, idx) => {
+        if (idx % stepN && idx !== fx.path.length - 1) return;
+        const rc = cellRect(p.at);
+        if (!rc) return;
+        /* 起点/位移当场算完再交给定时器：错峰发射时 cur 还在背地往后走，
+           闭包里直读它就会把一串子全发在最后那一格上 */
+        const x0 = cur.left + cur.width / 2, y0 = cur.top + cur.height / 2;
+        const dx = (rc.left + rc.width / 2) - x0, dy = (rc.top + rc.height / 2) - y0;
+        setTimeout(() => {
+          const g = ghost('<i class="mc-tok' + (fx.uid === 'me' ? ' me' : '') + '" style="--tc:' + (fx.col || 'var(--t1)') + '">' +
+            (fx.uid === 'me' ? '我' : '') + '</i>', 'mc-hop');
+          g.style.left = (x0 - 9) + 'px'; g.style.top = (y0 - 9) + 'px';
+          g.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: .95 },
+            { transform: 'translate(' + (dx * .5).toFixed(1) + 'px,' + (dy * .5 - 16).toFixed(1) + 'px) scale(1.18)', offset: .5 },
+            { transform: 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(1)', opacity: .95 }
+          ], { duration: HOP_MS, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+          kill(g, HOP_MS + 120);
+        }, d);
+        cur = { left: rc.left, top: rc.top, width: rc.width, height: rc.height };
+        d += HOP_MS * stepN;      // 一格接一格：不错峰就是一串子同时飞，看不出走了几步
+      });
+    }
+    (fx.cash || []).forEach((c, i) => {
+      const rc = cellRect(c.at); if (!rc) return;
+      const g = ghost('<b>' + (c.amt > 0 ? '+' : '') + c.amt + '</b>', 'mc-cash' + (c.amt > 0 ? ' up' : ''));
+      g.style.left = (rc.left + 4) + 'px'; g.style.top = (rc.top - 4 + i * 16) + 'px';
+      g.animate([{ transform: 'translateY(6px) scale(.86)', opacity: 0 }, { transform: 'translateY(-6px) scale(1.04)', opacity: 1, offset: .35 },
+        { transform: 'translateY(-26px) scale(1)', opacity: 0 }], { duration: 1000, easing: 'ease-out', fill: 'forwards' });
+      kill(g, 1160);
+    });
+    if (fx.buy) {
+      const rc = cellRect(fx.buy.at);
+      if (rc) {
+        const g = ghost('<b>' + nameOf(fx.buy.at) + '</b>', 'mc-stamp');
+        g.style.left = (rc.left + rc.width / 2 - 30) + 'px'; g.style.top = (rc.top + rc.height / 2 - 12) + 'px';
+        g.animate([{ transform: 'scale(1.7) rotate(-8deg)', opacity: 0 }, { transform: 'scale(1) rotate(0deg)', opacity: 1, offset: .4 },
+          { transform: 'scale(1) rotate(0deg)', opacity: 0 }], { duration: 760, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+        kill(g, 900);
+      }
+    }
+    if (fx.card) {
+      const bd = document.querySelector('#room-board .mc-mid');
+      if (bd) bd.animate([{ transform: 'rotateX(0)' }, { transform: 'rotateX(-14deg)' }, { transform: 'rotateX(0)' }], { duration: 520, easing: 'ease-out' });
+    }
+  }
+
+  function def() {
+    return {
+      id: 'mono', name: '大富翁', icon: 'map-mono', playersTxt: '2~4 人',
+      multi: true, maxRivals: MAXP - 1,
+      opening: true,                 // 谁先走由随机与骰子定，不走五子棋那套先手协商（壳子那句 firstLine 在这条路上不会被读，所以不写）
+      seats: true,                   // 现金与归属画在盘上，壳子不再另起玩家条
+      newRoom, render, onPlan, settleTable, onResign,
+      turnOf: curUid,
+      onTimeout,
+      /* 给验收探针：规则、几何、账目都从这份口径读，不另开一套 */
+      N, POS, CITY, EV, CHANCE, FATE, COLORS, DIE, START_CASH, PASS_GO, RENT_RATE, KEEP, TURN_CAP, MAXP,
+      priceOf, rentOf, nameOf, ownOf, assets, alive, colOf, seatOf, st, curUid,
+      step, land, tryBuy, payRent, draw, bankrupt, nextTurn, begin, askBuy, rankRows, endIt, popCard,
+      myRoll, myBuy, aiWantsBuy, taTurn, playFx, fitBoard
     };
   }
   return { def };
@@ -19070,6 +19725,22 @@ const Games = (function () {
 
   /* ---------- TA 聊天邀玩（她 08-29 定 1%）：挂在聊天回复链上，1% 掷中就发邀请卡 ----------
      同一 TA 两小时内最多一次（工程防抖）；已有没下完的对局不重复邀；TA 发起所以你执黑先行 */
+  /* 特效自收（09-03 拢口）：挂 body + fixed，定时器自己收；onfinish 只当第二腿——
+     headless 与切后台都不放动画回调（09-01 鸡蛋那一课），每个游戏各写一份早晚飘 */
+  function fxGhost(html, cls) {
+    const el = document.createElement('div');
+    el.className = cls || '';
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    return el;
+  }
+  function fxKill(el, ms) {
+    if (!el) return;
+    setTimeout(() => { if (el && el.parentNode) el.remove(); }, ms);
+    const a = el.getAnimations ? el.getAnimations()[0] : null;
+    if (a) a.onfinish = () => { if (el && el.parentNode) el.remove(); };
+  }
+
   function maybeInvite(conv, ct) {
     if (Math.random() * 100 >= INVITE_CHAT_RATE) return;
     const g = DB.state.gameInviteAt = DB.state.gameInviteAt || {};
@@ -19091,7 +19762,8 @@ const Games = (function () {
   /* 累计记分牌：一个游戏一块（UNO 分低者强、斗地主分高者强）；只落库不给她看=白记 */
   const SCORE_BOARDS = [
     { key: 'unoScore', name: 'UNO', note: '分低者强' },
-    { key: 'dzScore', name: '斗地主', note: '分高者强' }
+    { key: 'dzScore', name: '斗地主', note: '分高者强' },
+    { key: 'monoScore', name: '大富翁', note: '盈亏累计' }
   ];
   function scoreBoards() {
     return SCORE_BOARDS.map(b => {
@@ -19142,6 +19814,7 @@ const Games = (function () {
     register(Mine.def());
     register(Ludo.def());    // 大厅第四张：飞行棋（P46，她 09-01 22:13 点名要的游戏）
     register(Doudizhu.def()); // 大厅第五张：斗地主（P50，她 09-02 17:10：“去做斗地主吧”）
+  register(Mono.def());     // 大厅第六张：大富翁（P51，她 09-03 08:30 拍了三件事后开工）
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
@@ -19158,6 +19831,8 @@ const Games = (function () {
     answerTaInvite, replay,
     /* 游戏模块的三个通用口：回写、我方倒计时、终局（UNO 等全走这里，不再各自扰 UI.save/重绘） */
     touch, armUrge, disarmUrge, feed, finish: endGame,
+    /* 特效自收的共用两件套（游戏模块只调一行）*/
+    fxGhost, fxKill,
     /* 房规读写（09-03）：游戏模块只读 optOf，写只走选人框那一个入口 */
     optOf, setOpt
   };
