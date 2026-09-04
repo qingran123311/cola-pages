@@ -9985,7 +9985,10 @@ const Engine = (function () {
     imgProb: 20, imgMode: 'single',
     cardComboProb: 1, cardComboMin: 2, cardComboMax: 3,
     readNoReply: 0, moMutual: 0,
-    moPostRate: 60, moPostMin: 1, moPostMax: 6, moPostUnit: 'hour'
+    /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
+       旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
+       3~14 小时 + 40% 后同一算法约每人每天 1 条。只影响没存过设置的联系人（存过的照她写的走）。 */
+    moPostRate: 40, moPostMin: 3, moPostMax: 14, moPostUnit: 'hour'
   };
   function params(ct) {
     return Object.assign({}, REPLY_DEF, (ct && ct.params) || {});
@@ -10465,7 +10468,7 @@ const Engine = (function () {
   }
 
   return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate,
-           params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt };
+           params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF };
 })();
 
 /* =====================================================
@@ -13882,7 +13885,8 @@ const Moments = (function () {
   function hasFresh() {
     const s = store();
     const seen = s.seenAt || 0;
-    return (s.posts || []).some(p => p && p.uid !== 'me' && p.ts > seen);
+    /* 09-04：动态可以是被补发的（发生时刻比 seenAt 早），那颗点要看“它什么时候落进我库的” */
+    return (s.posts || []).some(p => p && p.uid !== 'me' && (p.at || p.ts) > seen);
   }
   function markSeen() { const s = store(); s.seenAt = Date.now(); DB.save(); }
   function dotDiscover() {
@@ -14059,9 +14063,12 @@ function coverTap(e) {
      开=联系人之间互评，且 30% 动态主人会回一条评论。
      我的动态不受这个开关影响（P26 口径）——08-27 #41 重构成“看动态主人参数”时把这条
      弄丢了：uid='me' 查不到主人参数直接整条早退，我发的动态从此零赞零评（她 08-28 抓到）。 */
-  function scheduleReactions(postId) {
+  function scheduleReactions(postId, base) {
     const target = store().posts.find(x => x.id === postId);
     if (!target) return;
+    /* 09-04：互动按这条动态自己的发生时刻往后排，不是按“我什么时候看到它”——
+       补发出来的旧动态不该在上线那一秒突然被点赞（她的同一句诉求） */
+    const t0 = +base || Date.now();
     if (target.uid !== 'me') {
       /* 互评开关按人（她 08-27：“默认就是只有我，互评放回复设置里调”）：TA 的动态主人开了才排 TA 之间的互动 */
       const owner = Home.contactById(target.uid);
@@ -14074,7 +14081,7 @@ function coverTap(e) {
       const w = chatWindowOf(ct);
       /* 计划时刻制（她 08-28“回评要补”）：时刻预生成落库，刷新/重开到点由 settle() 补跑——
          不再是内存 setTimeout（决策 #60 的根治） */
-      addPlan(target, { kind: 'react', ct: ct.id, at: Date.now() + rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000 });
+      addPlan(target, { kind: 'react', ct: ct.id, at: t0 + rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000 });
     });
   }
   /* 我回复TA的评论后TA再回：只按聊天回复延迟，无缓冲。
@@ -14092,14 +14099,15 @@ function coverTap(e) {
     if (!post) return;
     addPlan(post, { kind: 'reply', ct: toUid, to: 'me', at: Date.now() + rand(w.minS, w.maxS) * 1000 + (first ? rand(0, 60) * 1000 : 0) });
   }
-  function reactOnce(postId, ct) {
+  function reactOnce(postId, ct, at) {
     const post = store().posts.find(x => x.id === postId);
     if (!post) return;
+    const t0 = +at || Date.now();        // 09-04：评论时刻=这班互动该到的时刻（补排的不再挂“刚刚”）
     if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
       /* 评论正文与配图：与聊天同一口径（拼卡/装饰/imgProb 都在 taBody 里算） */
       const b = taBody(ct, 50);
-      if (b.text || b.img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.img, ts: Date.now() });
+      if (b.text || b.img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.img, ts: t0 });
     }
     DB.save();
     renderList();
@@ -14109,7 +14117,7 @@ function coverTap(e) {
       const owner = Home.contactById(post.uid);
       const w2 = owner ? chatWindowOf(owner) : null;
       const delayS = w2 ? rand(w2.minS, w2.maxS) : rand(3, 15);
-      addPlan(post, { kind: 'reply', ct: post.uid, to: ct.id, at: Date.now() + delayS * 1000 });
+      addPlan(post, { kind: 'reply', ct: post.uid, to: ct.id, at: t0 + delayS * 1000 });
     }
   }
   /* ---------- 计划时刻制（她 08-28“回评要补”）：TA 的赞/评/回评全部落库排程 ----------
@@ -14131,12 +14139,12 @@ function coverTap(e) {
       due.forEach(pl => {
         const ct = Home.contactById(pl.ct);
         if (!ct) return;                       /* 人没了，这笔互动不补 */
-        if (pl.kind === 'react') { reactOnce(p.id, ct); return; }
+        if (pl.kind === 'react') { reactOnce(p.id, ct, pl.at); return; }
         /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
         const b = taBody(ct, 50);
         if (!b.text && !b.img) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.img, ts: Date.now() });
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.img, ts: pl.at || Date.now() });
       });
       acted = true;
     });
@@ -14145,6 +14153,7 @@ function coverTap(e) {
        发现页那颗“有人发朋友圈”的墨点就是盏点不亮的灯。改由心跳（30s）到点落帖：
        每人一个 nextPost 钟，不管这轮掷中没掷中都先把下一班钟排上，免得每 30s 掷一次变刷屏。 */
     const nc = (s.nextPost = s.nextPost || {});
+    let bornN = 0;
     contactsAll().forEach(ct => {
       const due = +nc[ct.id] || 0;
       if (due && now < due) return;
@@ -14155,10 +14164,18 @@ function coverTap(e) {
       if (Math.random() * 100 >= rate) return;
       const b = taBody(ct, 80);
       if (!b.text && !b.img) return;
-      const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4), uid: ct.id, ts: now, text: b.text, images: b.img ? [b.img] : [], likes: [], comments: [] };
+      /* 09-04（她「朋友圈上线的补发，不要按照我一上线的时间来」）：发生时刻 = 这班钟该到的那一刻（due），
+         落库时刻 = 现在（at）。以前一律 ts=now：离开几小时回来，几个人的钟同时过期、同秒补发、
+         全挂着“刚刚”——既不像真实时间线，看着也像刷屏。主动发消息那边早就是“ts 回填到应发时刻”
+         （engine.js 的 maybeProactive），朋友圈这回跟它归一口。一次离开每人只补一条，不追发。 */
+      const born = due;
+      const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4), uid: ct.id, ts: born, at: now, text: b.text, images: b.img ? [b.img] : [], likes: [], comments: [] };
+      bornN++;
       s.posts.unshift(post);
-      scheduleReactions(post.id);
+      scheduleReactions(post.id, born);
     });
+    /* 补发的动态发生时刻比现在早，直接 unshift 会把时间线顶到最前 → 按发生时刻重排（渲染读的就是这个数组顺序） */
+    if (bornN) s.posts.sort((x, y) => (y.ts || 0) - (x.ts || 0));
     if (acted) { DB.save(); renderList(); }
     /* 她正盯着这页 → 到点的动态当场就算看过，别让墨点亮在已经读了的人脸上 */
     const pg = document.getElementById('page-moments');
@@ -14181,15 +14198,31 @@ function coverTap(e) {
     if (n) DB.save();
     return n;
   }
-  /* 发帖间隔：每人各自在 [moPostMin, moPostMax] 区间内等概率取一班钟（09-01 起由 settle 排，不再只在开页时掷一次） */
+  /* 发帖间隔：每人各自在 [moPostMin, moPostMax] 区间内等概率取一班钟（09-01 起由 settle 排，不再只在开页时掷一次）。
+     09-04 两条下限（她「怎么酷酷发朋友圈」，实测出来的）：
+       ① 区间没设或设成 0~0 → 按 REPLY_DEF 的默认区间走。以前 0 被原样收下，钟=0，于是“每班钟”
+          退化成“每 30 秒心跳掷一次”——探针 M3 量到 24 小时 2879 条，那就是她说的酷酷发。
+       ② 取到的班钟不短于 60 秒：心跳本身 30 秒一次，比这更短的区间会被粒度吞掉，
+          设置写“12 秒”跑起来是“30 秒”，那是骗人。
+     默认值只这一处读 Engine.REPLY_DEF，不在这里抄一份。 */
+  const CLOCK_FLOOR = 60000;
   function postDelayMs(ct) {
     const p = Engine.params(ct);   // 09-02：默认值从 Engine.params 来，这里不再兑一份 1~6 小时
+    const D = Engine.REPLY_DEF || {};
     let mn = parseFloat(p.moPostMin), mx = parseFloat(p.moPostMax);
     if (!isFinite(mn) || mn < 0) mn = 0;
     if (!isFinite(mx)) mx = mn;
     if (mx < mn) mx = mn;
-    const unit = p.moPostUnit === 'min' ? 60000 : 3600000;   // 区间支持小数，单位分钟/小时
-    return Math.round((mn + Math.random() * (mx - mn)) * unit);
+    let unit = p.moPostUnit === 'min' ? 60000 : 3600000;   // 区间支持小数，单位分钟/小时
+    /* 区间没设或设成 0~0 → 默认区间连单一起取（只换数字不换单位，“3~14 分钟”跟“3~14 小时”不是一回事） */
+    if (mx <= 0) { mn = parseFloat(D.moPostMin) || 0; mx = parseFloat(D.moPostMax) || 0; unit = D.moPostUnit === 'min' ? 60000 : 3600000; }
+    return Math.max(CLOCK_FLOOR, Math.round((mn + Math.random() * (mx - mn)) * unit));
+  }
+  /* 改了发帖概率/区间/单位 → 旧钟作废，下一班就按新值重排（与来信时钟同一做法，profile.js 那边调）。
+     只清钟：清完下次 settle 看到没钟就只排钟不发，不会把这一清当成“补发”机会。 */
+  function reschedule(cid) {
+    const s = store();
+    if (s.nextPost && cid) delete s.nextPost[cid];
   }
 
   /* 极简输入模态（所在位置/链接）：ui-modal(1190) 保证压过一切业务壳 */
@@ -14614,7 +14647,7 @@ function coverTap(e) {
     dotDiscover();
   }
 
-  return { init, open, openUser, settle, backfillMissed, hasFresh, markSeen, dotDiscover };
+  return { init, open, openUser, settle, backfillMissed, hasFresh, markSeen, dotDiscover, reschedule };
 })();
 
 /* =====================================================
@@ -20258,6 +20291,8 @@ const Profile = (function () {
         const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
         const oldLetterRate = (+((c.params || {}).letterRate ?? 0));
         const oldLtrMin = +((c.params || {}).ltrMinH ?? 1), oldLtrMax = +((c.params || {}).ltrMaxH ?? 24);
+        const oldMoRate = +((c.params || {}).moPostRate ?? -1), oldMoMin = +((c.params || {}).moPostMin ?? -1);
+        const oldMoMax = +((c.params || {}).moPostMax ?? -1), oldMoUnit = (c.params || {}).moPostUnit || '';
         p.imgMode = el('pf-imgmode').value;
         p.imgProb = Math.min(100, Math.max(0, Math.round(+el('pf-imgprob').value || 0)));
         p.letterRate = Math.min(100, Math.max(0, Math.round(+el('pf-letterrate').value || 0)));
@@ -20268,13 +20303,19 @@ const Profile = (function () {
         p.readNoReply = Math.min(100, Math.max(0, Math.round(+el('pf-readnr').value || 0)));
         /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回 */
         p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
-        /* 朋友圈（二期P16③）：发帖概率%+互动间隔秒区间，默认30~120s（原文L45口径） */
+        /* 朋友圈发帖（二期P16③）：概率% + 间隔区间（单位小时/分钟，支持小数）；09-04 修正旧注释——
+           这里早就不是“30~120 秒”那个口径了。默认值也不再在这拄一份（以前写死 60 和 6，
+           REPLY_DEF 改了这边不知道，台账 L13 同一个病），一律从 Engine.REPLY_DEF 读。 */
         p.moPostRate = Math.min(100, Math.max(0, Math.round(+el('pf-mopost').value)));
-        if (!isFinite(p.moPostRate)) p.moPostRate = 60;
+        if (!isFinite(p.moPostRate)) p.moPostRate = Engine.REPLY_DEF.moPostRate;
         p.moPostMin = Math.max(0, parseFloat(el('pf-mopmin').value) || 0);
         p.moPostMax = parseFloat(el('pf-mopmax').value);
-        if (!isFinite(p.moPostMax) || p.moPostMax < p.moPostMin) p.moPostMax = p.moPostMin || 6;
+        if (!isFinite(p.moPostMax) || p.moPostMax < p.moPostMin) p.moPostMax = p.moPostMin || Engine.REPLY_DEF.moPostMax;
         p.moPostUnit = el('pf-mopunit').value === 'min' ? 'min' : 'hour';
+        /* 发帖参数一改旧钟作废，下一班就按新值走（她 09-04 要的是“改了就能看见效果”，不是干等旧钟跑完） */
+        if (oldMoRate !== p.moPostRate || oldMoMin !== p.moPostMin || oldMoMax !== p.moPostMax || oldMoUnit !== p.moPostUnit) {
+          if (typeof Moments !== 'undefined' && Moments.reschedule) Moments.reschedule(c.id);
+        }
         /* 朋友圈互评：开关挂在动态主人身上——开了才允许其他联系人来评 TA 这条 */
         p.moMutual = el('pf-momutual').value === '1';
         /* 对方主动发消息间隔（她 11:17）：分钟，默认 0=不主动 */
