@@ -348,10 +348,10 @@ button{-webkit-tap-highlight-color:transparent}
    不在名单里，实测 4 人局结算浮层 340×440.3、8 人 540px+，脚注与按钮顶到屏外又滘不回来（台账 L4 第 15 次）。
    教训：**验收与收口写成“点名清单”，漏一个名字等于没这条门禁**。
    所以收口挂在结构上：凡是全屏遮罩的直属盒子一律兜住，新浮层不需要登记名字。
-   自带滞动区的面板显式豁免（overflow:hidden 把滞动交回内层），方免是“只影响滞动条”，安侧。 */
+   自带滚动区的面板显式豁免（overflow:hidden 把滚动交回内层）；豁免的后果只是“多一条滚动条”，安全侧。 */
 .dialog-mask>*,.sheet-mask>*{max-height:100%;
   overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-/* 自带滞动区的面板（文件管理/游戏面板）：滞动交回内层，避免双滞动条 */
+/* 自带滚动区的面板（文件管理/游戏面板）：滚动交回内层，避免双滚动条 */
 .sheet-lib,.sheet-gm{overflow:hidden}
 .sheet-title{text-align:center;color:var(--t3);font-size:12px;padding:8px 0 4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
