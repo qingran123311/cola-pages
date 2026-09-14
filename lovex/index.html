@@ -2980,6 +2980,28 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-cash.up{border-style:dashed}
 .mc-stamp{padding:2px 7px;border:1.4px solid var(--t1);border-radius:6px;background:var(--card);
   font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap}
+/* 五拍（09-14 P56-A）：摇骰转面 → 落定弹一下 → 逐格跳 → 事件翻牌 → 换手
+   时长全在 mono.js 的 BEAT 表里（三档可调），CSS 只管“怎么动”，不管“动多久” */
+.mc-dice.spin .mc-dice-b{display:inline-block;width:.78em;height:.78em;border:1.6px solid var(--t2);
+  border-radius:15%;background:var(--card);animation:mc-tumble .22s linear infinite}
+.mc-dice.spin .mc-dice-b:last-child{animation-delay:-.11s}
+@keyframes mc-tumble{50%{transform:rotate(180deg) translateY(-14%)}}
+.mc-dice.land span{animation:mc-die-in .3s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes mc-die-in{0%{transform:scale(.42) rotate(-26deg);opacity:.15}70%{transform:scale(1.14) rotate(5deg);opacity:1}}
+/* 事件翻牌：居中、大字号（她 09-14：“只写一行 10px 小字，我都没反应过来”） */
+.mc-pop{width:min(300px,86vw);margin:auto;padding:20px 18px 16px;text-align:center;
+  background:var(--card);border:1.6px solid var(--t1);border-radius:14px;box-shadow:var(--shadow-float);
+  animation:mc-flip .42s cubic-bezier(.2,.9,.3,1.25)}
+.mc-pop .k{display:block;font-size:11px;font-weight:700;letter-spacing:.34em;color:var(--t3)}
+.mc-pop p{margin:9px 0 7px;font-size:19px;line-height:1.45;color:var(--t1);overflow-wrap:anywhere}
+.mc-pop em{display:block;font-style:normal;font-size:12.5px;color:var(--t2)}
+.mc-pop .h{display:block;margin-top:12px;font-style:normal;font-size:10.5px;color:var(--t3)}
+@keyframes mc-flip{0%{transform:rotateX(-86deg) scale(.9);opacity:.1}60%{transform:rotateX(9deg) scale(1.03);opacity:1}}
+/* 齿轮里那一页：说明小字 + 实时预估（填完就知道开出来是什么盘，不靠猜） */
+.mc-tip{display:block;margin-top:3px;font-size:10.5px;line-height:1.45;color:var(--t3)}
+.mc-prev{margin:10px 0 2px;padding:7px 9px;border:1px dashed var(--line);border-radius:9px;
+  font-size:11px;line-height:1.5;color:var(--t2);font-variant-numeric:tabular-nums}
+.dialog-wide{width:min(400px,92vw)}
 
 </style>
 </head>
@@ -17879,18 +17901,39 @@ const Doudizhu = (function () {
    ⑤ 收场改成"谁先把资产做到目标数谁赢"，不靠回合数硬磨（她嫌太长）；
    ⑥ 界面上不许出现"虚拟钱 / 不动你的钱包 / 不记账单"这类内部口径——这本来就不是给玩家看的话。
    一期仍不做：建房、抵押、交易、监狱、税收、双倍骰（P49 §二写明的砍法）。
+   她 09-14 拍的 P56-A（只改手感与旋钮，这一期不加新格子）：
+   ⑦ 一回合拆成五拍：摇骰 → 骰子落定 → 逐格跳 → 落格（事件翻牌）→ 换手；
+      下一手必须等表演放完，节拍走壳子的计划队列（mcBeat）——关页面再回来不会卡在演到一半；
+      表演期间点盘面 = 立刻落定（快进）。
+   ⑧ 起步金 / 过起点 / 目标规模 / 目标资产 / 每人轮数 / 城价缩放 / 事件格密度 / 节奏
+      全进齿轮那一页；开局抄一份 M.rule 快照，中途改设置不把正在跑的局拧变样。
+   ⑨ 老局（存档里没有 M.rule 的）锁回一期那套账与那张盘：M.layVer='v1'，只有节奏跟着齿轮走。
+   表里那些毫秒是她要我拍的（公开资料没有“逐格停顿几毫秒”这种口径），三档在齿轮里可选、不当标准。
    ============================================================ */
 const Mono = (function () {
   const TURN_SEC = [2.2, 4.6];      // TA 一回合（掷骰 + 要不要买）想多久，跟飞行棋同一档
   const BEGIN_MS = 900;             // 人齐到开跑：让骰子在盘上站一下
-  const START_CASH = 500;           // 起步金（盘上这个数与钱包无关，界面上也不提钱包）
-  const PASS_GO = 100;              // 经过起点领一趟
   const RENT_RATE = 0.3;            // 租金 = 地价 × 0.3（向上取整）：一张公式，不再另立租金表
   const KEEP = 80;                  // AI 买完地至少留这些现金（一轮就破产看着像 bug，不像规则）
-  const GOAL_LAPS = 2;              // 目标里的“过路钱”那一块 = 绕场两趟
-  const GOAL_CITIES = 2;            // 目标里的“地价”那一块 = 两座均价城
-  const ROUND_CAP = 14;             // 兑底：每人最多走 14 轮（按人算，不按总手数——8 人不该因此多挨一倍上限）
   const MAXP = 8;                   // 2~8 人
+  /* 一期那五个数：现在只是「老局那一套」的取值（RULE_V1），新局一律读齿轮 CFG */
+  const START_CASH = 500; const PASS_GO = 100; const GOAL_LAPS = 2; const GOAL_CITIES = 2; const ROUND_CAP = 14;
+  const LAY_VER = 'v2';             // 盘面版本：老局按老布局跑完（格子内容一改，同一个 idx 就不是同一块地）
+  /* 齿轮默认值（我拍的，可调；界面上不写“这是拍的”） */
+  const CFG = { cash: 800, passGo: 150, tier: 'std', goal: 0, cap: 20, ev: 'mid', beat: 'norm', price: 100 };
+  const TIERS = { fast: [2, 2], std: [3, 4], long: [5, 7], none: [0, 0] };   // [绕几趟过路钱, 几座均价城]
+  const TIER_NAME = { fast: '快局', std: '标准', long: '长局', none: '不收场' };
+  /* 内容格颗数按环长给：[20 格, 24 格, 28 格]（疏=一期那三颗；环越大城只会更多，不会因人多反而少城） */
+  const EV_N = { low: [3, 4, 4], mid: [6, 7, 8], high: [9, 11, 13] };
+  const BEAT_NAME = { slow: '细看', norm: '正常', fast: '快' };
+  /* 每一拍多长——三档；TA 那一档略快，八人桌一圈才等得起 */
+  const BEAT = {
+    slow: { spin: 1000, settle: 320, hop: 380, hopTa: 300, go: 640, land: 1800, landTa: 1200, card: 2200 },
+    norm: { spin: 760, settle: 220, hop: 300, hopTa: 190, go: 520, land: 1500, landTa: 900, card: 1800 },
+    fast: { spin: 380, settle: 120, hop: 160, hopTa: 120, go: 260, land: 700, landTa: 500, card: 600 }
+  };
+  /* 老局那一套（存档里没 M.rule 的）：账与盘锁回一期，节奏跟着齿轮走 */
+  const RULE_V1 = { layVer: 'v1', cash: START_CASH, passGo: PASS_GO, price: 100, ev: 3, laps: GOAL_LAPS, cities: GOAL_CITIES, goalRaw: 0, cap: ROUND_CAP, tier: 'fast' };
   /* 玩家身份色：4 个主色 + 各自加深一档，8 家分得开，且不碰 255°~305°（紫色会被否） */
   const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0', '#A45B4E', '#C08A2E', '#4F7A57', '#3F6A8C'];
   const DIE = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
@@ -17936,31 +17979,66 @@ const Mono = (function () {
     for (let rr = 2; rr <= side - 1; rr++) a.push([side, rr]);   // 右边：上 → 下
     return a;
   }
-  function lay(side) {
+  /* 内容格摊开摆：ev=3 时 20 格环正好落在 3 / 10 / 17（与一期那一串位置相同） */
+  function evSlots(N, ev) {
+    const used = {}, out = [];
+    for (let i = 0; i < ev; i++) {
+      let at = Math.round(N * (i + 0.5) / ev), guard = 0;
+      while ((used[at] || at <= 0 || at >= N) && guard++ < N) at = at + 1 >= N ? 1 : at + 1;
+      if (used[at] || at <= 0 || at >= N) continue;
+      used[at] = 1; out.push(at);
+    }
+    return out.sort((a, b) => a - b);
+  }
+  /* 一张盘由「边长 + 内容格颗数 + 城价缩放」三件事定，缓存 key 就这三件（少一件就会串盘） */
+  function lay(side, rule) {
     side = side || 6;
-    if (LAY[side]) return LAY[side];
+    rule = rule || ruleOf(cfg(), side);
+    const key = side + '@' + rule.ev + '@' + rule.price;
+    if (LAY[key]) return LAY[key];
     const N = 4 * (side - 1);
     const POS = ringPos(side);
-    /* 事件格按环长的 15% / 50% / 85% 摆：20 格正好落在 3 / 10 / 17（与一期一致），大环自动摊开 */
     const EV = {};
-    [Math.floor(N * 0.15), Math.floor(N * 0.5), Math.floor(N * 0.85)].forEach((i, k) => {
-      if (i > 0 && i < N) EV[i] = k === 1 ? ['fate', '命运'] : ['chance', '机会'];
-    });
+    evSlots(N, rule.ev).forEach((i, k) => { EV[i] = k % 3 === 1 ? ['fate', '命运'] : ['chance', '机会']; });
     const CITY = {};
     let k = 0, total = 0;
     for (let i = 1; i < N && k < CITY_LIST.length; i++) {
       if (EV[i]) continue;
-      CITY[i] = CITY_LIST[k++];
-      total += CITY_LIST[k - 1][1];
+      const p = Math.max(20, Math.ceil(CITY_LIST[k][1] * rule.price / 100));
+      CITY[i] = [CITY_LIST[k][0], p];
+      total += p; k++;
     }
     const avg = k ? Math.round(total / k) : 0;
-    /* 目标不拿全城地价乘比例：环越大城越多，那样 8 人环的目标会遥不可及，机制就挂了。
-       绕两趟过路钱 + 两座均价城——与小环同量级，8 人也到得了 */
-    const goal = START_CASH + GOAL_LAPS * PASS_GO + avg * GOAL_CITIES;
-    LAY[side] = { side: side, N: N, POS: POS, CITY: CITY, EV: EV, cities: k, total: total, avg: avg, goal: goal };
-    return LAY[side];
+    LAY[key] = { side: side, N: N, POS: POS, CITY: CITY, EV: EV, cities: k, total: total, avg: avg, ver: rule.layVer };
+    return LAY[key];
   }
-  function L(r) { return lay(st(r).side); }
+  /* 目标只这一条公式：起步金 + 几趟过路钱 + 几座均价城（她直填的数优先，档位让位） */
+  function goalFor(rule, l) {
+    if (rule.goalRaw > 0) return rule.goalRaw;
+    if (!(rule.laps > 0) && !(rule.cities > 0)) return 0;      // 「不收场」= 0：只靠破产与轮数上限收
+    return rule.cash + rule.laps * rule.passGo + l.avg * rule.cities;
+  }
+  function clamp(v, d, lo, hi) { const x = Math.round(+v); return Number.isFinite(x) ? Math.max(lo, Math.min(hi, x)) : d; }
+  /* 齿轮那一页读写都过这里：范围与默认只住一处，别在页面上各夹一份 */
+  function cfg() {
+    const g = (DB.state.games = DB.state.games || {});
+    const c = g.monoCfg = g.monoCfg || {};
+    return {
+      cash: clamp(c.cash, CFG.cash, 300, 3000), passGo: clamp(c.passGo, CFG.passGo, 50, 400),
+      tier: TIERS[c.tier] ? c.tier : CFG.tier, goal: clamp(c.goal, CFG.goal, 0, 99999),
+      cap: clamp(c.cap, CFG.cap, 0, 40), ev: EV_N[c.ev] ? c.ev : CFG.ev,
+      beat: BEAT[c.beat] ? c.beat : CFG.beat, price: clamp(c.price, CFG.price, 60, 160)
+    };
+  }
+  function ruleOf(c, side) {
+    const t = TIERS[c.tier] || TIERS[CFG.tier];
+    const evRow = EV_N[c.ev] || EV_N[CFG.ev];
+    return {
+      layVer: LAY_VER, cash: c.cash, passGo: c.passGo, price: c.price, goalRaw: c.goal, cap: c.cap,
+      ev: evRow[Math.max(0, Math.min(2, side - 6))], laps: t[0], cities: t[1], tier: c.tier, beat: c.beat, goal: null
+    };
+  }
+  function L(r) { const M = st(r); return lay(M.side, M.rule); }
 
   function esc(s) { return UI.escapeHtml(s); }
   function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -17980,7 +18058,10 @@ const Mono = (function () {
     r.mc = r.mc || {
       phase: 'wait', order: [], oi: 0, pos: {}, cash: {}, own: {}, out: {},
       deck: {}, turnNo: 0, dice: null, pending: null, card: '', last: '', fx: null,
-      beginAt: 0, beginQueued: 0, rankRows: null
+      beginAt: 0, beginQueued: 0, rankRows: null,
+      /* 五拍用的那几颗：actor=这一拍是谁，roll=骰子已定还没落定，plan=路径（只算不走），
+         cardShow=事件翻牌，fast=她按了快进 */
+      actor: null, roll: null, plan: null, cardShow: null, fast: 0
     };
     /* 半路接手/老存档可能缺项：补齐，不靠“缺字段就当没事” */
     const M = r.mc;
@@ -17990,6 +18071,9 @@ const Mono = (function () {
     if (typeof M.turnNo !== 'number') M.turnNo = 0;
     if (typeof M.oi !== 'number') M.oi = 0;
     if (!M.side) M.side = sideFor(Math.max(2, (M.order || []).length || 2));
+    /* 开局快照：没有就补一份——老局补 v1 那一套（账与盘不变），新局补齿轮当前值 */
+    if (!M.rule) { M.rule = Object.assign({}, RULE_V1); M.layVer = 'v1'; }
+    if (M.rule.goal == null) M.rule.goal = goalFor(M.rule, lay(M.side, M.rule));
     if (!M.deck.chance) M.deck.chance = shuffle(CHANCE.length);
     if (!M.deck.fate) M.deck.fate = shuffle(FATE.length);
     return M;
@@ -18002,8 +18086,9 @@ const Mono = (function () {
   function rentOf(r, i) { const c = L(r).CITY[i]; return c ? Math.ceil(c[1] * RENT_RATE) : 0; }
   function nameOf(r, i) { const l = L(r); return l.CITY[i] ? l.CITY[i][0] : (i === 0 ? '起点' : (l.EV[i] || ['', ''])[1]); }
   function ownOf(r, i) { const o = st(r).own[i]; return o && !st(r).out[o] ? o : null; }
-  function goalOf(r) { return L(r).goal; }
-  function capOf(r) { return ROUND_CAP * Math.max(2, (st(r).order || []).length); }
+  function goalOf(r) { return st(r).rule.goal || 0; }
+  /* 0 = 不设上限：那就真不排这个兑底，不在背后夹一个“实际上还是 20”的数 */
+  function capOf(r) { const c = st(r).rule.cap; return c > 0 ? c * Math.max(2, (st(r).order || []).length) : Infinity; }
   function assets(r, u) {
     const M = st(r);
     let sum = M.cash[u] || 0;
@@ -18016,16 +18101,22 @@ const Mono = (function () {
     const M = st(room);
     M.order = (room.players || []).slice(0, MAXP);
     M.side = sideFor(M.order.length);
+    /* 快照：本局只读这一份，中途改齿轮不把正在跑的局拧变样 */
+    M.rule = ruleOf(cfg(), M.side);
+    M.rule.goal = goalFor(M.rule, lay(M.side, M.rule));
+    M.layVer = M.rule.layVer;
     M.oi = rand(0, Math.max(0, M.order.length - 1));    // 谁先走是随机的，不是默认我先
     M.pos = {}; M.cash = {}; M.out = {}; M.own = {};
-    M.order.forEach(u => { M.pos[u] = 0; M.cash[u] = START_CASH; });
+    M.order.forEach(u => { M.pos[u] = 0; M.cash[u] = M.rule.cash; });
     M.deck = { chance: shuffle(CHANCE.length), fate: shuffle(FATE.length) };
     M.turnNo = 0; M.dice = null; M.pending = null; M.card = ''; M.rankRows = null;
+    M.actor = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0;
     M.phase = 'begin';
     M.beginAt = Date.now() + BEGIN_MS;
     room.blackUid = M.order[M.oi] || 'me';
-    const l = lay(M.side);
-    feed(room, 'sys', '棋盘是 ' + l.cities + ' 城的方环：每人 ' + START_CASH + ' 元起步，踩到无主的城能买下，踩到别人的城交租，钱不够就出局——谁先把资产做到 ' + l.goal + ' 元谁赢');
+    const l = lay(M.side, M.rule), R = M.rule;
+    feed(room, 'sys', '棋盘是 ' + l.cities + ' 城的方环：每人 ' + R.cash + ' 元起步，踩到无主的城能买下，踩到别人的城交租，钱不够就出局' +
+      (R.goal > 0 ? '——谁先把资产做到 ' + R.goal + ' 元谁赢' : '——这一局不收场，把别人掳光才算完'));
     return room;
   }
   function begin(r) {
@@ -18046,25 +18137,102 @@ const Mono = (function () {
     r.plans.push({ kind: 'mcRoll', at: Date.now() + rand(TURN_SEC[0], TURN_SEC[1]) * 1000, done: false });
   }
 
+  /* ---------- 五拍引擎：摇骰 → 子落定 → 逐格跳 → 落格 → 换手 ----------
+     不挂动画回调（headless 与切后台都不放 onfinish，09-01 那一课），拍子进 r.plans，到点由壳子派；
+     迟到的拍先问 phase，不对就作废——所以关页面再回来只是把剩下的拍放完，不会卡在演到一半。 */
+  function beatMs(r, key) {
+    const M = st(r);
+    const b = BEAT[M.rule.beat] || BEAT.norm;
+    const k = (key === 'hop' || key === 'land') && M.actor !== 'me' ? key + 'Ta' : key;
+    return b[k] != null ? b[k] : (b[key] || 0);
+  }
+  function pushBeat(r, kind, ms) {
+    const M = st(r);
+    (r.plans = r.plans || []).push({ kind: 'mcBeat', beat: kind, at: M.fast ? Date.now() : Date.now() + Math.max(0, Math.round(ms)), done: false });
+  }
+  /* 逐格跳共多长：一格一跳、不跳帧（她 09-14：“我都没反应过来就嘎嘎跳完了”） */
+  function hopMs(r) {
+    const M = st(r);
+    const p = M.plan || { path: [] };
+    return (p.path || []).length * beatMs(r, 'hop') + (p.go ? beatMs(r, 'go') : 0);
+  }
+  /* 收牌：状态与 DOM 一起收（DOM 贴在 #dialog-layer，不靠“回到牌桌重画”才没掉） */
+  function hideCard() { const el = document.getElementById('mc-pop'); if (el) el.remove(); }
+  /* 点盘面 = 立刻落定：把这一回合剩下的拍拉到眼前一次放完 */
+  function ff(r) {
+    const M = st(r);
+    if (M.phase !== 'show') return false;
+    M.fast = 1;
+    (r.plans || []).forEach(p => { if (p.kind === 'mcBeat' && !p.done) p.at = Date.now(); });
+    M.cardShow = null;
+    hideCard();
+    touch(r);
+    return true;
+  }
+  function startTurn(r, uid, d1, d2) {
+    const M = st(r);
+    if (M.phase === 'over') return;
+    M.actor = uid; M.roll = [d1, d2]; M.dice = null; M.cardShow = null; M.fast = 0;
+    M.plan = planHop(r, uid, d1, d2);
+    M.phase = 'show';
+    M.fx = { act: 'spin', uid: uid, col: colOf(r, uid) || 'var(--t1)' };
+    clearClock(r); killPlans(r, 'mcBeat');
+    pushBeat(r, 'move', beatMs(r, 'spin') + beatMs(r, 'settle'));
+    touch(r);
+  }
+  function runBeat(r, kind) {
+    const M = st(r);
+    if (M.phase !== 'show') return;                    // 房间收了/换手了：迟到的拍作废，不重演
+    const uid = M.actor || curUid(r);
+    if (!uid || M.out[uid]) { M.fast = 0; M.cardShow = null; M.plan = null; nextTurn(r); return; }
+    if (kind === 'move') {
+      M.dice = M.roll; M.roll = null;
+      M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', ring: L(r).N, path: ((M.plan || {}).path || []).slice(), at: Date.now() };
+      touch(r);
+      pushBeat(r, 'land', hopMs(r));
+      return;
+    }
+    if (kind === 'land') {
+      const plan = M.plan || { d: M.dice || [1, 1], n: 0, path: [], at: M.pos[uid] | 0, go: 0 };
+      M.plan = null;
+      applyHop(r, uid, plan);
+      touch(r);
+      if (M.phase === 'over') return;
+      pushBeat(r, 'next', beatMs(r, M.cardShow ? 'card' : 'land'));
+      return;
+    }
+    if (kind === 'next') { M.fast = 0; M.cardShow = null; hideCard(); handOver(r); touch(r); }
+  }
+
   /* ---------- 走一格算一格（判定与记账只在这里，我与 TA 共用一个口） ---------- */
+  function planHop(r, uid, d1, d2) {
+    const M = st(r), l = L(r);
+    const n = (d1 | 0) + (d2 | 0);
+    const path = [];
+    let at = M.pos[uid] | 0, go = 0;
+    for (let i = 1; i <= n; i++) {
+      at = (at + 1) % l.N;
+      if (at === 0) { go++; path.push({ go: 1, at: at }); } else path.push({ at: at });
+    }
+    return { d: [d1, d2], n: n, path: path, at: at, go: go };
+  }
+  /* 落账：位置、过起点那一笔、播报，然后结算落格 */
+  function applyHop(r, uid, plan) {
+    const M = st(r), R = M.rule;
+    (r.moves = r.moves || []).push({ who: uid, act: 'roll', d: plan.d, n: plan.n, ts: Date.now() });
+    if (plan.go) M.cash[uid] = (M.cash[uid] || 0) + R.passGo * plan.go;
+    M.pos[uid] = plan.at;
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(plan.d[0]) + dieTxt(plan.d[1]) + ' 走 ' + plan.n + ' 格到 ' + esc(nameOf(r, plan.at)) +
+      (plan.go ? '（过起点领 ' + R.passGo * plan.go + '）' : ''));
+    return land(r, uid, false);
+  }
+  /* 一把过：账与表演同一拍落（模拟对局与验收用；真局走上面那五拍） */
   function step(r, uid, d1, d2) {
     const M = st(r);
-    const l = L(r);
-    const steps = (d1 | 0) + (d2 | 0);
-    M.dice = [d1, d2];
-    (r.moves = r.moves || []).push({ who: uid, act: 'roll', d: [d1, d2], n: steps, ts: Date.now() });
-    const path = [];
-    let at = M.pos[uid] | 0;
-    for (let i = 1; i <= steps; i++) {
-      at = (at + 1) % l.N;
-      if (at === 0) { M.cash[uid] = (M.cash[uid] || 0) + PASS_GO; path.push({ go: 1, at: at }); }
-      else path.push({ at: at });
-    }
-    M.pos[uid] = at;
-    M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', ring: l.N, path: path.slice(), at: Date.now() };
-    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(d1) + dieTxt(d2) + ' 走 ' + steps + ' 格到 ' + esc(nameOf(r, at)) +
-      (path.some(p => p.go) ? '（过起点领 ' + PASS_GO + '）' : ''));
-    return land(r, uid, false);
+    M.actor = uid; M.roll = null; M.cardShow = null; M.dice = [d1, d2];
+    const plan = planHop(r, uid, d1, d2);
+    M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', ring: L(r).N, path: plan.path.slice(), at: Date.now() };
+    return applyHop(r, uid, plan);
   }
   function dieTxt(v) { return (DIE[v] || '') + ' ' + v; }
   /* 落格：无主可买 / 有主交租 / 事件抽一张；事件把我挪走之后只再结算一次（不链式抽到手软） */
@@ -18090,6 +18258,7 @@ const Mono = (function () {
     M.fx = Object.assign({}, M.fx, { cash: [{ uid: uid, amt: -rent, at: at }, { uid: host, amt: rent, at: at }] });
     M.last = nm(uid) + ' 在 ' + nameOf(r, at) + ' 交租 ' + rent + ' 给 ' + nm(host);
     feed(r, uid === 'me' ? 'me' : 'ta', esc(M.last));
+    if (uid !== 'me') Games.say(r, uid, '快捷短语');      // 交了租它要嘨一句（话从她的库里挑，拍子上不叠加）
     if (M.cash[uid] < 0) bankrupt(r, uid, host);
   }
   function draw(r, uid, kind, at) {
@@ -18114,15 +18283,24 @@ const Mono = (function () {
     }
     if (c.to != null) {
       M.pos[uid] = c.to;
-      if (c.to === 0) M.cash[uid] = (M.cash[uid] || 0) + PASS_GO;
-      line += '，回到 ' + esc(nameOf(r, c.to)) + (c.to === 0 ? '（领 ' + PASS_GO + '）' : '');
+      if (c.to === 0) M.cash[uid] = (M.cash[uid] || 0) + M.rule.passGo;
+      line += '，回到 ' + esc(nameOf(r, c.to)) + (c.to === 0 ? '（领 ' + M.rule.passGo + '）' : '');
       M.fx.hop = { uid: uid, to: c.to };
     }
     feed(r, uid === 'me' ? 'me' : 'ta', line);
     if (M.cash[uid] < 0) bankrupt(r, uid, null);
+    /* 正在表演：抽到的牌翻一张大的给她看；一把过的那条路不翻（那本来就没在演） */
+    if (M.phase === 'show') { M.cardSeq = (M.cardSeq || 0) + 1; M.cardShow = { k: (l.EV[at] ? l.EV[at][1] : '机会'), x: c.t, e: cardEnd(c) }; }
     /* 被卡挪到别人的地上照样交租：只再结算一次，不链式抽卡 */
     if (M.fx.hop && l.CITY[M.pos[uid]]) return land(r, uid, true);
     return { done: 1 };
+  }
+  /* 翻牌上那一行小字：这张卡干了什么说人话（与上面那句 feed 同源，不另拿一份数） */
+  function cardEnd(c) {
+    if (c.cash) return (c.cash > 0 ? '到账 ' : '付出 ') + Math.abs(c.cash) + ' 元';
+    if (c.to != null) return '回到起点';
+    if (c.mv) return (c.mv > 0 ? '前进 ' : '退') + Math.abs(c.mv) + ' 格';
+    return '什么也没发生';
   }
   function popCard(r, kind) {
     const M = st(r);
@@ -18143,6 +18321,7 @@ const Mono = (function () {
     (r.moves = r.moves || []).push({ who: uid, act: 'buy', cell: idx, price: price, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { buy: { at: idx, uid: uid, name: nameOf(r, idx) } });
     feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 买下 ' + esc(nameOf(r, idx)) + '（' + price + '，以后踩它的人交 ' + rentOf(r, idx) + '）');
+    if (uid !== 'me') Games.say(r, uid, '快捷短语');
     return { ok: 1 };
   }
   /* 破产：地把债主拿走（没债主就归无主），人退出这一局，不是把负数留在盘上装没事 */
@@ -18157,6 +18336,7 @@ const Mono = (function () {
     (r.moves = r.moves || []).push({ who: uid, act: 'out', cells: got.length, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { out: uid });
     feed(r, 'sys', esc(nm(uid)) + ' 现金见底，出局' + (got.length ? '（' + got.length + ' 座城' + (creditor ? '归 ' + esc(nm(creditor)) : '收回无主') + '）' : ''));
+    Games.say(r, uid, '胜负感言');           // 输了的人自己说一句（话挑不到就闭嘴，不编）
     if (alive(r).length <= 1) endIt(r, alive(r)[0] || null);
   }
 
@@ -18165,20 +18345,23 @@ const Mono = (function () {
     const M = st(r);
     if (M.phase === 'over') return;
     clearClock(r);
-    killPlans(r, 'mcRoll');
-    M.pending = null;
+    killPlans(r, 'mcRoll'); killPlans(r, 'mcBeat');
+    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0;
+    hideCard();
     M.turnNo++;
     if (alive(r).length <= 1) { endIt(r, alive(r)[0] || null); return; }
-    /* 收场主判据：谁的资产先到目标数，当场收（她嫌靠回合数磨太长） */
-    const goal = L(r).goal;
-    const champ = alive(r).filter(u => assets(r, u) >= goal)
-      .sort((a, b) => assets(r, b) - assets(r, a))[0];
-    if (champ) {
-      feed(r, 'sys', esc(nm(champ)) + ' 先把资产做到 ' + assets(r, champ) + '（目标 ' + goal + '），这局收');
-      endIt(r, champ);
-      return;
+    /* 收场主判据：谁的资产先到目标数，当场收（地她嫌靠回合数磨太长）；目标 0 = 不收场 */
+    const goal = goalOf(r);
+    if (goal > 0) {
+      const champ = alive(r).filter(u => assets(r, u) >= goal)
+        .sort((a, b) => assets(r, b) - assets(r, a))[0];
+      if (champ) {
+        feed(r, 'sys', esc(nm(champ)) + ' 先把资产做到 ' + assets(r, champ) + '（目标 ' + goal + '），这局收');
+        endIt(r, champ);
+        return;
+      }
     }
-    if (M.turnNo >= capOf(r)) { rankOut(r, '跑满 ' + ROUND_CAP + ' 轮收场'); return; }
+    if (M.turnNo >= capOf(r)) { rankOut(r, '每人走满 ' + M.rule.cap + ' 轮收场'); return; }
     let guard = 0;
     do { M.oi = (M.oi + 1) % M.order.length; guard++; } while (M.out[M.order[M.oi]] && guard <= M.order.length);
     M.phase = 'roll';
@@ -18192,11 +18375,12 @@ const Mono = (function () {
   }
   function rankRows(r) {
     const M = st(r);
+    const base = M.rule.cash;
     /* 盈亏就这里算一处：出局那位按 -起始 记（钱见底就是赔光），
        不在 endIt 里再改一遍——结算表与记分牌读到两份数就假了 */
     return M.order.map(u => ({
       u: u, cash: M.cash[u] || 0, cities: Object.keys(M.own).filter(i => M.own[i] === u).length,
-      assets: assets(r, u), out: M.out[u] ? 1 : 0, sc: M.out[u] ? -START_CASH : assets(r, u) - START_CASH
+      assets: assets(r, u), out: M.out[u] ? 1 : 0, sc: M.out[u] ? -base : assets(r, u) - base
     })).sort((a, b) => (b.out ? 0 : 1) - (a.out ? 0 : 1) || b.assets - a.assets);
   }
   function settleTable(r) {
@@ -18208,12 +18392,13 @@ const Mono = (function () {
         '<span>' + (i + 1) + '</span><span class="nm"><b>' + esc(nm(x.u)) + '</b>' + (x.out ? '<i class="mc-out">出局</i>' : '') + '</span>' +
         '<span>' + x.cash + '</span><span>' + x.cities + ' 座</span>' +
         '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span></div>').join('') +
-      '<div class="mc-scr-f">跑了 ' + M.turnNo + ' 回合 · 目标 ' + L(r).goal + ' 元</div></div>';
+      '<div class="mc-scr-f">跑了 ' + M.turnNo + ' 回合 · ' + (goalOf(r) > 0 ? '目标 ' + goalOf(r) + ' 元' : '不收场') + '</div></div>';
   }
   function endIt(r, winUid) {
     const M = st(r);
     M.phase = 'over';
-    M.pending = null;
+    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0; M.actor = null;
+    hideCard();
     r.winner = winUid || M.order[0] || 'me';
     const rows = M.rankRows || rankRows(r);
     const sc = {};
@@ -18221,12 +18406,13 @@ const Mono = (function () {
     r.mcScore = sc;
     r.finalScores = { scores: sc };
     M.rankRows = rows;
-    killPlans(r, 'mcRoll'); killPlans(r, 'mcBegin');
+    killPlans(r, 'mcRoll'); killPlans(r, 'mcBegin'); killPlans(r, 'mcBeat');
     clearClock(r);
     const g = (DB.state.games = DB.state.games || {});
     const t = g.monoScore = g.monoScore || {};
     Object.keys(sc).forEach(u => { t[u] = (t[u] || 0) + sc[u]; });
     feed(r, 'sys', esc(nm(r.winner)) + ' 拿下这局（资产 ' + assets(r, r.winner) + '）');
+    Games.say(r, r.winner, '胜负感言');      // 赢了的那位夸口一句（TA 赢才说，我赢了没谁接话）
     if (typeof Games !== 'undefined' && Games.finish) Games.finish(r, { win: r.winner, line: [] });
     else touch(r);
   }
@@ -18244,21 +18430,37 @@ const Mono = (function () {
   function myRoll(r) {
     const M = st(r);
     if (r.phase !== 'playing' || M.phase !== 'roll' || curUid(r) !== 'me' || M.out['me']) return;
-    clearClock(r);
-    step(r, 'me', rand(1, 6), rand(1, 6));
-    if (M.phase === 'over') { touch(r); return; }
-    askBuy(r);
-    touch(r);
+    /* 掷骰只开第一拍：买不买要等表演放完才问（以前钮与动画同时冒出来） */
+    startTurn(r, 'me', rand(1, 6), rand(1, 6));
+  }
+  /* 落点能不能买：只这里算一份，问与代买都读它 */
+  function buyable(r, uid) {
+    const M = st(r);
+    const at = M.pos[uid] | 0;
+    if (!L(r).CITY[at] || M.own[at] || (M.cash[uid] || 0) < priceOf(r, at)) return -1;
+    return at;
   }
   /* 落点能买才问一句；不能买直接换手，不摆一个点了没反应的钮 */
   function askBuy(r) {
     const M = st(r);
-    const at = M.pos['me'] | 0;
-    if (L(r).CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(r, at)) {
-      M.phase = 'act';
-      M.pending = { cell: at };
+    const at = buyable(r, 'me');
+    if (at < 0) { nextTurn(r); return; }
+    M.phase = 'act';
+    M.pending = { cell: at };
+    armClock(r);            // 30 秒从“问出口”这一刻起，不在表演里偷烧
+  }
+  /* 换手拍：先处理落点那块地（问我 / TA 自己买），才排下一位 */
+  function handOver(r) {
+    const M = st(r);
+    const uid = M.actor || curUid(r);
+    M.actor = null;
+    if (M.phase === 'over') return;
+    const at = buyable(r, uid);
+    if (at >= 0 && uid === 'me') {
+      M.phase = 'act'; M.pending = { cell: at }; armClock(r);
       return;
     }
+    if (at >= 0 && uid !== 'me' && aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
     nextTurn(r);
   }
   function myBuy(r, yes) {
@@ -18290,14 +18492,7 @@ const Mono = (function () {
     }
     if (M.phase !== 'roll') return false;
     feed(r, 'me', '时间到，替你掷了骰子');
-    step(r, 'me', rand(1, 6), rand(1, 6));
-    if (M.phase === 'over') { touch(r); return true; }
-    const at = M.pos['me'] | 0;
-    if (L(r).CITY[at] && !M.own[at] && (M.cash['me'] || 0) >= priceOf(r, at)) {
-      feed(r, 'me', '顺手替你买下 ' + nameOf(r, at) + '（不想买可以提前自己按）');
-      tryBuy(r, 'me', at);
-    }
-    nextTurn(r);
+    startTurn(r, 'me', rand(1, 6), rand(1, 6));   // 替掷也走五拍：她能看见骰子落了什么
     return true;
   }
 
@@ -18307,12 +18502,24 @@ const Mono = (function () {
     if (r.phase !== 'playing' || M.phase === 'over') return;
     const uid = curUid(r);
     if (!uid || uid === 'me' || M.out[uid]) { nextTurn(r); return; }
+    if (M.phase === 'show') return;               // 上一拍还没放完：不重演
+    startTurn(r, uid, rand(1, 6), rand(1, 6));
+  }
+  /* 不等表演的整回合（模拟对局与验收用）：掷、走、买、换手一拍过完 */
+  function simTurn(r) {
+    const M = st(r);
+    if (M.phase === 'over') return;
+    const uid = curUid(r);
+    if (!uid) return;
+    M.phase = 'roll';
     step(r, uid, rand(1, 6), rand(1, 6));
-    if (M.phase === 'over') { touch(r); return; }
-    const at = M.pos[uid] | 0;
-    if (L(r).CITY[at] && !M.own[at] && aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
+    if (M.phase === 'over') return;
+    const at = buyable(r, uid);
+    if (at >= 0) {
+      if (uid === 'me') { M.phase = 'act'; M.pending = { cell: at }; return; }
+      if (aiWantsBuy(r, uid, at)) tryBuy(r, uid, at);
+    }
     nextTurn(r);
-    touch(r);
   }
   function aiWantsBuy(r, uid, at) {
     const M = st(r);
@@ -18320,6 +18527,7 @@ const Mono = (function () {
   }
   function onPlan(r, p) {
     if (!p) return false;
+    if (p.kind === 'mcBeat') { p.done = true; runBeat(r, p.beat); return true; }
     if (p.kind === 'mcRoll') { p.done = true; taTurn(r); return true; }
     if (p.kind === 'mcBegin') {
       const M = st(r);
@@ -18356,7 +18564,7 @@ const Mono = (function () {
       (own ? ';--oc:' + (colOf(r, own) || 'var(--t1)') : '') + '">' +
       '<b class="mc-n">' + esc(nameOf(r, i)) + '</b>' +
       (l.CITY[i] ? '<i class="mc-p">' + priceOf(r, i) + (own ? ' · 租' + rentOf(r, i) : '') + '</i>'
-        : isGo ? '<i class="mc-p">' + (l.side > 6 ? '+' + PASS_GO : '过一趟 +' + PASS_GO) + '</i>' : '<i class="mc-p">抽一张</i>') +
+        : isGo ? '<i class="mc-p">' + (l.side > 6 ? '+' + M.rule.passGo : '过一趟 +' + M.rule.passGo) + '</i>' : '<i class="mc-p">抽一张</i>') +
       tokHtml(r, M, i) +
       '</div>';
   }
@@ -18366,11 +18574,13 @@ const Mono = (function () {
     if (!M.order.length) { el.innerHTML = '<div class="mc-empty">等大富翁的玩家上桌…</div>'; return; }
     if (M.order.length > MAXP) M.order = M.order.slice(0, MAXP);
     if (M.side !== sideFor(M.order.length)) M.side = sideFor(M.order.length);
-    const l = lay(M.side);
-    M.order.forEach(u => { if (M.cash[u] == null) M.cash[u] = START_CASH; if (M.pos[u] == null) M.pos[u] = 0; });
+    const l = lay(M.side, M.rule);
+    M.order.forEach(u => { if (M.cash[u] == null) M.cash[u] = M.rule.cash; if (M.pos[u] == null) M.pos[u] = 0; });
     const boxW = boxWidth(el);
     const q = Math.max(.72, Math.min(1.06, boxW / 400));
+    const R = M.rule;
     const myTurn = r.phase === 'playing' && curUid(r) === 'me' && M.phase !== 'over' && !M.out['me'];
+    const spinning = M.phase === 'show' && !!M.roll;      // 摇骰那一拍：面子还没揭
     const cells = [];
     for (let i = 0; i < l.N; i++) cells.push(cellHtml(r, M, l, i));
     let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + ';--mg:' + l.side + '">';
@@ -18391,10 +18601,14 @@ const Mono = (function () {
     }
     h += '<div class="mc-board" id="mc-board">' + cells.join('') +
       '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
-      '<div class="mc-dice">' + (M.dice ? '<span>' + DIE[M.dice[0]] + '</span><span>' + DIE[M.dice[1]] + '</span>' : '<span class="mc-dice-x">◎</span>') + '</div>' +
+      '<div class="mc-dice' + (spinning ? ' spin' : M.dice ? ' land' : '') + '">' + (spinning
+        ? '<b class="mc-dice-b"></b><b class="mc-dice-b"></b>'
+        : M.dice ? '<span>' + DIE[M.dice[0]] + '</span><span>' + DIE[M.dice[1]] + '</span>' : '<span class="mc-dice-x">◎</span>') + '</div>' +
       '<div class="mc-state">' + (M.phase === 'begin' ? '开局准备…' : M.phase === 'over' ? '这局收了'
+        : M.phase === 'show' ? ((M.actor === 'me' ? '骰子落定' : esc(nm(M.actor || curUid(r))) + ' 那一步') + ' · 点一下跳过')
         : (myTurn ? (M.phase === 'act' ? '要不要买下这块？' : '轮到你，掷骰子') : esc(nm(curUid(r))) + ' 在想…')) + '</div>' +
-      '<div class="mc-goal">目标 ' + l.goal + ' · 第 ' + (M.turnNo + 1) + ' 回合</div>' +
+      '<div class="mc-goal">' + (goalOf(r) > 0 ? '目标 ' + goalOf(r) : '不收场') + ' · 第 ' + (M.turnNo + 1) + ' 回合' +
+        (R.cap > 0 ? ' · 每人最多 ' + R.cap + ' 轮' : '') + '</div>' +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
       '</div></div>';
@@ -18407,7 +18621,8 @@ const Mono = (function () {
       h += '<button class="btn btn-primary" id="mc-buy">买下 ' + esc(nameOf(r, at)) + ' ' + priceOf(r, at) + '</button>' +
         '<button class="btn btn-secondary" id="mc-no">不买</button>' +
         '<span class="mc-hint">手里 ' + (M.cash['me'] || 0) + '，买完剩 ' + ((M.cash['me'] || 0) - priceOf(r, at)) + '</span>';
-    } else if (myTurn) h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button><span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合</span>';
+    } else if (myTurn && M.phase === 'roll') h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button><span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合</span>';
+    else if (M.phase === 'show') h += '<span class="mc-hint">' + (spinning ? '骰子在转…' : '跳格中…') + '点盘面可跳过</span>';
     else h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合 · ' + esc(nm(curUid(r))) + ' 的回合</span>';
     h += '</div>';
     /* 图例：谁是哪座城的主人（她把“区分我们二者”当硬要求） */
@@ -18422,8 +18637,11 @@ const Mono = (function () {
     const rb = el.querySelector('#mc-roll'); if (rb) rb.addEventListener('click', () => runSafe('mc.roll', () => myRoll(r)));
     const bb = el.querySelector('#mc-buy'); if (bb) bb.addEventListener('click', () => runSafe('mc.buy', () => myBuy(r, 1)));
     const nb = el.querySelector('#mc-no'); if (nb) nb.addEventListener('click', () => runSafe('mc.no', () => myBuy(r, 0)));
+    /* 表演期间点盘面任意处 = 立刻落定（只有 show 里 ff 才吃，平时点了不抢动作） */
+    const wp = el.querySelector('.mc-wrap'); if (wp) wp.addEventListener('click', () => runSafe('mc.ff', () => ff(r)));
     fitBoard(el, boxW);
-    if (M.fx) { runSafe('mc.playFx', () => playFx(el, M.fx)); M.fx = null; }
+    if (M.fx) { runSafe('mc.playFx', () => playFx(r, el, M.fx)); M.fx = null; }
+    syncCard(r);
     if (M.phase === 'begin') {
       if (M.beginAt && Date.now() >= M.beginAt) { begin(r); touch(r); return; }
       if (!M.beginQueued) { M.beginQueued = 1; r.plans.push({ kind: 'mcBegin', at: (M.beginAt || Date.now()), done: false }); touch(r); }
@@ -18450,20 +18668,20 @@ const Mono = (function () {
     const el = document.querySelector('#room-board .mc-cell[data-idx="' + i + '"]');
     return el ? el.getBoundingClientRect() : null;
   }
-  const HOP_MS = 150;
-  function playFx(el, fx) {
+  function playFx(r, el, fx) {
     const ring = fx.ring || 20;      // 环长随人数变，跟着这一手 fx 走，不回读全局
+    if (fx.act === 'spin') return;  // 摇骰那一拍由 CSS 转，不挂回调
     if (fx.act === 'hop' && fx.path && fx.path.length) {
+      const HOP = Math.max(60, beatMs(r, 'hop'));      // 一格多长跟着齿轮那一档走，不写第二个数
       const first = (function () {
         const rc0 = cellRect((fx.path[0].at - 1 + ring) % ring);
         /* 拷一份可写的矩形：DOMRect 是只读的，拿它当累加器就是“看着能跑，一点就报错” */
         return rc0 ? { left: rc0.left, top: rc0.top, width: rc0.width, height: rc0.height }
           : { left: (window.innerWidth || 360) / 2, top: (window.innerHeight || 600) - 160, width: 40, height: 40 };
       })();
-      const stepN = fx.path.length > 10 ? Math.ceil(fx.path.length / 10) : 1;   // 走得远就隔几格补一帧，别拖成一分钟
+      /* 不跳帧：一格就是一帧，隔几格补一下又变回她嫌的“嘎嘎跳完” */
       let cur = first, d = 0;
       fx.path.forEach((p, idx) => {
-        if (idx % stepN && idx !== fx.path.length - 1) return;
         const rc = cellRect(p.at);
         if (!rc) return;
         /* 起点/位移当场算完再交给定时器：错峰发射时 cur 还在背地往后走，
@@ -18478,11 +18696,11 @@ const Mono = (function () {
             { transform: 'translate(0,0) scale(1)', opacity: .95 },
             { transform: 'translate(' + (dx * .5).toFixed(1) + 'px,' + (dy * .5 - 16).toFixed(1) + 'px) scale(1.18)', offset: .5 },
             { transform: 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(1)', opacity: .95 }
-          ], { duration: HOP_MS, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
-          kill(g, HOP_MS + 120);
+          ], { duration: HOP, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+          kill(g, HOP + 120);
         }, d);
         cur = { left: rc.left, top: rc.top, width: rc.width, height: rc.height };
-        d += HOP_MS * stepN;      // 一格接一格：不错峰就是一串子同时飞，看不出走了几步
+        d += HOP;      // 一格接一格：不错峰就是一串子同时飞
       });
     }
     (fx.cash || []).forEach((c, i) => {
@@ -18509,6 +18727,99 @@ const Mono = (function () {
     }
   }
 
+  /* ---------- 齿轮里那一页（唯一入口：右上角齿轮 → 大富翁） ----------
+     改的是下一局；正在跑的这局读开局那份 M.rule 快照，不会被中途拧变样。
+     枚举项用胶囊（与选人框那套同一个长相），数字用格子：不在选人框里再摆一套。 */
+  function settings() {
+    const c = cfg();
+    const pend = Object.assign({}, c);
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask';
+    const seg = (key, label, vals) => '<div class="gm-opt"><span>' + label + '</span>' + vals.map(v =>
+      '<button class="gm-rchip' + (pend[key] === v[0] ? ' on' : '') + '" data-ck="' + key + '" data-cv="' + v[0] + '">' + v[1] + '</button>').join('') + '</div>';
+    const row = (key, label, val, tip, ph) => '<div class="form-row"><div class="form-label">' + label + '</div>' +
+      '<input class="input" type="number" data-fk="' + key + '" value="' + (val || '') + '" placeholder="' + ph + '"><small class="mc-tip">' + tip + '</small></div>';
+    mask.innerHTML = '<div class="dialog dialog-wide"><div class="dialog-title">大富翁</div><div class="form-body">' +
+      seg('beat', '节奏（点一下改）', [['slow', '细看'], ['norm', '正常'], ['fast', '快']]) +
+      seg('tier', '目标规模', [['fast', '快局'], ['std', '标准'], ['long', '长局'], ['none', '不收场']]) +
+      seg('ev', '事件格', [['low', '疏'], ['mid', '中'], ['high', '密']]) +
+      row('cash', '起步金（300~3000）', c.cash, '每人开局这么多', '') +
+      row('passGo', '过起点领（50~400）', c.passGo, '绕一圈领这些', '') +
+      row('goal', '目标资产（留空按上面档位算）', c.goal, '填了就以这个数为准，“不收场”也能靠它收', '留空') +
+      row('cap', '每人最多轮数（0~40）', c.cap, '填 0 就不设上限，只靠目标与破产收场', '') +
+      row('price', '城价缩放（60~160%）', c.price, '整张盘的地价一起乘这个比例', '') +
+      '<div class="mc-prev" id="mc-prev"></div>' +
+      '</div><div class="dialog-btns"><button class="btn btn-secondary" data-x>取消</button>' +
+      '<button class="btn btn-primary" data-ok>保存</button></div></div>';
+    const prev = mask.querySelector('#mc-prev');
+    /* 预估按“夹过一轮”的值算：她填 99999 也不会把预估带沟里去 */
+    function collect() {
+      const g = (DB.state.games = DB.state.games || {});
+      const keep = g.monoCfg;
+      g.monoCfg = pend;
+      const c2 = cfg();
+      g.monoCfg = keep;
+      return c2;
+    }
+    function draw2() {
+      const R = ruleOf(collect(), 6);
+      const l = lay(6, R);
+      R.goal = goalFor(R, l);
+      prev.textContent = '这套数开出来：20 格环 ' + l.cities + ' 座城 · ' + R.ev + ' 个事件格 · 目标 ' +
+        (R.goal > 0 ? R.goal + ' 元' : '不收场') + ' · 每人最多 ' + (R.cap > 0 ? R.cap + ' 轮' : '不设上限');
+    }
+    mask.querySelectorAll('[data-ck]').forEach(b => b.addEventListener('click', () => {
+      pend[b.dataset.ck] = b.dataset.cv;
+      [].slice.call(b.parentNode.querySelectorAll('.gm-rchip')).forEach(x => x.classList.toggle('on', x === b));
+      draw2();
+    }));
+    mask.querySelectorAll('[data-fk]').forEach(inp => inp.addEventListener('input', () => {
+      pend[inp.dataset.fk] = inp.value; draw2();
+    }));
+    draw2();
+    document.getElementById('dialog-layer').appendChild(mask);
+    UI.raise(mask);
+    mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
+    mask.querySelector('[data-ok]').addEventListener('click', () => {
+      const c2 = collect();
+      DB.state.games.monoCfg = c2;
+      DB.save();
+      const live = Object.keys(DB.state.games.rooms || {}).some(k => {
+        const x = DB.state.games.rooms[k]; return x.game === 'mono' && x.phase === 'playing';
+      });
+      UI.toast('大富翁存好了' + (live ? '——正在跑的这局按开局那套数走完，下一局才换' : '，下一局生效'));
+      mask.remove();
+    });
+  }
+
+  /* 事件翻牌：形状由 M.cardShow 定，渲染只负责把它对上——重绘即重画，不会留个卸不掉的浮层 */
+  function syncCard(r) {
+    const M = st(r);
+    const onRoom = ((document.querySelector('.page.active') || {}).id === 'page-room');
+    let el = document.getElementById('mc-pop');
+    if (!M.cardShow || !onRoom) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'mc-pop'; el.className = 'dialog-mask';
+      el.innerHTML = '<div class="mc-pop"></div>';
+      el.addEventListener('click', () => runSafe('mc.ff', () => ff(r)));
+      document.getElementById('dialog-layer').appendChild(el);
+      UI.raise(el);
+      /* 第二腿：她中途切走了（浮层贴在 #dialog-layer，不跟页面走），到点自己收——
+         只收自己那一张：对不上 cardSeq 就不动手，不能把下一张牌提前掉掉 */
+      const seq = M.cardSeq;
+      setTimeout(() => runSafe('mc.popFade', () => {
+        const M2 = st(r);
+        if (M2.cardSeq !== seq) return;
+        M2.cardShow = null;
+        hideCard();
+      }), beatMs(r, 'card') + 900);
+    }
+    const c = M.cardShow;
+    el.firstChild.innerHTML = '<b class="k">' + esc(c.k) + '</b><p>' + esc(c.x) + '</p>' +
+      (c.e ? '<em>' + esc(c.e) + '</em>' : '') + '<i class="h">点一下跳过</i>';
+  }
+
   function def() {
     return {
       id: 'mono', name: '大富翁', icon: 'map-mono', playersTxt: '2~8 人',
@@ -18516,13 +18827,17 @@ const Mono = (function () {
       opening: true,                 // 谁先走由随机与骰子定，不走五子棋那套先手协商
       seats: true,                   // 现金与归属画在盘上，壳子不再另起玩家条
       newRoom, render, onPlan, settleTable, onResign,
+      /* 齿轮里自动挂一行（09-14）：声明了 cfgName 就有入口，不靠人记得去登记 */
+      cfgName: '大富翁（钱 / 目标 / 节奏）', openCfg: settings,
       turnOf: curUid,
       onTimeout,
-      /* 给验收探针：规则、几何、账目都从这份口径读，不另开一套 */
+      /* 给验收探针：规则、几何、账目、拍长都从这份口径读，不另开一套 */
       lay, sideFor, CITY_LIST, CHANCE, FATE, COLORS, DIE, START_CASH, PASS_GO, RENT_RATE, KEEP, ROUND_CAP, GOAL_LAPS, GOAL_CITIES, MAXP,
+      CFG, TIERS, EV_N, BEAT, BEAT_NAME, TIER_NAME, LAY_VER, RULE_V1, cfg, ruleOf, goalFor, settings,
       priceOf, rentOf, nameOf, ownOf, assets, alive, colOf, seatOf, st, curUid, goalOf, capOf,
+      planHop, applyHop, beatMs, hopMs, pushBeat, ff, startTurn, runBeat, handOver, buyable, simTurn, syncCard, hideCard,
       step, land, tryBuy, payRent, draw, bankrupt, nextTurn, begin, askBuy, rankRows, endIt, popCard,
-      myRoll, myBuy, aiWantsBuy, taTurn, playFx, fitBoard
+      myRoll, myBuy, aiWantsBuy, taTurn, onTimeout, playFx, fitBoard
     };
   }
   return { def };
@@ -19017,6 +19332,17 @@ const Games = (function () {
       const t = pickLine('快捷短语', taUid(r), DEF_TA);
       if (t) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t });
     }
+  }
+  /* 游戏模块让 TA 在关键时刻说一句（大富翁买地/交租/输了/赢了都走这里）：
+     话从「文件管理·游戏库」的分组里挑，挑不到就闭嘴（不拿现成句子顶）；
+     同一位一次只排一句——不在各游戏里各拄一份频率，免得变成第二个入口 */
+  function say(r, uid, group, builtin) {
+    if (!r || !uid || uid === 'me') return false;
+    if ((r.plans || []).some(p => p.kind === 'say' && !p.done && p.by === uid)) return false;
+    const t = pickLine(group, uid, builtin);
+    if (!t) return false;
+    (r.plans = r.plans || []).push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: t, by: uid });
+    return true;
   }
   function execSay(r, p) {
     /* 多人局：谁接话就写谁的名字（以前一律写 taUid，八人桌里变成“永远只有左家说话”） */
@@ -19895,14 +20221,24 @@ const Games = (function () {
   /* ---------- 游戏设置（只在游戏里：右上角小齿轮；她 08-29：表单拆短，手机一屏放得下） ---------- */
   function openSettings() {
     const cfg = S().wheelCfg;
+    /* 游列自动包上“游戏自己声明的旋钮”（def.cfgName）：又一个不许写名单的坑——
+       新游戏加了旋钮还要回来登记一行，忘了就是死旋钮（09-14 那条收口教训同一个病） */
+    const auto = Object.keys(REG).map(k => REG[k]).filter(d => d.cfgName && d.openCfg)
+      .map(d => ({ key: 'cfg:' + d.id, label: d.cfgName }));
     UI.actionSheet('游戏设置', [
       { key: 'weight', label: '转盘占比（五类%）' },
       { key: 'reds', label: '转盘红包档位（四档）' },
       { key: 'mine', label: '扫雷棋盘（边长 / 雷数）' },
-      { key: 'uno', label: 'UNO 规则（叠加 / 喊话 / 质疑）' },
+      { key: 'uno', label: 'UNO 规则（叠加 / 喊话 / 质疑）' }
+    ].concat(auto).concat([
       { key: 'prop', label: '转盘配色：' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿') + '（点一下切换）' },
       { key: 'chat', label: 'TA 下棋时说话频率：' + chatProb() + '%（点一下改）' }
-    ]).then(k => {
+    ])).then(k => {
+      if (k && String(k).indexOf('cfg:') === 0) {
+        const d = REG[String(k).slice(4)];
+        if (d && d.openCfg) d.openCfg();
+        return;
+      }
       if (k === 'prop') {
         S().propsStyle = S().propsStyle === 'sticker' ? 'mono' : 'sticker';
         DB.save(); UI.toast('转盘已切换为' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿'));
@@ -20100,7 +20436,9 @@ const Games = (function () {
     /* 特效自收的共用两件套（游戏模块只调一行）*/
     fxGhost, fxKill,
     /* 房规读写（09-03）：游戏模块只读 optOf，写只走选人框那一个入口 */
-    optOf, setOpt
+    optOf, setOpt,
+    /* TA 说一句的唯一口（09-14 P56-A） */
+    say
   };
 })();
 
