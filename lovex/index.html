@@ -498,22 +498,24 @@ button{-webkit-tap-highlight-color:transparent}
 .batch-bar button:disabled{opacity:.45;cursor:default}
 
 .item-list{display:flex;flex-direction:column;gap:5px}
-.lib-item{display:flex;align-items:center;gap:6px;padding:4px 8px;
+.lib-item{display:flex;align-items:center;gap:5px;padding:4px 8px;
   background:var(--card);border-radius:10px;border:1px solid var(--line)}
+/* 行内那颗状态胶囊：钮回来了，它就得再缩一号，不然短字卡也要折成两行（折一行 = 行高从 29 顶回 48） */
+.lib-item .tag{font-size:9.5px;padding:1px 5px}
 .lib-item.off .li-text{color:var(--t3);text-decoration:line-through}
 .lib-item input[type=checkbox]{width:16px;height:16px;flex:none;accent-color:var(--primary)}
 .li-main{flex:1;min-width:0}
 .li-text{display:block;font-size:13px;line-height:1.45;color:var(--t1);word-break:break-word}
 .li-main small{display:block;color:var(--t3);font-size:10px;margin-top:1px}
 .tag-blocked{background:var(--fill);color:var(--t3)}
-/* 行尾动作钮：全站一个口径（禁言中心用文字钮，字卡条用竖三点）。
-   以前字卡条一行右侧挂着编辑/屏蔽/删除三颖文字钮，吃掉 40% 行宽——
-   她 09-14：“那一排按钮可以再小一点”，换成一颗 .ico 图标钮，文字宽度全数给正文。 */
-.li-btns{display:flex;gap:4px;flex:none;align-items:center}
-.li-btns button{display:flex;align-items:center;gap:3px;
+/* 行尾动作钮：全站一个口径——禁言中心、文件管理、字卡条都是文字钮。
+   她 09-14：“那一排按钮可以再小一点”→ 字号 12 降到 11、padding 收到 2px 5px；
+   她 09-15：“我还挺喜欢原来什么生效啊什么的那几个按钮的”→ 文字钮与“生效”胶囊都留着，不再折成 ⋯ 菜单。
+   上一版收成一颗图标钮被否了：这排钮不许再用 icon 替文字钮。 */
+.li-btns{display:flex;gap:2px;flex:none;align-items:center}
+.li-btns button{display:flex;align-items:center;gap:2px;
   border:1px solid var(--line);background:var(--card);color:var(--t2);
-  font-size:11px;padding:3px 7px;border-radius:7px;cursor:pointer;line-height:1.35}
-.li-btns button.ico{width:26px;height:24px;padding:0;justify-content:center}
+  font-size:11px;padding:2px 5px;border-radius:7px;cursor:pointer;line-height:1.35}
 .li-btns button:hover{color:var(--primary);border-color:var(--primary)}
 /* =====================================================
    模态确认/输入层（confirmBox / inputDialog）：ui-modal(1190)
@@ -7207,18 +7209,31 @@ const Diary = (function () {
    ===================================================== */
 const Media = (function () {
 
+  const ANI_CAP = 50 * 1024 * 1024;   // 动图直通上限（只靠 IDB 才敢给这么大）
+
+  /* 动图本体先进 IndexedDB 并登记（MediaVault 规矩 1：已入库的东西写盘那一刻只留引用串）。
+     大 GIF 不再先往 localStorage 里躺一遍 —— 那才是“上传没成功”的真正坑。IDB 不可用就原样退回内联 */
+  async function preArm(text) {
+    try { await MediaVault.flush([[MediaVault.hash(text), text]]); } catch (e) { /* 没搬动也照常能用，只是仍吃配额 */ }
+    return text;
+  }
+
   function compressImage(file, maxSide = 1280, quality = 0.82) {
     return new Promise((resolve, reject) => {
       if (!file || !/^image\//.test(file.type)) {
         reject(new Error('请选择图片文件')); return;
       }
       /* 动图直通（#39z）：gif/webp/apng 不走 canvas（会杀动画），原样存储。
-         上限 15MB（#39z补 应清然要求放宽）：仅拦极端文件防撑爆整库，
-         真到配额临界 writeNow 的 onQuota 也会提醒 */
+         上限 50MB（她 09-15：“刚刚上传没成功，再放宽一点”）：与文件管理导入音频同一条线；
+         超限只在报尺寸，不拦在“过大”两个字上让人猜 */
       if (/^image\/(gif|webp|apng)$/.test(file.type)) {
-        if (file.size > 15 * 1024 * 1024) { reject(new Error('动图过大（超 15MB）')); return; }
+        if (file.size > ANI_CAP) {
+          reject(new Error('动图 ' + (file.size / 1048576).toFixed(1) + 'MB，超 ' +
+            Math.round(ANI_CAP / 1048576) + 'MB 上限'));
+          return;
+        }
         const rd = new FileReader();
-        rd.onload = () => resolve(rd.result);
+        rd.onload = () => preArm(rd.result).then(resolve);
         rd.onerror = () => reject(new Error('图片读取失败'));
         rd.readAsDataURL(file);
         return;
@@ -7291,7 +7306,7 @@ const Media = (function () {
     }
   };
 
-  return { compressImage, VoiceRec };
+  return { compressImage, VoiceRec, ANI_CAP };
 })();
 
 /* ---------------- P36d MediaStore：大文件媒体本体（她 08-27 定拆雷） ----------------
@@ -11152,9 +11167,15 @@ const Library = (function () {
             '<input type="checkbox"' + (view.selected.has(it.id) ? ' checked' : '') + '>' +
             '<div class="li-main"><span class="li-text">' + label + '</span>' +
               (kw && g ? '<small>' + esc(g.name) + '</small>' : '') + '</div>' +
-            (effBlocked ? '<span class="tag tag-blocked">已屏蔽</span>' : '') +   /* “生效”不占位：没屏蔽就是常态，常态不需要一颗胶囊来说话 */
+            /* 她 09-15：“我还挺喜欢原来什么生效啊什么的那几个按钮的” —— 文字钮与状态胶囊都还给行尾；
+               体量沿用上一轮改小的那颗字号（11px / 3px 6px），不给行高返工 */
+            '<span class="tag ' + (effBlocked ? 'tag-blocked' : 'tag-ok') + '">' +
+              (effBlocked ? '已屏蔽' : '生效') + '</span>' +
             '<span class="li-btns">' +
-              '<button class="ico" data-iop="more"><i data-icon="dots" data-size="15"></i></button>' +
+              (isVoiceKind(cur.kind) && it.audio ? '<button data-iop="play">试听</button>' : '') +
+              '<button data-iop="edit">编辑</button>' +
+              '<button data-iop="block">' + (it.blocked ? '解封' : '屏蔽') + '</button>' +
+              '<button data-iop="del">删除</button>' +
             '</span>' +
           '</div>';
       });
@@ -11162,7 +11183,6 @@ const Library = (function () {
     }
 
     body.innerHTML = h;
-    mountIcons(body);   /* 行尾那颗 ⋯ 是重绘出来的，不挂图标就是个空框 */
     bindBody(body, lib, gm, items);
   }
 
@@ -11216,40 +11236,9 @@ const Library = (function () {
         renderBody();
       });
       row.querySelectorAll('.li-btns button').forEach(b => {
-        b.addEventListener('click', () => (b.dataset.iop === 'more' ? itemMenu(id) : itemOp(b.dataset.iop, id)));
+        b.addEventListener('click', () => itemOp(b.dataset.iop, id));
       });
     });
-  }
-
-  /* 行尾收成一颗 ⋯（她 09-14：“那一排按钮可以再小一点，多显示一点实际内容”）：
-     能力一个不少，只是不再一行挂三颖文字钮挤正文——菜单里给全套，含“移到别的分组” */
-  async function itemMenu(id) {
-    const lib = currentLib();
-    const it = lib.items.find(x => x.id === id);
-    if (!it) return;
-    const voice = isVoiceKind(cur.kind);
-    const label = voice ? (it.name || '未命名') : (it.text || '');
-    const opts = [];
-    if (voice && it.audio) opts.push({ key: 'play', label: '试听' });
-    opts.push({ key: 'edit', label: '编辑' });
-    opts.push({ key: 'block', label: it.blocked ? '解除屏蔽' : '屏蔽这条' });
-    opts.push({ key: 'gmove', label: '移到别的分组' });
-    opts.push({ key: 'del', label: '删除', danger: true });
-    const key = await UI.actionSheet(label.slice(0, 14) + (label.length > 14 ? '…' : ''), opts);
-    if (!key) return;
-    if (key === 'gmove') {
-      const gs = lib.groups;
-      if (!gs.length) { UI.toast('还没有分组，先在分组栏新建一个'); return; }
-      const to = await UI.actionSheet('移到哪个分组？',
-        gs.map(g => ({ key: g.id, label: g.name + (g.blocked ? '（已屏蔽）' : '') })));
-      if (!to) return;
-      const target = findGroup(to);
-      it.groupId = target.id;
-      DB.save(); render();
-      UI.toast('已移到「' + target.name + '」');
-      return;
-    }
-    itemOp(key, id);
   }
 
   function selItems() {
