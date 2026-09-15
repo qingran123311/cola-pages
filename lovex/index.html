@@ -1094,7 +1094,7 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
 .card-sub{font-size:12px;color:var(--t3);margin-top:-6px}
 .call-invitees{display:flex;gap:10px;margin-top:10px}
 /* #39y 发起人行（策划L789：昵称下深色加粗）+ 群聊顶部人数 */
-.call-inv-line{margin-top:6px;font-size:14px;font-weight:600;color:#1c1c1c}
+/* .call-inv-line（“X 邀请你视频通话”）只在来电卡上画；拨出面以前也挂一句，看着像反了（09-14）——那句已删 */
 /* 邀请成员多选弹窗 */
 .invite-sheet{position:absolute;left:14px;right:14px;bottom:14px;padding:16px 0 12px;
   border-radius:16px;background:var(--card);max-height:60vh;display:flex;flex-direction:column}
@@ -1723,14 +1723,16 @@ html.dark .rp-put{background:#E8E8E8;color:#111}
 .mo-cover.has-img:not(.zoom) .mo-cover-hint{display:none}
 /* 展开态：提示变底部居中的更换封面按钮（照微信，她 23:34 录屏） */
 .mo-cover.zoom .mo-cover-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:row;gap:6px;background:rgba(0,0,0,.45);color:#fff;
-  padding:8px 20px;border-radius:999px;font-size:var(--fs-small);cursor:pointer;z-index:3}
+  display:flex;flex-direction:row;align-items:center;gap:6px;background:rgba(0,0,0,.45);color:#fff;
+  padding:10px 22px;min-height:42px;box-sizing:border-box;border-radius:999px;font-size:var(--fs-small);cursor:pointer;z-index:4}
 html[data-theme="wechat"] .mo-cover{background:#E8E8E2}
 html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-cover img,.mo-cover video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.mo-me{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 16px;transform:translateY(-52px);margin-bottom:-38px;position:relative;z-index:2}
+/* .mo-me 骑在封面下沿上（translateY 上推），它不吃点击才能整幅封面都点得动；
+   只有头像那颗自己吃（点它看资料页）——修她 09-14：“点更换点了好多次才点到” */
+.mo-me{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 16px;transform:translateY(-52px);margin-bottom:-38px;position:relative;z-index:2;pointer-events:none}
 .mo-me-name{color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.35);font-size:17px}
-.mo-me-ava{width:68px;height:68px;border-radius:8px;border:2px solid #fff;color:#fff;background:var(--primary);flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px}
+.mo-me-ava{width:68px;height:68px;border-radius:8px;border:2px solid #fff;color:#fff;background:var(--primary);flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;pointer-events:auto;cursor:pointer}
 .mo-me-ava img,.mo-item-ava img{width:100%;height:100%;object-fit:cover;display:block}
 .mo-list{padding:0 16px}
 .mo-item{display:flex;gap:10px;padding:16px 0 6px;border-bottom:1px solid var(--line)}
@@ -1738,10 +1740,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-item-main{flex:1;min-width:0;position:relative}
 .mo-item-name{font-size:var(--fs-body);color:var(--primary);font-weight:600;display:block;margin-bottom:4px}
 .mo-item-text{margin:0 0 6px;font-size:var(--fs-body);color:var(--t1);white-space:pre-wrap;word-break:break-word}
-.mo-item-imgs{display:grid;gap:4px;margin-bottom:6px}
-.mo-item-imgs.n1{grid-template-columns:minmax(0,180px);max-width:200px}
-.mo-item-imgs.n2,.mo-item-imgs.n3,.mo-item-imgs.n4{grid-template-columns:repeat(2,1fr);max-width:240px}
-.mo-item-imgs.n5,.mo-item-imgs.n6,.mo-item-imgs.n7,.mo-item-imgs.n8,.mo-item-imgs.n9{grid-template-columns:repeat(3,1fr)}
+/* 发帖配图：单图以前给到 180~200px，一张图比整个文字区还抢屏（她 09-14 20:42 又提：“发帖的图片要小”）。
+   现在照微信：一格就是九宫格里那一格，1 张也只占一格，最多 3 列 */
+.mo-item-imgs{display:grid;grid-template-columns:repeat(3,minmax(0,84px));gap:4px;margin-bottom:6px;max-width:260px}
 .mo-thumb{aspect-ratio:1;border-radius:4px;cursor:pointer;overflow:hidden}
 .mo-vthumb video{width:100%;height:100%;object-fit:cover;display:block}
 /* P36d：视频文件不在本机（如换设备恢复备份）——降级灰底小字，严禁黑块 */
@@ -2435,6 +2436,19 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-settle-t{font-size:26px;font-weight:700;color:var(--t1)}
 .gm-settle-s{font-size:12px;color:var(--t3);margin-top:-6px}
 .gm-settle .btn{width:100%;justify-content:center}
+/* 结算表：以前名字列是 1fr，340px 的卡片上只剩三四十像素，名字被截一截、数也挤得贴出格（她两次报同一处）。
+   现在名字列按内容长（minmax(96px,max-content)）；整张表装不下就左右划——
+   只写在这一处结构规则上，UNO/斗地主/大富翁/飞行棋四张表共用，不鼓各游戏自己打补丁（09-14 20:42） */
+.gm-settle.wide{width:min(94vw,430px);padding-left:12px;padding-right:12px}
+.gm-settle-prize.tight{background:none;border:none;padding:0;border-radius:0}
+.gm-swipe{width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+  touch-action:pan-x;scrollbar-width:none}
+.gm-swipe::-webkit-scrollbar{display:none}
+.gm-settle .gm-swipe>*{min-width:340px;width:max-content}
+.gm-swipe .nm{overflow:visible}
+.gm-mini-ava{width:18px;height:18px;border-radius:5px;background:var(--fill);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:var(--t2);flex:none;overflow:hidden}
+.gm-mini-ava img{width:100%;height:100%;object-fit:cover;display:block}
 .gm-wheel-title{font-size:15px;font-weight:700;color:var(--t1)}
 .gm-wheel-wrap{position:relative;width:min(70vw,250px);aspect-ratio:1}
 .gm-wheel{width:100%;height:100%;border-radius:50%;border:2px dashed var(--t2);position:relative;
@@ -2682,15 +2696,15 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   font-size:10px;padding:2px 9px;cursor:pointer;font-family:inherit}
 /* 结算记分表：一人一行、列对齐（以前拼成一长条文字，她说“有点乱”） */
 .un-scoretab{width:100%;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:2px}
-.un-scr-h,.un-scr-row{display:grid;grid-template-columns:22px 1fr 46px 40px 50px;gap:4px;padding:4px 8px;
+.un-scr-h,.un-scr-row{display:grid;grid-template-columns:22px minmax(96px,max-content) 46px 40px 50px;gap:4px;padding:4px 8px;
   font-variant-numeric:tabular-nums}
 .un-scr-h{font-size:10px;color:var(--t3);background:var(--fill);border-bottom:1px solid var(--line)}
 .un-scr-row{font-size:12px;border-top:1px solid var(--line)}
 .un-scr-row:first-of-type{border-top:none}
-.un-scr-h span,.un-scr-row span{text-align:right;white-space:nowrap;overflow:hidden}
+.un-scr-h span,.un-scr-row span{text-align:right;white-space:nowrap}
 .un-scr-h .nm,.un-scr-row .nm{text-align:left;display:flex;align-items:center;gap:4px;min-width:0}
 .un-scr-row .nm i{font-style:normal;color:var(--t3);font-size:10px;flex:none}
-.un-scr-row .nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.un-scr-row .nm b{font-weight:600;white-space:nowrap}
 .un-scr-row.win{border-left:3px solid var(--primary);background:color-mix(in srgb,var(--primary) 8%,transparent)}
 .un-scr-row.win .sc{font-weight:800}
 /* ---------- 08-30 纠察三：道具图标的彩色（花=粉+绿、锤=木栈柄+中性灰头；不引入紫、不加第四色族）
@@ -2784,13 +2798,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .ld-lg i{font-style:normal;color:var(--t1)}
 .ld-lg-n{padding:0 6px;font-size:10.5px;color:var(--t1);border:1px solid var(--line);border-radius:999px}
 .ld-scr{margin-top:4px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.ld-scr-row{display:grid;grid-template-columns:auto auto 1fr auto auto auto;gap:8px;align-items:center;
+.ld-scr-row{display:grid;grid-template-columns:auto auto minmax(96px,max-content) auto auto auto;gap:8px;align-items:center;
   padding:6px 10px;font-size:12px;border-top:1px solid var(--line);color:var(--t2)}
 .ld-scr-row:first-child{border-top:none}
 .ld-scr-row.me{background:var(--fill)}
 .ld-rank{width:14px;font-size:11px;color:var(--t3);text-align:center}
 .ld-cname{font-weight:700}
-.ld-who-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1)}
+.ld-who-n{display:flex;align-items:center;gap:5px;min-width:0;white-space:nowrap;color:var(--t1)}
 
 /* ---------- 09-02 补：飞行棋动画与两家区分、扫雷归属（她：“该有的动画记得有”
    “区分我们二者的颜色棋或者下的地方”）——全是墨色，不引入第四色 ---------- */
@@ -2898,11 +2912,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   font-size:11px;color:var(--t1);white-space:nowrap}
 /* 结算记分表（沿用 UNO 那张的五列网格口径） */
 .dz-scr{min-width:290px;text-align:left}
-.dz-scr-h,.dz-scr-row{display:grid;grid-template-columns:20px 1fr 40px 52px 44px 52px;gap:5px;
+.dz-scr-h,.dz-scr-row{display:grid;grid-template-columns:20px minmax(96px,max-content) 40px 52px 44px 52px;gap:5px;
   align-items:center;font-size:11.5px;padding:3px 0}
 .dz-scr-h{color:var(--t3);border-bottom:1px solid var(--line);font-size:10.5px}
-.dz-scr-row .nm{display:flex;align-items:center;gap:4px;overflow:hidden}
-.dz-scr-row .nm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dz-scr-row .nm{display:flex;align-items:center;gap:4px}
+.dz-scr-row .nm b{white-space:nowrap}
 .dz-scr-row .sc{font-weight:700}
 .dz-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
 .dz-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
@@ -2910,12 +2924,16 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* ---------- 大富翁（P51）：方环 20 城 + 中间一块调度区 ---------- */
 .mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px}
 .mc-empty{padding:26px 12px;text-align:center;color:var(--t3);font-size:12px}
-/* 盘外这一行：谁多少钱、几座城、是不是出局了 */
-.mc-bank{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:0}
-.mc-pk{width:auto;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
-  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:100%}
+/* 盘外这一行：一人一颗（头像/颜色/名字/资产/现金与地产），一排画不下就左右划。
+   09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
+   以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；现在不分档 */
+.mc-bank{display:flex;flex-wrap:nowrap;gap:6px;padding:0 2px 2px;justify-content:flex-start;
+  overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
+.mc-bank::-webkit-scrollbar{display:none}
+.mc-pk{width:auto;flex:none;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:none}
 .mc-pk.on{opacity:1;border-color:var(--t1)}
-.mc-pk b{font-weight:600;max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-pk b{font-weight:600;white-space:nowrap}
 .mc-pk small{color:var(--t3);font-size:10px}
 .mc-pk .mc-cash{color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums}
 .mc-pk .mc-cash::after{content:' 元';font-weight:400;font-size:9px;color:var(--t3)}
@@ -2924,18 +2942,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-out{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--line);color:var(--t3)}
 /* 在狱里那颗角标：与“出局”同一长相，只是不摸成空牌 */
 .mc-jbadge{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--t2);color:var(--t1)}
-/* 5 人以上：现金条换紧凑三列（只放 名 + 资产），现金与城数并到盘外那行小字里，信息不丢只换位置 */
-.mc-bank.dense .mc-pk{flex:0 1 30%;min-width:0;justify-content:center;gap:3px;padding:2px 6px;font-size:10.5px}
-.mc-bank.dense .mc-pk b{max-width:40px}
-.mc-bank2{display:flex;flex-wrap:wrap;gap:3px 10px;justify-content:center;font-size:10px;color:var(--t3);
-  font-variant-numeric:tabular-nums;padding:0 2px}
-.mc-board{display:grid;grid-template-columns:repeat(var(--mg,6),1fr);grid-template-rows:repeat(var(--mg,6),1fr);gap:2px;
-  width:100%;max-width:470px;margin:0 auto;overflow:hidden}
+.mc-board{display:grid;grid-template-columns:repeat(var(--mg,6),minmax(0,1fr));grid-template-rows:repeat(var(--mg,6),1fr);gap:2px;
+  width:100%;max-width:470px;min-width:0;margin:0 auto;overflow:hidden}
 .mc-cell{position:relative;min-width:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:1px;padding:2px 1px;border:1px solid var(--line);border-radius:4px;background:var(--card);overflow:hidden}
 .mc-cell .mc-n{font-size:calc(10.5px * var(--mq,1));line-height:1.15;color:var(--t1);font-weight:600;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mc-cell .mc-p{font-size:calc(8.5px * var(--mq,1));line-height:1.1;color:var(--t3);white-space:nowrap}
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mc-cell .mc-p{font-size:calc(8.5px * var(--mq,1));line-height:1.1;color:var(--t3);white-space:nowrap;max-width:100%;overflow:hidden}
 .mc-cell.mc-ev{border-style:dashed}
 .mc-cell.mc-ev .mc-n{letter-spacing:1px}
 .mc-cell.mc-go{background:var(--fill)}
@@ -2978,11 +2991,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-lg b{font-weight:700;color:var(--tc,var(--t1))}
 .mc-lg.me{color:var(--t1)}
 .mc-scr{min-width:270px;text-align:left}
-.mc-scr-h,.mc-scr-row{display:grid;grid-template-columns:20px 1fr 56px 48px 56px;gap:5px;align-items:center;
+.mc-scr-h,.mc-scr-row{display:grid;grid-template-columns:20px minmax(96px,max-content) 56px 48px 56px;gap:5px;align-items:center;
   font-size:11px;padding:4px 0;border-bottom:1px dashed var(--line)}
 .mc-scr-h{color:var(--t3);border-bottom:1px solid var(--line);font-size:10.5px}
-.mc-scr-row .nm{display:flex;align-items:center;gap:4px;overflow:hidden}
-.mc-scr-row .nm b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-scr-row .nm{display:flex;align-items:center;gap:4px}
+.mc-scr-row .nm b{white-space:nowrap}
 .mc-scr-row .sc{font-weight:700}
 .mc-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
 .mc-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
@@ -6358,10 +6371,25 @@ const Diary = (function () {
       replyMax: isFinite(r.replyMax) ? r.replyMax : 6
     };
   }
+  /* 词库默认项：空库 = 记录表单里那排选择根本画不出来（她 09-14：“我选的 EMOJI 与情绪怎么不显示”——
+     查下来“选→存→渲染→重开还在”这条链实测是通的，空词库就是唯一让她选不出东西的地方）。
+     只补空位，逐 key 记账（offered）：她自己动过的一个不盖、删掉的不会复活（与大富翁语料同一口径）。 */
+  const LIB_DEF = {
+    moods: ['平静', '开心', '想念', '疲惫', '有点委屈', '生气', '安心'],
+    emojis: ['\u{1F60C}', '\u{1F972}', '\u{1F610}', '\u{1F624}', '\u{1F319}', '\u{1F327}\uFE0F'],
+    weathers: ['晴', '多云', '阴', '小雨', '雨夹雪', '大风', '雾', '雪']
+  };
   function lib() {
     if (!DB.state.diaryLib) DB.state.diaryLib = { moods: [], emojis: [], weathers: [], daily: [], pokes: [] };
-    if (!DB.state.diaryLib.pokes) DB.state.diaryLib.pokes = [];
-    return DB.state.diaryLib;
+    const l = DB.state.diaryLib;
+    if (!l.pokes) l.pokes = [];
+    if (!l.offered) l.offered = {};
+    Object.keys(LIB_DEF).forEach(k => {
+      if (l.offered[k]) return;
+      if (!(l[k] || []).length) l[k] = LIB_DEF[k].slice();
+      l.offered[k] = 1;
+    });
+    return l;
   }
 
   /* 结构迁移（幂等）：老档单对象 → P22 多条数组 */
@@ -7662,6 +7690,16 @@ const Home = (function () {
     if (uid === 'me') return DB.state.profile.name || '我';
     return displayName(contactById(uid));
   }
+  /* uid → 头像里面那一层（图或昵称首字），全站一个口径（09-14 拢条）：
+     game/doudizhu/uno/moments 以前各拄一份，于是“大富翁盘上没头像、别的游戏有”这种不统一就长出来了。
+     外壳（.gm-ava / .mo-item-ava …）由各家自己包，大小它们说了算；人不在了给个 '?'，
+     不许把“已删除联系人”这种堆到脸上 */
+  function avaInner(uid) {
+    const c = uid === 'me' ? (DB.state.profile || {}) : contactById(uid);
+    const txt = uid === 'me' ? ((DB.state.profile || {}).name || '我') : (c ? displayName(c) : '');
+    return c && c.avatar ? '<img src="' + c.avatar + '" alt="">'
+      : '<span class="ava-txt">' + UI.escapeHtml(String(txt || '?').slice(0, 1)) + '</span>';
+  }
   /* ---------- 群会话工具（决策记录#15） ---------- */
   function membersOf(cv) {
     return (cv.memberIds || []).map(id => contactById(id)).filter(Boolean);
@@ -8013,7 +8051,7 @@ const Home = (function () {
 
   return {
     init, render, openConv,
-    contactById, displayName, uidName, ensureConv, openForm, msgBanner,
+    contactById, displayName, uidName, avaInner, ensureConv, openForm, msgBanner,
     membersOf, groupName
   };
 })();
@@ -10049,8 +10087,10 @@ const Engine = (function () {
     readNoReply: 0, moMutual: 0,
     /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
        旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
-       3~14 小时 + 40% 后同一算法约每人每天 1 条。只影响没存过设置的联系人（存过的照她写的走）。 */
-    moPostRate: 40, moPostMin: 3, moPostMax: 14, moPostUnit: 'hour'
+       3~14 小时 + 40% 后同一算法约每人每天 1 条。只影响没存过设置的联系人（存过的照她写的走）。
+       09-14 她拍“发帖的话，建议你改”：再降一档到 30% / 6~24 小时（六人 72h 实测 22→17 条，
+       一人一天约 0.7 条）；仍然只动默认值，已设过的人一个字节不盖。 */
+    moPostRate: 30, moPostMin: 6, moPostMax: 24, moPostUnit: 'hour'
   };
   function params(ct) {
     return Object.assign({}, REPLY_DEF, (ct && ct.params) || {});
@@ -13870,11 +13910,7 @@ const Moments = (function () {
 
   function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
   function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName（09-02 拢条）
-  function avaHtml(uid) {
-    const p = uid === 'me' ? DB.state.profile : Home.contactById(uid);
-    if (p && p.avatar) return '<img src="' + p.avatar + '" alt="">';
-    return '<span>' + esc(name(uid).slice(0, 1)) + '</span>';
-  }
+  function avaHtml(uid) { return Home.avaInner(uid); }   // 头像口径全站一份在 Home.avaInner（09-14 拢条）
   function store() {
     if (!DB.state.moments) DB.state.moments = { posts: [], covers: { me: null, byContact: {} } };
     if (!DB.state.moments.covers) DB.state.moments.covers = { me: null, byContact: {} };
@@ -14023,7 +14059,11 @@ const Moments = (function () {
     /* 她 08-27 21:08 两句话背后的真 bug：① 右上角相机（发布）与 dots（评论人）都绝对定位在 right:8px，
        dots 在后、直接盖在相机上面，发布按钮等于消失——所以右上角只留发布；
        ② 互评开关不放在页面导航，改到「高级回复设置」按人调（默认关=只有我能评） */
-    document.getElementById('mo-me-ava').addEventListener('click', () => Router.go('mine'));
+    document.getElementById('mo-me-ava').addEventListener('click', () => {
+      /* TA 相册顶上那颗是 TA：点她头像看她的资料页，不该把我的主页抽出来 */
+      if (viewUid && viewUid !== 'me') Profile.open(viewUid);
+      else Router.go('mine');
+    });
     document.getElementById('mo-cover').addEventListener('click', coverTap);
   }
   /* 她 08-26：TA 相册就是 TA 的页面，导航返回键由全局 data-back 统一处理（直接退页），
@@ -14071,7 +14111,10 @@ const Moments = (function () {
   /* 封面点击（清然 23:34 录屏定稿）：点一下封面往下拉开铺满大半屏，头像昵称跟着推下去，
    展开后底部居中出现「更换封面」钮；点空白处收回；无图时提示常显引导 */
 function coverTap(e) {
-  if (e.target.closest('#mo-me-ava')) return;
+  /* 以前这里先挡一句 e.target.closest('#mo-me-ava')——但 .mo-me 是封面的兄弟节点，
+     点击根本不经过封面；而它自己悬在封面下沿上（transform:translateY(-52px)），
+     所以那一片就是“点了没反应”的坑（她 09-14 20:42：“点了好多次才点到”）。
+     现在 .mo-me 整行不吃点击（CSS pointer-events），只有头像那颗自己吃 */
   const box = document.getElementById('mo-cover');
   if (e.target.closest('.mo-cover-hint')) {
     if (box.classList.contains('zoom')) changeCover();
@@ -14609,11 +14652,12 @@ function coverTap(e) {
         if (it) delComment(it.dataset.id, cm.dataset.id);
       });
     });
-    list.querySelectorAll('.mo-item-ava').forEach(a => a.addEventListener('click', () => {
+    list.querySelectorAll('.mo-item-ava, .mo-item-name').forEach(a => a.addEventListener('click', () => {
       const uid = a.closest('.mo-item').dataset.uid;
       if (!uid || uid === 'me') return;   // 自己的头像走我的主页（L45：TA 相册只看 TA）
-      viewUid = uid; pageLimit = 30; renderList();
-      document.getElementById('mo-nav').classList.remove('solid');
+      /* 进 TA 的相册只走一个口 openUser：以前这里自己手推 viewUid + renderList，
+         没跑 renderCover——她看到的就是“人都进去了，头像与封面还是我的”（09-14 20:42 报） */
+      openUser(uid);
     }));
     list.querySelectorAll('.mo-thumb').forEach(t => t.addEventListener('click', () => {
       const vd = t.querySelector('video');
@@ -15755,7 +15799,7 @@ const Uno = (function () {
     return '<div class="un-scoretab"><div class="un-scr-h"><span>#</span><span class="nm">玩家</span><span>本局</span><span>手上</span><span>累计</span></div>' +
       list.map((x, i) => '<div class="un-scr-row' + (x.id === room.winner ? ' win' : '') + '">' +
         '<span>' + (i + 1) + '</span>' +
-        '<span class="nm"><i>' + esc(x.seat) + '</i><b>' + esc(nameOf(x.id)) + '</b></span>' +
+        '<span class="nm"><span class="gm-mini-ava">' + Home.avaInner(x.id) + '</span><i>' + esc(x.seat) + '</i><b>' + esc(nameOf(x.id)) + '</b></span>' +
         '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span>' +
         '<span>' + x.hand + '</span>' +
         '<span>' + (x.all > 0 ? '+' + x.all : x.all) + '</span></div>').join('') + '</div>';
@@ -16042,15 +16086,7 @@ const Uno = (function () {
     }
     if (mid) mid.style.transform = 'translate(-50%,-50%)' + (k < 1 ? ' scale(' + k.toFixed(3) + ')' : '');
   }
-  function ava(id) {
-    if (id === 'me') {
-      const p = DB.state.profile || {};
-      return p.avatar ? '<img src="' + p.avatar + '">' : esc((p.name || '我').slice(0, 1));
-    }
-    const ct = (DB.state.contacts || []).find(c => c.id === id);
-    if (!ct) return '?';
-    return ct.avatar ? '<img src="' + ct.avatar + '">' : esc((ct.remark || ct.name || '?').slice(0, 1));
-  }
+  function ava(id) { return Home.avaInner(id); }   // 同上：头像只住 Home.avaInner 一个口
   function bindTable(room, el, sorted) {
     el.querySelectorAll('.un-hand .un-card').forEach(cardEl => {
       cardEl.addEventListener('click', () => {
@@ -16536,7 +16572,7 @@ const Ludo = (function () {
       '<div class="ld-scr-row' + (x.u === 'me' ? ' me' : '') + '">' +
       '<span class="ld-rank">' + (i + 1) + '</span>' +
       '<b class="ld-cname" style="color:' + CHEX[x.c] + '">' + CNAME[x.c] + '</b>' +
-      '<span class="ld-who-n">' + esc(nm(x.u)) + '</span>' +
+      '<span class="ld-who-n"><span class="gm-mini-ava">' + Home.avaInner(x.u) + '</span>' + esc(nm(x.u)) + '</span>' +
       '<span>回窝 ' + x.home + '/4</span>' +
       '<span>撞飞 ' + x.hit + '</span>' +
       '<span>掷 ' + x.rolls + ' 次</span></div>').join('') + '</div>';
@@ -17604,7 +17640,7 @@ const Doudizhu = (function () {
       '<div class="dz-scr-h"><span>#</span><span class="nm">玩家</span><span>身份</span><span>本局</span><span>剩牌</span><span>累计</span></div>' +
       rows.map((x, i) => '<div class="dz-scr-row' + (x.win ? ' win' : '') + (x.u === 'me' ? ' me' : '') + '">' +
         '<span>' + (i + 1) + '</span>' +
-        '<span class="nm"><b>' + esc(nm(x.u)) + '</b></span>' +
+        '<span class="nm"><span class="gm-mini-ava">' + Home.avaInner(x.u) + '</span><b>' + esc(nm(x.u)) + '</b></span>' +
         '<span>' + (x.land ? '地主' : '农民') + '</span>' +
         '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span>' +
         '<span>' + x.left + ' 张</span>' +
@@ -17615,15 +17651,7 @@ const Doudizhu = (function () {
       '</div>';
   }
   /* ---------- 渲染 ---------- */
-  function ava(uid) {
-    if (uid === 'me') {
-      const p = DB.state.profile || {};
-      return p.avatar ? '<img src="' + p.avatar + '">' : esc((p.name || '我').slice(0, 1));
-    }
-    const ct = Home.contactById(uid);
-    if (!ct) return '?';
-    return ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1));
-  }
+  function ava(uid) { return Home.avaInner(uid); }   // 头像口径全站一份在 Home.avaInner（09-14 拢条：以前 uno/dz/壳子/moments 各拄一份，大富翁干脆没画）
   function cardFace(c, cls, extra) {
     if (!c) return '<div class="dz-card dz-back' + (cls ? ' ' + cls : '') + '">' + (extra || '') + '</div>';
     const jk = c.r >= 16;
@@ -18667,7 +18695,7 @@ const Mono = (function () {
     return '<div class="mc-scr">' +
       '<div class="mc-scr-h"><span>#</span><span class="nm">玩家</span><span>现金</span><span>地产</span><span>盈亏</span></div>' +
       rows.map((x, i) => '<div class="mc-scr-row' + (i === 0 ? ' win' : '') + (x.u === 'me' ? ' me' : '') + '">' +
-        '<span>' + (i + 1) + '</span><span class="nm"><b>' + esc(nm(x.u)) + '</b>' + (x.out ? '<i class="mc-out">出局</i>' : '') + '</span>' +
+        '<span>' + (i + 1) + '</span><span class="nm"><span class="gm-mini-ava">' + Home.avaInner(x.u) + '</span><b>' + esc(nm(x.u)) + '</b>' + (x.out ? '<em class="mc-out">出局</em>' : '') + '</span>' +
         '<span>' + x.cash + '</span><span>' + x.cities + ' 城' + (x.stations ? ' · ' + x.stations + ' 站' : '') + '</span>' +
         '<span class="sc">' + (x.sc > 0 ? '+' + x.sc : x.sc) + '</span></div>').join('') +
       '<div class="mc-scr-f">跑了 ' + M.turnNo + ' 回合 · ' + (goalOf(r) > 0 ? '目标 ' + goalOf(r) + ' 元' : '不收场') + '</div></div>';
@@ -18984,22 +19012,20 @@ const Mono = (function () {
     const cells = [];
     for (let i = 0; i < l.N; i++) cells.push(cellHtml(r, M, l, i));
     let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + ';--mg:' + l.side + '">';
-    /* 盘外这一行：谁多少现金、资产做到哪了、几座城、是不是出局了 */
-    const dense = M.order.length > 4;      // 5 人以上：现金条换成“名 + 资产”的紧凑三列，不然八颗排成八行吃掉半屏
-    h += '<div class="gm-players mc-bank' + (dense ? ' dense' : '') + '">' + M.order.map(u =>
+    /* 盘外这一行：一人一颗（头像 + 颜色 + 名字 + 资产 + 现金与地产），一排画不下就左右划。
+       09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
+       以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；
+       现在不分档：信息全在一颗上，窄了可划，与结算表同一个“左右划”口径（.gm-swipe 同一家） */
+    h += '<div class="gm-players mc-bank">' + M.order.map(u =>
       '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
-      '" data-uid="' + u + '"><i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
+      '" data-uid="' + u + '"><span class="gm-mini-ava">' + Home.avaInner(u) + '</span>' +
+      '<i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
       '<b>' + esc(nm(u)) + '</b>' +
       '<small class="mc-cash">' + assets(r, u) + '</small>' +
-      (dense ? '' : '<small>现' + (M.cash[u] || 0) + ' · ' + ownedProps(r, u).length + ' 块地产</small>') +
+      '<small>现' + (M.cash[u] || 0) + ' · ' + ownedProps(r, u).length + ' 块</small>' +
       (u === 'me' ? '<em class="mc-me">我</em>' : '') +
       (M.jail[u] ? '<em class="mc-jbadge">狱</em>' : '') +
       (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
-    if (dense) {
-      /* 紧凑档里城数与现金没地方摆，并到图例那句里（信息不丢，只换位置） */
-      const who = M.order.map(u => esc(nm(u)) + ' 现' + (M.cash[u] || 0) + '·' + ownedProps(r, u).length + ' 地产').join('、');
-      h += '<div class="mc-bank2">' + who + '</div>';
-    }
     h += '<div class="mc-board" id="mc-board">' + cells.join('') +
       '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
       '<div class="mc-dice' + (spinning ? ' spin' : M.dice ? ' land' : '') + '">' + (spinning
@@ -19672,9 +19698,24 @@ const Games = (function () {
     }
     DB.save(); scheduleTimers(room);
   }
-  /* 逐个应答：每位 TA 一条计划（r.plans 里带 cid），全答完才开席 */
-  /* 没人来那句只在这一处拼：toast 与播报各写一份就会飘出不一样口径（09-14 那回就是两份里漏了一份） */
-  function noShowLine(r) { return (r.invited || []).map(name).join('、') + ' 这局都不来'; }
+  /* “谁没来”这句只在这一处拼：邀请没人应的 toast、牌桌播报、散局横幅全走它
+     （09-14 那回就是两份里漏了一份，把“每人 80% 应约”抬到了面上） */
+  function noShowLine(r, pick) {
+    const ids = (r.invited || []).filter(pick || function () { return true; }).map(name);
+    return (ids.length ? ids.join('、') : '没人') + ' 这局都不来';
+  }
+  /* 散局横幅：名字从 answers 里拿真名，婉拒与没回话说得不一样
+     （以前拿 taUid 兑——没人上桌时它是 null，name(null) 就把兑底串抬到脸上了） */
+  function deadLine(r) {
+    const ans = r.answers || {};
+    if (r.deadWhy === 'declined') return '你婉拒了这局，回大厅再请一位吧';
+    const no = (r.invited || []).filter(x => ans[x] === 'no');
+    const wait = (r.invited || []).filter(x => !ans[x]);
+    if (no.length && wait.length) return noShowLine(r, x => ans[x] === 'no') + '，' + wait.map(name).join('、') + ' 没回话，这局散了';
+    if (no.length) return noShowLine(r, x => ans[x] === 'no') + '，回大厅再请一位吧';
+    if (wait.length) return wait.map(name).join('、') + ' 没回话，这局散了';
+    return '人没凑齐，这局先散了';
+  }
   function execInvite(r, p) {
     const cid = p && p.cid;
     if (r.phase !== 'inviting' || !cid || (r.answers || {})[cid]) return;
@@ -20093,12 +20134,17 @@ const Games = (function () {
     /* UNO 的座位环就画在牌桌里（谁在哪边、几个人怎么排一目了然），不再另起一条玩家条；
        旧 .un-foes 那排“XX N 张”也删——同一个信息不许在页上出现两次 */
     const seats = defOf(r).seats === true;
+    /* 座位是谁：已上桌的先算，一个都没坐下就拿野我请的那位——以前直接拿 taUid（还没人
+       上桌时是 null）去 name(null)，牌桌上就抬出「已删除联系人」（她 09-14 20:42 报的就是这一条） */
+    const seated = (r.players || []).filter(u => u && u !== 'me');
+    const foe = seated[0] || (r.invited || [])[0] || null;
+    const here = seated.indexOf(foe) >= 0;
     let h = '';
-    if (!seats) h += '<div class="gm-players">' +
-      playerChip('me', r, turn === 'me') +
+    if (!seats && foe) h += '<div class="gm-players">' +
+      playerChip('me', r, turn === 'me', true) +
       '<span class="gm-vs">VS</span>' +
-      playerChip(ta, r, turn === ta) +
-      (thinking ? '<span class="gm-thinking">' + esc(name(ta)) + ' 正在想…</span>' : '') +
+      playerChip(foe, r, turn === foe, here) +
+      (thinking && here ? '<span class="gm-thinking">' + esc(name(foe)) + ' 正在想…</span>' : '') +
       '</div>';
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
     /* 短语/道具面板开在玩家条正下方（她 08-29：双击头像却要划到最底下才看得到，来回划） */
@@ -20116,7 +20162,7 @@ const Games = (function () {
         ? '等 ' + esc(wait.map(name).join('、')) + ' 答话…（已坐下 ' + ((r.players || []).length - 1) + ' 位）'
         : '人齐了就开…') + '</div>';
     } else if (r.phase === 'dead') {
-      h += '<div class="gm-banner">' + esc(name(ta)) + ' 婉拒了这局，返回再请一位吧</div>';
+      h += '<div class="gm-banner">' + esc(deadLine(r)) + '</div>';
     } else if (r.phase === 'negotiate') {
       if (r.pendingFirst) {
         h += '<div class="gm-nego"><button class="btn btn-secondary" id="gm-nego-no">驳回，我要先手</button>' +
@@ -20190,17 +20236,16 @@ const Games = (function () {
     renderFloat(r);
     tick();
   }
-  function playerChip(uid, r, active) {
+  function playerChip(uid, r, active, here) {
     /* 她 08-29：五子棋头像显示不正确——我的格子是空盒。补上：我用我的头像/昵称首字；
        扫雷时头像下常驻实时分数（她：分数怎么没实际标出来变化着）。
        08-29 二修：名字+先手点一行、分数一行，chip 定宽——行不再被撑乱 */
-    const prof = DB.state.profile || {};
-    let ava = '';
-    if (uid === 'me') {
-      ava = prof.avatar ? '<img src="' + prof.avatar + '">' : esc((prof.name || '我').slice(0, 1));
-    } else {
-      const ct = Home.contactById(uid);
-      if (ct) ava = ct.avatar ? '<img src="' + ct.avatar + '">' : esc(Home.displayName(ct).slice(0, 1));
+    const ava = '<span class="gm-ava">' + (uid ? Home.avaInner(uid) : '?') + '</span>';
+    if (!here) {
+      /* 人还没坐下：给真名字 + 「等答话」，不拿空位拿兑底串冒充玩家 */
+      return '<span class="gm-player wait" data-uid="' + (uid || '') + '">' + ava +
+        '<span class="gm-name-row"><b>' + esc(name(uid)) + '</b></span>' +
+        '<small class="gm-pts">等答话</small></span>';
     }
     const stone = r.blackUid === uid ? '<i class="gm-stone-dot"></i>' : '';
     /* 五子棋：颜色跟先手走，玩家条上直接写清谁拿黑子（墨点=先手，但“黑/白”得看字才知道） */
@@ -20209,7 +20254,7 @@ const Games = (function () {
     const pts = (r.game === 'mine' && r.mine && r.mine.scores)
       ? '<small class="gm-pts">' + (r.mine.scores[uid] || 0) + ' 分 · 雷' + (r.mine.hits[uid] || 0) + '</small>' : '';
     return '<span class="gm-player' + (active ? ' on' : '') + '" data-uid="' + uid + '">' +
-      '<span class="gm-ava">' + ava + '</span>' +
+      ava +
       '<span class="gm-name-row"><b>' + esc(name(uid)) + '</b>' + stone + '</span>' +
       gcol + pts + '</span>';
   }
@@ -20591,18 +20636,22 @@ const Games = (function () {
     closeOverlay();
     const won = r.winner === 'me', draw = r.winner === 'draw';
     const role = prizeRoles(r);
+    /* 有表格的结算卡要宽一点、表格外那一层虚线框去掉（套两层框 = 丑），
+       并把表装进 .gm-swipe：窄屏左右划得动，不把名字截成一截（她 09-14 20:42） */
+    const hasTab = !!(defOf(r) && defOf(r).settleTable);
     overlay = document.createElement('div');
     overlay.className = 'dialog-mask gm-ovl';
     overlay.innerHTML =
-      '<div class="gm-settle">' +
+      '<div class="gm-settle' + (hasTab ? ' wide' : '') + '">' +
         '<div class="gm-settle-t">' + (draw ? '平局' : (won ? '你赢了' : esc(name(r.winner)) + ' 赢了')) + '</div>' +
         '<div class="gm-settle-s">' + esc(defOf(r).name) + ' · ' + (r.moves || []).length + ' 手 · ' +
             /* 平局不能拿空 uid 去查人名（那会写成“已删除联系人 拿下”，看着像渲染坏了） */
             (draw ? '平局收场' : esc(name(r.winner)) + ' 拿下') + '</div>' +
         /* 结算统计要看得见（她 08-29）；文案由游戏自己出（扫雷报踩雷个数，UNO 报记分表） */
-        (r.finalScores ? '<div class="gm-settle-prize">' +
-          /* 表格由游戏自己出（UNO 的记分表）；没提供的回到逐行文字 */
-          (defOf(r).settleTable ? defOf(r).settleTable(r) :
+        (r.finalScores ? '<div class="gm-settle-prize' + (hasTab ? ' tight' : '') + '">' +
+          /* 表格由游戏自己出；外面抽一层 .gm-swipe：窄屏不截名字、不溢出，左右划就能看完
+             （她 09-14 20:42：“都超出格子了，大不了左右划一下看看战绩”） */
+          (hasTab ? '<div class="gm-swipe">' + defOf(r).settleTable(r) + '</div>' :
             Object.keys(r.finalScores.scores || {}).map(u =>
               esc(name(u)) + ' ' + (r.finalScores.scores[u] || 0) + ' 分（踩雷 ' + (r.finalScores.hits[u] || 0) + '）').join('<br>')) +
           '</div>' : '') +
@@ -21855,15 +21904,15 @@ const Call = (function () {
     const gname = single ? '' : Home.groupName(st.conv);
     let mid = '';
 
-    if (st.phase === 'outgoing' || st.phase === 'incoming') {
+    /* 拨出去这一屏只报“在等对方接”：“X 邀请你视频通话”那句属于来电卡（renderCard），
+       挂在拨出面上就成了“我给 TA 打，屏幕上却写 TA 邀请我”（她 09-14 20:42 报）。
+       而 incoming 在 render() 开头就转去画来电卡了，根本进不到这里——那个分支一并删掉。 */
+    if (st.phase === 'outgoing') {
       const show = single ? peer : st.caller;
       mid = '<div class="call-center">' +
         '<div class="call-avatar">' + avatarHTML(show) + '</div>' +
         '<div class="call-name">' + esc(Home.displayName(show)) + '</div>' +
-        /* #39y 策划L789：谁发起的——昵称下深色加粗一行 */
-        '<div class="call-inv-line">' + esc(Home.displayName(show)) + '邀请你视频通话</div>' +
-        '<div class="call-sub">' + (st.phase === 'outgoing'
-          ? (single ? '正在等待对方接受邀请…' : '正在邀请群成员…') : '视频通话邀请…') + '</div>' +
+        '<div class="call-sub">' + (single ? '正在等待对方接受邀请…' : '正在邀请群成员…') + '</div>' +
         (st.mode === 'group' ? '<div class="call-invitees">' +
           Home.membersOf(st.conv).map(m =>
             '<span class="call-mini-av">' + avatarHTML(m) + '</span>').join('') + '</div>' : '') +
