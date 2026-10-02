@@ -1030,6 +1030,9 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显 */
 .msg-img-fade{opacity:0;transition:opacity .3s ease}
 .msg-img-fade.loaded{opacity:1}
+/* 相册发视频（她 10-02）：气泡裸贴视频，内联播放 */
+.msg-video{display:block;max-width:min(62vw,220px);border-radius:8px;background:#000}
+.bubble-video{background:none;border:none;padding:0}
 .msg-flash{animation:msgFlash 1.2s ease}
 @keyframes msgFlash{0%,60%{background:var(--primary-ultra)}100%{background:transparent}}
 
@@ -2894,6 +2897,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-card.jk .dz-cr{font-size:calc(10.5px * var(--dq,1))}
 .dz-card.dz-back{background:repeating-linear-gradient(45deg,var(--card) 0 4px,var(--fill) 4px 8px);cursor:default}
 .dz-hand.live .dz-card:active{transform:translateY(-4px)}
+/* 牌面数字与压叠负 margin 解耦（她 10-02：手上的牌数字被遮）：压叠时点数/花色搭进左边
+   永远露出来的窄条，不再赌中段露不露得出来；桌上的长牌同理 */
+.dz-hand.tight .dz-card .dz-cs{left:3px;top:4px;font-size:calc(8.5px * var(--dq,1))}
+.dz-hand.tight .dz-card .dz-cr{position:absolute;left:3px;top:15px;font-size:calc(12px * var(--dq,1))}
+.dz-hand.tight .dz-card.jk .dz-cr{font-size:calc(9px * var(--dq,1))}
+.dz-pile.many .dz-card .dz-cs{left:4px;top:3px;font-size:calc(8.5px * var(--dq,1))}
+.dz-pile.many .dz-card .dz-cr{position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:calc(12px * var(--dq,1))}
 /* 桌上的牌：以前固定 28px，跟手牌（~42px）差到六成多，就是她说的“中间快看不见”；
    抬到 34px 基准（再宽就靠上面的换行接住） */
 .dz-mini{width:calc(34px * var(--dq,1));height:calc(46px * var(--dq,1));cursor:default;border-width:1.2px;box-shadow:none}
@@ -3461,6 +3471,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>学我说话概率</span><em><input type="number" id="pf-learn" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
           <label class="adv-item"><span>朋友圈拼字卡率</span><em><input type="number" id="pf-mocombo" min="0" max="100"> %</em></label>
@@ -3580,7 +3591,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 
 <div id="toast-layer"></div>
 <div id="dialog-layer"></div>
-<input type="file" id="chat-img-input" accept="image/*" hidden>
+<input type="file" id="chat-img-input" accept="image/*,video/*" hidden>
 
 <script>
 "use strict";
@@ -8222,7 +8233,7 @@ const Chat = (function () {
   /* ---------------- 消息渲染 ---------------- */
   /* 消息摘要（引用预览用） */
   function snippetOf(m) {
-    return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
+    return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : m.type === 'game' ? '[游戏邀请]'
       : m.type === 'link' ? '[链接]' : (m.text || '');
@@ -8363,6 +8374,14 @@ const Chat = (function () {
       if (im.complete) im.classList.add('loaded');
       else im.addEventListener('load', () => im.classList.add('loaded'), { once: true });
       bub.appendChild(im);
+    } else if (m.type === 'video' && m.vid) {
+      /* 相册发视频（她 10-02）：本体在 IndexedDB（MediaStore），气泡内联播放，不占 localStorage 配额 */
+      bub.classList.add('bubble-video');
+      bub.innerHTML = '<video class="msg-video" controls playsinline preload="metadata"></video>';
+      MediaStore.src(m.vid).then(u => {
+        const v = bub.querySelector('video');
+        if (v && u) v.src = u;
+      });
     } else if (m.type === 'voice') {
       bub.classList.add('bubble-voice');
       /* 波形条替代话筒图标（决策#33），播放时波动动画 */
@@ -8720,7 +8739,7 @@ const Chat = (function () {
 
   async function showMsgActions(m) {
     /* P35（她 20:17）：自己的文字/图片可撤回，不限时间不限群私聊；红包/亲属卡等资产类不提供 */
-    const revocable = m.from === 'me' && (m.type === 'text' || m.type === 'img' || m.type === 'link');
+    const revocable = m.from === 'me' && (m.type === 'text' || m.type === 'img' || m.type === 'link' || m.type === 'video');
     const items = [
       { key: 'quote', label: '引用回复' }
     ];
@@ -8814,6 +8833,7 @@ const Chat = (function () {
     (DB.state.msgs[cv.id] = DB.state.msgs[cv.id] || []).push(m);
     cv.lastMsg = m.type === 'text' ? m.text
                 : m.type === 'img' ? '[图片]'
+                : m.type === 'video' ? '[视频]'
                 : m.type === 'kinship' ? '[亲属卡]'
                 : m.type === 'redpacket' ? '[红包]'
                 : m.type === 'quiz' ? '[灵魂拷问]'
@@ -8822,6 +8842,8 @@ const Chat = (function () {
                 : '[语音]';
     cv.lastTime = m.ts;
     DB.save();
+    /* 学我说话·学（她 10-02「先做学我说话」）：单聊里我发的字整条进 TA 的池子（金额/地址不学） */
+    if (m.type === 'text' && cv.type === 'single') runSafe('chat.learn', () => Engine.learn(cv.peerId, m.text));
     if (!convId || (cur && cv.id === cur.id)) renderMsgs();   // 悬浮窗发的消息不重渲主窗
     Home.render();
     Engine.onUserMessage(cv.id);   // 文字/图片/语音都会触发AI回复安排
@@ -10065,10 +10087,20 @@ const Chat = (function () {
     const imgInput = document.getElementById('chat-img-input');
     imgInput.addEventListener('change', async () => {
       const f = imgInput.files[0];
-      if (!f) return;
-      try { sendImage(await Media.compressImage(f)); }
-      catch (err) { UI.toast(err.message); }
       imgInput.value = '';
+      if (!f) return;
+      try {
+        if (/^video\//i.test(f.type || '')) {
+          /* 相册发视频（她 10-02）：本体进 IndexedDB（MediaStore），存档只留 'idb:' 引用 */
+          const key = 'vid_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          await MediaStore.put(key, f);
+          const back = await MediaStore.get(key);
+          if (!back) throw new Error('视频没存进去');
+          pushMine({ type: 'video', vid: 'idb:' + key });
+        } else {
+          sendImage(await Media.compressImage(f));
+        }
+      } catch (e) { UI.toast((e && e.message) ? e.message + '，换个小点的试试' : '发送失败'); }
     });
   }
 
@@ -10099,6 +10131,22 @@ const Engine = (function () {
     const items = (lib && lib.items || []).filter(i => !i.blocked && i.text);
     if (items.length) return pick(items).text;
     return pick(kind === 'em' ? EMOJI : KAOMOJI);
+  }
+
+  /* 学我说话·学（她 10-02 拍）：单聊里我发的每个字都可能进 TA 的可发池（ct.learned），
+     只拦金额与地址（防假扣钱、防真地址上街，决策#138）——不立字数/条数/冷却规矩。 */
+  const LEARN_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
+  function learn(ctId, text) {
+    try {
+      const t = String(text || '').trim();
+      if (!t || LEARN_BAD.test(t)) return false;
+      const ct = (typeof Home !== 'undefined') ? Home.contactById(ctId) : null;
+      if (!ct) return false;
+      ct.learned = ct.learned || [];
+      if (ct.learned.indexOf(t) > -1) return false;
+      ct.learned.push(t);
+      return true;
+    } catch (e) { logErr('engine.learn ' + ((e && e.message) || e)); return false; }
   }
 
   const timers = new Map();   // 'convId:memberId' -> true：该成员本轮进行中
@@ -10142,6 +10190,9 @@ const Engine = (function () {
     /* 她 10-02 拍：朋友圈的拼字卡/配图单独两个闸，不跟聊天共用车（聊天拼卡默认仍是 1）。
        只影响没存过这两项的联系人；资料卡朋友圈区可改。 */
     moComboProb: 80, moImgProb: 70,
+    /* 学我说话（决策#138，她 10-02「先做学我说话」）：学到即入池、无字数/条数/冷却限制，
+       这档只是「偶尔用一下」的概率；默认 15 是我拍的，资料卡可调，0=关。 */
+    learnRate: 15,
     readNoReply: 0, moMutual: 0,
     /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
        旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
@@ -10363,8 +10414,19 @@ const Engine = (function () {
      其余字卡文本；附带模式下整轮后追加一张图的独立判定；
      整轮20%概率首条附带对最近10条消息的引用 */
   function fireBatch(conv, p, ct, n, cap) {
+    /* 学我说话·用（决策#138）：命中概率整条引用一句学来的话——不拼贴、不重组、不截断；
+       提到字卡池检查之前：池子空它也该能用学到的话。群聊不学（学的是每个联系人自己的池子）。 */
+    const learned = (ct && Array.isArray(ct.learned)) ? ct.learned : [];
+    const learnP = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
+    if (conv.type === 'single' && learnP > 0 && learned.length && Math.random() * 100 < learnP) {
+      const line = pick(learned);
+      const dt = rollDelay(p);
+      later(conv.id, dt, () => pushAi(conv, line, ct));
+      return dt;
+    }
     const cards = usableCards(ct);
     if (!cards.length) { hintNoCards(conv); return 0; }
+    /* 学我说话·用（决策#138）：出口在函数最顶上（池子空也能用），这里不再重复。 */
     /* 拼字卡（二期P9）：命中组合概率时，本条回复由多条字卡拼接为一条消息；
        抽取条数走「拼卡条数」设置、发送时机走外层「回复延迟」，均按用户配置；
        间隔符逐位随机（逗号/句号/顿号/感叹号/问号/无），自然涌现半隔开半不隔开 */
@@ -10513,7 +10575,7 @@ const Engine = (function () {
   }
 
   function snippetIn(m) {
-    return m.type === 'img' ? '[图片]' : m.type === 'voice' ? '[语音]'
+    return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
       : m.type === 'link' ? '[链接]' : (m.text || '');
@@ -10627,7 +10689,7 @@ const Engine = (function () {
     }
   }
 
-  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate,
+  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate, learn,
            params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF };
 })();
 
@@ -14207,21 +14269,27 @@ function coverTap(e) {
     for (let i = 0; i < MO_IMG_W.length; i++) { if (r < MO_IMG_W[i]) { n = i + 1; break; } r -= MO_IMG_W[i]; }
     return n;
   }
-  function taBody(ct, maxLen) {
-    const out = { text: '', imgs: [], text2: '' };
+  /* 她 10-02 两刀：① 不限字数——以前 maxLen 把字卡拦腰截成半句，她从来没说过评论/发帖要限字数；
+     ② 图和文的先后顺序等概率打乱（单图评论才谈顺序；发帖多图本来就在文字下面）。等概率随机是铁口径。 */
+  function taBody(ct) {
+    const out = { text: '', imgs: [], text2: '', order: null };
     try {
+      const p = Engine.params(ct);
+      /* 学我说话（决策#138）：命中就整条引用一句学来的话——不拼贴、不截断、不装饰 */
+      const learned = (ct && Array.isArray(ct.learned)) ? ct.learned : [];
+      const lr = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
+      if (lr > 0 && learned.length && Math.random() * 100 < lr) { out.text = pick(learned); return out; }
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
       if (!pool.length) return out;
-      const p = Engine.params(ct);
       const comboP = Math.min(100, Math.max(0, Math.round(+p.moComboProb ?? p.cardComboProb ?? 0)));
       let combo = false;
       if (pool.length >= 2 && comboP > 0 && Math.random() * 100 < comboP) {
         const cMin = Math.max(2, Math.round(+p.cardComboMin) || 2);
         const cMax = Math.max(cMin, Math.round(+p.cardComboMax) || cMin);
-        out.text = Engine.buildCardCombo(pool, cMin, cMax).slice(0, maxLen);
+        out.text = Engine.buildCardCombo(pool, cMin, cMax);
         combo = true;
       } else {
-        out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool)).slice(0, maxLen);
+        out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool));
       }
       const ip = Math.min(100, Math.max(0, Math.round(+p.moImgProb ?? p.imgProb ?? 0)));
       if (ip > 0 && Math.random() * 100 < ip) {
@@ -14231,8 +14299,13 @@ function coverTap(e) {
           const bag = sp.slice();                 /* 不重复抽：洗牌取前 N，池子不够就用整池 */
           for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
           out.imgs = bag.slice(0, Math.min(want, bag.length));
-          if (combo && !out.text2 && Math.random() < 0.5)
-            out.text2 = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool)).slice(0, 30);
+          if (out.imgs.length === 1) {
+            if (combo && Math.random() < 0.5)
+              out.text2 = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool));
+            const parts = out.text2 ? ['t', 'i', 'x'] : ['t', 'i'];
+            for (let i = parts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = parts[i]; parts[i] = parts[j]; parts[j] = t; }
+            out.order = parts;                    /* 文/图（/尾句）等概率打乱，不搞死板先文后图 */
+          }
         }
       }
     } catch (e) { logErr('moments.taBody ' + ((e && e.message) || e)); }
@@ -14286,8 +14359,8 @@ function coverTap(e) {
     if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
       /* 评论正文与配图：拼卡/装饰/配图都在 taBody 里算；文-图-文的尾句在 text2 */
-      const b = taBody(ct, 50);
-      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.imgs[0] || null, text2: b.text2, ts: t0 });
+      const b = taBody(ct);
+      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: t0 });
     }
     DB.save();
     renderList();
@@ -14322,9 +14395,9 @@ function coverTap(e) {
         if (pl.kind === 'react') { reactOnce(p.id, ct, pl.at); return; }
         /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
-        const b = taBody(ct, 50);
+        const b = taBody(ct);
         if (!b.text && !b.imgs.length) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.imgs[0] || null, text2: b.text2, ts: pl.at || Date.now() });
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: pl.at || Date.now() });
       });
       acted = true;
     });
@@ -14351,7 +14424,7 @@ function coverTap(e) {
         acted = true;
         n++;
         if (Math.random() * 100 >= rate) continue;        /* 没落进 60%：这一班不发，安静等下一班 */
-        const b = taBody(ct, 80);
+        const b = taBody(ct);
         if (!b.text && !b.imgs.length) continue;
         /* 09-04（她「朋友圈上线的补发，不要按照我一上线的时间来」）：发生时刻 = 这班钟该到的那一刻（born），
            落库时刻 = 现在（at）。以前一律 ts=now：离开几小时回来，几个人的钟同时过期、同秒补发、
@@ -14658,12 +14731,17 @@ function coverTap(e) {
             ? '<div class="mo-likes"><i data-icon="heart" data-size="13"></i><span>' + esc(likeNames.join('，')) + ' 觉得很赞</span></div>'
             : '') +
           ((p.comments || []).length
-            ? '<div class="mo-comments">' + p.comments.map(c =>
-                '<div class="mo-cmt" data-id="' + c.id + '" data-uid="' + c.uid + '"><b>' + esc(name(c.uid)) + '</b>' +
+            ? '<div class="mo-comments">' + p.comments.map(c => {
+              /* 她 10-02：评论段落顺序等概率随机（order 缺省=老数据的固定 文→图→尾） */
+              const seg = (c.order && c.order.length) ? c.order : ['t', 'i', 'x'];
+              const body = seg.map(k =>
+                k === 't' ? '<span>' + esc(c.text || '') + '</span>'
+                : k === 'i' ? (c.img ? '<img class="mo-cmt-img" src="' + c.img + '" alt="">' : '')
+                : (c.text2 ? '<span>' + esc(c.text2) + '</span>' : '')).join('');
+              return '<div class="mo-cmt" data-id="' + c.id + '" data-uid="' + c.uid + '"><b>' + esc(name(c.uid)) + '</b>' +
                 (c.toUid ? '<span>回复</span><b>' + esc(name(c.toUid)) + '</b>' : '') +
-                '<span>：</span><span>' + esc(c.text || '') + '</span>' +
-                (c.img ? '<img class="mo-cmt-img" src="' + c.img + '" alt="">' : '') +
-                (c.text2 ? '<span>' + esc(c.text2) + '</span>' : '') + '</div>').join('') + '</div>'
+                '<span>：</span>' + body + '</div>';
+            }).join('') + '</div>'
             : '') +
         '</div>' +
       '</div>';
@@ -17859,6 +17937,8 @@ const Doudizhu = (function () {
   function fitHand(el) {
     const hand = el.querySelector('.dz-hand');
     if (!hand) return;
+    /* 压叠态标记先行：牌面数字挪进左边永远露出来的窄条（与负 margin 解耦，她 10-02） */
+    hand.classList.toggle('tight', ((parseFloat(String(hand.style.getPropertyValue('--dgap')) || '0')) || 0) < -0.5);
     const n = hand.querySelectorAll('.dz-card').length;
     if (n < 2) return;
     for (let i = 0; i < 4; i++) {
@@ -21669,6 +21749,7 @@ const Profile = (function () {
     el('pf-comax').value = pa.cardComboMax;
     el('pf-readnr').value = pa.readNoReply;
     el('pf-revoke').value = (pa.revokeRate ?? 0);
+    el('pf-learn').value = pa.learnRate;
     el('pf-mopost').value = pa.moPostRate;
     el('pf-mopmin').value = pa.moPostMin;
     el('pf-mopmax').value = pa.moPostMax;
@@ -21857,6 +21938,8 @@ const Profile = (function () {
         p.readNoReply = Math.min(100, Math.max(0, Math.round(+el('pf-readnr').value || 0)));
         /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回 */
         p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
+        /* 学我说话概率（她 10-02 拍）：学到即入池，这档只是「偶尔用一下」；0=关。默认 15 我拍的 */
+        p.learnRate = Math.min(100, Math.max(0, Math.round(+el('pf-learn').value || 0)));
         /* 朋友圈发帖（二期P16③）：概率% + 间隔区间（单位小时/分钟，支持小数）；09-04 修正旧注释——
            这里早就不是“30~120 秒”那个口径了。默认值也不再在这拄一份（以前写死 60 和 6，
            REPLY_DEF 改了这边不知道，台账 L13 同一个病），一律从 Engine.REPLY_DEF 读。 */
@@ -22522,7 +22605,9 @@ const Call = (function () {
             ? (st.camOn && stream ? '<video id="call-main-video" class="call-mainvideo" autoplay muted playsinline></video>' : '')
             : (bgImg ? '<img class="call-bg" src="' + bgImg + '">' : '')) +
           '<div class="call-far">' +
-            '<div class="call-avatar">' + (st.swapped ? '<span>' + esc(myName.slice(0, 1)) + '</span>' : avatarHTML(peer)) + '</div>' +
+            (!(st.swapped && st.camOn && stream)
+              ? '<div class="call-avatar">' + (st.swapped ? '<span>' + esc(myName.slice(0, 1)) + '</span>' : avatarHTML(peer)) + '</div>'
+              : '') +   /* 她 10-02：开了摄像头中间就是画面，头像别再压在视频上（微信同款） */
             '<div class="call-name">' + esc(st.swapped ? myName : Home.displayName(peer)) + '</div>' +
           '</div>' +
           meSmall() + '</div>';
