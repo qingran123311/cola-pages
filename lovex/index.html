@@ -3030,6 +3030,37 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-tip{display:block;margin-top:3px;font-size:10.5px;line-height:1.45;color:var(--t3)}
 .mc-prev{margin:10px 0 2px;padding:7px 9px;border:1px dashed var(--line);border-radius:9px;
   font-size:11px;line-height:1.5;color:var(--t2);font-variant-numeric:tabular-nums}
+/* ---------- C 期（09-15）：楼画在格子上、抵押挂个角标、地产页与换地页 ----------
+   全墨线：楼 = 小方框，盖到地标才实心；不加彩色（她定的：新的格子只许墨 + 主题色） */
+.mc-cell .mc-lv{position:absolute;left:2px;top:2px;display:flex;gap:1px}
+.mc-cell .mc-lv s{display:block;width:calc(4px * var(--mq,1));height:calc(4px * var(--mq,1));
+  border:1px solid var(--t1);background:var(--card)}
+.mc-cell .mc-lv.top s{background:var(--oc,var(--t1));border-color:var(--oc,var(--t1))}
+.mc-mort{position:absolute;right:2px;bottom:2px;font-style:normal;font-size:calc(8px * var(--mq,1));line-height:1;
+  padding:1px 2px;border:1px solid var(--line);border-radius:3px;background:var(--card);color:var(--t2)}
+.mc-itbadge{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;
+  border:1px dashed var(--t2);color:var(--t2);white-space:nowrap;flex:none}
+.mc-deep{font-size:calc(9.5px * var(--mq,1));line-height:1.35;color:var(--t3);font-variant-numeric:tabular-nums}
+.mc-deed{text-align:left}
+.gm-swipe>.mc-deed,.gm-swipe>.mc-chips{min-width:min(300px,84vw);width:max-content}
+.mc-deed-h,.mc-deed-row{display:grid;grid-template-columns:minmax(84px,max-content) 46px 62px minmax(118px,max-content);
+  gap:6px;align-items:center;padding:5px 2px}
+.mc-deed-h{border-bottom:1px solid var(--line);color:var(--t3);font-size:10.5px}
+.mc-deed-row{border-bottom:1px dashed var(--line)}
+.mc-deed-row.mort{background:var(--fill)}
+.mc-deed-row .nm{display:flex;align-items:center;gap:4px;min-width:0}
+.mc-deed-row .nm b{font-weight:600;white-space:nowrap}
+.mc-deed-row .nm i{font-style:normal;font-size:9.5px;color:var(--t2);border:1px solid var(--line);border-radius:3px;padding:1px 3px;white-space:nowrap}
+.mc-deed-row .acts{display:flex;gap:4px;align-items:center}
+.mc-deed-row>em{grid-column:1 / -1;font-style:normal;font-size:10px;line-height:1.4;color:var(--t3)}
+.mc-act{font:inherit;font-size:10.5px;line-height:1;padding:5px 8px;border:1px solid var(--t1);border-radius:999px;
+  background:var(--card);color:var(--t1);white-space:nowrap;cursor:pointer}
+.mc-act:active{background:var(--fill)}
+.mc-deed-f{margin-top:7px;font-size:10.5px;line-height:1.5;color:var(--t3)}
+.mc-chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 0}
+.gm-swipe>.mc-chips{flex-wrap:nowrap}
+.mc-chips .gm-rchip{flex:none}
+.mc-none{font-size:10.5px;color:var(--t3)}
 .dialog-wide{width:min(400px,92vw)}
 
 </style>
@@ -17957,7 +17988,7 @@ const Mono = (function () {
   const START_CASH = 500; const PASS_GO = 100; const GOAL_LAPS = 2; const GOAL_CITIES = 2; const ROUND_CAP = 14;
   const LAY_VER = 'v2';             // 盘面版本：老局按老布局跑完（格子内容一改，同一个 idx 就不是同一块地）
   /* 齿轮默认值（我拍的，可调；界面上不写“这是拍的”） */
-  const CFG = { cash: 800, passGo: 150, tier: 'std', goal: 0, cap: 20, ev: 'mid', beat: 'norm', price: 100, dbl: 1 };
+  const CFG = { cash: 800, passGo: 150, tier: 'std', goal: 0, cap: 20, ev: 'mid', beat: 'norm', price: 100, dbl: 1, up: 1, it: 1, tr: 1 };
   const TIERS = { fast: [2, 2], std: [3, 4], long: [5, 7], none: [0, 0] };   // [绕几趟过路钱, 几座均价城]
   const TIER_NAME = { fast: '快局', std: '标准', long: '长局', none: '不收场' };
   /* 内容格颗数按环长给：[20 格, 24 格, 28 格]（疏=一期那三颗；环越大城只会更多，不会因人多反而少城） */
@@ -17970,7 +18001,7 @@ const Mono = (function () {
     fast: { spin: 380, settle: 120, hop: 160, hopTa: 120, go: 260, land: 700, landTa: 500, card: 600 }
   };
   /* 老局那一套（存档里没 M.rule 的）：账与盘锁回一期，节奏跟着齿轮走 */
-  const RULE_V1 = { layVer: 'v1', cash: START_CASH, passGo: PASS_GO, price: 100, ev: 3, laps: GOAL_LAPS, cities: GOAL_CITIES, goalRaw: 0, cap: ROUND_CAP, tier: 'fast', auc: 0, dbl: 0 };
+  const RULE_V1 = { layVer: 'v1', cash: START_CASH, passGo: PASS_GO, price: 100, ev: 3, laps: GOAL_LAPS, cities: GOAL_CITIES, goalRaw: 0, cap: ROUND_CAP, tier: 'fast', auc: 0, dbl: 0, up: 0, it: 0, tr: 0 };
   /* 玩家身份色：4 个主色 + 各自加深一档，8 家分得开，且不碰 255°~305°（紫色会被否） */
   const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0', '#A45B4E', '#C08A2E', '#4F7A57', '#3F6A8C'];
   const DIE = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
@@ -18061,6 +18092,18 @@ const Mono = (function () {
   const ST_RENT = [0.125, 0.25, 0.5, 1];   // 持 1/2/3/4 座的租 = 站价 × 这四档（官方四条铁路那四档）
   const BAIL_RATE = 0.0625;                 // 交保 = 起步金的 1/16（默认档就是 50）
   const TAX_RATE = 0.1; const TAX_CAP = 0.25; const LUX_RATE = 0.125;   // 所得税按总资产一成、封顶=起步金四分之一；奢侈税固定一笔
+  /* ---------- C 期（09-15）：盖楼 / 抵押 / 道具 / 换地 ----------
+     倍率不抄官方那条 1/5/15/45/80/125：我们的基础租已经定在地价×30%，那条拿过来一块城能收到六千、一脚踩死。
+     楼就三档，租按 1 / 3 / 8 / 20 走；盖价、库存、抵押都只在这几行里定，别处不再夹第二份。 */
+  const LVL = [1, 3, 8, 20];              // 空地 → 小楼 → 大楼 → 地标
+  const LVL_NAME = ['', '小楼', '大楼', '地标'];
+  const BUILD_RATE = 0.5;                 // 盖一档 = 地价的一半（向上取整，最少 20）
+  const HOUSES_EACH = 6;                  // 限量库存：每人 6 颗，全场共 n×6 颗；抢完必须在盘上写清，不许静默失败
+  const MORT_RATE = 0.5; const BACK_RATE = 1.1;   // 抵押拿一半地价，赎回多付一成
+  /* 道具只存一颗（单槽）：摸到新的一顶掉手里那颗，顶掉了什么写进播报——背包/堆叠/多选那一层复杂度全切掉 */
+  const IT_NAME = { dice: '遥控骰子', rev: '转向卡', warp: '传送卡', smash: '拆楼卡', shield: '免租卡' };
+  const IT_TXT = { dice: '下一手走几步你定', rev: '下一手倒着走', warp: '把自己挑到盘上任一格', smash: '拆掉别人一座楼', shield: '下一回填别人的租不掏钱' };
+  const IT_POOL = ['dice', 'rev', 'warp', 'smash', 'shield'];
 
   /* ---------- 棋盘：边长随人数撑大，一格一格都从这一个口算出来 ---------- */
   function sideFor(n) { return n <= 4 ? 6 : n <= 6 ? 7 : 8; }   // 6 边=20 格 / 7 边=24 格 / 8 边=28 格
@@ -18105,15 +18148,28 @@ const Mono = (function () {
       if (t === 'station') { C[i].p = stPrice(rule); stations++; }
     });
     let k = 0, total = 0;
+    const ord = [];
     for (let i = 1; i < N && k < CITY_LIST.length; i++) {
       if (C[i]) continue;
       const p = Math.max(20, Math.ceil(CITY_LIST[k][1] * rule.price / 100));
       C[i] = { t: 'city', n: CITY_LIST[k][0], p: p };
       CITY[i] = [CITY_LIST[k][0], p];
+      ord.push(i);
       total += p; k++;
     }
+    /* 成组：按地价序两座一组，落单的那座并进最后一组（不造“独苗一组”，不然“集齐”成一句空话）。
+       盖楼、整组翻倍、换地都读这一份，别在别处再推一遍邻座关系 */
+    const G = {}, GS = {};
+    if (k > 1) {
+      const tail = (k % 2) ? 3 : 2, head = k - tail;
+      for (let x = 0; x < k; x++) {
+        const g = x < head ? Math.floor(x / 2) : Math.floor(head / 2);
+        G[ord[x]] = g;
+        (GS[g] = GS[g] || []).push(ord[x]);
+      }
+    } else if (k === 1) { G[ord[0]] = 0; GS[0] = [ord[0]]; }
     const avg = k ? Math.round(total / k) : 0;
-    LAY[key] = { side: side, N: N, POS: POS, C: C, CITY: CITY, EV: EV, cities: k, stations: stations, total: total, avg: avg, ver: ver };
+    LAY[key] = { side: side, N: N, POS: POS, C: C, CITY: CITY, EV: EV, G: G, GS: GS, groups: Object.keys(GS).length, cities: k, stations: stations, total: total, avg: avg, ver: ver };
     return LAY[key];
   }
   /* 内容格摆哪几颗：表没配到的档位就补事件格，不塞废格 */
@@ -18140,7 +18196,9 @@ const Mono = (function () {
       cash: clamp(c.cash, CFG.cash, 300, 3000), passGo: clamp(c.passGo, CFG.passGo, 50, 400),
       tier: TIERS[c.tier] ? c.tier : CFG.tier, goal: clamp(c.goal, CFG.goal, 0, 99999),
       cap: clamp(c.cap, CFG.cap, 0, 40), ev: EV_N[c.ev] ? c.ev : CFG.ev,
-      beat: BEAT[c.beat] ? c.beat : CFG.beat, price: clamp(c.price, CFG.price, 60, 160), dbl: +c.dbl === 0 ? 0 : 1
+      beat: BEAT[c.beat] ? c.beat : CFG.beat, price: clamp(c.price, CFG.price, 60, 160), dbl: +c.dbl === 0 ? 0 : 1,
+      /* 三个“要不要”：没填过 = 关（没填过就是字段不存在，当 0），填了才开 */
+      up: +c.up === 0 ? 0 : 1, it: +c.it === 0 ? 0 : 1, tr: +c.tr === 0 ? 0 : 1
     };
   }
   function ruleOf(c, side) {
@@ -18148,14 +18206,20 @@ const Mono = (function () {
     const evRow = EV_N[c.ev] || EV_N[CFG.ev];
     return {
       layVer: LAY_VER, cash: c.cash, passGo: c.passGo, price: c.price, goalRaw: c.goal, cap: c.cap,
-      ev: evRow[Math.max(0, Math.min(2, side - 6))], laps: t[0], cities: t[1], tier: c.tier, beat: c.beat, dbl: c.dbl, auc: 1, goal: null
+      ev: evRow[Math.max(0, Math.min(2, side - 6))], laps: t[0], cities: t[1], tier: c.tier, beat: c.beat, dbl: c.dbl, auc: 1, goal: null,
+      up: c.up, it: c.it, tr: c.tr
     };
   }
   function L(r) { const M = st(r); return lay(M.side, M.rule); }
 
   function esc(s) { return UI.escapeHtml(s); }
   function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
-  function nm(uid) { return Home.uidName(uid); }
+  /* 牌桌上的人不在了（局中被删好友）给 '?'：displayName 那句兜底串是留给聊天列表旧消息的，
+     不许上桌（八修 N 段扫过全游戏，大富翁不能开倒车）；盘面、图例、三页浮层、结算都走这一个口 */
+  function nm(uid) {
+    if (uid !== 'me' && !Home.contactById(uid)) return '?';
+    return Home.uidName(uid);
+  }
   function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
   function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); }
   function armClock(r) { if (typeof Games !== 'undefined' && Games.armUrge) Games.armUrge(r); }
@@ -18173,6 +18237,9 @@ const Mono = (function () {
       deck: {}, turnNo: 0, dice: null, pending: null, card: '', last: '', fx: null,
       /* B 期新格子那几颗：jail=在里面第几掷，jcard=出狱卡几张，shield=免租一次，dbl=连掷双数到几，auc=正在拍卖 */
       jail: {}, jcard: {}, shield: {}, dbl: {}, jump: {}, auc: null,
+      /* C 期那几颗：lv=这块盖到第几档，mort=抵出去拿了多少钱，items=手里那颗道具（单槽），
+         fix=遥控来的点数，rev=下一手倒着走，stock=全场还剩几颗楼可盖，pick=正在点格子 */
+      lv: {}, mort: {}, items: {}, fix: {}, rev: {}, stock: 0, pick: null,
       beginAt: 0, beginQueued: 0, rankRows: null,
       /* 五拍用的那几颗：actor=这一拍是谁，roll=骰子已定还没落定，plan=路径（只算不走），
          cardShow=事件翻牌，fast=她按了快进 */
@@ -18180,7 +18247,8 @@ const Mono = (function () {
     };
     /* 半路接手/老存档可能缺项：补齐，不靠“缺字段就当没事” */
     const M = r.mc;
-    ['pos', 'cash', 'own', 'out', 'deck', 'jail', 'jcard', 'shield', 'dbl', 'jump'].forEach(k => { if (!M[k]) M[k] = {}; });
+    ['pos', 'cash', 'own', 'out', 'deck', 'jail', 'jcard', 'shield', 'dbl', 'jump', 'lv', 'mort', 'items', 'fix', 'rev'].forEach(k => { if (!M[k]) M[k] = {}; });
+    if (typeof M.stock !== 'number') M.stock = 0;
     if (!Array.isArray(M.order)) M.order = [];
     if (!Array.isArray(M.dice)) M.dice = null;
     if (typeof M.turnNo !== 'number') M.turnNo = 0;
@@ -18208,7 +18276,15 @@ const Mono = (function () {
   function rentOf(r, i) {
     const l = L(r), M = st(r), c = l.C[i];
     if (!c) return 0;
-    if (c.t === 'city') return Math.max(1, Math.ceil(c.p * RENT_RATE));
+    if (M.mort[i]) return 0;                       // 抵出去的地还归你，但收不了租（官方这条不留口子）
+    if (c.t === 'city') {
+      const base = Math.max(1, Math.ceil(c.p * RENT_RATE));
+      if (!upOn(r)) return base;
+      const lv = M.lv[i] | 0;
+      if (lv) return base * LVL[Math.max(0, Math.min(LVL.length - 1, lv))];
+      /* 整组在手、一座没盖：租翻倍；一旦盖下去就不翻倍，不然“先攒组不盖”反而更赚 */
+      return ownsGroup(r, M.own[i], i) ? base * 2 : base;
+    }
     if (c.t === 'station') {
       const n = ownedProps(r, M.own[i], 'station').length;
       return Math.max(1, Math.ceil(c.p * ST_RENT[Math.max(0, Math.min(ST_RENT.length - 1, n - 1))]));
@@ -18232,8 +18308,255 @@ const Mono = (function () {
   function assets(r, u) {
     const M = st(r);
     let sum = M.cash[u] || 0;
-    Object.keys(M.own).forEach(i => { if (M.own[i] === u) sum += priceOf(r, +i); });
+    Object.keys(M.own).forEach(i => {
+      if (M.own[i] !== u) return;
+      if (M.mort[i]) { sum += (M.mort[+i] | 0); return; }   // 抵出去那块只按实际拿到手那笔计：不重复计地价，也不拿抵押当第二重惩罚
+      sum += priceOf(r, +i) + (M.lv[+i] | 0) * buildCost(r, +i);   // 盖下去的钱跟着地走：盖不涨资产，收租才涨
+    });
     return sum;
+  }
+
+  /* ---------- C 期：盖楼 / 抵押 / 道具 / 换地——判定与记账只住这一段，别处只调它 ---------- */
+  function upOn(r) { return +(st(r).rule.up || 0) === 1; }
+  function itOn(r) { return +(st(r).rule.it || 0) === 1; }
+  function trOn(r) { return +(st(r).rule.tr || 0) === 1; }
+  function buildCost(r, i) { const c = L(r).C[i]; return (c && c.p) ? Math.max(20, Math.round(c.p * BUILD_RATE)) : 0; }   /* 与 priceOf 同一道守：没地价的格不产生 NaN（资产口径不许被不可拥有的格弄脏） */
+  function lvOf(r, i) { return upOn(r) ? (st(r).lv[+i] | 0) : 0; }
+  function lvName(r, i) { return LVL_NAME[lvOf(r, i)] || ''; }
+  function mortOf(r, i) { return st(r).mort[+i] | 0; }
+  function backCost(r, i) { return Math.max(20, Math.round((st(r).mort[+i] | 0) * BACK_RATE)); }
+  /* 同一组是哪几座：没成组的盘（老局）就把这一块当一组，“集齐”自然退化成“这块归我” */
+  function groupCells(r, i) {
+    const l = L(r), g = l.G[i];
+    return g == null ? [+i] : (l.GS[g] || [+i]);
+  }
+  function groupSum(r, i) { return groupCells(r, i).reduce((s, x) => s + priceOf(r, +x), 0); }
+  /* 整组在手：一座不缺、一座没抵押——盖楼与整组翻倍都只问这一句 */
+  function ownsGroup(r, uid, i) {
+    const M = st(r);
+    if (!uid) return false;
+    return groupCells(r, i).every(x => M.own[x] === uid && !M.mort[x]);
+  }
+  function stockMax(r) { return Math.max(2, (st(r).order || []).length) * HOUSES_EACH; }
+  /* 盖楼四件事缺一件就当场说清缺哪件：集齐整组、同组差不得超一格、库存还有、钱够 */
+  function canBuild(r, uid, i) {
+    const M = st(r);
+    i = +i;
+    const c = L(r).C[i];
+    if (!upOn(r)) return { err: '这一局没开盖楼' };
+    if (!c || c.t !== 'city') return { err: '只有城能盖' };
+    if (M.own[i] !== uid) return { err: '这块不是你的' };
+    if (M.mort[i]) return { err: '抵着押，先赎回' };
+    if (M.jail[uid]) return { err: '在狱里，盖不了' };
+    if ((M.lv[i] | 0) >= LVL.length - 1) return { err: '这一座已经盖到顶' };
+    if (!ownsGroup(r, uid, i)) return { err: '同一组还没凑齐' };
+    const low = Math.min.apply(null, groupCells(r, i).map(x => M.lv[+x] | 0));
+    if ((M.lv[i] | 0) > low) return { err: '先盖矮的那几座' };
+    if ((M.stock | 0) <= 0) return { err: '楼用完了' };
+    const cost = buildCost(r, i);
+    if ((M.cash[uid] | 0) < cost) return { err: '现金不够这一档（' + cost + '）' };
+    return { ok: 1, cost: cost };
+  }
+  function doBuild(r, uid, i) {
+    const M = st(r), can = canBuild(r, uid, i);
+    if (!can.ok) return can;
+    i = +i;
+    M.cash[uid] = (M.cash[uid] | 0) - can.cost;
+    M.lv[i] = (M.lv[i] | 0) + 1;
+    M.stock = (M.stock | 0) - 1;
+    (r.moves = r.moves || []).push({ who: uid, act: 'build', cell: i, lv: M.lv[i], cost: can.cost, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { cash: [{ uid: uid, amt: -can.cost, at: i }], buy: { at: i, uid: uid, name: nameOf(r, i) } });
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 在 ' + esc(nameOf(r, i)) + ' 盖起' + esc(LVL_NAME[M.lv[i]]) +
+      '（付 ' + can.cost + '，踩它的人交 ' + rentOf(r, i) + '）');
+    if (uid !== 'me') Games.say(r, uid, '快捷短语');
+    touch(r);
+    return { ok: 1, cost: can.cost };
+  }
+  /* 拆一档：自己拆拿回一半（back=1），被人拆一分不给（back=0）；同组先拆高的，与盖楼对称 */
+  function doSell(r, uid, i, back) {
+    const M = st(r);
+    i = +i;
+    if (!upOn(r)) return { err: '这一局没开盖楼' };
+    if (M.own[i] !== uid) return { err: '这块不是你的' };
+    if (!(M.lv[i] | 0)) return { err: '这一座没楼可拆' };
+    const top = Math.max.apply(null, groupCells(r, i).map(x => M.lv[+x] | 0));
+    if (back && (M.lv[i] | 0) < top) return { err: '先拆高的那一座' };
+    M.lv[i] = (M.lv[i] | 0) - 1;
+    M.stock = (M.stock | 0) + 1;
+    const got = back ? Math.round(buildCost(r, i) * 0.5) : 0;
+    M.cash[uid] = (M.cash[uid] | 0) + got;
+    (r.moves = r.moves || []).push({ who: uid, act: back ? 'sell' : 'smash', cell: i, got: got, ts: Date.now() });
+    feed(r, 'sys', esc(nameOf(r, i)) + (back ? ' 拆掉一档，拿回 ' + got : ' 那一档被人拆了') + '（剩下：' +
+      esc(LVL_NAME[M.lv[i]] || '空地') + '，踩它的人交 ' + rentOf(r, i) + '）');
+    touch(r);
+    return { ok: 1, got: got };
+  }
+  /* 抵押：拿一半地价，地还归你但收不了租；赎回多付一成。有楼先把楼拆了（与官方同一个顺序） */
+  function doMort(r, uid, i) {
+    const M = st(r);
+    i = +i;
+    if (!upOn(r)) return { err: '这一局没开抵押' };
+    if (M.own[i] !== uid) return { err: '这块不是你的' };
+    if (M.mort[i]) return { err: '已经抵出去了' };
+    if (M.lv[i] | 0) return { err: '先把楼拆掉再抵' };
+    const got = Math.max(20, Math.round(priceOf(r, i) * MORT_RATE));
+    M.mort[i] = got;
+    M.cash[uid] = (M.cash[uid] | 0) + got;
+    (r.moves = r.moves || []).push({ who: uid, act: 'mort', cell: i, got: got, ts: Date.now() });
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 把 ' + esc(nameOf(r, i)) + ' 抵押出去，拿到 ' + got + '（这一块收不了租了）');
+    touch(r);
+    return { ok: 1, got: got };
+  }
+  function doBack(r, uid, i) {
+    const M = st(r);
+    i = +i;
+    if (!M.mort[i]) return { err: '这一块没抵押' };
+    if (M.own[i] !== uid) return { err: '这块不是你的' };
+    const cost = backCost(r, i);
+    if ((M.cash[uid] | 0) < cost) return { err: '赎回要 ' + cost + '，现金不够' };
+    M.cash[uid] = (M.cash[uid] | 0) - cost;
+    delete M.mort[i];
+    (r.moves = r.moves || []).push({ who: uid, act: 'unmort', cell: i, cost: cost, ts: Date.now() });
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 花 ' + cost + ' 赎回了 ' + esc(nameOf(r, i)) + '，租照收');
+    touch(r);
+    return { ok: 1 };
+  }
+  /* TA 什么时候盖楼：钱留得住、组齐了、库存有——三件都算得出来；盖得起几档就盖几档，不写死颗数 */
+  function aiBuild(r, uid) {
+    if (!upOn(r)) return 0;
+    const M = st(r);
+    let n = 0;
+    for (let k = 0; k < LVL.length; k++) {
+      const cand = ownedProps(r, uid, 'city').map(i => +i).filter(i => canBuild(r, uid, i).ok)
+        .sort((a, b) => priceOf(r, b) - priceOf(r, a))[0];
+      if (cand == null) break;
+      if ((M.cash[uid] | 0) - buildCost(r, cand) < KEEP) break;
+      if (!doBuild(r, uid, cand).ok) break;
+      n++;
+    }
+    return n;
+  }
+  /* 摸一颗道具：单槽，新的一顶掉手里那颗——顶掉了什么必须写清，不能让她以为两颗都在 */
+  function giveItem(r, uid, key) {
+    if (!itOn(r)) return '';
+    const M = st(r);
+    const k = key || IT_POOL[rand(0, IT_POOL.length - 1)];
+    const old = M.items[uid];
+    M.items[uid] = k;
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 从盒里摸出一颗「' + esc(IT_NAME[k]) + '」' +
+      (old ? '，手里那颗「' + esc(IT_NAME[old]) + '」顶掉了' : ''));
+    touch(r);
+    return k;
+  }
+  /* 用道具只这一个口：五种效果各落各的字段，落完就清槽（一次一颗，不滚存）
+     传与拆要先挑一格：没带 arg 时不吞槽，让调用方去进“点格子”那一档 */
+  function useItem(r, uid, arg) {
+    const M = st(r), k = M.items[uid];
+    if (!k) return { err: '手里没道具' };
+    if (k === 'shield') M.shield[uid] = 1;
+    else if (k === 'rev') M.rev[uid] = 1;
+    else if (k === 'dice') {
+      const n = clamp(arg, 0, 2, 12);
+      if (!n) return { err: '先挑一个数（2~12）' };
+      M.fix[uid] = n;
+    } else if (k === 'warp') {
+      const at = +arg;
+      if (!(at >= 0 && at < L(r).N)) return { err: '点一格才用得掉' };
+      M.pos[uid] = at;
+    } else if (k === 'smash') {
+      if (arg == null) return { err: '点一座别人有楼的城' };
+      const at = +arg, c = L(r).C[at];
+      if (!c || c.t !== 'city' || M.own[at] === uid || !(M.lv[at] | 0)) return { err: '点一座别人有楼的城' };
+      const x = doSell(r, M.own[at], at, 0);
+      if (!x.ok) return x;
+    }
+    M.items[uid] = null;
+    feed(r, uid === 'me' ? 'me' : 'ta', k === 'warp'
+      ? esc(nm(uid)) + ' 用「传送卡」挑到了 ' + esc(nameOf(r, +arg)) + '（只挑人，这一格不算踩到）'
+      : esc(nm(uid)) + ' 用了「' + esc(IT_NAME[k]) + '」：' + esc(IT_TXT[k]));
+    touch(r);
+    return { ok: 1, k: k };
+  }
+  /* TA 那颗怎么用：大点数、挂免租、拆你最高的那一座、有自家地就挑过去——都算得出来，不靠背牌 */
+  function aiUseItem(r, uid) {
+    const M = st(r), k = M.items[uid];
+    if (!k) return;
+    if (M.jail[uid] && (k === 'dice' || k === 'rev')) return;   // 在狱里不浪掷这一颗，下一手再用
+    if (k === 'dice') useItem(r, uid, 11);
+    else if (k === 'shield' || k === 'rev') useItem(r, uid, 0);
+    else if (k === 'warp') {
+      const own = ownedProps(r, uid).map(i => +i).sort((a, b) => priceOf(r, b) - priceOf(r, a))[0];
+      if (own != null) useItem(r, uid, own);
+    } else if (k === 'smash') {
+      let t = null;
+      alive(r).filter(u => u !== uid).forEach(u => ownedProps(r, u, 'city').forEach(i => {
+        if ((M.lv[i] | 0) > 0 && (t == null || (M.lv[i] | 0) > (M.lv[t] | 0))) t = +i;
+      }));
+      if (t != null) useItem(r, uid, t);
+    }
+  }
+  /* 遥控那一手：骰面跟着点数摆，不让她看见「⚀⚁ 走 11 格」这种自相矛盾的画面 */
+  function diceOf(n) { n = Math.max(2, Math.min(12, n | 0)); return n <= 7 ? [1, n - 1] : [6, n - 6]; }
+
+  /* ---------- 与 TA 换地（C4）：我摆条件，它按“这一块离成组还差几座 + 现金补不补得平”答话。
+     拒绝必须给真理由（理由从判定分支里出来，不是随机挑一句）；上面那些估值只住代码，界面上一个字不写。 ---------- */
+  function tradable(r, uid) {
+    const M = st(r);
+    return ownedProps(r, uid).map(i => +i).filter(i => !(M.lv[i] | 0) && !M.mort[i]);   // 有楼、抵着押的先自己处理完
+  }
+  /* 拿到这一块后这一组是否全归他（gained = 这一笔里同时到手的其它块） */
+  function fills(r, uid, i, gained) {
+    const M = st(r);
+    return groupCells(r, i).every(x => M.own[x] === uid || gained.indexOf(+x) >= 0);
+  }
+  function tradeAsk(r, ta, mine, theirs, cash) {
+    const M = st(r);
+    if (!trOn(r)) return { err: '这一局没开换地' };
+    if (!ta || ta === 'me' || M.out[ta]) return { err: '找谁换？' };
+    if (M.jail[ta]) return { err: nm(ta) + ' 在狱里，这会儿不谈事' };
+    mine = (mine || []).map(i => +i).filter(i => M.own[i] === 'me');
+    theirs = (theirs || []).map(i => +i).filter(i => M.own[i] === ta);
+    if (!mine.length && !theirs.length) return { err: '至少点一块地' };
+    const stuck = mine.concat(theirs).filter(i => (M.lv[i] | 0) || M.mort[i]);
+    if (stuck.length) return { err: '有楼或抵着押的，先自己处理掉' };
+    const pay = Math.round(+cash || 0);                       // >0 = 我找补给它，<0 = 要它倒找
+    if (pay > 0 && (M.cash['me'] | 0) < pay) return { err: '你手上没这些钱' };
+    if (pay < 0 && (M.cash[ta] | 0) + pay < 0) return { err: '它手上没这些钱' };
+    const val = a => a.reduce((s, i) => s + priceOf(r, i), 0);
+    /* 它补齐一整组给加成，被拆散一整组算代价；能拆你的组它更愿意——都按组地价一个比例，不另立一套数 */
+    let bonus = 0;
+    mine.forEach(i => { if (fills(r, ta, i, mine)) bonus += Math.round(groupSum(r, i) * 0.5); });
+    let brk = 0;
+    theirs.forEach(i => { if (ownsGroup(r, ta, i)) brk += Math.round(groupSum(r, i) * 0.6); });
+    let want = 0;
+    theirs.forEach(i => { if (ownsGroup(r, 'me', i)) want += Math.round(groupSum(r, i) * 0.4); });
+    const gain = val(mine) + Math.max(0, pay) + bonus;
+    const lose = val(theirs) + Math.max(0, -pay) + brk;
+    const yes = gain + want >= lose;
+    const why = yes
+      ? (bonus ? '行，那几块正好补我的组' : (pay > 0 ? '行，这一笔我认' : (theirs.length ? '换就换，谁也别嫌谁' : '这钱我收下，地还是你的')))
+      : (brk ? '那几块我凑齐了，换出去我就收不到租了'
+        : (pay < 0 ? '我手上现金不够找你这一笔'
+          : (!mine.length ? '就这点，我还不如自己等下一趟'
+            : (bonus ? '' : '你给的那几块我暂时用不上'))));
+    feed(r, 'me', '你把 ' + esc(mine.map(i => nameOf(r, i)).join('、') || '什么都没有') +
+      (pay > 0 ? ' 与 ' + pay + ' 元' : '') + ' 发给 ' + esc(nm(ta)) + '，要它的 ' +
+      esc(theirs.map(i => nameOf(r, i)).join('、') || '那块地') + (pay < 0 ? '，再补 ' + (-pay) + ' 元' : ''));
+    (r.moves = r.moves || []).push({ who: 'me', act: 'trade', to: ta, give: mine, take: theirs, cash: pay, no: yes ? 0 : 1, ts: Date.now() });
+    if (!yes) {
+      feed(r, 'ta', esc(nm(ta)) + ' 不换：' + esc(why));
+      Games.say(r, ta, '快捷短语');
+      touch(r);
+      return { ok: 0, why: why };
+    }
+    mine.forEach(i => { M.own[i] = ta; });
+    theirs.forEach(i => { M.own[i] = 'me'; });
+    if (pay) { M.cash['me'] = (M.cash['me'] | 0) - pay; M.cash[ta] = (M.cash[ta] | 0) + pay; }
+    feed(r, 'sys', esc(nm(ta)) + ' 点了头：' + esc(theirs.map(i => nameOf(r, i)).join('、') || '没拿地') + ' 归你，' +
+      esc(mine.map(i => nameOf(r, i)).join('、') || '没给地') + ' 归它' + (pay ? '，找补 ' + Math.abs(pay) : '') + '（' + esc(why) + '）');
+    Games.say(r, ta, '快捷短语');
+    touch(r);
+    return { ok: 1, why: why };
   }
 
   /* ---------- 开局 ---------- */
@@ -18247,7 +18570,11 @@ const Mono = (function () {
     M.layVer = M.rule.layVer;
     M.oi = rand(0, Math.max(0, M.order.length - 1));    // 谁先走是随机的，不是默认我先
     M.pos = {}; M.cash = {}; M.out = {}; M.own = {};
-    M.jail = {}; M.jcard = {}; M.shield = {}; M.dbl = {}; M.jump = {}; M.auc = null;
+    M.jail = {}; M.jcard = {}; M.shield = {}; M.dbl = {}; M.jump = {};
+    M.lv = {}; M.mort = {}; M.items = {}; M.fix = {}; M.rev = {}; M.pick = null;
+    M.auc = null;
+    /* 限量库存：全场共 n×6 颗楼，抢完就盖不了（盘上写清，不静默）；没开盖楼就不排这一池 */
+    M.stock = M.rule.up ? Math.max(2, M.order.length) * HOUSES_EACH : 0;
     M.order.forEach(u => { M.pos[u] = 0; M.cash[u] = M.rule.cash; });
     M.deck = { chance: [], fate: [] };   // 牌堆到点按“当下这一池”重洗，不在这把长度钉死
     M.turnNo = 0; M.dice = null; M.pending = null; M.card = ''; M.rankRows = null;
@@ -18314,7 +18641,7 @@ const Mono = (function () {
      手里拿着“下一手翻倍”——判完顺手把这一手的计划算出来（计划不动账，账在 ④ 那一拍才落） */
   function rollCheck(r, uid, d1, d2) {
     const M = st(r), out = {};
-    const dbl = (d1 | 0) === (d2 | 0);
+    const dbl = !M.fix[uid] && (d1 | 0) === (d2 | 0);   // 遥控那一手不算双数：不然她挑个 2 就被“连掷三双”丢进监狱
     if (!M.jail[uid]) {
       if (M.rule.dbl) {
         M.dbl[uid] = dbl ? (M.dbl[uid] | 0) + 1 : 0;
@@ -18343,7 +18670,9 @@ const Mono = (function () {
   function startTurn(r, uid, d1, d2) {
     const M = st(r);
     if (M.phase === 'over') return;
-    M.actor = uid; M.roll = [d1, d2]; M.dice = null; M.cardShow = null; M.fast = 0;
+    M.actor = uid; M.roll = [d1, d2]; M.dice = null; M.cardShow = null; M.fast = 0; M.pick = null;
+    const fx0 = M.fix[uid] | 0;
+    if (fx0 > 0) { const dp = diceOf(fx0); M.roll = [dp[0], dp[1]]; }   // 骰面跟着遥控那个数摆
     M.plan = rollPlan(r, uid, d1, d2);
     M.phase = 'show';
     M.fx = { act: 'spin', uid: uid, col: colOf(r, uid) || 'var(--t1)' };
@@ -18378,21 +18707,26 @@ const Mono = (function () {
   /* ---------- 走一格算一格（判定与记账只在这里，我与 TA 共用一个口） ---------- */
   function planHop(r, uid, d1, d2) {
     const M = st(r), l = L(r);
-    let n = (d1 | 0) + (d2 | 0);
+    const fix = M.fix[uid] | 0;          // 遥控骰子：这一手走几步你定（骰面照这个数摆）
+    const back = !!M.rev[uid];           // 转向卡：同一段路倒着走
+    let n = fix > 0 ? fix : (d1 | 0) + (d2 | 0);
     if (M.jump[uid]) n *= 2;          // 卡上那句“下一手走得远一倍”在这一手生效，落账时清掉
     const path = [];
     let at = M.pos[uid] | 0, go = 0;
     for (let i = 1; i <= n; i++) {
-      at = (at + 1) % l.N;
-      if (at === 0) { go++; path.push({ go: 1, at: at }); } else path.push({ at: at });
+      at = ((back ? at - 1 : at + 1) % l.N + l.N) % l.N;
+      /* 倒着过起点不领钱（官方也是这个口径），路还是同一条路 */
+      if (at === 0 && !back) { go++; path.push({ go: 1, at: at }); } else path.push({ at: at });
     }
-    return { d: [d1, d2], n: n, path: path, at: at, go: go, jump: !!M.jump[uid] };
+    return { d: fix > 0 ? diceOf(fix) : [d1, d2], n: n, path: path, at: at, go: go, jump: !!M.jump[uid], fix: fix > 0 ? 1 : 0, back: back ? 1 : 0 };
   }
   /* 落账：位置、过起点那一笔、播报，然后结算落格 */
   function applyHop(r, uid, plan) {
     const M = st(r), R = M.rule;
     (r.moves = r.moves || []).push({ who: uid, act: 'roll', d: plan.d, n: plan.n, ts: Date.now() });
     if (plan.jump) M.jump[uid] = 0;
+    if (plan.fix) M.fix[uid] = 0;
+    if (plan.back) M.rev[uid] = 0;
     if (plan.pay) payBank(r, uid, plan.pay, '保释金');
     if (M.out[uid]) return { done: 1 };
     if (plan.stop) {                     // 进狱 / 在狱里掷不双：这一手不走，账也不动
@@ -18402,7 +18736,7 @@ const Mono = (function () {
     }
     if (plan.go) M.cash[uid] = (M.cash[uid] || 0) + R.passGo * plan.go;
     M.pos[uid] = plan.at;
-    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 掷 ' + dieTxt(plan.d[0]) + dieTxt(plan.d[1]) + ' 走 ' + plan.n + ' 格到 ' + esc(nameOf(r, plan.at)) +
+    feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + (plan.fix ? ' 遥控出 ' : ' 掷 ') + dieTxt(plan.d[0]) + dieTxt(plan.d[1]) + (plan.back ? ' 倒着走 ' : ' 走 ') + plan.n + ' 格到 ' + esc(nameOf(r, plan.at)) +
       (plan.go ? '（过起点领 ' + R.passGo * plan.go + '）' : ''));
     return land(r, uid, false);
   }
@@ -18410,6 +18744,8 @@ const Mono = (function () {
   function step(r, uid, d1, d2) {
     const M = st(r);
     M.actor = uid; M.roll = null; M.cardShow = null; M.dice = [d1, d2];
+    const fx0 = M.fix[uid] | 0;
+    if (fx0 > 0) { const dp = diceOf(fx0); d1 = dp[0]; d2 = dp[1]; M.dice = dp; }
     const plan = rollPlan(r, uid, d1, d2);
     M.fx = { act: 'hop', uid: uid, col: colOf(r, uid) || 'var(--t1)', ring: L(r).N, path: plan.path.slice(), at: Date.now() };
     return applyHop(r, uid, plan);
@@ -18434,7 +18770,11 @@ const Mono = (function () {
       payBank(r, uid, amt, c.n);
       return { done: 1 };
     }
-    if (c.t === 'park') { feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 在路边歇了会儿脚，什么都没干'); return { done: 1 }; }
+    if (c.t === 'park') {
+      /* 歇脚这一格是道具唯一的来路（开关关了才只说一句歇脚）——不能把机制挂在一个永远按不到的钮上 */
+      if (itOn(r)) giveItem(r, uid); else feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 在路边歇了会儿脚，什么都没干');
+      return { done: 1 };
+    }
     if (chained) return { done: 1 };              // 被卡挑过来不再链式抽卡
     return draw(r, uid, c.t, at, 0);
   }
@@ -18624,13 +18964,17 @@ const Mono = (function () {
     const M = st(r);
     const got = Object.keys(M.own).filter(i => M.own[i] === uid);
     got.forEach(i => {
-      if (creditor && !M.out[creditor]) M.own[i] = creditor; else delete M.own[i];
+      /* 楼回公共池：人走了，楼不会跟着消失（不然一局盖下来的楼就蒸发了） */
+      if (M.lv[i]) { M.stock = (M.stock | 0) + (M.lv[i] | 0); delete M.lv[i]; }
+      if (creditor && !M.out[creditor]) M.own[i] = creditor; else { delete M.own[i]; delete M.mort[i]; }
     });
-    M.out[uid] = 1;
-    M.pending = null;
+    delete M.items[uid];
+    delete M.fix[uid]; delete M.rev[uid];
+    M.out[uid] = 1;                 // 这一行不能被挤掉：out 没立起来，全盘都不会收场
+    M.pending = null; M.pick = null;
     (r.moves = r.moves || []).push({ who: uid, act: 'out', cells: got.length, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { out: uid });
-    feed(r, 'sys', esc(nm(uid)) + ' 现金见底，出局' + (got.length ? '（' + got.length + ' 座城' + (creditor ? '归 ' + esc(nm(creditor)) : '收回无主') + '）' : ''));
+    feed(r, 'sys', esc(nm(uid)) + ' 现金见底，出局' + (got.length ? '（' + got.length + ' 块地' + (creditor ? '归 ' + esc(nm(creditor)) : '收回无主') + '）' : ''));
     Games.say(r, uid, '胜负感言');           // 输了的人自己说一句（话挑不到就闭嘴，不编）
     if (alive(r).length <= 1) endIt(r, alive(r)[0] || null);
   }
@@ -18641,7 +18985,7 @@ const Mono = (function () {
     if (M.phase === 'over') return;
     clearClock(r);
     killPlans(r, 'mcRoll'); killPlans(r, 'mcBeat');
-    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0; M.auc = null;
+    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0; M.auc = null; M.pick = null;
     hideCard();
     M.turnNo++;
     if (alive(r).length <= 1) { endIt(r, alive(r)[0] || null); return; }
@@ -18750,6 +19094,7 @@ const Mono = (function () {
     const uid = M.actor || curUid(r);
     M.actor = null;
     if (M.phase === 'over') return;
+    if (uid !== 'me') aiBuild(r, uid);      // TA 先把手里凑齐的那组盖一档，再看这块地买不买（我这边自己按钮）
     const at = buyable(r, uid);
     if (at >= 0 && uid === 'me') {
       M.phase = 'act'; M.pending = { cell: at }; armClock(r);
@@ -18890,6 +19235,7 @@ const Mono = (function () {
     const uid = curUid(r);
     if (!uid || uid === 'me' || M.out[uid]) { nextTurn(r); return; }
     if (M.phase === 'show') return;               // 上一拍还没放完：不重演
+    aiUseItem(r, uid);
     if (M.jail[uid]) aiJailOut(r, uid);
     startTurn(r, uid, rand(1, 6), rand(1, 6));
   }
@@ -18900,6 +19246,7 @@ const Mono = (function () {
     const uid = curUid(r);
     if (!uid) return;
     if (M.jail[uid]) { if (M.jcard[uid] | 0) tryOut(r, uid, 'card'); else tryOut(r, uid, 'pay'); }
+    if (uid !== 'me') { aiUseItem(r, uid); aiBuild(r, uid); }   // 模拟对局也得把 C 期这几件跑起来，不然测不到它们
     M.phase = 'roll';
     step(r, uid, rand(1, 6), rand(1, 6));
     if (M.phase === 'over') return;
@@ -18967,7 +19314,8 @@ const Mono = (function () {
     let sub = '';
     if (isGo) sub = (l.side > 6 ? '+' : '过一趟 +') + M.rule.passGo;
     else if (c) {
-      if (c.t === 'city') sub = c.p + (own ? ' · 租' + rentOf(r, i) : '');
+      if (M.mort[i]) sub = '抵 ' + (M.mort[i] | 0);        // 抵出去的那块只报这一件事：租收不着了
+      else if (c.t === 'city') sub = lvOf(r, i) ? '租' + rentOf(r, i) : c.p + (own ? ' · 租' + rentOf(r, i) : '');
       else if (c.t === 'station') sub = own ? '租' + rentOf(r, i) : String(c.p);
       else if (c.t === 'jail') sub = '掷双出';
       else if (c.t === 'tax') sub = '一成';
@@ -18980,6 +19328,9 @@ const Mono = (function () {
       (cur ? ' hot' : '') + '" data-idx="' + i + '" style="grid-column:' + l.POS[i][0] + ';grid-row:' + l.POS[i][1] +
       (own ? ';--oc:' + (colOf(r, own) || 'var(--t1)') : '') + '">' +
       '<b class="mc-n">' + esc(nameOf(r, i)) + '</b>' +
+      /* 楼就画在格子上（不另开面板）：一格一档，三档到顶；盖到地标那一档实心 */
+      (lvOf(r, i) ? '<u class="mc-lv' + (lvOf(r, i) >= LVL.length - 1 ? ' top' : '') + '">' + new Array(lvOf(r, i) + 1).join('<s></s>') + '</u>' : '') +
+      (M.mort[i] ? '<em class="mc-mort">抵</em>' : '') +
       (sub ? '<i class="mc-p">' + esc(sub) + '</i>' : '') +
       tokHtml(r, M, i) +
       (c && c.t === 'jail' ? '<u class="mc-bars"></u>' : '') +
@@ -19011,7 +19362,8 @@ const Mono = (function () {
       '<i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
       '<b>' + esc(nm(u)) + '</b>' +
       '<small class="mc-cash">' + assets(r, u) + '</small>' +
-      '<small>现' + (M.cash[u] || 0) + ' · ' + ownedProps(r, u).length + ' 块</small>' +
+      '<small>现' + (M.cash[u] || 0) + ' · ' + ownedProps(r, u).length + ' 块' + houseTxt(r, u) + '</small>' +
+      (M.items[u] ? '<em class="mc-itbadge">' + esc(IT_NAME[M.items[u]]) + '</em>' : '') +
       (u === 'me' ? '<em class="mc-me">我</em>' : '') +
       (M.jail[u] ? '<em class="mc-jbadge">狱</em>' : '') +
       (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
@@ -19028,6 +19380,10 @@ const Mono = (function () {
           : M.jail['me'] ? '你在狱里：掷双、交保或用卡' : '轮到你，掷骰子') : esc(nm(curUid(r))) + ' 在想…')) + '</div>' +
       '<div class="mc-goal">' + (goalOf(r) > 0 ? '目标 ' + goalOf(r) : '不收场') + ' · 第 ' + (M.turnNo + 1) + ' 回合' +
         (R.cap > 0 ? ' · 每人最多 ' + R.cap + ' 轮' : '') + '</div>' +
+      /* 限量库存与手里那颗道具：抢完了什么、手里拿着什么都写在盘中央，不让她靠猜 */
+      ((upOn(r) || (itOn(r) && M.items['me'])) ? '<div class="mc-deep">' +
+        (upOn(r) ? ('还能盖 ' + (M.stock | 0) + ' 颗' + ((M.stock | 0) <= 0 ? '（楼用完了）' : '')) : '') +
+        (itOn(r) && M.items['me'] ? ((upOn(r) ? ' · ' : '') + '手里：' + esc(IT_NAME[M.items['me']])) : '') + '</div>' : '') +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
       '</div></div>';
@@ -19041,14 +19397,24 @@ const Mono = (function () {
         '<button class="btn btn-secondary" id="mc-no">不买</button>' +
         '<span class="mc-hint">手里 ' + (M.cash['me'] || 0) + '，买完剩 ' + ((M.cash['me'] || 0) - priceOf(r, at)) + '</span>';
     } else if (myTurn && M.phase === 'roll') {
-      h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button>';
-      if (M.jail['me']) {
-        h += '<button class="btn btn-secondary" id="mc-bail">交保 ' + bailOf(r) + '</button>';
-        if (M.jcard['me'] | 0) h += '<button class="btn btn-secondary" id="mc-jcard">用出狱卡（' + (M.jcard['me'] | 0) + '）</button>';
-        h += '<span class="mc-hint">掷出双数就自己出来了</span>';
+      if (M.pick) {
+        h += '<span class="mc-hint">' + (M.pick.kind === 'warp' ? '点一格：把自己挑过去（这一格不算踩到）' : '点一座别人有楼的城') + '</span>' +
+          '<button class="btn btn-secondary" id="mc-pickx">先不点了</button>';
       } else {
-        h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合' +
-          ((M.dbl['me'] | 0) === 2 && M.rule.dbl ? ' · 已连掷两个双数' : '') + (M.jump['me'] ? ' · 下一手步数翻倍' : '') + '</span>';
+        h += '<button class="btn btn-primary" id="mc-roll">掷 骰 子</button>';
+        if (M.items['me']) h += '<button class="btn btn-secondary" id="mc-it">用「' + esc(IT_NAME[M.items['me']]) + '」</button>';
+        if (M.jail['me']) {
+          h += '<button class="btn btn-secondary" id="mc-bail">交保 ' + bailOf(r) + '</button>';
+          if (M.jcard['me'] | 0) h += '<button class="btn btn-secondary" id="mc-jcard">用出狱卡（' + (M.jcard['me'] | 0) + '）</button>';
+          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">拆抵与赎回</button>';
+          h += '<span class="mc-hint">掷出双数就自己出来了</span>';
+        } else {
+          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">盖楼与抵押</button>';
+          if (trOn(r) && alive(r).some(u => u !== 'me' && tradable(r, u).length)) h += '<button class="btn btn-secondary" id="mc-trade">找 TA 换地</button>';
+          h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合' +
+            ((M.dbl['me'] | 0) === 2 && M.rule.dbl ? ' · 已连掷两个双数' : '') + (M.jump['me'] ? ' · 下一手步数翻倍' : '') +
+            (M.fix['me'] ? ' · 这一手遥控 ' + (M.fix['me'] | 0) + ' 步' : '') + (M.rev['me'] ? ' · 下一手倒着走' : '') + '</span>';
+        }
       }
     } else if (M.phase === 'bid' && (M.pending || {}).who === 'me') {
       const ask = (M.pending || {}).price || 0;
@@ -19064,7 +19430,8 @@ const Mono = (function () {
       const list = ownedProps(r, u).map(i => nameOf(r, +i));
       return '<span class="mc-lg' + (u === 'me' ? ' me' : '') + '"><b style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' +
         esc(nm(u)) + '</b>' + (list.length ? esc(list.join('、')) : '手上还没地产') +
-        (M.jail[u] ? '（在狱里' + ((M.jcard[u] | 0) ? '，兑里有一张出狱卡' : '') + '）' : '') + '</span>';
+        (upOn(r) ? esc(deedNote(r, u)) : '') +
+        (M.jail[u] ? '（在狱里' + ((M.jcard[u] | 0) ? '，兜里有一张出狱卡' : '') + '）' : '') + '</span>';
     }).join('') + '</div>';
     h += '</div>';
     el.innerHTML = h;
@@ -19076,6 +19443,16 @@ const Mono = (function () {
     const bp = el.querySelector('#mc-pass'); if (bp) bp.addEventListener('click', () => runSafe('mc.pass', () => myBid(r, 0)));
     const bb = el.querySelector('#mc-buy'); if (bb) bb.addEventListener('click', () => runSafe('mc.buy', () => myBuy(r, 1)));
     const nb = el.querySelector('#mc-no'); if (nb) nb.addEventListener('click', () => runSafe('mc.no', () => myBuy(r, 0)));
+    const itb = el.querySelector('#mc-it'); if (itb) itb.addEventListener('click', () => runSafe('mc.item', () => useItemBtn(r)));
+    const ddb = el.querySelector('#mc-deed'); if (ddb) ddb.addEventListener('click', () => runSafe('mc.deed', () => deedSheet(r)));
+    const trb = el.querySelector('#mc-trade'); if (trb) trb.addEventListener('click', () => runSafe('mc.trade', () => tradeSheet(r)));
+    const pxb = el.querySelector('#mc-pickx'); if (pxb) pxb.addEventListener('click', () => runSafe('mc.pickx', () => { M.pick = null; touch(r); }));
+    /* 点格子：只在“正在挑一格”时吃（传送与拆楼靠它），平时点了不抢动作 */
+    [].slice.call(el.querySelectorAll('.mc-cell')).forEach(td => td.addEventListener('click', ev => runSafe('mc.pick', () => {
+      if (!M.pick || M.phase !== 'roll' || curUid(r) !== 'me') return;
+      ev.stopPropagation();
+      pickDo(r, +td.dataset.idx);
+    })));
     /* 表演期间点盘面任意处 = 立刻落定（只有 show 里 ff 才吃，平时点了不抢动作） */
     const wp = el.querySelector('.mc-wrap'); if (wp) wp.addEventListener('click', () => runSafe('mc.ff', () => ff(r)));
     fitBoard(el, boxW);
@@ -19176,6 +19553,186 @@ const Mono = (function () {
     }
   }
 
+  /* 我这边那一页上的任何动作都得在我回合里做：浮层可以开着等下一手，但不能隔着 TA 的手改盘 */
+  function myAct(r) {
+    const M = st(r);
+    if (r.phase !== 'playing' || M.phase === 'over' || M.out['me'] || curUid(r) !== 'me' || M.phase === 'show') {
+      UI.toast('不是你的回合，先等一手');
+      return false;
+    }
+    return true;
+  }
+
+  /* ---------- 我这边那三页浮层：地产（盖/拆/抵/赎）、换地、遥控挑数 ----------
+     浮层一律 .dialog-mask > .dialog（结构上就被 D0 那条门禁兜着：高不过屏、内容可滚），
+     入口只走 UI.raise；表装不下就左右划（.gm-swipe），不截字也不堆行。 */
+  function pop(title, body) {
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask';
+    mask.innerHTML = '<div class="dialog dialog-wide"><div class="dialog-title">' + esc(title) + '</div>' +
+      '<div class="form-body">' + body + '</div>' +
+      '<div class="dialog-btns"><button class="btn btn-secondary" data-x>关闭</button></div></div>';
+    document.getElementById('dialog-layer').appendChild(mask);
+    UI.raise(mask);
+    mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    return mask;
+  }
+  /* 盘外那颗 chip 与图例都报同一句：“盖了几档 / 抵了几块”，两处口径从一个口出 */
+  function houseTxt(r, u) {
+    const M = st(r);
+    if (!upOn(r)) return '';
+    let h = 0, mo = 0;
+    ownedProps(r, u).forEach(i => { h += (M.lv[i] | 0); if (M.mort[i]) mo++; });
+    return (h ? ' · ' + h + ' 楼' : '') + (mo ? ' · 抵 ' + mo : '');
+  }
+  function deedNote(r, u) {
+    const M = st(r);
+    if (!upOn(r)) return '';
+    let mo = 0;
+    ownedProps(r, u).forEach(i => { if (M.mort[i]) mo++; });
+    return mo ? '（抵着 ' + mo + ' 块，那几块收不到租）' : '';
+  }
+  /* 一行地产：名字 · 地价 · 租，右边能干什么就摆什么钮（干不了的一个不摆，不留死钮） */
+  function deedRow(r, M, i) {
+    const acts = [];
+    const can = canBuild(r, 'me', i);
+    if (can.ok) acts.push('<button class="mc-act" data-k="build" data-i="' + i + '">盖 ' + can.cost + '</button>');
+    if (M.lv[i] | 0) acts.push('<button class="mc-act" data-k="sell" data-i="' + i + '">拆一档 +' + Math.round(buildCost(r, i) * 0.5) + '</button>');
+    if (M.mort[i]) acts.push('<button class="mc-act" data-k="back" data-i="' + i + '">赎回 ' + backCost(r, i) + '</button>');
+    else if (!(M.lv[i] | 0)) acts.push('<button class="mc-act" data-k="mort" data-i="' + i + '">抵押 +' + Math.max(20, Math.round(priceOf(r, i) * MORT_RATE)) + '</button>');
+    const c = L(r).C[i];
+    const note = (c && c.t === 'city' && !can.ok) ? '<em>' + esc(can.err) + '</em>' : '';
+    return '<div class="mc-deed-row' + (M.mort[i] ? ' mort' : '') + '"><span class="nm"><b>' + esc(nameOf(r, i)) + '</b>' +
+      (lvOf(r, i) ? '<i>' + esc(lvName(r, i)) + '</i>' : '') + '</span>' +
+      '<span>' + priceOf(r, i) + '</span><span>租 ' + rentOf(r, i) + '</span>' +
+      '<span class="acts">' + (acts.join('') || '—') + '</span>' + note + '</div>';
+  }
+  function deedSheet(r) {
+    const M = st(r);
+    if (!ownedProps(r, 'me').length) { UI.toast('手上还没地产'); return; }
+    const mask = pop('盖楼与抵押', '<div class="gm-swipe"><div class="mc-deed">' +
+      '<div class="mc-deed-h"><span>地产</span><span>地价</span><span>租</span><span>能干什么</span></div>' +
+      '<div id="mc-deed-rows"></div>' +
+      (upOn(r) ? '<div class="mc-deed-f" id="mc-deed-f"></div>' : '<div class="mc-deed-f">这一局没开盖楼，只能看看。</div>') +
+      '</div></div>');
+    function draw() {
+      const box = mask.querySelector('#mc-deed-rows'), MM = st(r);
+      if (!box) return;
+      box.innerHTML = ownedProps(r, 'me').map(i => deedRow(r, MM, +i)).join('');
+      const f = mask.querySelector('#mc-deed-f');
+      if (f) f.textContent = '全场还能盖 ' + (MM.stock | 0) + ' 颗（每人 ' + HOUSES_EACH + ' 颗的池子）' +
+        ((MM.stock | 0) <= 0 ? '——楼用完了，谁都盖不了' : '');
+      box.querySelectorAll('.mc-act').forEach(b => b.addEventListener('click', () => runSafe('mc.deed.act', () => {
+        if (!myAct(r)) return;
+        const i = +b.dataset.i, k = b.dataset.k;
+        const x = k === 'build' ? doBuild(r, 'me', i) : k === 'sell' ? doSell(r, 'me', i, 1)
+          : k === 'mort' ? doMort(r, 'me', i) : doBack(r, 'me', i);
+        if (x && x.err) { UI.toast(x.err); return; }
+        draw();               // 改完就地重画这一页：她连着盖三档不用关了再开
+        touch(r);
+      })));
+    }
+    draw();
+  }
+  /* 遥控那一手：挑一个数就完事，不再多一层“确认” */
+  function diceSheet(r) {
+    const ns = [];
+    for (let n = 2; n <= 12; n++) ns.push(n);
+    const mask = pop('这一手走几步', '<div class="mc-chips">' + ns.map(n =>
+      '<button class="gm-rchip" data-n="' + n + '">' + n + '</button>').join('') + '</div>' +
+      '<div class="mc-deed-f">骰子会照着这个数落，别人看得见你走了几步。</div>');
+    mask.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => runSafe('mc.dice', () => {
+      if (!myAct(r)) { mask.remove(); return; }
+      const x = useItem(r, 'me', +b.dataset.n);
+      mask.remove();
+      if (x && x.err) UI.toast(x.err);
+      touch(r);
+    })));
+  }
+  function tradeSheet(r) {
+    const M = st(r);
+    if (!trOn(r)) { UI.toast('这一局没开换地'); return; }
+    const foes = alive(r).filter(u => u !== 'me' && tradable(r, u).length);
+    if (!foes.length) { UI.toast('场上没人有可换的地'); return; }
+    const pick = { ta: foes[0], give: [], take: [], cash: '' };
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask';
+    mask.innerHTML = '<div class="dialog dialog-wide"><div class="dialog-title">找 TA 换地</div>' +
+      '<div class="form-body" id="mc-trade-b"></div><div class="dialog-btns">' +
+      '<button class="btn btn-secondary" data-x>取消</button><button class="btn btn-primary" data-ok>发给 TA</button></div></div>';
+    document.getElementById('dialog-layer').appendChild(mask);
+    UI.raise(mask);
+    mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    function row(label, list, sel, side) {
+      return '<div class="form-label">' + label + '</div><div class="gm-swipe"><div class="mc-chips" data-side="' + side + '">' +
+        (list.length ? list.map(i => '<button class="gm-rchip' + (sel.indexOf(i) >= 0 ? ' on' : '') + '" data-i="' + i + '">' +
+          esc(nameOf(r, i)) + ' ' + priceOf(r, i) + '</button>').join('') : '<span class="mc-none">这一边没可换的</span>') + '</div></div>';
+    }
+    function draw() {
+      const ta = pick.ta, M2 = st(r);
+      mask.querySelector('#mc-trade-b').innerHTML =
+        '<div class="gm-opt"><span>跟谁</span>' + foes.map(u => '<button class="gm-rchip' + (u === ta ? ' on' : '') +
+          '" data-ta="' + u + '">' + esc(nm(u)) + '</button>').join('') + '</div>' +
+        row('你给出的地', tradable(r, 'me'), pick.give, 'give') +
+        row('你要它的地', tradable(r, ta), pick.take, 'take') +
+        '<div class="form-row"><div class="form-label">找补（正数你添钱，负数要它添）</div>' +
+        '<input class="input" type="number" id="mc-tcash" value="' + esc(pick.cash) + '" placeholder="0">' +
+        '<small class="mc-tip">你手上 ' + (M2.cash['me'] | 0) + '，' + esc(nm(ta)) + ' 手上 ' + (M2.cash[ta] | 0) + '</small></div>' +
+        '<div class="mc-deed-f">有楼的先把楼拆了、抵着押的先赎回，这两类都不列进来。点一下选中，再点一下取消。</div>';
+      mask.querySelectorAll('[data-ta]').forEach(b => b.addEventListener('click', () => { pick.ta = b.dataset.ta; pick.take = []; draw(); }));
+      mask.querySelectorAll('[data-side]').forEach(box => box.addEventListener('click', e => {
+        const b = e.target.closest ? e.target.closest('.gm-rchip') : null;
+        if (!b) return;
+        const arr = pick[box.dataset.side], i = +b.dataset.i, at = arr.indexOf(i);
+        if (at >= 0) arr.splice(at, 1); else arr.push(i);
+        draw();
+      }));
+      const ci = mask.querySelector('#mc-tcash');
+      if (ci) ci.addEventListener('input', () => { pick.cash = ci.value; });
+    }
+    draw();
+    mask.querySelector('[data-ok]').addEventListener('click', () => runSafe('mc.trade.ok', () => {
+      if (!myAct(r)) return;
+      const x = tradeAsk(r, pick.ta, pick.give, pick.take, Math.round(+pick.cash || 0));
+      if (x && x.err) { UI.toast(x.err); return; }
+      mask.remove();
+      touch(r);
+    }));
+  }
+  /* 手里那颗按下去：能直接用的就用，要先挑一格/挑个数的就进对应那一页；干不了的事不摆钮 */
+  function useItemBtn(r) {
+    const M = st(r), k = M.items['me'];
+    if (!k) { UI.toast('手里没道具'); return; }
+    if (!myAct(r)) return;
+    if (k === 'warp') { M.pick = { kind: 'warp', who: 'me' }; touch(r); return; }
+    if (k === 'smash') {
+      const any = alive(r).filter(u => u !== 'me').some(u => ownedProps(r, u, 'city').some(i => (M.lv[i] | 0) > 0));
+      if (!any) { UI.toast('没人有楼可拆'); return; }
+      M.pick = { kind: 'smash', who: 'me' };
+      touch(r);
+      return;
+    }
+    if (k === 'dice') { diceSheet(r); return; }
+    const x = useItem(r, 'me', 0);
+    if (x && x.err) UI.toast(x.err);
+    touch(r);
+  }
+  /* 点格子那一步：点错了不吞槽（播报与 toast 说清要点什么），点对了才把道具用掉 */
+  function pickDo(r, i) {
+    const M = st(r);
+    if (!M.pick) return;
+    const k = M.pick.kind;
+    M.pick = null;
+    const x = useItem(r, 'me', i);
+    if (x && x.err) {
+      M.pick = { kind: k, who: 'me' };
+      UI.toast(x.err);
+    }
+    touch(r);
+  }
+
   /* ---------- 齿轮里那一页（唯一入口：右上角齿轮 → 大富翁） ----------
      改的是下一局；正在跑的这局读开局那份 M.rule 快照，不会被中途拧变样。
      枚举项用胶囊（与选人框那套同一个长相），数字用格子：不在选人框里再摆一套。 */
@@ -19193,6 +19750,9 @@ const Mono = (function () {
       seg('tier', '目标规模', [['fast', '快局'], ['std', '标准'], ['long', '长局'], ['none', '不收场']]) +
       seg('ev', '内容格（事件与功能格一共几颗）', [['low', '疏'], ['mid', '中'], ['high', '密']]) +
       seg('dbl', '连掷三个双数就进狱', [['1', '开'], ['0', '关']]) +
+      seg('up', '盖楼与抵押', [['1', '开'], ['0', '关']]) +
+      seg('it', '道具（歇脚那一格摸一颗）', [['1', '开'], ['0', '关']]) +
+      seg('tr', '与 TA 换地', [['1', '开'], ['0', '关']]) +
       row('cash', '起步金（300~3000）', c.cash, '每人开局这么多', '') +
       row('passGo', '过起点领（50~400）', c.passGo, '绕一圈领这些', '') +
       row('goal', '目标资产（留空按上面档位算）', c.goal, '填了就以这个数为准，“不收场”也能靠它收', '留空') +
@@ -19221,7 +19781,9 @@ const Mono = (function () {
       const mix = Object.keys(cnt).map(t => (KIND_NAME[t] || t) + ' ' + cnt[t]).join(' · ');
       prev.textContent = '这套数开出来：20 格环 ' + l.cities + ' 座城 · 内容格 ' + R.ev + (mix ? '（' + mix + '）' : '') + ' · 目标 ' +
         (R.goal > 0 ? R.goal + ' 元' : '不收场') + ' · 每人最多 ' + (R.cap > 0 ? R.cap + ' 轮' : '不设上限') +
-        (R.dbl ? ' · 连掷三双进狱' : '');
+        (R.dbl ? ' · 连掷三双进狱' : '') +
+        (R.up ? ' · 楼三档（租 1/3/8/20 倍），全场共 ' + (2 * HOUSES_EACH) + ' 颗可盖' : '') +
+        (R.it ? ' · 歇脚摸道具' : '') + (R.tr ? ' · 可与 TA 换地' : '');
     }
     mask.querySelectorAll('[data-ck]').forEach(b => b.addEventListener('click', () => {
       pend[b.dataset.ck] = b.dataset.cv;
@@ -19288,13 +19850,18 @@ const Mono = (function () {
       onTimeout,
       /* 给验收探针：规则、几何、账目、拍长都从这份口径读，不另开一套 */
       CFG, TIERS, EV_N, BEAT, BEAT_NAME, TIER_NAME, LAY_VER, RULE_V1,
+      LVL, LVL_NAME, BUILD_RATE, HOUSES_EACH, MORT_RATE, BACK_RATE, IT_NAME, IT_TXT, IT_POOL,
       lay, sideFor, CITY_LIST, CHANCE, FATE, CHANCE_V1, FATE_V1, POOL, POOL_V1, EV_PAT, KIND_NAME, LIGHT, ST_PRICE, ST_RENT, BAIL_RATE, COLORS, DIE, START_CASH, PASS_GO, RENT_RATE, KEEP, ROUND_CAP, GOAL_LAPS, GOAL_CITIES, MAXP,
-      cfg, ruleOf, goalFor, settings, kindsFor, poolFor, popCard, cardDo, taxDue, bailOf, jailIdx, isProp, ownedProps,
+      cfg, ruleOf, goalFor, settings, kindsFor, poolFor, cardDo, taxDue, bailOf, jailIdx, isProp, ownedProps,
       rollCheck, rollPlan, toJail, tryOut, payBank, decline, auction, auctionStep, myBid, aiBidOk, aiJailOut,
       priceOf, rentOf, nameOf, ownOf, assets, alive, colOf, seatOf, st, curUid, goalOf, capOf,
       planHop, applyHop, beatMs, hopMs, pushBeat, ff, startTurn, runBeat, handOver, buyable, simTurn, syncCard, hideCard,
       step, land, tryBuy, payRent, draw, bankrupt, nextTurn, begin, askBuy, rankRows, endIt, popCard,
-      myRoll, myBuy, aiWantsBuy, taTurn, onTimeout, playFx, fitBoard
+      myRoll, myBuy, aiWantsBuy, taTurn, onTimeout, playFx, fitBoard,
+      /* C 期那套：判定、记账、浮层都只这一个口，验收也从这里读 */
+      upOn, itOn, trOn, canBuild, doBuild, doSell, doMort, doBack, buildCost, backCost, lvOf, lvName, mortOf,
+      groupCells, groupSum, ownsGroup, stockMax, houseTxt, deedNote, tradable, tradeAsk, fills,
+      giveItem, useItem, useItemBtn, pickDo, aiUseItem, aiBuild, diceOf, deedSheet, tradeSheet, diceSheet, pop
     };
   }
   return { def };
@@ -19352,7 +19919,12 @@ const Games = (function () {
   function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function uidR() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName（09-02 拢条，以前四个模块各拄一份）
+  /* 桌上的人不在了（局中被删好友）给 '?'：那句兜底串是留给聊天列表旧消息的，不许上桌与上结算
+     （八修 N 段口径；mono 的 nm() 同款）。别名允许存在，别处仍直接走 Home.uidName */
+  function name(uid) {
+    if (uid !== 'me' && !Home.contactById(uid)) return '?';
+    return Home.uidName(uid);
+  }
   function taUid(room) { return (room.players || []).find(u => u !== 'me') || null; }
   function chatProb() { const v = S().chatProb; return Math.max(0, Math.min(100, (v == null ? CHAT_PROB : +v) || 0)); }
   /* 轮到谁：游戏模块自己有口径（UNO 多人是沿座位环走，不是奇偶交替）就问它；
