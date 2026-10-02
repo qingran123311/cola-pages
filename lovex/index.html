@@ -697,6 +697,9 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
   display:flex;align-items:center;justify-content:center;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ed-kao:hover{background:var(--fill)}
+/* 颜文字流式排布（她 10-02）：格子随内容自适应换行，任何时候不吞两侧；放不下由 chat.js 逐格缩字号兑底 */
+.ed-grid.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center}
+.ed-grid.flow .ed-kao{flex:0 1 auto;width:auto;white-space:nowrap;max-width:100%;overflow:hidden;padding:9px 7px}
 .ed-pic{aspect-ratio:1/1;overflow:hidden;border-radius:8px}
 .ed-pic img{width:100%;height:100%;object-fit:cover;display:block}
 .ed-pic:hover{outline:2px solid var(--primary)}
@@ -3460,6 +3463,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
+          <label class="adv-item"><span>朋友圈拼字卡率</span><em><input type="number" id="pf-mocombo" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>朋友圈配图率</span><em><input type="number" id="pf-moimg" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈互评</span><em><select id="pf-momutual"><option value="0">只有我能评 TA</option><option value="1">联系人可互评（30% 追评）</option></select></em></label>
           <label class="adv-item"><span>主动发消息间隔</span><em><input type="number" id="pf-promin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-promax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>主动发红包概率</span><em><input type="number" id="pf-redgift" min="0" max="100"> %</em></label>
@@ -5115,7 +5120,7 @@ var Quiz = (function () {
       const tIds = targets.slice(), pids = picked.slice(), mode = composeMode;
       mask.remove();
       /* V3.5（她 19:02）：duet 不再当场弹答题 sheet——先落「发起默契挑战」卡，点卡片再作答 */
-      sendQuiz(title || '未命名问卷', delay, tIds, pids, mode, null);
+      sendQuiz(title || '灵魂拷问', delay, tIds, pids, mode, null);   /* 她 10-02 拍：不写卷名就叫「灵魂拷问」 */
       pruneTmp();   // 没收进题库又没被这份卷子用上的，不留尸体
     });
     mask.addEventListener('click', e => { if (e.target === mask) { mask.remove(); pruneTmp(); } });
@@ -5952,6 +5957,8 @@ var Quiz = (function () {
   /* ---------------- init：按钮接线 ---------------- */
   function init() {
     pruneTmp();                                    // 上次写到一半没发出去的现场题，开机抹掉
+    /* 她 10-02：存量里叫「未命名问卷」的一律改叫「灵魂拷问」（一次性、幂等） */
+    (DB.state.quizzes || []).forEach(z => { if (z.title === '未命名问卷') z.title = '灵魂拷问'; });
     document.getElementById('qz-new').addEventListener('click', openComposer);
     document.getElementById('qz-lib').addEventListener('click', openLibPage);
     document.getElementById('qz-cfg').addEventListener('click', toggleCfg);
@@ -8337,8 +8344,20 @@ const Chat = (function () {
       }
       im.style.borderRadius = '8px'; im.style.display = 'block';
       im.style.cursor = 'zoom-in';
-      /* 点击放大查看（#39s） */
-      im.addEventListener('click', () => openImgViewer(m.img));
+      /* 点击放大查看（#39s）；长按/右键＝消息操作（她 10-02 拍：图片点一下是放大，
+         引用/撤回/删除这些操作走长按，跟文字气泡的右键同一个 showMsgActions，不限时间） */
+      let lpT = null, lpFired = false;
+      im.addEventListener('pointerdown', () => {
+        lpFired = false;
+        lpT = setTimeout(() => { lpFired = true; showMsgActions(m); }, 450);
+      });
+      const lpCancel = () => { if (lpT) { clearTimeout(lpT); lpT = null; } };
+      im.addEventListener('pointerup', lpCancel);
+      im.addEventListener('pointercancel', lpCancel);
+      im.addEventListener('pointermove', lpCancel);
+      im.addEventListener('pointerleave', lpCancel);
+      im.addEventListener('click', () => { if (lpFired) { lpFired = false; return; } openImgViewer(m.img); });
+      im.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); lpCancel(); showMsgActions(m); });   /* stopPropagation：否则冒到气泡上的那份 contextmenu 会再叠一层同款面板（探针 10-02 拓出） */
       /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显；缓存图直接显示 */
       im.className = 'msg-img-fade';
       if (im.complete) im.classList.add('loaded');
@@ -8543,7 +8562,7 @@ const Chat = (function () {
           }
         });
         bub.innerHTML = '<div class="qz-card' + (isMine ? '' : ' done') + '">' + inner + '</div>';
-        bub.addEventListener('click', () => { UI.toast(isMine ? '等 TA 作答呀' : '往上看 TA 的回答'); });
+        bub.addEventListener('click', () => { Quiz.viewQuiz(z.id); });   /* 她 10-02 拍：点卷子卡（含标题）跳到该卷详情查看 */
       } else {
         /* 长卷：me=发卷封面记录卡；ai=交卷提醒条；都点开详情页 */
         const isMine = m.from === 'me';
@@ -9369,7 +9388,7 @@ const Chat = (function () {
         /* 管理模式：屏蔽项半透明显示供解封；图片/字符同构处理 */
         opbar.hidden = false;
         const items = lib.items.filter(it => (it.img || it.text) && matchGrp(it));
-        h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : 'g7') + '">' + items.map(it =>
+        h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : edTab === 'kao' ? 'flow' : 'g7') + '">' + items.map(it =>
           '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + (it.blocked ? ' off' : '') +
             (edSel.has(it.id) ? ' sel' : '') + '" data-id="' + it.id + '">' +
             (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
@@ -9383,7 +9402,7 @@ const Chat = (function () {
         document.getElementById('ed-manage').classList.add('active');
       } else {
         const items = lib.items.filter(it => !it.blocked && (it.img || it.text) && matchGrp(it));
-        h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : 'g7') + '">' + items.map(it =>
+        h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : edTab === 'kao' ? 'flow' : 'g7') + '">' + items.map(it =>
           '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + '" data-id="' + it.id + '"' +
             (it.img ? '' : ' data-v="' + esc(it.text) + '"') + '>' +
             (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
@@ -9411,31 +9430,17 @@ const Chat = (function () {
           '<button class="ed-cell ed-patcell" data-id="' + it.id + '" data-v="' + esc(it.text) + '">' + esc(it.text) + '</button>').join('') + '</div>';
         if (!all.length) h += '<div class="lib-hint">还没有文案，点左上角＋添加</div>';
       }
-    } else {
-      /* 颜文字：无分组全量平铺，每行5个（策划 920/507） */
-      grps.hidden = true;
-      const all = lib.items.filter(it => it.text);
-      if (edManage) {
-        opbar.hidden = false;
-        document.getElementById('ed-op-move').hidden = true;   // 无分组不可移
-        h = '<div class="ed-grid g5">' + all.map(it =>
-          '<button class="ed-cell ed-kao' + (it.blocked ? ' off' : '') +
-            (edSel.has(it.id) ? ' sel' : '') + '" data-id="' + it.id + '">' + esc(it.text) + '</button>').join('') + '</div>';
-        if (!all.length) h += '<div class="lib-hint">还没有颜文字</div>';
-        const allOff = edSel.size > 0 && all.every(it => !edSel.has(it.id) || it.blocked);
-        document.getElementById('ed-op-block').textContent = allOff ? '取消屏蔽' : '屏蔽';
-        document.getElementById('ed-op-all').textContent =
-          all.length && all.every(it => edSel.has(it.id)) ? '取消全选' : '全选';
-        document.getElementById('ed-manage').classList.add('active');
-      } else {
-        opbar.hidden = true;
-        const items = all.filter(it => !it.blocked);
-        h = '<div class="ed-grid g5">' + items.map(it =>
-          '<button class="ed-cell ed-kao" data-id="' + it.id + '" data-v="' + esc(it.text) + '">' + esc(it.text) + '</button>').join('') + '</div>';
-        if (!items.length) h += '<div class="lib-hint">还没有颜文字，点左上角＋导入</div>';
-      }
     }
     body.innerHTML = h;
+    /* 她 10-02：颜文字任何时候都要完整显示，不许两边吞——流式格子放不下就逐格缩字号（最小 8.5px） */
+    if (edTab === 'kao') {
+      body.querySelectorAll('.ed-kao').forEach(c => {
+        let fs = 12.5;
+        c.style.fontSize = '';
+        let guard = 0;
+        while (c.scrollWidth > c.clientWidth && fs > 8.5 && guard++ < 12) { fs -= 0.5; c.style.fontSize = fs + 'px'; }
+      });
+    }
   }
 
   function setEmojiDrawer(on) {
@@ -9596,7 +9601,7 @@ const Chat = (function () {
     document.getElementById('ed-tabs').addEventListener('click', e => {
       const b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.t !== edTab) exitEdManage();
+      if (b.dataset.t !== edTab) { exitEdManage(); edGrp = null; edSel.clear(); }   /* 浏览态切栏也清残留组滤（以前只清管理态，残留会把新栏滤成空格） */
       edTab = b.dataset.t;
       renderEmojiDrawer();
     });
@@ -9748,22 +9753,26 @@ const Chat = (function () {
         }
       });
     }
-    /* 文本条目入库（批量/单个共用）：跨条去重 + 统计 toast */
+    /* 文本条目入库（批量/单个共用）：跨条去重 + 统计 toast。
+       10-02 她拍：导入进「当前正看着的那个分组」，没选组就落默认，不再只能进默认 */
     function addPanelTexts(arr) {
       const lib = stickerLib(edTab);
       const isEm = edTab === 'emoji';
+      const isPat = edTab === 'pat';
       let def = lib.groups[0];
       if (isEm && !def) { def = { id: gidLocal(), name: '默认', blocked: false }; lib.groups.push(def); }
-      const prefix = isEm ? 'se' : edTab === 'pat' ? 'pa' : 'sk';
+      const prefix = isEm ? 'se' : isPat ? 'pa' : 'sk';
+      const target = (!isPat && edGrp !== null) ? edGrp : (isEm ? def.id : null);
+      const gname = g => (lib.groups.find(x => x.id === g) || {}).name || '默认';
       let add = 0, dup = 0;
       arr.forEach(t => {
         if (lib.items.some(it => it.text === t)) { dup++; return; }
         lib.items.push({ id: prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          text: t, blocked: false, groupId: isEm ? def.id : null });
+          text: t, blocked: false, groupId: target });
         add++;
       });
       DB.save(); renderEmojiDrawer();
-      UI.toast('导入 ' + add + ' 条' + (dup ? '，跳过重复 ' + dup + ' 条' : ''));
+      UI.toast('导入 ' + add + ' 条' + (!isPat ? '到「' + gname(target) + '」' : '') + (dup ? '，跳过重复 ' + dup + ' 条' : ''));
     }
     document.getElementById('ed-add').addEventListener('click', () => {
       if (edTab === 'emoji' || edTab === 'kao' || edTab === 'pat') {
@@ -9795,11 +9804,11 @@ const Chat = (function () {
         } else lib = DB.state.libs[k];
         if (!lib.groups.length)
           lib.groups.push({ id: gidLocal(), name: '默认', blocked: false });
-        pickGroup(lib, gid => {
-          fileInput.dataset.target = k;
-          fileInput.dataset.group = gid;
-          fileInput.click();
-        });
+        /* 10-02 她拍：正看着哪张分组就传进哪张——同一库且当前选了组时跳过选组一步 */
+        const curGid = (stickerLib(edTab) === lib && edGrp !== null) ? edGrp : null;
+        const go = gid => { fileInput.dataset.target = k; fileInput.dataset.group = gid; fileInput.click(); };
+        if (curGid) go(curGid);
+        else pickGroup(lib, go);
       });
     });
     fileInput.addEventListener('change', async () => {
@@ -9846,7 +9855,7 @@ const Chat = (function () {
     document.getElementById('ed-op-all').addEventListener('click', () => {
       const shown = [...document.querySelectorAll('#ed-body .ed-cell[data-id]')];
       const all = shown.length && shown.every(p => edSel.has(p.dataset.id));
-      shown.forEach(p => all ? edSel.delete(p.dataset.img) : edSel.add(p.dataset.img));
+      shown.forEach(p => all ? edSel.delete(p.dataset.id) : edSel.add(p.dataset.id));   /* 以前写成 dataset.img＝undefined，全选永远选不中（她 10-02 报的“图片表情无法多选”） */
       renderEmojiDrawer();
     });
     document.getElementById('ed-op-block').addEventListener('click', () => {
@@ -10130,6 +10139,9 @@ const Engine = (function () {
     minSec: 3, maxSec: 15, minCount: 1, maxCount: 3,
     imgProb: 20, imgMode: 'single',
     cardComboProb: 1, cardComboMin: 2, cardComboMax: 3,
+    /* 她 10-02 拍：朋友圈的拼字卡/配图单独两个闸，不跟聊天共用车（聊天拼卡默认仍是 1）。
+       只影响没存过这两项的联系人；资料卡朋友圈区可改。 */
+    moComboProb: 80, moImgProb: 70,
     readNoReply: 0, moMutual: 0,
     /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
        旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
@@ -10472,7 +10484,7 @@ const Engine = (function () {
   /* 拼字卡公共函数（二期P9）：聊天引擎与朋友圈发帖/评论共用（09-02 起朋友圈真的接上了，
      以前这句注释是假的——朋友圈没调过它）。cards=字卡文本池，minN/maxN=抽取条数区间，
      逐位随机间隔符；每条自带 emoji/颜文字装饰（内部走 maybeDecorate） */
-  const COMBO_SEPS = [',', '。', '、', '!', '?', ''];
+  const COMBO_SEPS = ['', ' '];   /* 她 10-02 拍：间隔符只要「直接拼接 / 空格」两种，逗号句号那套符号混合废了 */
   function buildCardCombo(cards, minN, maxN) {
     const lo = Math.max(2, Math.min(minN, maxN));
     const hi = Math.max(lo, maxN);
@@ -14185,28 +14197,43 @@ function coverTap(e) {
     return true;
   }
   /* TA 发圈/写评论的正文与配图（她 09-02 点头：发帖与评论都要能拼字卡、能带图片表情、能带 emoji）。
-     口径与聊天回复同源，不另开一套：同一个可用字卡池、同一个 cardComboProb 拼卡闸门，
-     拼串走 Engine.buildCardCombo（内部逐条过 decorate，所以 emoji/颜文字自然混在字卡里），
-     没拼上的单条也过一道 decorate；配图按 imgProb 从其可用表情池抽一张。
-     以前这里只抽一条字卡截断，不拼、不装饰、不带图（发帖的 images 写死空数组）。 */
+     10-02 她拍新口径：拼卡/配图改走朋友圈专属闸 moComboProb(默认80)/moImgProb(默认70)，
+     不再跟聊天共用车；配图一次可多张（1~9 张，权重我拍的可调），她要的多图双方都能发；
+     混拼强化：拼卡本身已把 emoji/颜文字织进字串，图抽到且是拼卡时，评论还有一半概率在图后再接一句（文-图-文）。 */
+  /* 多图张数分布（我拍的可调）：1张最常见，9张最少，合计 100 */
+  const MO_IMG_W = [34, 22, 14, 10, 7, 5, 3, 3, 2];
+  function pickImgCount() {
+    let r = Math.random() * 100, n = 1;
+    for (let i = 0; i < MO_IMG_W.length; i++) { if (r < MO_IMG_W[i]) { n = i + 1; break; } r -= MO_IMG_W[i]; }
+    return n;
+  }
   function taBody(ct, maxLen) {
-    const out = { text: '', img: null };
+    const out = { text: '', imgs: [], text2: '' };
     try {
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
       if (!pool.length) return out;
       const p = Engine.params(ct);
-      const comboP = Math.min(100, Math.max(0, +p.cardComboProb || 0));
+      const comboP = Math.min(100, Math.max(0, Math.round(+p.moComboProb ?? p.cardComboProb ?? 0)));
+      let combo = false;
       if (pool.length >= 2 && comboP > 0 && Math.random() * 100 < comboP) {
         const cMin = Math.max(2, Math.round(+p.cardComboMin) || 2);
         const cMax = Math.max(cMin, Math.round(+p.cardComboMax) || cMin);
         out.text = Engine.buildCardCombo(pool, cMin, cMax).slice(0, maxLen);
+        combo = true;
       } else {
         out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool)).slice(0, maxLen);
       }
-      const ip = Math.min(100, Math.max(0, Math.round(+p.imgProb || 0)));
+      const ip = Math.min(100, Math.max(0, Math.round(+p.moImgProb ?? p.imgProb ?? 0)));
       if (ip > 0 && Math.random() * 100 < ip) {
         const sp = Library.usableStickerPool(ct);
-        if (sp.length) out.img = pick(sp);
+        if (sp.length) {
+          const want = pickImgCount();
+          const bag = sp.slice();                 /* 不重复抽：洗牌取前 N，池子不够就用整池 */
+          for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+          out.imgs = bag.slice(0, Math.min(want, bag.length));
+          if (combo && !out.text2 && Math.random() < 0.5)
+            out.text2 = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool)).slice(0, 30);
+        }
       }
     } catch (e) { logErr('moments.taBody ' + ((e && e.message) || e)); }
     return out;
@@ -14258,9 +14285,9 @@ function coverTap(e) {
     const t0 = +at || Date.now();        // 09-04：评论时刻=这班互动该到的时刻（补排的不再挂“刚刚”）
     if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
-      /* 评论正文与配图：与聊天同一口径（拼卡/装饰/imgProb 都在 taBody 里算） */
+      /* 评论正文与配图：拼卡/装饰/配图都在 taBody 里算；文-图-文的尾句在 text2 */
       const b = taBody(ct, 50);
-      if (b.text || b.img) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.img, ts: t0 });
+      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.imgs[0] || null, text2: b.text2, ts: t0 });
     }
     DB.save();
     renderList();
@@ -14296,8 +14323,8 @@ function coverTap(e) {
         /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
         const b = taBody(ct, 50);
-        if (!b.text && !b.img) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.img, ts: pl.at || Date.now() });
+        if (!b.text && !b.imgs.length) return;
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.imgs[0] || null, text2: b.text2, ts: pl.at || Date.now() });
       });
       acted = true;
     });
@@ -14325,12 +14352,12 @@ function coverTap(e) {
         n++;
         if (Math.random() * 100 >= rate) continue;        /* 没落进 60%：这一班不发，安静等下一班 */
         const b = taBody(ct, 80);
-        if (!b.text && !b.img) continue;
+        if (!b.text && !b.imgs.length) continue;
         /* 09-04（她「朋友圈上线的补发，不要按照我一上线的时间来」）：发生时刻 = 这班钟该到的那一刻（born），
            落库时刻 = 现在（at）。以前一律 ts=now：离开几小时回来，几个人的钟同时过期、同秒补发、
            全挂着“刚刚”——既不像真实时间线，看着也像刷屏。主动发消息那边早就是“ts 回填到应发时刻”
            （engine.js 的 maybeProactive），朋友圈这回跟它归一口。 */
-        const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4) + (n > 1 ? 'w' + n : ''), uid: ct.id, ts: born, at: now, text: b.text, images: b.img ? [b.img] : [], likes: [], comments: [] };
+        const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4) + (n > 1 ? 'w' + n : ''), uid: ct.id, ts: born, at: now, text: b.text, images: b.imgs.slice(), likes: [], comments: [] };
         bornN++;
         s.posts.unshift(post);
         scheduleReactions(post.id, born);
@@ -14635,7 +14662,8 @@ function coverTap(e) {
                 '<div class="mo-cmt" data-id="' + c.id + '" data-uid="' + c.uid + '"><b>' + esc(name(c.uid)) + '</b>' +
                 (c.toUid ? '<span>回复</span><b>' + esc(name(c.toUid)) + '</b>' : '') +
                 '<span>：</span><span>' + esc(c.text || '') + '</span>' +
-                (c.img ? '<img class="mo-cmt-img" src="' + c.img + '" alt="">' : '') + '</div>').join('') + '</div>'
+                (c.img ? '<img class="mo-cmt-img" src="' + c.img + '" alt="">' : '') +
+                (c.text2 ? '<span>' + esc(c.text2) + '</span>' : '') + '</div>').join('') + '</div>'
             : '') +
         '</div>' +
       '</div>';
@@ -21644,6 +21672,8 @@ const Profile = (function () {
     el('pf-mopost').value = pa.moPostRate;
     el('pf-mopmin').value = pa.moPostMin;
     el('pf-mopmax').value = pa.moPostMax;
+    el('pf-mocombo').value = pa.moComboProb;
+    el('pf-moimg').value = pa.moImgProb;
     el('pf-mopunit').value = pa.moPostUnit;
     /* 朋友圈互评（她 08-27 21:08：互评开关放在回复设置里按人调，默认只有我） */
     el('pf-momutual').value = pa.moMutual ? '1' : '0';
@@ -21836,6 +21866,8 @@ const Profile = (function () {
         p.moPostMax = parseFloat(el('pf-mopmax').value);
         if (!isFinite(p.moPostMax) || p.moPostMax < p.moPostMin) p.moPostMax = p.moPostMin || Engine.REPLY_DEF.moPostMax;
         p.moPostUnit = el('pf-mopunit').value === 'min' ? 'min' : 'hour';
+        p.moComboProb = Math.min(100, Math.max(0, Math.round(+el('pf-mocombo').value || 0)));
+        p.moImgProb = Math.min(100, Math.max(0, Math.round(+el('pf-moimg').value || 0)));
         /* 发帖参数一改旧钟作废，下一班就按新值走（她 09-04 要的是“改了就能看见效果”，不是干等旧钟跑完） */
         if (oldMoRate !== p.moPostRate || oldMoMin !== p.moPostMin || oldMoMax !== p.moPostMax || oldMoUnit !== p.moPostUnit) {
           if (typeof Moments !== 'undefined' && Moments.reschedule) Moments.reschedule(c.id);
