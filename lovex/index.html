@@ -697,9 +697,10 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
   display:flex;align-items:center;justify-content:center;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ed-kao:hover{background:var(--fill)}
-/* 颜文字流式排布（她 10-02）：格子随内容自适应换行，任何时候不吞两侧；放不下由 chat.js 逐格缩字号兑底 */
-.ed-grid.flow{display:flex;flex-wrap:wrap;justify-content:center;align-items:center}
-.ed-grid.flow .ed-kao{flex:0 1 auto;width:auto;white-space:nowrap;max-width:100%;overflow:hidden;padding:9px 7px}
+/* 颜文字固定一行 5 个（她 10-03 二批重申定稿：emoji每行8/颜文字一行5/图片每行6，不许一行4一行5一行6参差）；
+   长句由 chat.js 逐格缩字号兑底（最小 8.5px），实在放不下才省略号 */
+.ed-grid.flow{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;justify-items:stretch}
+.ed-grid.flow .ed-kao{width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:9px 4px}
 .ed-pic{aspect-ratio:1/1;overflow:hidden;border-radius:8px}
 .ed-pic img{width:100%;height:100%;object-fit:cover;display:block}
 .ed-pic:hover{outline:2px solid var(--primary)}
@@ -1740,11 +1741,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    只有头像那颗自己吃（点它看资料页）——修她 09-14：“点更换点了好多次才点到” */
 .mo-me{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 16px;transform:translateY(-52px);margin-bottom:-38px;position:relative;z-index:2;pointer-events:none}
 .mo-me-name{color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.35);font-size:17px}
+/* 她 10-03 二批：头像四角漏底色（深色主题下像黑角）——
+   有图时垫白底（微信同款）+ 图片圆角跟容器内曲线对齐，底色只留给无图的字母头像 */
 .mo-me-ava{width:68px;height:68px;border-radius:8px;border:2px solid #fff;color:#fff;background:var(--primary);flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;pointer-events:auto;cursor:pointer}
+.mo-me-ava:has(img){background:#fff}
+.mo-me-ava img{border-radius:6px}
 .mo-me-ava img,.mo-item-ava img{width:100%;height:100%;object-fit:cover;display:block}
 .mo-list{padding:0 16px}
 .mo-item{display:flex;gap:10px;padding:16px 0 6px;border-bottom:1px solid var(--line)}
 .mo-item-ava{width:42px;height:42px;border-radius:8px;flex:none;color:#fff;background:var(--primary);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:16px}
+.mo-item-ava:has(img){background:#fff}
+.mo-item-ava img{border-radius:8px}
 .mo-item-main{flex:1;min-width:0;position:relative}
 .mo-item-name{font-size:var(--fs-body);color:var(--primary);font-weight:600;display:block;margin-bottom:4px}
 .mo-item-text{margin:0 0 6px;font-size:var(--fs-body);color:var(--t1);white-space:pre-wrap;word-break:break-word}
@@ -3078,17 +3085,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 
 /* ===== 她 10-03 七件：学我说话管理栏 / 排班表 / 链接小窗 / 群视频邀请格 ===== */
 /* 学我说话 · 积累管理（资料卡下方折叠栏） */
-#pf-learned-panel{margin-top:10px}
-#pf-learned-panel summary{position:relative}
-#pf-learned-panel #pf-learned-n{font-weight:400;color:var(--t3);margin-left:6px;font-size:12px}
-.pf-ln-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
-.pf-ln-row:last-child{border-bottom:none}
-.pf-ln-row .pf-ln-txt{flex:1;font-size:13px;line-height:1.5;word-break:break-all}
-.pf-ln-row.denied .pf-ln-txt{color:var(--t3)}
-.pf-ln-row .pf-ln-deny{flex:none;font-style:normal;font-size:10.5px;color:var(--t3);border:1px solid var(--line);border-radius:3px;padding:1px 4px;white-space:nowrap}
-.pf-ln-btns{display:flex;gap:6px;flex:none}
-.pf-ln-btns button{font:inherit;font-size:11px;line-height:1;padding:5px 9px;border:1px solid var(--t1);border-radius:999px;background:var(--card);color:var(--t1);cursor:pointer}
-.pf-ln-btns button:active{background:var(--fill)}
+/* 学我说话：主页只留一行入口（.cell 通用样式），整表在文件管理·四库弹窗里，无专属样式 */
 
 /* 排班表（入口：聊天＋号面板第2页链接后面） */
 .sched-head{display:flex;flex-direction:column;gap:4px;padding:14px 15px}
@@ -3116,16 +3113,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .sched-sheet .sched-ok{width:100%;margin-top:10px}
 .sched-sheet .sched-sheet-tip{font-size:10.5px;color:var(--t3);padding:8px 2px 2px;text-align:center}
 
-/* 链接小窗播放（她 10-03：直接视图小屏播放；可拖动，位置记忆） */
-.lk-mini{position:fixed;z-index:3100;width:min(240px,62vw);border-radius:12px;overflow:hidden;
+/* 链接小窗播放（她 10-03：点击卡片直接小窗播；可拖动，位置记忆）。
+   10-03 二批改类名 .lk-float：卡内缩略图本来就是 .lk-mini，旧名撞车导致全屏层一把 remove 会把卡片缩略图也刪了 */
+.lk-float{position:fixed;z-index:3100;width:min(240px,62vw);border-radius:12px;overflow:hidden;
   background:var(--card);box-shadow:0 6px 24px rgba(0,0,0,.22);border:1px solid var(--line)}
-.lk-mini .lk-mini-bar{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 9px;background:var(--card);cursor:grab;touch-action:none}
-.lk-mini .lk-mini-bar:active{cursor:grabbing}
-.lk-mini .lk-mini-t{flex:1;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lk-mini .lk-mini-bar button{flex:none;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--t2);cursor:pointer}
-.lk-mini .lk-mini-bar button:active{background:var(--fill)}
-.lk-mini .lk-mini-stage{display:block;width:100%;aspect-ratio:16/9;background:#000;border:none}
-.lk-mini video.lk-mini-stage{height:auto}
+.lk-float .lk-float-bar{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 9px;background:var(--card);cursor:grab;touch-action:none}
+.lk-float .lk-float-bar:active{cursor:grabbing}
+.lk-float .lk-float-t{flex:1;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lk-float .lk-float-bar button{flex:none;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:none;border-radius:6px;background:transparent;color:var(--t2);cursor:pointer}
+.lk-float .lk-float-bar button:active{background:var(--fill)}
+.lk-float .lk-float-stage{display:block;width:100%;aspect-ratio:16/9;background:#000;border:none}
+.lk-float video.lk-float-stage{height:auto}
 
 /* 群视频：邀请格（未加入者不再占画面，她 10-03） */
 .call-grid .call-cell.invite{border:1px dashed var(--line);background:transparent;color:var(--t2);cursor:pointer;justify-content:center}
@@ -3550,11 +3548,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="pf-letterbook"><span class="cell-icon"><i data-icon="feather"></i></span><span class="cell-text">信件册 · 我们往来的信</span><span class="chevron">›</span></button>
       </div>
 
-      <!-- 学我说话 · 积累管理（她 10-03：主页下方加一栏，可删可改；删可能被 TA 拒，拒了可发理由再问） -->
-      <details class="card adv-panel" id="pf-learned-panel">
-        <summary>学我说话 · 学到的话<b id="pf-learned-n"></b><i data-icon="chevron-right" data-size="16" class="adv-chev"></i></summary>
-        <div class="adv-body" id="pf-learned-list"></div>
-      </details>
+      <!-- 学我说话 · 库入口（她 10-03 二批：主页不推一整栏，改像字卡库那样进统一库管理，可搜索可批量） -->
+      <button class="cell" id="pf-learned-row"><span class="cell-icon"><i data-icon="tag"></i></span><span class="cell-main"><span class="cell-title">学我说话 · 学到的话<b id="pf-learned-n"></b></span></span><i data-icon="chevron-right" data-size="16" class="cell-arrow"></i></button>
 
       <button class="btn btn-danger pf-delete" id="pf-delete">删除好友</button>
     </div>
@@ -8466,11 +8461,10 @@ const Chat = (function () {
         bub.addEventListener('click', () => UI.toast('（模拟语音，时长 ' + m.dur + ' 秒）'));
       }
     } else if (m.type === 'link' && m.link) {
-      /* P36 V2（她 08-27 定）：链接小屏卡 B 方案——点一下原地起播；嵌不了的跳出。
-         展开态存内存 Set（按消息 id，不进 localStorage——否则重开页会渲成无播放器的假展开） */
+      /* P36 V2（她 08-27 定）：链接发过去就是小屏卡片的样子；
+         她 10-03 二批：点卡直接进可拖动小窗播放（对方同款），不再有卡内起播/全屏态 */
       bub.classList.add('bubble-card');
-      bub.innerHTML = linkCardHtml(m.link, lkPlaying.has(lkKey(m)));
-      if (lkCanPlay(m.link) && lkPlaying.has(lkKey(m))) lkMount(bub.querySelector('.lk-mini'), m.link);
+      bub.innerHTML = linkCardHtml(m.link, false);
       lkHydratePoster(bub, m.link);
       bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
     } else if (m.type === 'kinship') {
@@ -9111,29 +9105,7 @@ const Chat = (function () {
     } catch (e) { lkLog('lkMeta:' + (e && e.message)); }
     return null;
   }
-  const lkPlaying = new Set();
-  const lkKey = m => m.id || ('ts' + m.ts);
   const lkCanPlay = L => !!(L && (L.embed || L.vsrc));   /* 嵌播 iframe 或原生 mp4 直链都算可播 */
-  function lkMount(mini, L) {
-    if (!mini || mini.querySelector('iframe,video')) return;
-    let el;
-    if (L.embed) {
-      el = document.createElement('iframe');
-      el.src = L.embed;
-      el.allowFullscreen = true;
-      el.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
-      el.setAttribute('scrolling', 'no');
-      el.setAttribute('frameborder', '0');
-    } else {
-      el = document.createElement('video');
-      el.src = L.vsrc;
-      el.setAttribute('controls', '');
-      el.setAttribute('playsinline', '');
-      el.setAttribute('autoplay', '');
-      el.setAttribute('preload', 'metadata');
-    }
-    mini.appendChild(el);
-  }
   const lkIsIdb = v => typeof MediaStore !== 'undefined' && MediaStore.isRef(v);
   /* idb 存的封面：先占位后补水（src 不预设避免空src误触 onerror 提前摘图），拉不到→摘图露 ghost */
   function lkHydratePoster(root, L) {
@@ -9170,29 +9142,20 @@ const Chat = (function () {
       '</div>' +
     '</div>';
   }
-  /* B 方案（她 08-27 选）：点小屏才原地起播（嵌播/原生视频），再点收起；
-     点标题/说明区→全屏播（可播的，她 09:13 定）/跳原链接（嵌不了的） */
+  /* 她 10-03 二批：点卡直接小窗播放（发过去是小屏卡片的样子，对方点开也是同款小窗），不再走全屏层；
+     播不了的仍走：中转图→全屏看图，其余→浏览器 */
   function tapLinkCard(root, m, e) {
     const L = m.link;
     if (!lkCanPlay(L)) {
-      /* 接了中转的抖音/小红书：点小卡=原地看实际内容（全屏看图，多图可翻），不跳浏览器 */
       if (lkImgMode(L)) { lkOpenGallery(L); return; }
       if (L.url) window.open(L.url, '_blank', 'noopener');
       return;
     }
-    const mini = root.querySelector('.lk-mini');
-    if (!mini) return;
-    if (e && !mini.contains(e.target)) { openLinkPlayer(L); return; }
-    const key = lkKey(m), on = !lkPlaying.has(key);
-    if (on) lkPlaying.add(key); else lkPlaying.delete(key);
-    mini.classList.toggle('lk-on', on);
-    const f = mini.querySelector('iframe,video');
-    if (on) lkMount(mini, L);
-    else { if (f && f.pause) f.pause(); if (f) f.remove(); }
+    lkOpenMini(L);
   }
   function openLink(L) {
     if (L && lkImgMode(L)) { lkOpenGallery(L); return; }
-    if (L && (L.embed || L.vsrc)) openLinkPlayer(L);
+    if (L && (L.embed || L.vsrc)) lkOpenMini(L);   /* 她 10-03 二批：小窗播放，不进全屏层 */
     else if (L && L.url) window.open(L.url, '_blank', 'noopener');
   }
   /* 全屏看图（V4.4，她要的是“小屏 + 实际内容”）：图经中转实时回源，不热链不存库；
@@ -9244,7 +9207,7 @@ const Chat = (function () {
   function openLinkPlayer(L, resumeSec) {
     const layer = document.getElementById('dialog-layer');
     document.querySelectorAll('#dialog-layer > .lk-player').forEach(x => x.remove());  /* 防叠层 */
-    document.querySelectorAll('.lk-mini').forEach(x => x.remove());                     /* 回全屏就收小窗 */
+    document.querySelectorAll('.lk-float').forEach(x => x.remove());                   /* 回全屏就收小窗 */
     const wrap = document.createElement('div');
     wrap.className = 'lk-player';
     const isVid = !L.embed && !!L.vsrc;
@@ -9271,19 +9234,20 @@ const Chat = (function () {
     UI.raise(wrap);
     if (resumeSec) { const v = wrap.querySelector('video'); if (v) { v.currentTime = resumeSec; } }
   }
-  /* 可拖动小窗：标题栏拖动（不拖按钮），位置记忆在同一会话内复用 */
+  /* 可拖动小窗（.lk-float，她 10-03 二批改的名：卡内缩略图叫 .lk-mini，浮窗是另一个东西，
+     旧名撞车导致全屏层一把 remove 会把卡片缩略图也刪了）：标题栏拖动（不拖按钮），位置记忆在同一会话内复用 */
   function lkOpenMini(L, resumeSec) {
-    document.querySelectorAll('.lk-mini').forEach(x => x.remove());
+    document.querySelectorAll('.lk-float').forEach(x => x.remove());
     const isVid = !L.embed && !!L.vsrc;
     const el = document.createElement('div');
-    el.className = 'lk-mini';
+    el.className = 'lk-float';
     el.innerHTML =
-      '<div class="lk-mini-bar"><span class="lk-mini-t">' + esc(L.site || '链接') + '小窗</span>' +
-        '<button class="lk-mini-full" title="回全屏">' + I('pip', 13) + '</button>' +
-        '<button class="lk-mini-x" title="关闭">' + I('x', 13) + '</button></div>' +
+      '<div class="lk-float-bar"><span class="lk-float-t">' + esc(L.site || '链接') + '小窗</span>' +
+        '<button class="lk-float-full" title="回全屏">' + I('pip', 13) + '</button>' +
+        '<button class="lk-float-x" title="关闭">' + I('x', 13) + '</button></div>' +
       (isVid
-        ? '<video class="lk-mini-stage" src="' + esc(L.vsrc) + '" controls autoplay playsinline></video>'
-        : '<iframe class="lk-mini-stage" src="' + L.embed + '" allow="autoplay; encrypted-media; picture-in-picture" scrolling="no" frameborder="0"></iframe>');
+        ? '<video class="lk-float-stage" src="' + esc(L.vsrc) + '" controls autoplay playsinline></video>'
+        : '<iframe class="lk-float-stage" src="' + L.embed + '" allow="autoplay; encrypted-media; picture-in-picture" scrolling="no" frameborder="0"></iframe>');
     if (lkMiniPos) { el.style.left = lkMiniPos.left + 'px'; el.style.top = lkMiniPos.top + 'px'; }
     else { el.style.right = '10px'; el.style.bottom = '90px'; }
     const keep = () => {
@@ -9292,7 +9256,7 @@ const Chat = (function () {
       el.style.left = lkMiniPos.left + 'px'; el.style.top = lkMiniPos.top + 'px';
       el.style.right = 'auto'; el.style.bottom = 'auto';
     };
-    const bar = el.querySelector('.lk-mini-bar');
+    const bar = el.querySelector('.lk-float-bar');
     bar.addEventListener('pointerdown', ev => {
       if (ev.target.closest('button')) return;
       ev.preventDefault();
@@ -9306,8 +9270,8 @@ const Chat = (function () {
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     });
-    el.querySelector('.lk-mini-x').addEventListener('click', () => el.remove());
-    el.querySelector('.lk-mini-full').addEventListener('click', () => {
+    el.querySelector('.lk-float-x').addEventListener('click', () => el.remove());
+    el.querySelector('.lk-float-full').addEventListener('click', () => {
       const v = el.querySelector('video');
       openLinkPlayer(L, v ? v.currentTime : 0);
     });
@@ -9592,7 +9556,7 @@ const Chat = (function () {
       }
     }
     body.innerHTML = h;
-    /* 她 10-02：颜文字任何时候都要完整显示，不许两边吞——流式格子放不下就逐格缩字号（最小 8.5px） */
+    /* 颜文字固定一行 5 个（她 10-03 二批重申）：CSS 已定死 5 列，长句逐格缩字号兑底（最小 8.5px） */
     if (edTab === 'kao') {
       body.querySelectorAll('.ed-kao').forEach(c => {
         let fs = 12.5;
@@ -10274,8 +10238,8 @@ const Engine = (function () {
     return pick(kind === 'em' ? EMOJI : KAOMOJI);
   }
 
-  /* 学我说话·学（她 10-02 拍）：单聊里我发的每个字都可能进 TA 的可发池（ct.learned），
-     只拦金额与地址（防假扣钱、防真地址上街，决策#138）——不立字数/条数/冷却规矩。 */
+  /* 学我说话·学（她 10-02 拍，10-03 二批搬进学舌库）：单聊里我发的每个字都可能进 TA 的可发池
+     （libs.learned[ctId]，经 Library.learnAdd 查重入库），只拦金额与地址（防假扣钱、防真地址上街，决策#138）——不立字数/条数/冷却规矩。 */
   const LEARN_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
   function learn(ctId, text) {
     try {
@@ -10283,7 +10247,8 @@ const Engine = (function () {
       if (!t || LEARN_BAD.test(t)) return false;
       const ct = (typeof Home !== 'undefined') ? Home.contactById(ctId) : null;
       if (!ct) return false;
-      ct.learned = ct.learned || [];
+      if (typeof Library !== 'undefined' && Library.learnAdd) return Library.learnAdd(ctId, t);
+      ct.learned = ct.learned || [];                       /* 兑底：库模块未就绪时走旧路 */
       if (ct.learned.indexOf(t) > -1) return false;
       ct.learned.push(t);
       return true;
@@ -10557,7 +10522,7 @@ const Engine = (function () {
   function fireBatch(conv, p, ct, n, cap) {
     /* 学我说话·用（决策#138）：命中概率整条引用一句学来的话——不拼贴、不重组、不截断；
        提到字卡池检查之前：池子空它也该能用学到的话。群聊不学（学的是每个联系人自己的池子）。 */
-    const learned = (ct && Array.isArray(ct.learned)) ? ct.learned : [];
+    const learned = (typeof Library !== 'undefined' && Library.learnedTexts) ? Library.learnedTexts(ct.id) : (ct.learned || []);
     const learnP = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
     if (conv.type === 'single' && learnP > 0 && learned.length && Math.random() * 100 < learnP) {
       const line = pick(learned);
@@ -10855,7 +10820,8 @@ const Library = (function () {
     voices:      { title: '音集',         per: false },   // 二期P12：共用语音
     whispers:    { title: '私语',           per: true },     // 二期P12：联系人专属语音
     redNotes:    { title: '红包',       per: false },     // 二期P15：发红包随机选用
-    gameNotes:   { title: '游戏',       per: false }      // P40：快捷短语/转盘奖池/胜负感言（她要几百条，支持批量导入）
+    gameNotes:   { title: '游戏',       per: false },    // P40：快捷短语/转盘奖池/胜负感言（她要几百条，支持批量导入）
+    learned:     { title: '学舌',         per: true }     // 她 10-03 二批：学我说话的句子入库，像字卡一样可搜可管；存 libs.learned[ctId]
   };
   /* 图片表情三库已于 2026-08-23 撤出文件管理，管理收进表情面板内（清然决定） */
   const isVoiceKind = k => k === 'voices' || k === 'whispers';
@@ -11416,12 +11382,15 @@ const Library = (function () {
             /* 她 09-15：“我还挺喜欢原来什么生效啊什么的那几个按钮的” —— 文字钮与状态胶囊都还给行尾；
                体量沿用上一轮改小的那颗字号（11px / 3px 6px），不给行高返工 */
             '<span class="tag ' + (effBlocked ? 'tag-blocked' : 'tag-ok') + '">' +
-              (effBlocked ? '已屏蔽' : '生效') + '</span>' +
+              (cur.kind === 'learned' && it.denied && !effBlocked ? 'TA拒绝了'
+                : (effBlocked ? '已屏蔽' : '生效')) + '</span>' +
             '<span class="li-btns">' +
               (isVoiceKind(cur.kind) && it.audio ? '<button data-iop="play">试听</button>' : '') +
               '<button data-iop="edit">编辑</button>' +
-              '<button data-iop="block">' + (it.blocked ? '解封' : '屏蔽') + '</button>' +
-              '<button data-iop="del">删除</button>' +
+              (cur.kind === 'learned'
+                ? '<button data-iop="del">' + (it.denied ? '再问问' : '删除') + '</button>'
+                : '<button data-iop="block">' + (it.blocked ? '解封' : '屏蔽') + '</button>' +
+                  '<button data-iop="del">删除</button>') +
             '</span>' +
           '</div>';
       });
@@ -11675,6 +11644,7 @@ const Library = (function () {
       DB.save(); render();
     }
     else if (op === 'del') {
+      if (cur.kind === 'learned') { learnedDel(it); return; }   /* 她 10-03：学舌库删除可能被 TA 拒，拒了可发理由再问 */
       const ok = await UI.confirmBox({
         title: '删除', text: '删除「' + itLabel.slice(0, 20) + (itLabel.length > 20 ? '…' : '') + '」？',
         danger: true, okText: '删除'
@@ -11739,9 +11709,99 @@ const Library = (function () {
     }
   }
 
-  function init() {}
+  function init() {
+    ensureLearned();   /* 学舌库：存量 ct.learned 一次性迁进 libs.learned[ctId] */
+  }
 
-  return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId };
+  /* ---------- 学我说话库（她 10-03 二批）：主页不再推一整栏，整表进四库统一弹窗 ----------
+     存储搬家：ct.learned/learnedSt → libs.learned[ctId] = { groups, items:[{id,text,groupId,denied?}] }，
+     引擎侧只认 Library.learnedTexts/learnAdd；删除仍走她 10-03 定的那套：
+     首删 60% 成 / 40% 被 TA 拒（denied 标记+TA 说话）；被拒的再删=发理由再问，85% 成（概率我拍可调）。 */
+  function ensureLearned() {
+    if (!DB.state.libs.learned) DB.state.libs.learned = {};
+    DB.state.contacts.forEach(ct => {
+      if (!Array.isArray(ct.learned)) return;
+      const lib = learnedLib(ct.id);
+      const st = ct.learnedSt || {};
+      ct.learned.forEach(t => {
+        if (!lib.items.some(x => x.text === t))
+          lib.items.push({ id: iid(), text: t, groupId: lib.groups[0].id, denied: st[t] === 'denied' || undefined });
+      });
+      delete ct.learned;
+      delete ct.learnedSt;
+    });
+  }
+  function learnedLib(ctId) {
+    if (!DB.state.libs.learned) DB.state.libs.learned = {};   /* 自愈：init 未跑（如旧入口）也不撂挑子 */
+    const m = DB.state.libs.learned;
+    if (!m[ctId]) { m[ctId] = { groups: [], items: [] }; defGroup(m[ctId]); }
+    return m[ctId];
+  }
+  /* 引擎抽取：跳过屏蔽（双重同字卡）；denied 只是 TA 不让删，那句话还能继续用 */
+  function learnedTexts(ctId) {
+    const lib = (DB.state.libs.learned || {})[ctId];
+    if (!lib) return [];
+    const gm = new Map((lib.groups || []).map(g => [g.id, g]));
+    return (lib.items || [])
+      .filter(it => { const g = gm.get(it.groupId); return !(it.blocked || (g && g.blocked)); })
+      .map(it => it.text);
+  }
+  function learnedCount(ctId) { const lib = (DB.state.libs.learned || {})[ctId]; return lib ? lib.items.length : 0; }
+  function learnAdd(ctId, t) {
+    const lib = learnedLib(ctId);
+    if (lib.items.some(x => x.text === t)) return false;   // 查重：同字卡口径
+    lib.items.push({ id: iid(), text: t, groupId: lib.groups[0].id });
+    return true;
+  }
+  /* 学舌库删除：TA 拒绝/再问由 TA 本人在会话里说话（文案沿用她验收过的那批） */
+  const LEARN_DENY = ['删掉干什么呀，我还要用呢', '不行，这句我记住了，不给删', '这句我喜欢，不删'];
+  const LEARN_DENY2 = ['你这么说我也还是不想删', '理由听完了，但还是不行', '唔……再让我用一阵子吧'];
+  const LEARN_AGREE = ['好吧好吧，删了删了', '行，看你的面子', '嗯，那这句我忘了'];
+  function taSayLearned(ctId, text) {
+    const conv = DB.state.convs.find(v => v.type === 'single' && v.peerId === ctId);
+    if (!conv) return;
+    Engine.pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      from: 'ai', type: 'text', text: text, senderId: ctId });
+  }
+  function learnedDel(it) {
+    const ctId = cur.ctId;
+    if (it.denied) {
+      /* 被 TA 拒过的：再问=发理由（作为我的消息进会话），85% 成 */
+      Home.openForm({
+        title: '再问问 TA',
+        fields: [{ key: 'v', type: 'textarea', label: '说明理由（会作为你的消息发给 TA）', value: '' }],
+        okText: '发送',
+        onSubmit(v) {
+          const conv = DB.state.convs.find(x => x.type === 'single' && x.peerId === ctId);
+          if (conv) Chat.sendTo(conv.id, (v.v || '').trim() || '就把那句话删了吧');
+          const ok = Math.random() * 100 < 85;
+          setTimeout(() => {
+            const lib = learnedLib(ctId);
+            lib.items = lib.items.filter(x => x !== it);
+            if (ok) taSayLearned(ctId, LEARN_AGREE[Math.floor(Math.random() * LEARN_AGREE.length)]);
+            else taSayLearned(ctId, LEARN_DENY2[Math.floor(Math.random() * LEARN_DENY2.length)]);
+            DB.save(); render();
+          }, 1200 + Math.random() * 1600);
+        }
+      });
+      return;
+    }
+    if (Math.random() * 100 < 60) {
+      const lib = learnedLib(ctId);
+      lib.items = lib.items.filter(x => x !== it);
+      view.selected.delete(it.id);
+      DB.save(); render();
+      UI.toast('已删除');
+      return;
+    }
+    it.denied = true;
+    DB.save(); render();
+    taSayLearned(ctId, LEARN_DENY[Math.floor(Math.random() * LEARN_DENY.length)]);
+    UI.toast('TA 拒绝了删除——可以发理由再问问');
+  }
+
+  return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId,
+    learnAdd, learnedTexts, learnedCount };
 })();
 
 /* =====================================================
@@ -14168,8 +14228,17 @@ const Moments = (function () {
     return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(f); });
   }
 
-  /* ---------- P36d 视频本体进 IndexedDB 拆雷（她 08-27 定：搬进 IDB 并回读校验通过，才清 localStorage 的 base64，两头不空） ---------- */
+  /* ---------- P36d 视频本体进 IndexedDB 拆雷（她 08-27 定：搬进 IDB 并回读校验通过，才清 localStorage 的 base64，两头不空） ----------
+     她 10-03 二批：朋友圈封面图也走同一条路——图片 base64 躺在主档里，几张就把 5MB 配额吃满，
+     setItem 静默失败 → 导入的封面一重启就消失（她实测报的丢图根因）；现在统一 storeCoverBlob 进 IDB。 ---------- */
   let _vseq = 0;
+  async function storeCoverBlob(blob) {
+    const key = 'cvr_' + Date.now().toString(36) + '_' + (++_vseq) + Math.random().toString(36).slice(2, 5);
+    await MediaStore.put(key, blob);
+    const back = await MediaStore.get(key);          /* 回读校验，同视频口径 */
+    if (!back) throw new Error('idb-verify-fail');
+    return 'idb:' + key;
+  }
   async function storeVideoBlob(blob) {
     const key = 'vid_' + Date.now().toString(36) + '_' + (++_vseq) + Math.random().toString(36).slice(2, 5);
     await MediaStore.put(key, blob);
@@ -14233,8 +14302,22 @@ const Moments = (function () {
     })());
     (st.posts || []).forEach(p => (p.videos || []).forEach((_, i) => moveOne(p.videos, i)));
     const cv = st.covers || {};
-    if (cv.me) moveOne(cv, 'me');
-    Object.keys(cv.byContact || {}).forEach(uid => { if (cv.byContact[uid]) moveOne(cv.byContact, uid); });
+    /* 她 10-03 二批：老存档的 dataURL 图片封面也迁进 IDB（同视频口径），不然还是受配额拆雷 */
+    const moveImg = (holder, key) => tasks.push((async () => {
+      const v = holder[key];
+      if (typeof v !== 'string' || !/^data:image/.test(v)) return;
+      try {
+        const ref = await storeCoverBlob(await dataUrlToBlob(v));
+        holder[key] = ref;
+        moved++;
+      } catch (e) { /* 保留 dataURL，绝不清掉 */ }
+    })());
+    if (cv.me) { if (/^data:video/.test(cv.me)) moveOne(cv, 'me'); else moveImg(cv, 'me'); }
+    Object.keys(cv.byContact || {}).forEach(uid => {
+      const v = cv.byContact[uid];
+      if (!v) return;
+      if (/^data:video/.test(v)) moveOne(cv.byContact, uid); else moveImg(cv.byContact, uid);
+    });
     if (!tasks.length) return;
     await Promise.all(tasks);
     if (moved) DB.save();
@@ -14334,11 +14417,20 @@ const Moments = (function () {
     if (nameEl) nameEl.textContent = name;
     if (!cv) { box.classList.remove('has-img'); return; }
     box.classList.add('has-img');
-    if (/^data:video/.test(cv) || (typeof MediaStore !== 'undefined' && MediaStore.isRef(cv))) {
-      vid.hidden = false;   /* P36d：idb 引用需异步 resolve */
-      MediaStore.src(cv).then(u => {
-        if (u) vid.src = u;
-        else { vid.hidden = true; box.classList.remove('has-img'); }   /* 文件不在→退回无封面态，不黑屏 */
+    if (/^data:video/.test(cv)) {
+      vid.hidden = false;   /* P36d：老存档的 dataURL 视频 */
+      vid.src = cv;
+    }
+    else if (typeof MediaStore !== 'undefined' && MediaStore.isRef(cv)) {
+      /* 她 10-03：IDB 引用需看本体类型——视频进 <video>，图片封面（新口径）进 <img>；
+         文件不在→退回无封面态，不黑屏 */
+      MediaStore.get(cv.slice(4)).then(b => {
+        if (!b) { box.classList.remove('has-img'); return; }
+        MediaStore.src(cv).then(u => {
+          if (!u) return;
+          if (/^video/.test(b.type)) { vid.hidden = false; vid.src = u; }
+          else { img.hidden = false; img.src = u; }
+        });
       });
     }
     else { img.src = cv; img.hidden = false; }
@@ -14363,10 +14455,19 @@ function coverTap(e) {
       const f = pickFiles(inp)[0];
       if (!f) return;
       try {
-        /* P36d：视频封面进 IDB，图片维持原路 */
-        const data = (/^video\//.test(f.type) && MediaStore.available())
-          ? await storeVideoBlob(f)
-          : await readAsDataURL(f);
+        /* P36d：视频封面进 IDB；她 10-03：图片封面同路——base64 进主档是丢封面的根因 */
+        if (MediaStore.available()) {
+          let blob;
+          if (/^video\//.test(f.type)) blob = f;
+          else {
+            const url = await Media.compressImage(f, 1280, 0.82);   /* 压到合理体积再进库 */
+            blob = await dataUrlToBlob(url);
+          }
+          const ref = await storeCoverBlob(blob);
+          data = ref;
+        } else {
+          data = (/^video\//.test(f.type)) ? await readAsDataURL(f) : await readAsDataURL(f);   /* IDB 不可用退回老路 */
+        }
         if (viewUid && viewUid !== 'me') {
           const bc = (store().covers.byContact = store().covers.byContact || {});
           bc[viewUid] = data;
@@ -14416,8 +14517,8 @@ function coverTap(e) {
     const out = { text: '', imgs: [], text2: '', order: null };
     try {
       const p = Engine.params(ct);
-      /* 学我说话（决策#138）：命中就整条引用一句学来的话——不拼贴、不截断、不装饰 */
-      const learned = (ct && Array.isArray(ct.learned)) ? ct.learned : [];
+      /* 学我说话（决策#138）：命中就整条引用一句学来的话——不拼贴、不截断、不装饰；10-03 二批改读学舌库 */
+      const learned = (typeof Library !== 'undefined' && Library.learnedTexts) ? Library.learnedTexts(ct.id) : (ct.learned || []);
       const lr = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
       if (lr > 0 && learned.length && Math.random() * 100 < lr) { out.text = pick(learned); return out; }
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
@@ -21916,58 +22017,13 @@ const Profile = (function () {
     Router.go('profile');
   }
 
-  /* ---------- 学我说话 · 积累管理（她 10-03：主页下方一栏，可删可改；删可能被拒，拒了可发理由再问） ----------
-     概率我拍可调：首次删 60% 成 / 40% 被 TA 拒；被拒后发理由再问 85% 成。拒绝与同意都由 TA 在会话里说话。 */
-  const LEARN_DENY = ['删掉干什么呀，我还要用呢', '不行，这句我记住了，不给删', '这句我喜欢，不删'];
-  const LEARN_DENY2 = ['你这么说我也还是不想删', '理由听完了，但还是不行', '唔……再让我用一阵子吧'];
-  const LEARN_AGREE = ['好吧好吧，删了删了', '行，看你的面子', '嗯，那这句我忘了'];
-  function taSay(c, text) {
-    const conv = DB.state.convs.find(v => v.type === 'single' && v.peerId === c.id);
-    if (!conv) return;
-    Engine.pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      from: 'ai', type: 'text', text: text, senderId: c.id });
-  }
+  /* ---------- 学我说话 · 库入口（她 10-03 二批：主页只留一行入口，列表收进四库统一弹窗，
+     像字卡库一样可搜索/可批量/可导入导出；删除仍走「可能被 TA 拒」的那套，逻辑在 library.js 的 learnedDel） ---------- */
   function refreshLearned(c) {
-    const list = Array.isArray(c.learned) ? c.learned : [];
-    el('pf-learned-n').textContent = list.length ? '（' + list.length + '）' : '';
-    const box = el('pf-learned-list');
-    if (!list.length) {
-      box.innerHTML = '<p class="adv-note">还没有学到的话。你在聊天里发的文字，TA 会按上面的概率整句学去用。</p>';
-      return;
-    }
-    box.innerHTML = list.map((t, i) => {
-      const denied = c.learnedSt && c.learnedSt[t] === 'denied';
-      return '<div class="pf-ln-row' + (denied ? ' denied' : '') + '">' +
-        '<span class="pf-ln-txt">' + esc(t) + '</span>' +
-        (denied ? '<em class="pf-ln-deny">TA 拒绝了</em>' : '') +
-        '<span class="pf-ln-btns"><button class="pf-ln-edit" data-i="' + i + '">改</button>' +
-        '<button class="pf-ln-del" data-i="' + i + '">' + (denied ? '再问问' : '删') + '</button></span></div>';
-    }).join('');
-  }
-  function removeLearned(c, t) {
-    const i = (c.learned || []).indexOf(t);
-    if (i >= 0) c.learned.splice(i, 1);
-    if (c.learnedSt) delete c.learnedSt[t];
-    DB.save();
-    refreshLearned(c);
-  }
-  function askLearnedAgain(c, t) {
-    Home.openForm({
-      title: '再问问 TA',
-      fields: [{ key: 'v', type: 'textarea', label: '说明理由（会作为你的消息发给 TA）', value: '' }],
-      okText: '发送',
-      onSubmit(v) {
-        const conv = DB.state.convs.find(x => x.type === 'single' && x.peerId === c.id);
-        const reason = (v.v || '').trim();
-        if (conv) Chat.sendTo(conv.id, reason || '就把那句话删了吧');
-        const ok = Math.random() * 100 < 85;
-        setTimeout(() => {
-          if (ok) { removeLearned(c, t); taSay(c, LEARN_AGREE[Math.floor(Math.random() * LEARN_AGREE.length)]); }
-          else taSay(c, LEARN_DENY2[Math.floor(Math.random() * LEARN_DENY2.length)]);
-          refreshLearned(c);
-        }, 1200 + Math.random() * 1600);
-      }
-    });
+    let n = 0;
+    if (typeof Library !== 'undefined' && Library.learnedCount) n = Library.learnedCount(c.id);
+    else n = Array.isArray(c.learned) ? c.learned.length : 0;   /* 迁移前的兑底 */
+    el('pf-learned-n').textContent = n ? '（' + n + '）' : '';
   }
 
   function init() {
@@ -22019,39 +22075,10 @@ const Profile = (function () {
       });
     });
 
-    /* 学我说话 · 积累管理：改/删/再问问（同上，她 10-03 定） */
-    el('pf-learned-list').addEventListener('click', e => {
+    /* 学我说话 · 库入口：整表收进四库统一弹窗（她 10-03 二批），主页不再堆一整栏 */
+    el('pf-learned-row').addEventListener('click', () => {
       const c = cur(); if (!c) return;
-      const eb = e.target.closest('.pf-ln-edit');
-      const db = e.target.closest('.pf-ln-del');
-      const list = Array.isArray(c.learned) ? c.learned : [];
-      if (eb) {
-        const i = +eb.dataset.i, old = list[i];
-        if (old == null) return;
-        Home.openForm({
-          title: '改这句话',
-          fields: [{ key: 'v', type: 'textarea', label: 'TA 学去的那句话', value: old }],
-          okText: '保存',
-          onSubmit(v) {
-            const t = (v.v || '').trim();
-            if (!t || t === old) return;
-            list[i] = t;
-            if (c.learnedSt && c.learnedSt[old]) { c.learnedSt[t] = c.learnedSt[old]; delete c.learnedSt[old]; }
-            DB.save(); refreshLearned(c); UI.toast('已改');
-          }
-        });
-      } else if (db) {
-        const i = +db.dataset.i, t = list[i];
-        if (t == null) return;
-        if (c.learnedSt && c.learnedSt[t] === 'denied') askLearnedAgain(c, t);
-        else if (Math.random() * 100 < 60) { removeLearned(c, t); UI.toast('已删除'); }
-        else {
-          (c.learnedSt = c.learnedSt || {})[t] = 'denied';
-          DB.save(); refreshLearned(c);
-          taSay(c, LEARN_DENY[Math.floor(Math.random() * LEARN_DENY.length)]);
-          UI.toast('TA 拒绝了删除——可以发理由再问问');
-        }
-      }
+      Library.open({ kind: 'learned', ctId: c.id });
     });
 
     /* 高级回复参数：变更即校验（最快≤最慢、最少≤最多）并保存 */
@@ -22491,8 +22518,9 @@ const Call = (function () {
     grpTimers.forEach(clearTimeout); grpTimers = [];
     if (grpJoinTimer) { clearTimeout(grpJoinTimer); grpJoinTimer = null; }
   }
-  /* 她 10-03（也重申了早先的要求）：通话中每隔 20~40s 一轮，每个未加入成员按
-     接听概率×0.15 掷补入（我拍可调）；也有概率自己退出——退出沿用下方先退钟（holdSecs ±30%） */
+  /* 她 10-03 二批口径：不是短间隔扫描，是「每隔比如 1~3 小时可能加入」——
+     轮间隔改 1~3 小时（数值我拍可调），每轮对未加入成员按接听概率×0.15 掷补入；
+     退出概率照旧沿用下方先退钟（holdSecs ±30%） */
   function startJoinDice() {
     if (grpJoinTimer) { clearTimeout(grpJoinTimer); grpJoinTimer = null; }
     const tick = () => {
@@ -22508,9 +22536,9 @@ const Call = (function () {
         }
       });
       if (st && st.phase === 'active' && st.mode === 'group')
-        grpJoinTimer = setTimeout(tick, 20000 + Math.random() * 20000);
+        grpJoinTimer = setTimeout(tick, 3600000 + Math.random() * 7200000);
     };
-    grpJoinTimer = setTimeout(tick, 20000 + Math.random() * 20000);
+    grpJoinTimer = setTimeout(tick, 3600000 + Math.random() * 7200000);
   }
 
   /* 群成员独立行为：接/拒/持续等待；未接者后续每轮以 10% 重掷补加入（#39y） */
@@ -22670,7 +22698,7 @@ const Call = (function () {
   }
   function scheduleGroupLeaves() {
     st.joined.forEach(id => scheduleLeaveFor(id));
-    startJoinDice();   /* 她 10-03：等着的人过一阵也有概率自己进来 */
+    startJoinDice();   /* 她 10-03：等着的人隔一两小时也有概率自己进来 */
   }
   function leaveMember(id) {
     if (!st || st.phase !== 'active') return;
@@ -24198,6 +24226,7 @@ Router.register('schedule', () => Schedule.render());/* 排班表（她 10-03）
   Kinship.init();  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
   Redpacket.init();/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
   Moments.init();  /* P36d：朋友圈存量视频 dataURL→IndexedDB 幂等迁移（她 08-27 拆雷） */
+  Library.init();    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
   Games.init();    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
   Schedule.init(); /* 排班表（她 10-03）：页面事件绑定 */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
