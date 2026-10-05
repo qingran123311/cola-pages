@@ -249,6 +249,15 @@ button{-webkit-tap-highlight-color:transparent}
   color:var(--primary);font-size:12.5px;background:#fff}
 .gm-chip:active{background:var(--primary);color:#fff}
 
+/* --- 颜文字叠加标记（她 10-05）：组合符缺字时自己画，走到哪台机器都不方块 ---
+   基符外包 .kstack（相对定位），标记 .kmark 是随字号缩放的细线，用 currentColor 跟文字同色 */
+.kstack{position:relative;display:inline-block}
+.kmark{position:absolute;display:block;background:currentColor;border-radius:1px;pointer-events:none}
+.k-acute{left:.40em;bottom:.74em;width:.30em;height:.07em;transform:rotate(-40deg)}
+.k-grave{left:.08em;bottom:.74em;width:.30em;height:.07em;transform:rotate(40deg)}
+.k-macron{left:.05em;bottom:.82em;width:.52em;height:.07em}
+.k-dot{left:.32em;bottom:.80em;width:.11em;height:.11em;border-radius:50%}
+.k-stroke{left:.02em;bottom:.44em;width:.58em;height:.06em}
 /* =====================================================
    LOVE♡X · components.css —— 通用组件规范
    按钮 / 输入框 / 开关 / 标签 / 头像圆点 / 弹窗 / Toast / 空状态
@@ -3715,6 +3724,7 @@ const DB = (function () {
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
         diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
         notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
+        dailyBackup: true,             // 她 10-05：每天自动存一份全档备份（IDB，留最近 7 天）
         // P26 朋友圈互评开关已按她 08-27 21:08 口径改成「按人」：存 contacts[].params.moMutual，
         // 默认关=只有我能评赞；入口在资料卡·高级回复设置（不再占朋友圈右上角）
         lkRelay: '',                   // P36 视频/图文中转（自建 Worker 地址）：空=关，抖音/小红书只发标题卡；填了才去抓真封面（docs/lk-relay-worker.js）
@@ -4426,6 +4436,54 @@ const DB = (function () {
     return mergeForeign({ msgs });
   }
 
+  /* ---- 每日自动备份（她 10-05）：整档一份，每人一份，留 7 天 ----
+     触发在开页时（一天只写一份）；恢复是整档覆盖，所以调用方要先跟她确认。 */
+  async function dailySnap(force) {
+    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
+    if (!V) return false;                                  // 没 IDB 就不写（不然整档塞 localStorage 会当场爆配额）
+    if (!force && state.settings.dailyBackup === false) return false;
+    try {
+      const day = todayKey();
+      const idx = await V.listFull();
+      if (!force && idx.some(x => x.day === day)) return false;   // 今天已经备份过
+      clearTimeout(saveTimer); writeNow();                 // 先把主档落盘，备的是最新那份
+      const ok = await V.snapFull(day, JSON.parse(JSON.stringify(state)));
+      /* 她 10-05：在 APK 壳里再往手机「下载」目录写一份真文件（网页做不到静默写文件，
+         壳里能）——备份不能只躺在同一个 IDB 里，那样被清就一起没了 */
+      try {
+        if (ok && typeof window !== 'undefined' && window.LovexNative
+          && typeof window.LovexNative.saveBackup === 'function' && state.settings.dailyBackup !== false) {
+          const where = window.LovexNative.saveBackup(backupText(JSON.parse(JSON.stringify(state))),
+            'LOVEX每日备份-' + day + '.json');
+          if (where && typeof logErr === 'function') logErr('备份：已写到手机 ' + where);
+        }
+      } catch (e2) { if (typeof logErr === 'function') logErr('备份：写手机文件失败 ' + (e2 && e2.message)); }
+      return ok;
+    } catch (e) {
+      if (typeof logErr === 'function') logErr('备份：每日备份失败 ' + (e && e.message));
+      return false;
+    }
+  }
+  async function listBackups() {
+    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
+    try { return V ? await V.listFull() : []; } catch (e) { return []; }
+  }
+  function backupText(doc) {
+    return JSON.stringify({ app: 'LOVEX', version: 1, exportedAt: new Date().toISOString(), data: doc }, null, 2);
+  }
+  async function readBackup(day) {
+    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
+    try { const hit = V ? await V.readFull(day) : null; return hit && hit.doc ? hit : null; } catch (e) { return null; }
+  }
+  async function restoreBackup(day) {
+    const hit = await readBackup(day);
+    if (!hit) return false;
+    state = deepMerge(defaults(), hit.doc);
+    clearTimeout(saveTimer);
+    writeNow();
+    return true;
+  }
+
   return {
     get state() { return state; },
     get ready() { return startReady(); },
@@ -4441,6 +4499,11 @@ const DB = (function () {
     listSnaps,
     getSnapMsgs,
     restoreSnap,
+    dailySnap,
+    listBackups,
+    readBackup,
+    restoreBackup,
+    backupText,
     resolveMedia,
     vaultStats,
     persistState: () => persistFlag,
@@ -4491,6 +4554,20 @@ var Notify = (function () {
      她 08-26：安卓权限全开仍不弹——加三件套：开启成功当场发测试通知、
      denied 给精确解锁路径、长按 cell 出诊断面板定位卡在哪一步 */
   function toggle() {
+    /* APK 壳里走原生：不需要网页授权（也没法授），只拨开关 */
+    var N = native();
+    if (N) {
+      if (!DB.state.settings.notify) {
+        DB.state.settings.notify = true; DB.save();
+        runSafe('notify.native.test', function () { N.notifyNow('LOVE♡X 通知打通了', '能看见这条就通了～TA 来消息也这样弹'); });
+        UI.toast('已开启，刚发了条测试通知，看下通知栏');
+      } else {
+        DB.state.settings.notify = false; DB.save();
+        UI.toast('新消息通知已关闭');
+      }
+      refreshRow();
+      return DB.state.settings.notify;
+    }
     if (!supported()) { UI.toast('这个浏览器不支持系统通知，换 Chrome 打开试试'); return false; }
     if (!DB.state.settings.notify) {
       if (Notification.permission === 'denied') {
@@ -4557,8 +4634,24 @@ var Notify = (function () {
 
   /* pushRaw 非 viewing 分支调用（engine 传入拼好的标题/摘要）
      她 09:58 拍板学旧站口径：页面看得见且有焦点时不弹（应用内已有横幅），其余情况都弹 */
+  /* 她 10-05：APK 壳里给了一条原生桥（LovexNative）。有原生就用原生——
+     网页能弹的范围只限“页面进程还活着”，原生是系统级通知，应用被杀也能弹。 */
+  function native() {
+    try {
+      return (typeof window !== 'undefined' && window.LovexNative
+        && typeof window.LovexNative.notifyNow === 'function') ? window.LovexNative : null;
+    } catch (e) { return null; }
+  }
+
   function maybeSys(conv, m, title, body) {
     try {
+      var N = native();
+      if (N) {                                   /* 壳里：直接交给系统通知 */
+        if (!DB.state.settings.notify) return;
+        if (document.visibilityState === 'visible' && document.hasFocus()) return;
+        runSafe('notify.native', function () { N.notifyNow(title, body); });
+        return;
+      }
       if (!DB.state.settings.notify || !supported()) return;
       if (document.visibilityState === 'visible' && document.hasFocus()) return;
       if (Notification.permission !== 'granted') return;
@@ -4617,6 +4710,7 @@ var Notify = (function () {
 
   /* mine 页行文案 */
   function rowText() {
+    if (native()) return DB.state.settings.notify ? '已开启（应用通知）' : '未开启';
     if (!supported()) return '不支持';
     if (DB.state.settings.notify && Notification.permission === 'granted') return '已开启';
     return '未开启';
@@ -4648,6 +4742,19 @@ var Notify = (function () {
     return out;
   }
   function armPlanned() {
+    var N = native();
+    /* 路线 0（APK 壳）：把该提醒的时刻交给系统的精确闹钟——应用被杀也能到点弹 */
+    if (N && N.armAt && DB.state.settings.notify) {
+      var ns = dueItems();
+      if (!ns.length) return;
+      var cap = Math.min(ns.length, 24);
+      for (var i = 0; i < cap; i++) {
+        (function (it) {
+          runSafe('notify.native.arm', function () { N.armAt(it.dueAt, it.name, it.body); });
+        })(ns[i]);
+      }
+      return;
+    }
     if (!supported() || !DB.state.settings.notify || Notification.permission !== 'granted') return;
     var items = dueItems();
     if (!items.length) return;
@@ -4682,12 +4789,55 @@ var Notify = (function () {
     window.addEventListener('pagehide', armPlanned);
   }
 
+  /* 开机静默重挂的最近一次结果（只活在内存里，给诊断/探针看，不入档） */
+  let lastResume = null;
+
+  /* 她 10-05：
+     「后台通知和保活我一退出重进就不行了，虽然显示开启但我还得再点一遍」——
+     开关状态是存下来的，但重进后没人把「挂」重新接上：这里在开机时静默重挂（权限还在的话）。
+     权限真被系统/浏览器撤了就如实把开关改回关，不让界面撑面子。 */
+  function resume() {
+    if (native()) { lastResume = { on: !!DB.state.settings.notify, perm: 'native', armed: true }; refreshRow(); return; }
+    if (!supported()) return;
+    const on = !!DB.state.settings.notify;
+    if (!on) { lastResume = { on: false, perm: null, armed: false }; refreshRow(); return; }
+    const perm = Notification.permission;
+    if (perm === 'granted') {
+      registerSW(); armPlanned();
+      lastResume = { on: true, perm: perm, armed: true };
+      refreshRow(); return;
+    }
+    if (perm === 'denied') {
+      lastResume = { on: true, perm: perm, armed: false };
+      DB.state.settings.notify = false; DB.save(); refreshRow();
+      elog('通知：权限已被系统/浏览器收回，开关自动置为关');
+      return;
+    }
+    lastResume = { on: true, perm: perm, armed: false, waitingGesture: true };
+    /* 权限被浏览器重置成「未问」：授权框不能凭空弹，得等她下次触一下屏幕，
+       这一下就顺手把权限和挂載一起补回来 */
+    const once = function () {
+      document.removeEventListener('pointerdown', once);
+      runSafe('notify.resume', function () {
+        const r = Notification.requestPermission(function (p) {
+          if (p === 'granted') { registerSW(); refreshRow(); }
+          else if (p === 'denied') { DB.state.settings.notify = false; DB.save(); refreshRow(); }
+        });
+        if (r && r.then) r.then(function (p) {
+          if (p === 'granted') { registerSW(); refreshRow(); }
+          else if (p === 'denied') { DB.state.settings.notify = false; DB.save(); refreshRow(); }
+        });
+      });
+    };
+    document.addEventListener('pointerdown', once, { once: true });
+  }
+
   function refreshRow() {
     var el = document.getElementById('notify-state');
     if (el) el.textContent = rowText();
   }
 
-  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, armPlanned: armPlanned, refreshRow: refreshRow, diag: diag, test: test };
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, armPlanned: armPlanned, refreshRow: refreshRow, diag: diag, test: test, resume: resume, lastResume: () => lastResume, native: native };
 })();
 
 /* ============================================================
@@ -7766,6 +7916,33 @@ const MediaVault = (function () {
     try { return (await MediaStore.get(SNAP + day)) || null; } catch (e) { return null; }
   }
 
+  /* ---- 每日全档自动备份（她 10-05：「再加一个每天都备份的功能」）
+     跟上面的聊天快照不同：这里存的是整档（联系人/聊天/字卡库/朋友圈/钱包…都在），
+     媒体本体仍在媒体库里、主档里是引用串，所以一份只有几十 KB。留最近 7 天。
+     键前缀 '@bk:' 不带 '@mv'，清扫不会误伤。 */
+  const BK = '@bk:', BKIDX = '@bkidx';
+  async function snapFull(day, doc, savedAt) {
+    if (off) return false;
+    try {
+      const at = savedAt || Date.now();
+      await MediaStore.put(BK + day, { day, savedAt: at, doc });
+      const idx = (await MediaStore.get(BKIDX)) || [];
+      const next = [{ day, savedAt: at }].concat(idx.filter(x => x.day !== day)).slice(0, 7);
+      const gone = idx.filter(x => !next.some(y => y.day === x.day)).map(x => x.day);
+      await MediaStore.put(BKIDX, next);
+      for (const d of gone) { try { await MediaStore.del(BK + d); } catch (e) { if (typeof logErr === 'function') logErr('备份：清旧的失败 ' + (e && e.message)); } }
+      return true;
+    } catch (e) { if (typeof logErr === 'function') logErr('备份：写每日备份失败 ' + (e && e.message)); return false; }
+  }
+  async function listFull() {
+    if (off) return [];
+    try { return (await MediaStore.get(BKIDX)) || []; } catch (e) { return []; }
+  }
+  async function readFull(day) {
+    if (off) return null;
+    try { return (await MediaStore.get(BK + day)) || null; } catch (e) { return null; }
+  }
+
   /* 给清扫用的“保留键”：内存里每个媒体都算数——引用串原样，内联 dataURL 按同一 hash 反推键 */
   function keepKeys(node) {
     const out = [];
@@ -7827,6 +8004,7 @@ const MediaVault = (function () {
     enabled() { return !off; },
     hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs,
     shadow, readShadow, snap, listSnaps, readSnap,
+    snapFull, listFull, readFull,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
     broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); }
@@ -8366,6 +8544,76 @@ const Home = (function () {
     contactById, displayName, uidName, avaInner, ensureConv, openForm, msgBanner,
     membersOf, groupName
   };
+})();
+
+/* ============================================================
+ * KaoFmt — 颜文字「强制叠加」（她 10-05）
+ *
+ * 背景：颜文字里 `•́`、`˃̵` 这种其实是「基符 + 组合符」两个码位拼出来的。
+ * 手机字体缺组合符、或没有 mark 定位表时，系统就画成一个方框（她看到的豆腐块）。
+ * 纯网页没法命令系统字体去叠——所以叠加这一层由我们自己画：
+ *   `˃̵` → <span class="kstack">˃<i class="kmark k-stroke"></i></span>
+ * 标记是一条随字号缩放的细线，画在基符上方，任何设备上都长一样，永远不方块。
+ *
+ * 口径：数据里存的仍是原始字符（复制出去、导出的都是原样颜文字），
+ *       只有「显示」这一层被换掉；表里没登记的字符一律原样交给字体。
+ * ============================================================ */
+var KaoFmt = (function () {
+
+  /* 只在显示上换成覆盖广的等价字（数据不动）：ᴗ 属语音扩展区，手机常缺 */
+  var SUBS = { '\u1D17': '\u25E1' };
+
+  /* 能画的标记：组合符 → css 类。表外的组合符不碰，原样交回字体 */
+  var MARK_CLS = {
+    '\u0300': 'k-grave', '\u0301': 'k-acute', '\u0304': 'k-macron',
+    '\u0308': 'k-dot', '\u0335': 'k-stroke'
+  };
+  var isMark = cp => (cp >= 0x300 && cp <= 0x36f) || (cp >= 0x20d0 && cp <= 0x20ff);
+
+  var ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+  const escH = s => String(s).replace(/[&<>"]/g, c => ESC[c]);
+
+  function stack(base, marks) {
+    let bars = '';
+    marks.forEach(m => { const c = MARK_CLS[m]; if (c) bars += '<i class="kmark ' + c + '"></i>'; });
+    if (!bars) return escH(base + marks.join(''));
+    return '<span class="kstack">' + escH(base) + bars + '</span>';
+  }
+
+  /* 文本 → 安全 HTML（叠加符转成自己画的标记） */
+  function render(text) {
+    const s = String(text == null ? '' : text);
+    let out = '', i = 0;
+    while (i < s.length) {
+      const cp = s.codePointAt(i);
+      const ch = String.fromCodePoint(cp);
+      i += ch.length;
+      const marks = [];
+      while (i < s.length) {
+        const m = s.codePointAt(i);
+        if (!isMark(m)) break;
+        const mc = String.fromCodePoint(m);
+        marks.push(mc); i += mc.length;
+      }
+      const shown = SUBS[ch] || ch;
+      out += marks.length ? stack(shown, marks) : escH(shown);
+    }
+    return out;
+  }
+
+  /* 判断一段文本有没有需要自己画的标记（给探针/调用方用） */
+  function hasMark(text) {
+    const s = String(text == null ? '' : text);
+    for (let i = 0; i < s.length;) {
+      const cp = s.codePointAt(i);
+      const ch = String.fromCodePoint(cp);
+      i += ch.length;
+      if (isMark(cp) && i - ch.length > 0) return true;
+    }
+    return false;
+  }
+
+  return { render: render, hasMark: hasMark };
 })();
 
 /* =====================================================
@@ -8914,7 +9162,7 @@ const Chat = (function () {
     } else {
       const sp = document.createElement('span');
       sp.className = 'bubble-text';
-      sp.textContent = m.text || '';          // 不能用 bub.textContent，会清掉引用块
+      sp.innerHTML = kaoHtml(m.text || '');   // 用 innerHTML 是为了画颜文字的叠加标记；文本内部已转义
       bub.appendChild(sp);
       /* 她 10-04：报备的情绪不跟在内容后面，缩成气泡内底部小标签（双方同款；旧消息没这字段不动） */
       if (m.mood) {
@@ -9632,12 +9880,9 @@ const Chat = (function () {
     '🌹','🍀','🌊','❄️','⚡️','🌞','🌽','🍔',
     '🐴','🐢','🦆','🐧','🐳','🐝','🐞','🦢'
   ];
-  /* 她 10-05：颜文字里有些字符在某些手机上显成方框。两个典型来源：
-     ① 组合符（如 •́ 、˃̵ 这种“基符+叠加符”拼出来的）——安卓很多字体叠不上去，直接画豆腐块；
-     ② 个别字体覆盖差的字符（ᴗ 这类）。统一规范化：去掉叠加符、换成覆盖广的等价字。 */
-  const fixKao = s => String(s == null ? '' : s)
-    .replace(/[\u0300-\u036F\u20D0-\u20FF]/g, '')
-    .replace(/\u1D17/g, '\u25E1');
+  /* 她 10-05：颜文字里有些字符在某些手机上显成方框——早上我一度把叠加符从数据里剥掉，
+     她明确否了：「我还是希望颜文字可以叠起来组合成一个颜文字的」。
+     所以数据层保持原样（叠加符一个不动），改由 KaoFmt 在显示层自己把标记画上去。 */
   const KAOMOJI_PANEL = [
     '(＾▽＾)','(｡•́︿•̀｡)','ヾ(≧▽≦*)o','(๑•́ ₃ •̀๑)','(￣▽￣)～',
     '(っ˘ω˘ς)','(◍•ᴗ•◍)','(๑˃̵ᴗ˂̵)و','(¦3[▓▓]','(¬_¬)',
@@ -9652,13 +9897,15 @@ const Chat = (function () {
   const edSel = new Set();
 
   function esc(s) { return UI.escapeHtml(s); }   // 以前这份用 String(s)，null 会被打成页面上的“null”
+  /* 她 10-05：颜文字的叠加符交给我们自己画（字体叠不上就是方框）；数据里仍是原字符 */
+  const kaoHtml = t => (typeof KaoFmt !== 'undefined' ? KaoFmt.render(t) : esc(t));
 
   /* 表情格内容（她 10-04）：本体丢了的图不画破图，给「丢」占位（可从导出备份找回） */
   const edCellBody = it => it.img
     ? ((typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(it.img))
         ? '<span class="ed-kao">丢</span>'
         : '<img src="' + it.img + '">')
-    : esc(it.text);
+    : kaoHtml(it.text);
   function stickerLib(kind) {
     if (kind === 'mine') return DB.state.libs.userStickers;
     if (kind === 'emoji') return DB.state.libs.emojis;
@@ -9699,10 +9946,7 @@ const Chat = (function () {
     });
     const ph = ka.items.filter(i => /^\[.{1,4}\]$/.test(i.text || ''));
     if (ph.length) { ka.items = ka.items.filter(i => !/^\[.{1,4}\]$/.test(i.text || '')); }
-    /* 存量颜文字也过一遗规范化（只去叠加符/换 ᴗ，不改别的）；她手机上已有的库同样受益 */
-    ka.items.forEach(it => { if (it && it.text) { const t = fixKao(it.text); if (t !== it.text) it.text = t; } });
-    ['(๑•̀ㅂ•́)و','(｡♥‿♥｡)','(づ￣ 3￣)づ','(´▽`ʃ♡ƪ)','(❁´◡`❁)'].forEach(k0 => {
-      const k = fixKao(k0);
+    ['(๑•̀ㅂ•́)و','(｡♥‿♥｡)','(づ￣ 3￣)づ','(´▽`ʃ♡ƪ)','(❁´◡`❁)'].forEach(k => {
       if (!ka.items.some(i => i.text === k))
         ka.items.push({ id: 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           text: k, blocked: false, groupId: null });
@@ -9716,9 +9960,9 @@ const Chat = (function () {
           text: e, blocked: false, groupId: def.id }));
     }
     if (!ka.items.length) {
-      KAOMOJI_PANEL.forEach(k0 => ka.items.push(
+      KAOMOJI_PANEL.forEach(k => ka.items.push(
         { id: 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          text: fixKao(k0), blocked: false, groupId: null }));
+          text: k, blocked: false, groupId: null }));
     }
   }
 
@@ -10491,7 +10735,7 @@ const Engine = (function () {
 
   /* emoji/颜文字库化（策划918-920）：AI附加从未屏蔽全集等概率抽取，库空回退内置小集 */
   const EMOJI = ['😊', '😂', '🥺', '😳', '❤️', '✨', '🙈', '😴', '👌', '🎵', '🌙', '🍀'];
-  const KAOMOJI = ['(＾▽＾)', '(｡•︿•｡)', 'ヾ(≧▽≦*)o', '(๑• ₃ •๑)', '(￣▽￣)～', '(っ˘ω˘ς)'];
+  const KAOMOJI = ['(＾▽＾)', '(｡•́︿•̀｡)', 'ヾ(≧▽≦*)o', '(๑•́ ₃ •̀๑)', '(￣▽￣)～', '(っ˘ω˘ς)'];
   function pickDeco(kind) {
     const lib = kind === 'em' ? DB.state.libs.emojis : DB.state.libs.kamoji;
     const items = (lib && lib.items || []).filter(i => !i.blocked && i.text);
@@ -11827,11 +12071,12 @@ const Library = (function () {
       items.forEach(it => {
         const g = gm.get(it.groupId);
         const effBlocked = it.blocked || (g && g.blocked);
-        const label = esc(isVoiceKind(cur.kind) ? ((it.name || '未命名') + ' · ' + (it.dur || 1) + '″') : it.text);
+        const label = esc(isVoiceKind(cur.kind) ? ((it.name || '未命名') + ' · ' + (it.dur || 1) + '″') : '');
+      const labelHtml = isVoiceKind(cur.kind) ? label : (typeof KaoFmt !== 'undefined' ? KaoFmt.render(it.text) : esc(it.text));
         h +=
           '<div class="lib-item' + (effBlocked ? ' off' : '') + '" data-id="' + it.id + '">' +
             '<input type="checkbox"' + (view.selected.has(it.id) ? ' checked' : '') + '>' +
-            '<div class="li-main"><span class="li-text">' + label + '</span>' +
+            '<div class="li-main"><span class="li-text">' + labelHtml + '</span>' +
               (kw && g ? '<small>' + esc(g.name) + '</small>' : '') + '</div>' +
             /* 她 09-15：“我还挺喜欢原来什么生效啊什么的那几个按钮的” —— 文字钮与状态胶囊都还给行尾；
                体量沿用上一轮改小的那颗字号（11px / 3px 6px），不给行高返工 */
@@ -24766,6 +25011,10 @@ Router.register('schedule', () => Schedule.render());/* 排班表（她 10-03）
   Games.init();    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
   Schedule.init(); /* 排班表（她 10-03）：页面事件绑定 */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
+  /* 她 10-05：重进后静默重挂（权限还在就重新接上；权限真没了就把开关改成关） */
+  runSafe('notify.resume', () => Notify.resume());
+  /* 她 10-05 新提：每天自动备份一份全档（一天一次，只留最近 7 天） */
+  runSafe('backup.daily', () => { DB.dailySnap(); });
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
     document.getElementById('btn-side').addEventListener('click', () => Router.go('mine'));
@@ -24954,7 +25203,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
         return a.length ? '黑匣子错误 ' + a.length + ' 条（长按心事簿标题可看）\n' : ''; } catch (e) { return ''; }
     }
-    function storageOverview() {
+    async function storageOverview() {
+      const bks = await DB.listBackups();
+      const bkTxt = bks.length
+        ? ('每日自动备份 ' + bks.length + ' 份 · 最近 ' + bks[0].day + '（留最近 7 天）\n')
+        : '每日自动备份：还没存过（每天开页时自动存一份）\n';
       let bytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -24982,20 +25235,25 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
               : '图片/语音已托管 ' + vs.packed + ' 个·' + vs.kb + ' KB（不占主档配额）\n'
                 + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了（本体被浏览器/手机清掉了，回不来；原图还在相册或微信里的，重新发一遍就补回来）\n' : ''))
           + '存储受浏览器保护：' + (typeof DB.persistState === 'function' ? DB.persistState() : '未知') + '\n'
+          + bkTxt
           + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
       });
     }
     document.getElementById('cell-storage').addEventListener('click', async () => {
       let snaps = [];
-      try { snaps = await DB.listSnaps(); } catch (e) {}
+      try { snaps = await DB.listSnaps(); } catch (e) { logErr('存储管理：读快照失败 ' + (e && e.message)); }
+      let bks = [];
+      try { bks = await DB.listBackups(); } catch (e) { logErr('存储管理：读备份失败 ' + (e && e.message)); }
       const act = await UI.actionSheet('存储管理', [
         { key: 'info', label: '本机占用概览' },
         { key: 'batch', label: '批量贴上图片（自动对上丢的）' },
+        { key: 'bk', label: bks.length ? ('每日自动备份（已存 ' + bks.length + ' 份）') : '每日自动备份（还没存过）' },
         { key: 'snap', label: snaps.length ? ('按天找回聊天记录（' + snaps.length + ' 天快照）') : '按天找回聊天记录（暂无快照）' }
       ]);
       if (act === 'info') { storageOverview(); return; }
       if (act === 'batch') { batchInput.value = ''; batchInput.click(); return; }
+      if (act === 'bk') { openBackups(); return; }
       if (act !== 'snap') return;
       if (!snaps.length) return UI.toast('还没得快照：每天开页时存一份，只留最近 14 天');
       const day = await UI.actionSheet('选一天合并回来（只补我缺的那几条，不整档覆盖）',
@@ -25006,6 +25264,58 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       UI.toast(n ? ('已并回 ' + n + ' 条') : '这一天没有新东西可并');
       if (n) setTimeout(() => location.reload(), 800);
     });
+
+    /* --- 每天自动备份（她 10-05）：进来看见存了几份、能恢复、能导出成文件 ---
+       备份写在 IDB（媒体本体本来就在 IDB，主档里是引用串，一份只有几十 KB）。
+       如实交底：IDB 被浏览器/手机整个清掉时备份也跟着没——所以还留了「导出成文件」这条硬退路。 */
+    async function openBackups() {
+      let list = [];
+      try { list = await DB.listBackups(); } catch (e) { logErr('备份：读列表失败 ' + (e && e.message)); }
+      const on = DB.state.settings.dailyBackup !== false;
+      const opts = [{ key: 'now', label: '现在就备份一份' }];
+      if (list.length) opts.push({ key: 'rst', label: '用某一天备份恢复（共 ' + list.length + ' 份）' });
+      opts.push({ key: 'exp', label: list.length ? ('把最近这份导出成文件（' + list[0].day + '）') : '把最近这份导出成文件' });
+      opts.push({ key: 'tog', label: on ? '关掉「每天自动备份」' : '打开「每天自动备份」' });
+      const act = await UI.actionSheet('每日自动备份' + (on ? '' : '（现在关着）'), opts);
+      if (!act) return;
+      if (act === 'now') {
+        const okNow = await DB.dailySnap(true);
+        UI.toast(okNow ? '已备份今天这份' : '没备成：本机没开 IndexedDB 或空间不够');
+        return;
+      }
+      if (act === 'tog') {
+        DB.state.settings.dailyBackup = !on; DB.save();
+        UI.toast(!on ? '已打开：以后每天开页自动备份一份' : '已关掉每天自动备份');
+        return;
+      }
+      if (act === 'exp') {
+        const day0 = list.length ? list[0].day : null;
+        const hit = day0 ? await DB.readBackup(day0) : null;
+        if (!hit) { UI.toast('还没得备份可导'); return; }
+        const blob = new Blob([DB.backupText(hit.doc)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'LOVEX自动备份-' + day0 + '.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        UI.toast('已导出这份备份文件');
+        return;
+      }
+      if (act === 'rst') {
+        const day = await UI.actionSheet('选一份备份恢复（整档覆盖，当前数据会被这份替掉）',
+          list.map(x => ({ key: x.day, label: x.day + ' · ' + new Date(x.savedAt).toLocaleTimeString().slice(0, 5) })));
+        if (!day) return;
+        const go = await UI.confirmBox({
+          title: '恢复备份', okText: '恢复',
+          text: '会把现在的数据整档换成 ' + day + ' 那一份（今天的改动会丢，但恢复前那一份会自动存回去，可再换回来）。'
+        });
+        if (!go) return;
+        await DB.dailySnap(true);                       /* 先给现状存一份，防恢复错了回不去 */
+        const done = await DB.restoreBackup(day);
+        UI.toast(done ? '已恢复到 ' + day + '，刷新中…' : '这份备份读不出来');
+        if (done) setTimeout(() => location.reload(), 900);
+      }
+    }
 
     /* --- 批量贴上图片（她 10-05）：多选一堆图，本体对得上的自动贴回原位 ---
        匹配靠的是“键=图本体算出来的码”：同一张原图直接选进来就能对上，
@@ -25258,8 +25568,30 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     function renderKaVal() {
       const on = !!DB.state.settings.keepAlive;
       document.getElementById('ka-val').textContent =
-        on ? (KeepAlive.active() || KeepAlive.ctx ? '开' : '开·待激活') : '关';
+        on ? (KeepAlive.active() ? '开' : '开·待激活') : '关';
     }
+    /* 她 10-05：「保活我一退出重进就不行了，虽然显示开启但我还得再点一遍」。
+       病根：重进后没人重启它，而且浏览器的自动播放策略也不让无手势就出声——
+       这里开机先试一次，不行就等她碰一下屏幕时静默补上（不用她再关一次再开一次）。 */
+    function armKeepAliveGesture() {
+      document.documentElement.dataset.lxKaArmed = '1';
+      const once = () => {
+        document.removeEventListener('pointerdown', once);
+        document.documentElement.dataset.lxKaArmed = '0';
+        KeepAlive.start();
+        renderKaVal();
+        setTimeout(renderKaVal, 500);
+      };
+      document.addEventListener('pointerdown', once, { once: true });
+    }
+    function resumeKeepAlive() {
+      if (!DB.state.settings.keepAlive) { renderKaVal(); return; }
+      KeepAlive.start();
+      renderKaVal();
+      if (!KeepAlive.active()) armKeepAliveGesture();
+    }
+    /* 探针碰不到 IIFE 内部的函数，给一条只读入口（验收套件用，UI 不显示） */
+    window.__kaResume = resumeKeepAlive;
     document.getElementById('cell-keepalive').addEventListener('click', () => {
       const on = !!DB.state.settings.keepAlive;
       if (on) {
@@ -25271,10 +25603,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         if (!KeepAlive.ctx) return;
         DB.state.settings.keepAlive = true;
         DB.save(); renderKaVal();
-        UI.toast('后台保活已开启（无感音波，防杀后台）');
+        UI.toast(KeepAlive.active() ? '后台保活已开启（无感音波，防杀后台）' : '后台保活已开启，回到桌面再回来就生效了');
       }
     });
-    if (DB.state.settings.keepAlive) renderKaVal();
+    if (DB.state.settings.keepAlive) resumeKeepAlive();
 
     /* P36 分享封面中转（自建 Worker，她 08-27 拍板）：接上后抖音/小红书抽真封面小屏；不接=维持标题卡 */
     function renderLkRelay() {
