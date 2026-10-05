@@ -4382,15 +4382,21 @@ const DB = (function () {
           }
         }
       } catch (e) {}
-      /* 空闲时回收没人引用的媒体 blob（主档/备份/快照都不引用的才删） */
+      /* 空闲时回收没人引用的媒体 blob（她 10-05 加固两遭）：
+         ① 内有图没进库（pending）就本轮不清——这种状态下的“没人引用”可能是假象；
+         ② 保留集除了文本引用，还包括 keepKeys(state)（内存里每个媒体反推的键）；
+         ③ 真清了就写一笔黑匣子，不再无声无息。 */
       setTimeout(() => {
         (async function () {
           try {
-            const parts = [JSON.stringify(V.pack(state).doc),
+            const pk0 = V.pack(state);
+            if (pk0.pending.length) return;
+            const parts = [JSON.stringify(pk0.doc),
                            localStorage.getItem(KEY) || '', localStorage.getItem(BAK) || ''];
             const days = await listSnaps();
             for (const d of days) { try { parts.push(JSON.stringify(await V.readSnap(d.day))); } catch (e) {} }
-            await V.sweep(parts.join('\n'));
+            const n = await V.sweep(parts.join('\n'), V.keepKeys(state));
+            if (n && typeof logErr === 'function') logErr('媒体清扫：清掉 ' + n + ' 个没人引用的媒体');
           } catch (e) {}
         })();
       }, 4000);
@@ -7706,12 +7712,16 @@ const MediaVault = (function () {
     return { found, missing };
   }
 
-  /* 孤儿回收：主档/备份/快照都不引用的 '@mv' 键才删（启动空闲时跑一次） */
-  async function sweep(liveText) {
+  /* 孤儿回收：主档/备份/快照都不引用的 '@mv' 键才删（启动空闲时跑一次）
+     她 10-05：老写法只扫文本里的 '@mv'，一旦某次写盘时图还内联在档里（没进库）,
+     那批图先前入库的本体就不在保留集里，会被当孤儿删——“记录还在、图没了”的一条真路。
+     现在把内存里所有媒体反推的键一并算进保留集（extraKeys），宁可留不可错删。 */
+  async function sweep(liveText, extraKeys) {
     if (off) return 0;
     let all;
     try { all = await MediaStore.keys(); } catch (e) { return 0; }
     const keep = new Set(refsIn(liveText));
+    (extraKeys || []).forEach(k => keep.add(k));
     let n = 0;
     for (const k of all) {
       if (typeof k !== 'string' || k.indexOf(P) !== 0) continue;   // 只清自己的
@@ -7755,9 +7765,27 @@ const MediaVault = (function () {
     try { return (await MediaStore.get(SNAP + day)) || null; } catch (e) { return null; }
   }
 
+  /* 给清扫用的“保留键”：内存里每个媒体都算数——引用串原样，内联 dataURL 按同一 hash 反推键 */
+  function keepKeys(node) {
+    const out = [];
+    const walk = v => {
+      if (typeof v === 'string') {
+        if (isRef(v)) { out.push(v); return; }
+        if (isMedia(v)) out.push(hash(v));
+        return;
+      }
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') {
+        for (const k in v) if (Object.prototype.hasOwnProperty.call(v, k)) walk(v[k]);
+      }
+    };
+    walk(node);
+    return out;
+  }
+
   return {
     enabled() { return !off; },
-    hash, pack, flush, unpack, sweep, refsIn,
+    hash, pack, flush, unpack, sweep, refsIn, keepKeys,
     shadow, readShadow, snap, listSnaps, readSnap,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
@@ -8935,17 +8963,55 @@ const Chat = (function () {
     bub.addEventListener('contextmenu', e => { e.preventDefault(); showMsgActions(m); });
   }
 
+  /* 她 10-05：图上丢了的那条记录，能就地重贴一张——位置/时间/上下文都不动，
+     换的只是这张图的本体（贴完下一次保存就进媒体库）。比“删了重发”强：时间线不碎 */
+  function reattachMedia(m) {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.id = 'repair-img-input'; inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0];
+      if (f) {
+        let settled = false;
+        const put = url => {
+          if (settled) return; settled = true;
+          m.img = url;
+          DB.save();
+          renderMsgs();
+          UI.toast('这张图贴回原位了，时间线没动');
+        };
+        /* 压缩那条路不通、或者卡住不回来，就原图读进来（贴图不能因为 canvas 掉链就卡死） */
+        const raw = () => {
+          if (settled) return;
+          const rd = new FileReader();
+          rd.onload = () => put(rd.result);
+          rd.onerror = () => { settled = true; UI.toast('这张图读不出来，换一张试试'); };
+          rd.readAsDataURL(f);
+        };
+        Media.compressImage(f).then(put).catch(raw);
+        setTimeout(raw, 3000);
+      }
+      inp.remove();
+    });
+    inp.click();
+  }
+
   async function showMsgActions(m) {
     /* P35（她 20:17）：自己的文字/图片可撤回，不限时间不限群私聊；红包/亲属卡等资产类不提供 */
     const revocable = m.from === 'me' && (m.type === 'text' || m.type === 'img' || m.type === 'link' || m.type === 'video');
     const items = [
       { key: 'quote', label: '引用回复' }
     ];
+    /* 她 10-05：本体丢了的图/表情给一个“重新贴上这张图”的口（在哪个方向发的都能补） */
+    if (m.type === 'img' && m.img && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img))
+      items.push({ key: 'reattach', label: '重新贴上这张图' });
     if (revocable) items.push({ key: 'revoke', label: '撤回' });
     items.push({ key: 'del', label: '删除', danger: true });
     const key = await UI.actionSheet('消息操作', items);
     if (!cur) return;
     if (key === 'quote') setQuote(m);
+    else if (key === 'reattach') reattachMedia(m);
     else if (key === 'revoke') revokeMine(m);
     else if (key === 'del') {
       const ok = await UI.confirmBox({ title: '删除消息', text: '删除后不可恢复。', danger: true, okText: '删除' });
