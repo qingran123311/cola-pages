@@ -3345,6 +3345,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="cell-data"><span class="cell-icon"><i data-icon="download"></i></span><span class="cell-text">数据管理</span><span class="chevron">›</span></button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
+  <input type="file" id="msgs-import-file" accept=".json,application/json" hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-keepalive"><span class="cell-icon"><i data-icon="pulse"></i></span><span class="cell-text">后台保活</span><span class="cell-value" id="ka-val">关</span></button>
         <button class="cell" id="cell-lkrelay"><span class="cell-icon"><i data-icon="link" data-size="18"></i></span><span class="cell-text">分享封面中转</span><span class="cell-ext" id="lkrelay-state">未接</span><span class="chevron">›</span></button>
@@ -24957,6 +24958,89 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       UI.actionSheet('选择联系人', list.map(c => ({ key: c.id, label: Home.displayName(c) })))
         .then(id => { const c = list.find(x => x.id === id); if (c) exportContactData(c); });
     }
+    /* --- 只带聊天记录的一份（她 10-05）：含各会话消息本体，不含钱包/朋友圈/字卡那些。
+       导入按 id 去重、只补缺的，不覆盖现有记录；联系人不在了的会话就跳过并报个数 --- */
+    function msgsPack() {
+      const convs = [], msgs = {};
+      (DB.state.convs || []).forEach(cv => {
+        const arr = DB.state.msgs[cv.id];
+        if (!arr || !arr.length) return;
+        convs.push(cv);
+        msgs[cv.id] = arr;
+      });
+      return { app: 'LOVEX-MSGS', version: 1, exportedAt: new Date().toISOString(), convs, msgs };
+    }
+    function exportMsgsData() {
+      const pack = msgsPack();
+      const n = Object.values(pack.msgs).reduce((a, x) => a + x.length, 0);
+      if (!n) { UI.toast('还没有聊天记录'); return; }
+      const blob = new Blob([JSON.stringify(pack)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const d = new Date(), p = x => String(x).padStart(2, '0');
+      a.download = 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+        '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      UI.toast('聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
+    }
+    function importMsgsData(raw) {
+      let pack;
+      try { pack = JSON.parse(raw); } catch (e) { throw new Error('文件格式不对'); }
+      if (pack.app !== 'LOVEX-MSGS' || !pack.msgs) throw new Error('这不是聊天记录文件');
+      const ids = Object.keys(pack.msgs);
+      let total = 0;
+      ids.forEach(k => { total += (pack.msgs[k] || []).length; });
+      return UI.confirmBox({
+        title: '导入聊天记录',
+        text: '共 ' + ids.length + ' 个会话 · ' + total + ' 条。只补我这里缺的，已有的不动，也不会覆盖别的数据。',
+        okText: '开始导入'
+      }).then(ok => {
+        if (!ok) return;
+        let added = 0, skipped = 0;
+        const meta = {};
+        (pack.convs || []).forEach(cv => { if (cv && cv.id) meta[cv.id] = cv; });
+        ids.forEach(cid => {
+          const incoming = pack.msgs[cid] || [];
+          let cv = (DB.state.convs || []).find(x => x.id === cid);
+          if (!cv) {
+            const m = meta[cid];
+            const peerOK = m && (m.type === 'group' ? (m.memberIds || []).filter(id => Home.contactById(id)).length >= 2
+                                                    : !!Home.contactById(m.peerId));
+            if (!m || !peerOK) { skipped += incoming.length; return; }   // 联系人不在了，跳过不硬塞
+            cv = JSON.parse(JSON.stringify(m));
+            cv.unread = 0;
+            DB.state.convs.push(cv);
+          }
+          const mine = DB.state.msgs[cid] = DB.state.msgs[cid] || [];
+          const has = new Set(mine.map(x => x && x.id));
+          incoming.forEach(x => { if (x && !has.has(x.id)) { mine.push(x); has.add(x.id); added++; } });
+          if (mine.length > 1) mine.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          const last = mine[mine.length - 1];
+          if (last && (last.ts || 0) > (cv.lastTime || 0)) {
+            cv.lastTime = last.ts;
+            cv.lastMsg = last.type === 'text' ? last.text : cv.lastMsg;
+          }
+        });
+        DB.save();
+        Home.render();
+        Chat.rerender();
+        UI.toast('导入完成：补回 ' + added + ' 条' + (skipped ? ('，' + skipped + ' 条因联系人不在了没导') : ''));
+      });
+    }
+    const msgsFileInput = document.getElementById('msgs-import-file');
+    msgsFileInput.addEventListener('change', () => {
+      const f = msgsFileInput.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try { importMsgsData(r.result); }
+        catch (err) { UI.toast((err && err.message) || '导入失败'); }
+      };
+      r.readAsText(f);
+      msgsFileInput.value = '';
+    });
+
     const contactFileInput = document.getElementById('contact-import-file');
     document.getElementById('cell-data').addEventListener('click', async () => {
       const key = await UI.actionSheet('数据管理', [
@@ -24964,11 +25048,15 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         { key: 'imp-all', label: '导入全部数据', danger: true },
         { key: 'bak', label: '恢复上次自动备份' },
         { key: 'exp-one', label: '导出某联系人数据' },
-        { key: 'imp-one', label: '导入某联系人数据' }
+        { key: 'imp-one', label: '导入某联系人数据' },
+        { key: 'exp-msgs', label: '导出聊天记录' },
+        { key: 'imp-msgs', label: '导入聊天记录' }
       ]);
       if (key === 'exp-all') exportAllData();
       else if (key === 'exp-one') pickContactAndExport();
       else if (key === 'imp-one') contactFileInput.value = '', contactFileInput.click();
+      else if (key === 'exp-msgs') exportMsgsData();
+      else if (key === 'imp-msgs') msgsFileInput.value = '', msgsFileInput.click();
       else if (key === 'imp-all' || key === 'bak') openLegacyFlow(key);
     });
     contactFileInput.addEventListener('change', () => {

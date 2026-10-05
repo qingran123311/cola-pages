@@ -26,6 +26,9 @@ function idbRead(key, put, val) {
   return new Promise(function (res) {
     try {
       var r = indexedDB.open('LOVEX_MEDIA', 1);
+      r.onupgradeneeded = function () {
+        if (!r.result.objectStoreNames.contains('blobs')) r.result.createObjectStore('blobs');
+      };
       r.onsuccess = function () {
         var d = r.result;
         try {
