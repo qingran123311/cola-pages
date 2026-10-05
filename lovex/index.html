@@ -8483,20 +8483,12 @@ const Chat = (function () {
     if (m.from !== 'me') av.dataset.sender = m.senderId || cur.peerId;   // 双击拍一拍用（P6）
     let sender = null;
     if (m.from === 'me') {
-      const pa = DB.state.profile.avatar;
-      if (pa) {
-        const im = document.createElement('img'); im.src = pa; av.appendChild(im);
-      } else {
-        av.textContent = (DB.state.profile.name || '我').slice(0, 1);
-      }
+      av.innerHTML = Home.avaInner('me');
     } else {
       sender = m.senderId ? Home.contactById(m.senderId)
                           : Home.contactById(cur.peerId);   // 旧单聊消息无senderId
-      if (sender && sender.avatar) {
-        const im = document.createElement('img'); im.src = sender.avatar; av.appendChild(im);
-      } else {
-        av.textContent = ((sender && Home.displayName(sender)) || '?').slice(0, 1);
-      }
+      /* 10-05：复用 Home 的统一头像口，断链退字母；消息行不能再直接把 @mv 引用塞给 img.src */
+      av.innerHTML = Home.avaInner(m.senderId || cur.peerId);
     }
 
     /* 群里AI消息：头像下方先名字后气泡（微信同款） */
@@ -8529,8 +8521,7 @@ const Chat = (function () {
         miss.className = 'msg-media-missing';
         miss.textContent = m.sticker ? '[表情丢了]' : '[图片丢了]';
         bub.appendChild(miss);
-        return bub;
-      }
+      } else {
       const im = document.createElement('img');
       im.src = m.img;
       /* 表情贴纸：微信式裸贴无气泡底；尺寸缩小（#39s）：贴纸 96px、相册图 132px */
@@ -8561,6 +8552,7 @@ const Chat = (function () {
       if (im.complete) im.classList.add('loaded');
       else im.addEventListener('load', () => im.classList.add('loaded'), { once: true });
       bub.appendChild(im);
+      }
     } else if (m.type === 'video' && m.vid) {
       /* 相册发视频（她 10-02）：本体在 IndexedDB（MediaStore），气泡内联播放，不占 localStorage 配额 */
       bub.classList.add('bubble-video');
@@ -25172,9 +25164,23 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
      否则首屏图片是空的。DB.ready 没 IDB 时立刻 resolve；最多等 1.5 秒就起页，
      不能让“存储卡住”变成“页面打不开”（她最恨喊人不应）。 */
   const boot = () => {
-    Promise.race([Promise.resolve(DB.ready), new Promise(r => setTimeout(r, 1500))]).then(init, e => {
+    const ready = Promise.resolve(DB.ready);
+    let started = false;
+    const start = () => { if (started) return; started = true; init(); };
+    /* 10-05：保留 1.5 秒启动兜底；若大批媒体稍后才 hydrate 完，重画头像/当前聊天。
+       否则 render 先把仍为 @mv 的值当断链，unpack 后 state 已有真 dataURL、DOM 却永远没更新。 */
+    ready.then(() => {
+      if (!started) return;
+      setTimeout(() => {
+        runSafe('media-ready.home', () => Home.render());
+        runSafe('media-ready.chat', () => Chat.rerender());
+      }, 0);
+    }, e => {
+      if (started && typeof logErr === 'function') logErr('媒体装载：' + ((e && e.message) || e));
+    });
+    Promise.race([ready, new Promise(r => setTimeout(r, 1500))]).then(start, e => {
       if (typeof logErr === 'function') logErr('装载：' + ((e && e.message) || e));
-      init();
+      start();
     });
   };
   if (document.readyState === 'loading') {
