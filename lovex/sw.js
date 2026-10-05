@@ -1,19 +1,19 @@
-/* LOVE♡X P17 通知中转 Service Worker
- * 仅 HTTPS 生效（GitHub Pages）。作用：
- * 1. Android Chrome 要求系统通知必须经 SW showNotification() 弹出
- * 2. 点通知：聚焦已开的页面并捎回会话 id；没有活页就开新窗
- * 无服务器推送（纯前端离线），push 事件留空占位。 */
-self.addEventListener('push', function () {});
+/* LOVE♡X · sw.js —— Service Worker（10-04 横幅通知那条线的 web 侧等价物）
+   她 10-04 给的参考是安卓原生的 setExactAndAllowWhileIdle + SCHEDULE_EXACT_ALARM——
+   那是原生 App 的东西，网页用不上；网页的「精确闹钟」= SW 注册的 showTrigger（TimestampTrigger）：
+   页面关了，浏览器到点也能自己弹横幅。本文件只做两件事：
+   ① 点横幅 → 聚焦/打开页面；② 承接 notify.js 预排的计划通知（报备/查岗到点弹）。
+   不支持的浏览器上 notify.js 根本不会走这条路（特征检测），不会退化成「立刻弹」。 */
+self.addEventListener('install', function (e) { self.skipWaiting(); });
+self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
 
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
-  var convId = e.notification.data && e.notification.data.convId;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
-      if (convId) { try { c.postMessage({ type: 'lovex-notify-open', convId: convId }); } catch (err) {} }
-      return c.focus();
+      if ('focus' in c) return c.focus();
     }
-    return self.clients.openWindow(self.registration.scope);
+    return self.clients.openWindow('./');
   }));
 });

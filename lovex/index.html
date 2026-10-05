@@ -934,6 +934,9 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .lk-tri{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;border-left:15px solid rgba(255,255,255,.95);border-top:10px solid transparent;border-bottom:10px solid transparent;filter:drop-shadow(0 1px 5px rgba(0,0,0,.55))}
 .lk-go{position:absolute;right:8px;bottom:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:3px 9px;border-radius:99px}
 .lk-mini iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.lk-mini video{position:absolute;inset:0;width:100%;height:100%;display:block;background:#000;object-fit:contain}
+/* 她 10-04：卡内直播放态，poster 垫底，播放器自己接管 */
+.lk-mini.lk-live .lk-poster{opacity:.92}
 .lk-on .lk-poster,.lk-on .lk-poster-ghost,.lk-on .lk-tri{display:none}
 .lk-cap{padding:9px 11px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .lk-title{font-size:13px;line-height:1.4;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1029,8 +1032,13 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
   box-shadow:none!important}
 .bubble-sticker img{border-radius:6px}
 /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显 */
+/* 她 10-04：报备消息的情绪小标签（双方同款，缩在气泡内底部） */
+.msg-mood-tag{display:block;font-style:normal;font-size:10.5px;line-height:1;color:var(--t3);
+  background:var(--fill);border-radius:999px;padding:3px 8px;margin-top:6px;align-self:flex-end;width:fit-content}
 .msg-img-fade{opacity:0;transition:opacity .3s ease}
 .msg-img-fade.loaded{opacity:1}
+/* 她 10-04：媒体本体丢失的占位（不画破图；找回口＝个人中心→存储管理→导出备份） */
+.msg-media-missing{font-size:12px;color:var(--t3);background:var(--fill);border-radius:8px;padding:10px 12px;max-width:132px;text-align:center}
 /* 相册发视频（她 10-02）：气泡裸贴视频，内联播放 */
 .msg-video{display:block;max-width:min(62vw,220px);border-radius:8px;background:#000}
 .bubble-video{background:none;border:none;padding:0}
@@ -2371,6 +2379,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* ---------- 对局页 ---------- */
 #page-room .page-body-flush{gap:0;padding:0}
 .gm-players{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 12px 6px;position:relative}
+/* 她 10-04：多人桌座位条——3 人分立，4~8 人两列网格各占一角（坐不满换行） */
+.gm-players.multi{display:grid;gap:6px 4px;justify-items:center}
+.gm-players.multi.n3{grid-template-columns:repeat(3,1fr)}
+.gm-players.multi.n4,.gm-players.multi.n6,.gm-players.multi.n8{grid-template-columns:repeat(2,1fr)}
+.gm-players.multi.n5,.gm-players.multi.n7{grid-template-columns:repeat(2,1fr)}
+.gm-players.multi .gm-player{width:72px}
 .gm-player{display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45;transition:opacity .2s;width:80px}   /* 定宽 80px：09-01 从 2001 行的 P40 补丁块拢回来，同一类名只留一处户口 */
 .gm-player.on{opacity:1}
 .gm-ava{width:40px;height:40px;border-radius:8px;background:var(--fill);overflow:hidden;display:flex;align-items:center;justify-content:center;
@@ -2491,8 +2505,20 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-ubrow b{flex:1;font-weight:600}
 .gm-ubrow span{font-variant-numeric:tabular-nums}
 .gm-stcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
-.gm-sthead{display:flex;align-items:baseline;gap:10px}
-.gm-sthead b{font-size:15px;flex:1}
+/* 她 10-04：筛选条 + 展开详情（战绩页重写） */
+.gm-stfl{margin-bottom:12px}
+.gm-stflrow{display:flex;gap:8px;overflow-x:auto;padding:4px 0;scrollbar-width:none}
+.gm-stflrow::-webkit-scrollbar{display:none}
+.gm-stchip{flex:none;background:var(--fill);border:1px solid var(--line);border-radius:999px;
+  padding:5px 12px;font-size:12px;color:var(--t2);cursor:pointer}
+.gm-stchip.on{border-color:var(--primary);color:var(--primary);background:var(--card)}
+.gm-sthead{cursor:pointer}
+.gm-stbig.w{color:var(--primary)}
+.gm-stbig.l{color:var(--t3)}
+.gm-stdetail{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.gm-stdl{font-size:12px;color:var(--t2);margin-bottom:4px}
+.gm-stdfeed{display:flex;flex-direction:column;gap:2px;color:var(--t3);font-size:11.5px;
+  background:var(--fill);border-radius:8px;padding:8px;margin-top:6px}
 .gm-stbig{font-size:14px;font-weight:700;color:var(--t1)}
 .gm-ststreak{font-size:11px;color:var(--primary)}
 .gm-strows{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
@@ -3526,6 +3552,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>学我说话概率</span><em><input type="number" id="pf-learn" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>自由说话概率</span><em><input type="number" id="pf-free" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
           <label class="adv-item"><span>朋友圈拼字卡率</span><em><input type="number" id="pf-mocombo" min="0" max="100"> %</em></label>
@@ -3545,11 +3572,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="cell-group card">
         <button class="cell" data-lib="contactCards"><span class="cell-icon"><i data-icon="tag"></i></span><span class="cell-text">管理专属字卡库</span><span class="chevron">›</span></button>
         <button class="cell" data-lib="aiPat"><span class="cell-icon"><i data-icon="heart"></i></span><span class="cell-text">管理拍一拍库</span><span class="chevron">›</span></button>
+        <button class="cell" id="pf-learned-row"><span class="cell-icon"><i data-icon="tag"></i></span><span class="cell-text">荟萃 · TA 学去的话<b id="pf-learned-n"></b></span><span class="chevron">›</span></button>
         <button class="cell" id="pf-letterbook"><span class="cell-icon"><i data-icon="feather"></i></span><span class="cell-text">信件册 · 我们往来的信</span><span class="chevron">›</span></button>
       </div>
-
-      <!-- 学我说话 · 库入口（她 10-03 二批：主页不推一整栏，改像字卡库那样进统一库管理，可搜索可批量） -->
-      <button class="cell" id="pf-learned-row"><span class="cell-icon"><i data-icon="tag"></i></span><span class="cell-main"><span class="cell-title">学我说话 · 学到的话<b id="pf-learned-n"></b></span></span><i data-icon="chevron-right" data-size="16" class="cell-arrow"></i></button>
 
       <button class="btn btn-danger pf-delete" id="pf-delete">删除好友</button>
     </div>
@@ -4576,12 +4601,55 @@ var Notify = (function () {
     if (DB.state.settings.notify && Notification.permission === 'granted') return '已开启';
     return '未开启';
   }
+
+  /* ---- 她 10-04：页面关了也能到点弹横幅（原生 setExactAndAllowWhileIdle 那条的网页等价物） ----
+     页面开着时通知本就由站内钟驱动；这里的口只管「离开页面」那一刻：
+     把每个 TA 报备计划里下一个报备/查岗时刻用 SW 的 showTrigger 预排出去。
+     TimestampTrigger 不存在时一步不进（那些浏览器上 showTrigger 会被当普通通知立刻弹，宁可不算）。
+     小米/各家浏览器对后台触发的放宽程度不一，她原话也说「不一定的」——尽力而为，不承诺。 */
+  function trigOK() {
+    return supported() && typeof window.TimestampTrigger !== 'undefined'
+      && DB.state.settings.notify && Notification.permission === 'granted' && swOK_();
+  }
+  function armPlanned() {
+    if (!trigOK() || !navigator.serviceWorker.getRegistration) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg || !reg.showNotification) return;
+      var now = Date.now(), n = 0;
+      var plans = (DB.state && DB.state.repPlans) || {};
+      Object.keys(plans).forEach(function (cid) {
+        var pl = plans[cid] || {};
+        var ct = Home.contactById(cid);
+        if (!ct) return;
+        var nm = Home.displayName(ct);
+        [{ at: pl.autoAt, what: '会给你报备' }, { at: pl.chkAt, what: '要来查你岗' }].forEach(function (x) {
+          if (!x.at || x.at <= now || x.at - now > 864e5 || n >= 8) return;
+          try {
+            reg.showNotification(nm, {
+              body: '大约这个点' + x.what + '——记得回来看看',
+              tag: 'lovex-plan-' + cid + '-' + x.at,
+              icon: ct.avatar || undefined,
+              showTrigger: new TimestampTrigger(x.at)
+            });
+            n++;
+          } catch (e) { elog('notify.arm: ' + (e && e.message)); }
+        });
+      });
+    }).catch(function () {});
+  }
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') armPlanned();
+    });
+    window.addEventListener('pagehide', armPlanned);
+  }
+
   function refreshRow() {
     var el = document.getElementById('notify-state');
     if (el) el.textContent = rowText();
   }
 
-  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, diag: diag, test: test };
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, armPlanned: armPlanned, refreshRow: refreshRow, diag: diag, test: test };
 })();
 
 /* ============================================================
@@ -4647,14 +4715,15 @@ var Report = (function () {
     const useP = form !== 2, useD = form !== 1;
     let mood = '';
     if (withMood && l.moods.length && Math.random() < 0.3) mood = pick(l.moods);
+    /* 她 10-04：情绪不再拼进正文，单独挂 mood 字段，聊天气泡里画成小标签 */
     return {
-      text: '我在' + (useP ? place : '') + (useD ? doing : '') + (mood ? '，' + mood : ''),
+      text: '我在' + (useP ? place : '') + (useD ? doing : ''),
       place: useP ? place : '', doing: useD ? doing : '', mood
     };
   }
 
-  /* 我方消息落库（不经 pushRaw：自己的消息不能给自己挂未读/横幅） */
-  function pushMeMsg(conv, text, ts) {
+  /* 我方消息落库（不经 pushRaw：自己的消息不能给自己挂未读/横幅）；mood 单独挂字段（她 10-04 格式） */
+  function pushMeMsg(conv, text, ts, mood) {
     const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
     const m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: 'me', type: 'text', text: text, ts: ts || Date.now() };
     let i = arr.length; while (i > 0 && arr[i - 1].ts > m.ts) i--;
@@ -4755,7 +4824,7 @@ var Report = (function () {
       place: g.place, doing: g.doing, mood: g.mood,
       startTs: opt.ts, endTs: null, ts: opt.ts, text: g.text
     });
-    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ai', type: 'text', text: g.text, ts: opt.ts });
+    Engine.pushRaw(conv, { id: 't' + opt.ts.toString(36), from: 'ai', type: 'text', text: g.text, mood: g.mood || undefined, ts: opt.ts });
   }
 
   /* ---------------- 我的动作 ---------------- */
@@ -4764,7 +4833,7 @@ var Report = (function () {
     const ct = Home.contactById(curCid);
     if (!ct || !doing) return false;
     const now = Date.now();
-    const text = '我在' + (place || '') + doing + (mood ? '，' + mood : '');
+    const text = '我在' + (place || '') + doing;   /* 她 10-04：情绪不进正文，走气泡内小标签 */
     recs(curCid).push({
       id: 'r' + now.toString(36), who: 'me', how: 'manual',
       place: place || '', doing: doing, mood: mood || '',
@@ -4808,7 +4877,7 @@ var Report = (function () {
     const m = arr.find(x => x.id === msgId);
     if (m) m.answered = true;
     const now = Date.now();
-    const text = '我在' + (place || '') + doing + (mood ? '，' + mood : '');
+    const text = '我在' + (place || '') + doing;   /* 她 10-04：情绪不进正文，走气泡内小标签 */
     const conv = DB.state.convs.find(v => v.id === convId);
     if (conv) {
       const peer = conv.peerId;
@@ -4819,7 +4888,8 @@ var Report = (function () {
       });
       DB.save();
     }
-    return text;
+    /* 她 10-04：回查岗也是报备消息，情绪同样走气泡内小标签（调用方把 mood 一并挂上消息） */
+    return { text: text, mood: mood || '' };
   }
 
   /* ---------------- 报备页 ---------------- */
@@ -7512,7 +7582,7 @@ const MediaVault = (function () {
   const MIN = 4096;                // 小于 4KB 的 data: 串不值得搬，留在主档
   let off = !(window.indexedDB);
   const armed = new Map();         // ref -> 1：本会话已确认在库里，不重复写
-  const st = { packed: 0, bytes: 0, missing: 0, refs: 0 };
+  const st = { packed: 0, bytes: 0, missing: 0, refs: 0, flushErr: 0, missingLogged: 0 };
 
   function hash(s) {
     let h1 = 0x811c9dc5, h2 = 0x9e3779b9;
@@ -7566,7 +7636,11 @@ const MediaVault = (function () {
         await MediaStore.put(key, text);
         armed.set(key, 1);
         st.packed++; st.bytes += text.length; n++;
-      } catch (e) { /* 这一个没搬动：下次保存还是内联，坏不了 */ }
+      } catch (e) {
+        /* 这一个没搬动：下次保存还是内联，坏不了；但持续失败 = 主档被大图慢慢撑爆。
+           她 10-04 报的「上传的图全丢」最符合这条链，不能再一声不吭——只进黑匣子，不弹窗（P33 口径） */
+        if (!st.flushErr) { st.flushErr = 1; if (typeof logErr === 'function') logErr('媒体入库失败：' + ((e && e.message) || e)); }
+      }
     }
     return n;                      // 落库后的补写交给 db.js 的 commit，不在这里绕 save
   }
@@ -7594,6 +7668,10 @@ const MediaVault = (function () {
     };
     walk(node);
     await Promise.all(jobs);
+    if (missing && typeof logErr === 'function' && !st.missingLogged) {
+      st.missingLogged = 1;
+      logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（多半是浏览器清了站点 IndexedDB）——趁页面还开着先导出备份，内存里还在的图都能带走');
+    }
     return { found, missing };
   }
 
@@ -7650,7 +7728,9 @@ const MediaVault = (function () {
     enabled() { return !off; },
     hash, pack, flush, unpack, sweep, refsIn,
     shadow, readShadow, snap, listSnaps, readSnap,
-    stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; }
+    stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
+    /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
+    broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); }
   };
 })();
 /* =====================================================
@@ -7828,7 +7908,9 @@ const Home = (function () {
   function avaInner(uid) {
     const c = uid === 'me' ? (DB.state.profile || {}) : contactById(uid);
     const txt = uid === 'me' ? ((DB.state.profile || {}).name || '我') : (c ? displayName(c) : '');
-    return c && c.avatar ? '<img src="' + c.avatar + '" alt="">'
+    /* 她 10-04：媒体本体丢了的头像不画破图，退回字母头像（@mv 还在 = IDB 被清） */
+    const brokenAva = c && c.avatar && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(c.avatar);
+    return c && c.avatar && !brokenAva ? '<img src="' + c.avatar + '" alt="">'
       : '<span class="ava-txt">' + UI.escapeHtml(String(txt || '?').slice(0, 1)) + '</span>';
   }
   /* ---------- 群会话工具（决策记录#15） ---------- */
@@ -8411,6 +8493,14 @@ const Chat = (function () {
     }
 
     if (m.type === 'img' && m.img) {
+      if (typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img)) {
+        /* 她 10-04：媒体本体丢了不画破图，给占位（导出备份可找回内存里还在的） */
+        const miss = document.createElement('div');
+        miss.className = 'msg-media-missing';
+        miss.textContent = m.sticker ? '[表情丢了]' : '[图片丢了]';
+        bub.appendChild(miss);
+        return bub;
+      }
       const im = document.createElement('img');
       im.src = m.img;
       /* 表情贴纸：微信式裸贴无气泡底；尺寸缩小（#39s）：贴纸 96px、相册图 132px */
@@ -8462,9 +8552,10 @@ const Chat = (function () {
       }
     } else if (m.type === 'link' && m.link) {
       /* P36 V2（她 08-27 定）：链接发过去就是小屏卡片的样子；
-         她 10-03 二批：点卡直接进可拖动小窗播放（对方同款），不再有卡内起播/全屏态 */
+         她 10-04 重申：卡片本身就是可直接播放的视图窗口（卡内直播放+标题），不跳转不点开 */
       bub.classList.add('bubble-card');
       bub.innerHTML = linkCardHtml(m.link, false);
+      lkInlineMount(bub, m.link);
       lkHydratePoster(bub, m.link);
       bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
     } else if (m.type === 'kinship') {
@@ -8583,8 +8674,8 @@ const Chat = (function () {
       bub.addEventListener('click', () => {
         if (m.answered) { UI.toast('已经回应过啦，往上看你的回复'); return; }
         Report.openForm('answer', (place, doing, mood) => {
-          const text = Report.answerCheckin(cur.id, m.id, place, doing, mood);
-          pushMine({ type: 'text', text });
+          const r = Report.answerCheckin(cur.id, m.id, place, doing, mood);
+          pushMine({ type: 'text', text: r.text, mood: r.mood || undefined });   /* 她 10-04：情绪走气泡内小标签 */
           UI.toast('回应好啦');
         });
       });
@@ -8734,6 +8825,13 @@ const Chat = (function () {
       sp.className = 'bubble-text';
       sp.textContent = m.text || '';          // 不能用 bub.textContent，会清掉引用块
       bub.appendChild(sp);
+      /* 她 10-04：报备的情绪不跟在内容后面，缩成气泡内底部小标签（双方同款；旧消息没这字段不动） */
+      if (m.mood) {
+        const tag = document.createElement('em');
+        tag.className = 'msg-mood-tag';
+        tag.textContent = '心情 · ' + m.mood;
+        bub.appendChild(tag);
+      }
     }
 
     col.appendChild(bub);
@@ -9131,19 +9229,39 @@ const Chat = (function () {
     const poster = posterSrc
       ? '<img class="lk-poster"' + (lkIsIdb(posterSrc) ? ' data-iref="1"' : ' src="' + esc(posterSrc) + '"') + ' referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
       : '';
-    const mask = lkCanPlay(L)
-      ? '<span class="lk-tri"></span>'
-      : '<span class="lk-go">' + (imgMode ? '看图' : '浏览器打开') + '</span>';
+    /* 她 10-04 口径（重申 08-27 的模式，别再忘了）：卡片本身就是可直接播放的视图窗口——
+       嵌播 iframe/原生视频直接挂在卡内，标题在下方，不跳转不进全屏；播放交给播放器自己 */
     return '<div class="lk-card lk-big">' +
-      '<div class="lk-mini' + (playing ? ' lk-on' : '') + '"><div class="lk-poster-ghost">' + esc(L.site || '链接') + '</div>' + poster + mask + '</div>' +
+      '<div class="lk-mini lk-live">' + poster + '</div>' +
       '<div class="lk-cap">' +
         (L.title ? '<div class="lk-title">' + esc(L.title) + '</div>' : '') +
         '<div class="lk-line">' + esc(L.site || '链接') + (L.vid ? ' · ' + esc(L.vid) : '') + '</div>' +
       '</div>' +
     '</div>';
   }
-  /* 她 10-03 二批：点卡直接小窗播放（发过去是小屏卡片的样子，对方点开也是同款小窗），不再走全屏层；
-     播不了的仍走：中转图→全屏看图，其余→浏览器 */
+  /* 卡内直播放：发送方/接收方同一条渲染链，卡片即播放器 */
+  function lkInlineMount(root, L) {
+    const mini = root && root.querySelector('.lk-mini.lk-live');
+    if (!mini || mini.querySelector('iframe,video')) return;
+    let el;
+    if (L.embed) {
+      el = document.createElement('iframe');
+      el.src = L.embed;
+      el.allowFullscreen = true;
+      el.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+      el.setAttribute('scrolling', 'no');
+      el.setAttribute('frameborder', '0');
+      el.setAttribute('loading', 'lazy');
+    } else {
+      el = document.createElement('video');
+      el.src = L.vsrc;
+      el.setAttribute('controls', '');
+      el.setAttribute('playsinline', '');
+      el.setAttribute('preload', 'metadata');
+    }
+    mini.appendChild(el);
+  }
+  /* 她 10-04：可播卡片本身就是播放器，点卡不再另开小窗/全屏（防误触整卡跳转）；播不了的仍走：中转图→看图，其余→浏览器 */
   function tapLinkCard(root, m, e) {
     const L = m.link;
     if (!lkCanPlay(L)) {
@@ -9151,7 +9269,6 @@ const Chat = (function () {
       if (L.url) window.open(L.url, '_blank', 'noopener');
       return;
     }
-    lkOpenMini(L);
   }
   function openLink(L) {
     if (L && lkImgMode(L)) { lkOpenGallery(L); return; }
@@ -9401,6 +9518,12 @@ const Chat = (function () {
 
   function esc(s) { return UI.escapeHtml(s); }   // 以前这份用 String(s)，null 会被打成页面上的“null”
 
+  /* 表情格内容（她 10-04）：本体丢了的图不画破图，给「丢」占位（可从导出备份找回） */
+  const edCellBody = it => it.img
+    ? ((typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(it.img))
+        ? '<span class="ed-kao">丢</span>'
+        : '<img src="' + it.img + '">')
+    : esc(it.text);
   function stickerLib(kind) {
     if (kind === 'mine') return DB.state.libs.userStickers;
     if (kind === 'emoji') return DB.state.libs.emojis;
@@ -9515,7 +9638,7 @@ const Chat = (function () {
         h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : edTab === 'kao' ? 'flow' : 'g7') + '">' + items.map(it =>
           '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + (it.blocked ? ' off' : '') +
             (edSel.has(it.id) ? ' sel' : '') + '" data-id="' + it.id + '">' +
-            (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
+            edCellBody(it) + '</button>').join('') + '</div>';
         if (!items.length)
           h += '<div class="lib-hint">这个分组还没有表情</div>';
         const allOff = edSel.size > 0 && items.every(it => !edSel.has(it.id) || it.blocked);
@@ -9529,7 +9652,7 @@ const Chat = (function () {
         h = '<div class="ed-grid ' + (edTab === 'emoji' ? 'g8' : edTab === 'kao' ? 'flow' : 'g7') + '">' + items.map(it =>
           '<button class="ed-cell' + (it.img ? ' ed-pic' : (edTab === 'kao' ? ' ed-kao' : ' ed-txt')) + '" data-id="' + it.id + '"' +
             (it.img ? '' : ' data-v="' + esc(it.text) + '"') + '>' +
-            (it.img ? '<img src="' + it.img + '">' : esc(it.text)) + '</button>').join('') + '</div>';
+            edCellBody(it) + '</button>').join('') + '</div>';
         if (!items.length)
           h += '<div class="lib-hint">这个分组还没有表情，点左上角＋添加</div>';
         opbar.hidden = true;
@@ -10154,7 +10277,7 @@ const Chat = (function () {
       const k = b.dataset.more;
       if (k === 'album') document.getElementById('chat-img-input').click();
       else if (k === 'video') { if (cur) Call.start(cur); }   /* P7 接线：视频通话入口在＋号栏（清然 15:19） */
-      else if (k === 'files') Library.open({ kind: 'globalCards' });
+      else if (k === 'files') Library.open({ kind: 'globalCards', ctId: (cur && cur.type === 'single') ? cur.peerId : null });   /* 她 10-04：专属库默认当前联系人 */
       else if (k === 'letter') Letter.open(cur);   /* P8 接线：写信慢消息 */
       else if (k === 'redpacket') { if (typeof Redpacket !== 'undefined') Redpacket.openSend(cur); }  /* 二期P15：红包（清然 21:07 定位置） */
       else if (k === 'diary') {   /* P21：心事簿（清然 09:54 定位置：聊天底栏＋号展开栏） */
@@ -10239,12 +10362,14 @@ const Engine = (function () {
   }
 
   /* 学我说话·学（她 10-02 拍，10-03 二批搬进学舌库）：单聊里我发的每个字都可能进 TA 的可发池
-     （libs.learned[ctId]，经 Library.learnAdd 查重入库），只拦金额与地址（防假扣钱、防真地址上街，决策#138）——不立字数/条数/冷却规矩。 */
+     （libs.learned[ctId]，经 Library.learnAdd 查重入库），只拦金额与地址（防假扣钱、防真地址上街，决策#138）——不立字数/条数/冷却规矩。
+     同口喂自由组话词典（她 10-04：TA 说得越来越像她），喂词失败不影响学舌本体 */
   const LEARN_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
   function learn(ctId, text) {
     try {
       const t = String(text || '').trim();
       if (!t || LEARN_BAD.test(t)) return false;
+      if (typeof FreeTalk !== 'undefined' && FreeTalk.feed) FreeTalk.feed(t);
       const ct = (typeof Home !== 'undefined') ? Home.contactById(ctId) : null;
       if (!ct) return false;
       if (typeof Library !== 'undefined' && Library.learnAdd) return Library.learnAdd(ctId, t);
@@ -10299,6 +10424,8 @@ const Engine = (function () {
     /* 学我说话（决策#138，她 10-02「先做学我说话」）：学到即入池、无字数/条数/冷却限制，
        这档只是「偶尔用一下」的概率；默认 15 是我拍的，资料卡可调，0=关。 */
     learnRate: 15,
+    /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
+    gaFree: 8,
     readNoReply: 0, moMutual: 0,
     /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
        旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
@@ -10529,6 +10656,20 @@ const Engine = (function () {
       const dt = rollDelay(p);
       later(conv.id, dt, () => pushAi(conv, line, ct));
       return dt;
+    }
+    /* 自由组话（她 10-04 拍板试试）：框架+词典自己「打」一句，打字延迟按拼音键数算。
+       优先级：学我说话 > 自由组话 > 字卡；只顶单条回复的批次——多卡连发（count>1）不被它吞（
+       不然 J6 那类「窗口内连发恰好三条」变成随机的 1 条，节奏就乱了）；
+       没产出（搭配两次不过）不硬凑，落回字卡路。gaFree 默认 8%，pf 参数页可调（0＝关） */
+    const freeN = (typeof n === 'number') ? n : 1;
+    const freeP = (freeN === 1) ? Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 8))) : 0;
+    if (conv.type === 'single' && freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
+      const line = FreeTalk.compose();
+      if (line) {
+        const dt = FreeTalk.typingDelay(line);
+        later(conv.id, dt, () => pushAi(conv, maybeDecorate(line), ct));
+        return dt;
+      }
     }
     const cards = usableCards(ct);
     if (!cards.length) { hintNoCards(conv); return 0; }
@@ -10800,6 +10941,177 @@ const Engine = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · freetalk.js —— TA 自由组话（她叫「对方自由说话」）
+   她 10-03 23:44 给方向（框架组话+常用字更多+拼音模拟输入），
+   她 10-04 09:34 拍板「做一下完善的试试」。P62 方案落档的实现版。
+
+   三层结构（方案原文）：
+   · 框架：句法骨架写死，产句只往槽里填，不乱序不拼接——保证不是无厘头；
+   · 词典：按词性分本，w=常用度权重，按权重轮盘抽——常用词天然更多；
+     动词带 obj 搭配标签、名词带 tag，「通顺性终检」＝动词的 obj 含名词的 tag；
+   · 拼音手感：按字算拼音按键数的打字延迟（长句更慢、偶尔删了重打），纯内部风味不上 UI。
+
+   防线：搭配终检重抽 2 次不过就放弃这次（调用方回落字卡路）；
+   金额/地址拦截与 engine.learn 同款；只做闲聊句式，不承诺行为不发图。
+   ===================================================== */
+const FreeTalk = (function () {
+
+  /* ---------- 词典（内置起步表；她的历史消息经 feed() 自动供词加权） ---------- */
+  const DIC = {
+    /* 动词：obj=可搭配的名词标签；w=常用度 */
+    verb: [
+      { t: '想吃', w: 10, obj: ['food'] },
+      { t: '刚吃完', w: 6, obj: ['food'] },
+      { t: '想喝', w: 8, obj: ['drink'] },
+      { t: '刚泡了', w: 4, obj: ['drink'] },
+      { t: '在看', w: 8, obj: ['media'] },
+      { t: '刚看完', w: 6, obj: ['media'] },
+      { t: '想追', w: 4, obj: ['media'] },
+      { t: '在整理', w: 5, obj: ['thing'] },
+      { t: '刚收拾完', w: 4, obj: ['thing'] },
+      { t: '买了', w: 6, obj: ['thing'] },
+      { t: '想买', w: 7, obj: ['thing'] },
+      { t: '拆了', w: 3, obj: ['thing'] },
+      { t: '刚从', w: 4, obj: ['place'], suffix: '回来' },
+      { t: '想去', w: 7, obj: ['place'] },
+      { t: '路过', w: 3, obj: ['place'] }
+    ],
+    /* 名词：tag=搭配标签 */
+    noun: [
+      { t: '火锅', w: 8, tag: 'food' }, { t: '烧烤', w: 5, tag: 'food' },
+      { t: '泡面', w: 6, tag: 'food' }, { t: '饺子', w: 5, tag: 'food' },
+      { t: '外卖', w: 6, tag: 'food' }, { t: '蛋糕', w: 4, tag: 'food' },
+      { t: '奶茶', w: 8, tag: 'drink' }, { t: '咖啡', w: 7, tag: 'drink' },
+      { t: '果汁', w: 4, tag: 'drink' }, { t: '可乐', w: 4, tag: 'drink' },
+      { t: '那本书', w: 5, tag: 'media' }, { t: '那部剧', w: 6, tag: 'media' },
+      { t: '那个电影', w: 4, tag: 'media' }, { t: '新出的综艺', w: 3, tag: 'media' },
+      { t: '房间', w: 6, tag: 'thing' }, { t: '衣柜', w: 4, tag: 'thing' },
+      { t: '快递', w: 7, tag: 'thing' }, { t: '桌子', w: 3, tag: 'thing' },
+      { t: '新手机', w: 3, tag: 'thing' },
+      { t: '超市', w: 6, tag: 'place' }, { t: '公园', w: 5, tag: 'place' },
+      { t: '书店', w: 4, tag: 'place' }, { t: '健身房', w: 5, tag: 'place' },
+      { t: '公司', w: 5, tag: 'place' }, { t: '学校', w: 4, tag: 'place' }
+    ],
+    /* 形容/副词小槽：直接给池子 */
+    adv:   [{ t: '真', w: 8 }, { t: '好', w: 9 }, { t: '有点', w: 7 }, { t: '超级', w: 4 }],
+    adj:   [{ t: '累', w: 8 }, { t: '热', w: 6 }, { t: '冷', w: 5 }, { t: '无聊', w: 6 }, { t: '充实', w: 4 }, { t: '开心', w: 6 }],
+    adjC:  [{ t: '好看', w: 8 }, { t: '温柔', w: 6 }, { t: '可爱', w: 6 }, { t: '厉害', w: 5 }],
+    weather: [{ t: '下雨了', w: 6 }, { t: '起风了', w: 4 }, { t: '好冷', w: 5 }, { t: '好晒', w: 4 }, { t: '闷得很', w: 3 }],
+    quit:  [{ t: '熬夜', w: 7 }, { t: '生气', w: 5 }, { t: '难过', w: 5 }, { t: '乱想', w: 4 }, { t: '不吃早饭', w: 4 }]
+  };
+  const DIC_CAP = 120;          // 每词性条目上限：防历史消息把词典撑成垃圾场
+
+  /* 权重轮盘：w 大的常出（她：「肯定是常用字更多」） */
+  function wPick(arr) {
+    if (!arr || !arr.length) return null;
+    let sum = 0;
+    arr.forEach(x => { sum += Math.max(1, +x.w || 1); });
+    let roll = Math.random() * sum;
+    for (let i = 0; i < arr.length; i++) {
+      roll -= Math.max(1, +arr[i].w || 1);
+      if (roll <= 0) return arr[i];
+    }
+    return arr[arr.length - 1];
+  }
+
+  /* ---------- 框架：槽位只从对应词性抽，动词×名词过搭配检 ---------- */
+  const FRAMES = [
+    { id: 'svb', make() {                       // 主谓宾：我想吃火锅
+        const n = wPick(DIC.noun); if (!n) return null;
+        const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
+        const v = wPick(vs); if (!v) return null;
+        return '我' + v.t + n.t;
+      } },
+    { id: 'svq', make() {                       // 疑问：你看过那部剧吗
+        const n = wPick(DIC.noun); if (!n) return null;
+        const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
+        const v = wPick(vs); if (!v) return null;
+        return '你' + v.t + n.t + '吗';
+      } },
+    { id: 'svp', make() {                       // 主谓补（带去向）：我刚从超市回来
+        const n = wPick(DIC.noun.filter(x => x.tag === 'place')); if (!n) return null;
+        const vs = DIC.verb.filter(v => (v.obj || []).indexOf('place') >= 0 && v.suffix);
+        const v = wPick(vs); if (!v) return null;
+        return '我' + v.t + n.t + v.suffix;
+      } },
+    { id: 'adjc', make() {                      // 主谓补：今天好累
+        const a = wPick(DIC.adv), j = wPick(DIC.adj);
+        return a && j ? '今天' + a.t + j.t : null;
+      } },
+    { id: 'weather', make() {                   // 无槽闲句：外面下雨了
+        const w = wPick(DIC.weather);
+        return w ? '外面' + w.t : null;
+      } },
+    { id: 'quit', make() {                      // 祈使：别熬夜了
+        const q = wPick(DIC.quit);
+        return q ? '别' + q.t + '了' : null;
+      } },
+    { id: 'compl', make() {                     // 感叹：你今天真好看
+        const j = wPick(DIC.adjC);
+        return j ? '你今天真' + j.t : null;
+      } }
+  ];
+
+  /* 产出一句；搭配重抽 2 次不过 = null（调用方回落字卡，不硬凑） */
+  function compose() {
+    for (let i = 0; i < 2; i++) {
+      const f = FRAMES[Math.floor(Math.random() * FRAMES.length)];
+      const line = f.make();
+      if (line) return line;
+    }
+    return null;
+  }
+
+  /* 拼音打字延迟（她要的「二十六字母拼音模拟输入」那层手感，纯内部）：
+     每个字按 1.6~4.2 个按键估（全拼均长≈2.6），加基础起手；
+     15% 概率来一次「打错删掉重打」的回退（+0.5~1.2s）；长句自然更慢 */
+  function typingDelay(text) {
+    const n = Math.max(2, String(text || '').length);
+    let keys = 0;
+    for (let i = 0; i < n; i++) keys += 1.6 + Math.random() * 2.6;
+    let ms = 500 + keys * (150 + Math.random() * 120);
+    if (Math.random() < 0.15) ms += 500 + Math.random() * 700;   // 删了重打
+    return Math.round(ms);
+  }
+
+  /* 她的历史消息自动供词（轻量版）：只认十来个高频结构，抽名词进词典。
+     现有条目 w+1；新词 w=2 起步；超上限时挤掉权重最低的。金额/地址同 learn 拦截。 */
+  const FEED_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
+  const FEED_PATS = [
+    { re: /(?:想吃|想喝|在吃|去吃|点了|叫了|买了)([\u4e00-\u9fa5]{1,4})/, tag: 'food' },
+    { re: /(?:在看|在追|看完|追完)([\u4e00-\u9fa5]{1,6})/, tag: 'media' },
+    { re: /(?:在整理|在收拾|拆了)([\u4e00-\u9fa5]{1,4})/, tag: 'thing' },
+    { re: /(?:去了|路过|在)(?:超市|公园|书店|健身房|公司|学校)/, tag: null }
+  ];
+  function feed(text) {
+    try {
+      const t = String(text || '').trim();
+      if (!t || t.length > 60 || FEED_BAD.test(t)) return false;
+      let hit = false;
+      FEED_PATS.forEach(p => {
+        const m = t.match(p.re);
+        if (!m || !m[1] || !p.tag) return;
+        const w0 = m[1];
+        if (w0.length < 2 || /了|的|吗|呢|吧/.test(w0)) return;
+        let arr = DIC.noun;
+        const ex = arr.find(x => x.t === w0);
+        if (ex) { ex.w = Math.min(20, (ex.w || 1) + 1); hit = true; return; }
+        if (arr.length >= DIC_CAP) {
+          let lo = 0;
+          arr.forEach((x, i) => { if (x.w < arr[lo].w) lo = i; });
+          arr.splice(lo, 1);
+        }
+        arr.push({ t: w0, w: 2, tag: p.tag });
+        hit = true;
+      });
+      return hit;
+    } catch (e) { return false; }
+  }
+
+  return { compose, typingDelay, feed };
+})();
+
+/* =====================================================
    LOVE♡X · library.js —— 文件管理·四库统一弹窗（P4 / M6）
    四个库：全局共用字卡 / 角色专属字卡 / 角色拍一拍 / 全局AI状态
    统一UI（源策划·通用弹窗规范）：底部上滑80%高、置顶批量导入、
@@ -10821,12 +11133,13 @@ const Library = (function () {
     whispers:    { title: '私语',           per: true },     // 二期P12：联系人专属语音
     redNotes:    { title: '红包',       per: false },     // 二期P15：发红包随机选用
     gameNotes:   { title: '游戏',       per: false },    // P40：快捷短语/转盘奖池/胜负感言（她要几百条，支持批量导入）
-    learned:     { title: '学舌',         per: true }     // 她 10-03 二批：学我说话的句子入库，像字卡一样可搜可管；存 libs.learned[ctId]
+    learned:     { title: '荟萃',         per: true }     // 她 10-04 改名：学我说话入库（原「学舌」），像字卡一样可搜可管；存 libs.learned[ctId]
   };
   /* 图片表情三库已于 2026-08-23 撤出文件管理，管理收进表情面板内（清然决定） */
   const isVoiceKind = k => k === 'voices' || k === 'whispers';
 
   let cur = null;        // {kind, ctId}
+  let lastCtId = null;   // 她 10-04：专属库记住最近一次选的角色，默认选中
   let view = null;       // {group:null|groupId, search:'', expanded:Set, selected:Set}
   let fileMode = null;   // 'lib' | groupId —— 共用隐藏文件输入的当前用途
 
@@ -10956,7 +11269,9 @@ const Library = (function () {
   /* ---------- 打开弹窗 ---------- */
   function open(opt) {
     if (shell) { shell.remove(); shell = null; }   // 防重入：先拆旧弹窗
-    cur = { kind: opt.kind || 'globalCards', ctId: opt.ctId || null };
+    /* 她 10-04：专属库（私叙/私语/荟萃）记住最近一次的角色——在哪个联系人的聊天/主页打开，就默认是谁 */
+    cur = { kind: opt.kind || 'globalCards', ctId: opt.ctId || lastCtId || null };
+    if (cur.ctId) lastCtId = cur.ctId;
     if (KINDS[cur.kind].per && cur.ctId) getLib(cur.kind, cur.ctId);   // 预建
     resetView();
     buildShell();
@@ -11194,6 +11509,7 @@ const Library = (function () {
         '<select class="input" id="lib-ct"><option value="">— 请选择 —</option>' + opts + '</select></label>';
       picker.querySelector('#lib-ct').addEventListener('change', e => {
         cur.ctId = e.target.value || null;
+        if (cur.ctId) lastCtId = cur.ctId;
         resetView();
         render();
       });
@@ -13590,6 +13906,12 @@ const Redpacket = (function () {
     const rp = createRp(conv.id, fromUid, toUid, fen, note, coverId || null,
       Object.assign({}, extra || {}, { pay }));
     pushMsg(rp, fromUid === 'me');
+    /* 她 10-04：转盘发出去的红包对方不领——giftDirect 没接正常发送那套 AI 三态（85 领/10 退/5 不领）。
+       收包人是 AI 就照常报三态，口径和普通红包一个口，不再两套规矩 */
+    if (toUid && toUid !== 'me') {
+      const taker = Home.contactById(toUid);
+      if (taker) aiThreeWays(rp, taker);
+    }
     return rp;
   }
   function pushMsg(rp, fromIsMe) {
@@ -14963,7 +15285,7 @@ function coverTap(e) {
             : '') +
           ((p.images || []).length
             ? '<div class="mo-item-imgs n' + Math.min(p.images.length, 9) + '">' +
-              p.images.map(d => '<div class="mo-thumb" style="background:#000 url(' + d + ') center/cover no-repeat"></div>').join('') + '</div>'
+              p.images.filter(d => !(typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(d))).map(d => '<div class="mo-thumb" style="background:#000 url(' + d + ') center/cover no-repeat"></div>').join('') + '</div>'
             : '') +
           (p.location ? '<div class="mo-item-loc">' + esc(p.location) + '</div>' : '') +
           '<div class="mo-item-meta"><span>' + fmtTime(p.ts) + '</span></div>' +
@@ -15431,19 +15753,24 @@ const Mine = (function () {
   function applyMove(room, uid, x, y) {
     const m = room.mine;
     if (!m.mineSet) genMines(m, x, y);
+    /* 她 10-04：初始第一步不计分——首翻连开多少全看第一下点哪，计分会开局就拉开不可控分差。
+     * m.firstDone 在本步结束后才置位，所以首步的翻格加分/标雷加分都自然跳过 */
+    const firstStep = !m.firstDone;
     if (m.mineSet.includes(key(x, y))) {
       flip(m, x, y, uid);
       m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
       m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
       room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
       room.lastMv = { uid, cells: [key(x, y)], mine: true, ts: Date.now() };
+      m.firstDone = true;
       if (m.hits[uid] >= 5) return { win: otherUid(room, uid), line: [] };
       return null;
     }
     const opened = flip(m, x, y, uid).filter(k => !m.mineSet.includes(k));
-    m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + opened.length * 3;
+    m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + (firstStep ? 0 : opened.length * 3);
     room.moves.push({ uid, x, y, ts: Date.now() });
     room.lastMv = { uid, cells: opened, mine: false, ts: Date.now() };
+    m.firstDone = true;
     const safeTotal = m.size * m.size - m.mineSet.length;
     if (Object.keys(m.open).filter(k => !m.mineSet.includes(k)).length >= safeTotal) {
       const other = otherUid(room, uid);
@@ -15471,6 +15798,7 @@ const Mine = (function () {
     m.flags[k] = true; m.flagBy[k] = uid;
     if (m.mineSet == null) return { toggled: 'on' };        // 首翻前还没有答案（导入的存档可能是 undefined），不判分
     if (m.flagScored[k]) return { toggled: 'on' };
+    /* 她 10-04 的「第一步不计分」只限首翻那下（连开多少不可控）；标雷是 ±3/-5 的确定动作，照旧计分 */
     const n = (room.moves || []).length;
     if (turnOf(room) !== uid) return { toggled: 'on', skipped: 'turn' };
     if (m.flagClock === n) return { toggled: 'on', skipped: 'once' };
@@ -16758,6 +17086,8 @@ const Ludo = (function () {
     if (typeof r.ludo.six !== 'number') r.ludo.six = 0;
     return r.ludo;
   }
+  /* 坐色按序号不变：她 10-04 说的「双人一行/三人分立/各占一角」是座位条的布置（壳层 gm-players 管），
+     不是棋盘角位——在途对局的颜色不能被重构掉，老存档照玩 */
   function colOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
   function siOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? -1 : i % 4; }
   function toks(r, c) { const L = st(r); return c && L.toks[c] ? L.toks[c] : null; }
@@ -16774,8 +17104,10 @@ const Ludo = (function () {
   function initToks(r) {
     const L = st(r);
     if (L.seeded) return L;
-    (r.players || []).forEach((u, i) => {
-      const c = COLORS[i % 4];
+    (r.players || []).forEach(u => {
+      /* 座位条她拍布置在壳层；棋盘颜色仍按序号（老对局兼容） */
+      const c = colOf(r, u);
+      if (!c) return;
       L.toks[c] = [0, 1, 2, 3].map(k => ({ c, k, s: 0 }));
       L.stat[c] = { rolls: 0, hit: 0 };
     });
@@ -16853,7 +17185,8 @@ const Ludo = (function () {
     });
     L.fx = fx;
     feed(r, 'sys', esc(msg));
-    return { home: ns === TOTAL, again: d === 6, hits: hits.length };
+    /* 她 10-04 补的童年规矩：撞了人也能再搞一回（和掷到 6 同款奖励掷） */
+    return { home: ns === TOTAL, again: d === 6 || hits.length > 0, againWhy: d === 6 ? '掷到 6' : '撞了人' };
   }
   /* 连掷三个 6 作废：三个掷骰口都只问这一句，话也在这里说清（不在调用方各写一套） */
   function sixVoid(r, d) {
@@ -16909,7 +17242,7 @@ const Ludo = (function () {
     feed(r, 'ta', esc(CNAME[c] + ' 掷出 ' + d + ' ' + dieCh(d)));
     const res = applyMove(r, c, t.k, d);
     if (res && homeCnt(r, c) === 4) { endIt(r, uid); touch(r); return; }
-    if (res && res.again) { feed(r, 'sys', esc(CNAME[c] + ' 掷到 6，再掷一次')); queueTa(r); touch(r); return; }
+    if (res && res.again) { feed(r, 'sys', esc(CNAME[c] + ' ' + (res.againWhy || '掷到 6') + '，再搞一回')); queueTa(r); touch(r); return; }
     nextTurn(r);
     touch(r);
   }
@@ -17055,8 +17388,9 @@ const Ludo = (function () {
         (mine && L.dice && !opts.length ? '<button class="btn btn-secondary" id="ld-pass">过</button>' : '') +
         '</div>';
     }
-    h += '<div class="ld-legend">' + (r.players || []).map((u, i) => {
-      const cc = COLORS[i % 4];
+    h += '<div class="ld-legend">' + (r.players || []).map(u => {
+      const cc = colOf(r, u);
+      if (!cc) return '';
       return '<span class="ld-lg' + (u === 'me' ? ' me' : '') + '" style="color:' + CHEX[cc] + '"><b>' + CNAME[cc] + '</b><i></i>' +
         (u === 'me' ? '<em class="ld-lg-me">我</em>' : '') +
         '<span class="ld-lg-n">' + homeCnt(r, cc) + '/4</span></span>';
@@ -17148,7 +17482,7 @@ const Ludo = (function () {
     L.dice = null;
     if (!res) { touch(r); return; }
     if (homeCnt(r, c) === 4) { endIt(r, 'me'); touch(r); return; }
-    if (res.again) { feed(r, 'sys', '掷到 6，再掷一次'); touch(r); return; }
+    if (res.again) { feed(r, 'sys', '你' + (res.againWhy || '掷到 6') + '，再搞一回'); touch(r); return; }
     nextTurn(r);
     touch(r);
   }
@@ -21059,12 +21393,24 @@ const Games = (function () {
     const foe = seated[0] || (r.invited || [])[0] || null;
     const here = seated.indexOf(foe) >= 0;
     let h = '';
-    if (!seats && foe) h += '<div class="gm-players">' +
-      playerChip('me', r, turn === 'me', true) +
-      '<span class="gm-vs">VS</span>' +
-      playerChip(foe, r, turn === foe, here) +
-      (thinking && here ? '<span class="gm-thinking">' + esc(name(foe)) + ' 正在想…</span>' : '') +
-      '</div>';
+    if (!seats && foe) {
+      /* 她 10-04：多人桌不能只画第一个对手——头像+名字全员上条，双击任意头像选道具。
+         布局她拍：双人一行；三人分立；4~8 人各占一角（两列网格，坐不满换行）。 */
+      const others = seated.length ? seated : (r.invited || []);
+      if (others.length === 1) {
+        h += '<div class="gm-players">' +
+          playerChip('me', r, turn === 'me', true) +
+          '<span class="gm-vs">VS</span>' +
+          playerChip(foe, r, turn === foe, here) +
+          (thinking && here ? '<span class="gm-thinking">' + esc(name(foe)) + ' 正在想…</span>' : '') +
+          '</div>';
+      } else {
+        const all = ['me'].concat(others);
+        h += '<div class="gm-players multi n' + all.length + '">' +
+          all.map(u => playerChip(u, r, turn === u, u === 'me' ? true : seated.indexOf(u) >= 0)).join('') +
+          '</div>';
+      }
+    }
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
     /* 短语/道具面板开在玩家条正下方（她 08-29：双击头像却要划到最底下才看得到，来回划） */
     h += '<div class="gm-chips hidden" id="room-chips"></div>' +
@@ -21648,9 +21994,38 @@ const Games = (function () {
       feed(r, 'sys', esc(resultText));
     } else {
       const gname = { truth: '转盘-真心话', dare: '转盘-大冒险', errand: '转盘-使唤' }[kind];
-      const line = pickLine(gname, taUid(r), null) || '（语料空空，去文件管理·游戏库加几条）';
-      resultText = WHEEL_NAMES[kind] + '：' + name(loser) + ' ' + line;
-      feed(r, 'sys', '转中「' + WHEEL_NAMES[kind] + '」——' + esc(name(loser)) + '：' + esc(line));
+      const label = WHEEL_NAMES[kind];
+      /* 她 10-04：转盘不是假设——输家真回答。TA 用 TA 的字卡库/游戏语料抽一句真发进聊天；
+         我输了就弹表单，答完同一条口发进聊天（包括我也是） */
+      const lconv = convOf(loser);
+      if (loser === 'me') {
+        feed(r, 'sys', '转中「' + label + '」——该你答了');
+        if (lconv && typeof Home !== 'undefined' && Home.openForm) {
+          Home.openForm({
+            title: label + ' · 该你答了',
+            fields: [{ key: 'say', label: label + '，答一句（答完发进聊天）', type: 'textarea' }],
+            okText: '答了',
+            onSubmit(v) {
+              const t = String(v.say || '').trim();
+              if (!t) return '总得答点什么吧';
+              if (typeof Chat !== 'undefined' && Chat.sendTo) Chat.sendTo(lconv, t);
+              else if (typeof Engine !== 'undefined' && Engine.pushRaw)
+                Engine.pushRaw(lconv, { from: 'me', type: 'text', text: t, ts: Date.now() });
+              feed(r, 'me', esc(t));
+              return null;
+            }
+          });
+        }
+        resultText = label + '——该你答（答完落聊天）';
+      } else {
+        const line = pickLine(gname, loser, null) || '（语料空空，去文件管理·游戏库加几条）';
+        if (lconv && line && typeof Engine !== 'undefined' && Engine.pushRaw) {
+          Engine.pushRaw(lconv, { from: 'ai', text: line, senderId: loser });
+          if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender();
+        }
+        feed(r, 'sys', '转中「' + label + '」——' + esc(name(loser)) + '：' + esc(line));
+        resultText = label + '：' + name(loser) + ' ' + line;
+      }
     }
     r.lastPrize = resultText;
     /* 她 08-29：转完啥也看不见——结果直接大字写在转盘上，停 2 秒再回结算卡 */
@@ -21801,54 +22176,73 @@ const Games = (function () {
 
   /* ---------- 战绩档案 ---------- */
   function openStats() { Router.go('gstats'); renderStats(); }
-  /* UNO 累计记分牌：官方是“赢家拿其余各家手牌分之和”，跨局累加才有得追；
-     只落库不给她看=白记（台账 L2“有数据无界面”同型，这次一并接上） */
-  /* 累计记分牌：一个游戏一块（UNO 分低者强、斗地主分高者强）；只落库不给她看=白记 */
-  const SCORE_BOARDS = [
-    { key: 'unoScore', name: 'UNO', note: '分低者强' },
-    { key: 'dzScore', name: '斗地主', note: '分高者强' },
-    { key: 'monoScore', name: '大富翁', note: '盈亏累计' }
-  ];
-  function scoreBoards() {
-    return SCORE_BOARDS.map(b => {
-      const t = (S()[b.key] || {});
-      const ids = Object.keys(t).filter(k => t[k] !== 0 || k === 'me');
-      if (!ids.length) return '';
-      const rows = ids.map(id =>
-        '<div class="gm-ubrow"><b>' + esc(name(id)) + '</b><span>' + (t[id] > 0 ? '+' : '') + t[id] + ' 分</span></div>').join('');
-      return '<div class="gm-uno-board"><div class="gm-ub-t">' + b.name + ' 记分牌 · 累计（' + b.note + '）</div>' + rows + '</div>';
-    }).join('');
+  /* 她 10-04 口径：战绩页不要累计分排行——一条就是一局，胜者写清名字，点击看当时对局。
+     旧版两个病根：①按「第一个非我玩家」分组，三人局第一个人赢了会被挂在第二个人头上；
+     ②行里只写胜/负不写胜者。全拆重写，SCORE_BOARDS 累计分牌一并撤下（数据仍在库里，只是不上屏） */
+  function resultTxt(r) {
+    return r.winner === 'me' ? '我赢了' : r.winner === 'draw' ? '平局' : esc(name(r.winner)) + ' 赢了';
+  }
+  function statDetail(r) {
+    const arch = (S().arch || []).find(x => x.id === r.id);
+    const dur = r.dur ? (r.dur >= 36e5 ? Math.round(r.dur / 36e5 * 10) / 10 + ' 小时' : r.dur >= 6e4 ? Math.round(r.dur / 6e4) + ' 分钟' : Math.round(r.dur / 1000) + ' 秒') : '';
+    let h = '<div class="gm-stdetail">' +
+      '<div class="gm-stdl">' + resultTxt(r) + ' · ' + (r.moves || 0) + ' 手' + (dur ? ' · 打了 ' + dur : '') + '</div>' +
+      '<div class="gm-stdl">在场：' + esc((r.players || []).map(name).join('、')) + '</div>';
+    if (r.scores && Object.keys(r.scores).length)
+      h += '<div class="gm-stdl">本局分：' + esc(Object.keys(r.scores).map(u => name(u) + ' ' + (r.scores[u] > 0 ? '+' : '') + r.scores[u]).join(' · ')) + '</div>';
+    if (arch && arch.lines && arch.lines.length)
+      h += '<div class="gm-stdl gm-stdfeed">' + arch.lines.map(f =>
+        '<span>' + esc(f.uid === 'me' ? '我' : (name(f.uid) || '播报')) + '：' + f.text + '</span>').join('') + '</div>';
+    return h + '</div>';
   }
   function renderStats() {
     const box = document.getElementById('gstats-body');
     if (!box) return;
     const recs = S().records.slice().sort((a, b) => b.ts - a.ts);
-    const byOpp = {};
-    recs.forEach(r => { const o = (r.players || []).find(u => u !== 'me'); (byOpp[o] = byOpp[o] || []).push(r); });
-    const keys = Object.keys(byOpp);
-    if (!keys.length) {
-      box.innerHTML = scoreBoards() + '<div class="empty-state"><div class="empty-icon"><i data-icon="gamepad" data-size="40"></i></div><div class="empty-text">还没有战绩<br>去开一局吧</div></div>';
+    if (!recs.length) {
+      box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="gamepad" data-size="40"></i></div><div class="empty-text">还没有战绩<br>去开一局吧</div></div>';
       mountIcons(); return;
     }
-    box.innerHTML = scoreBoards() + keys.map(o => {
-      const list = byOpp[o];
-      let w = 0, l = 0, d = 0, streak = 0;
-      list.slice().reverse().forEach(r => {
-        if (r.winner === 'draw') d++; else if (r.winner === 'me') { w++; if (streak >= 0) streak++; else streak = 1; }
-        else { l++; if (streak <= 0) streak--; else streak = -1; }
-      });
-      const rows = list.slice(0, 8).map(r =>
-        '<div class="gm-strow"><span class="gm-stres ' + (r.winner === 'me' ? 'w' : r.winner === 'draw' ? 'd' : 'l') + '">' +
-        (r.winner === 'me' ? '胜' : r.winner === 'draw' ? '平' : '负') + '</span>' +
-        '<b>' + esc(defOf({ game: r.game }).name) + '</b>' +
-        '<small>' + r.moves + ' 手 · ' + (r.scores ? '我 ' + ((r.scores.me || 0) > 0 ? '+' : '') + (r.scores.me || 0) + ' 分 · ' : '') + new Date(r.ts).toLocaleDateString('zh-CN') + '</small></div>').join('');
-      return '<div class="gm-stcard">' +
-        '<div class="gm-sthead"><b>' + esc(name(o)) + '</b>' +
-        '<span class="gm-stbig">' + w + ' 胜 ' + l + ' 负' + (d ? ' ' + d + ' 平' : '') + '</span>' +
-        '<span class="gm-ststreak">' + (streak > 1 ? '连胜 ' + streak : streak < -1 ? '连败 ' + (-streak) : '') + '</span></div>' +
-        '<div class="gm-strows">' + rows + '</div></div>';
-    }).join('');
+    const f = S().statsFilter = S().statsFilter || { ct: 'all', game: 'all' };
+    const cts = []; const games = [];
+    recs.forEach(r => {
+      (r.players || []).forEach(u => { if (u && u !== 'me' && cts.indexOf(u) < 0) cts.push(u); });
+      if (games.indexOf(r.game) < 0) games.push(r.game);
+    });
+    const chip = (k, v, label, on) =>
+      '<button class="gm-stchip' + (on ? ' on' : '') + '" data-' + k + '="' + esc(v) + '">' + esc(label) + '</button>';
+    const list = recs.filter(r =>
+      (f.ct === 'all' || (r.players || []).indexOf(f.ct) >= 0) &&
+      (f.game === 'all' || r.game === f.game));
+    box.innerHTML =
+      '<div class="gm-stfl">' +
+        '<div class="gm-stflrow">' + chip('ct', 'all', '全部联系人', f.ct === 'all') +
+          cts.map(u => chip('ct', u, name(u), f.ct === u)).join('') + '</div>' +
+        '<div class="gm-stflrow">' + chip('game', 'all', '全部游戏', f.game === 'all') +
+          games.map(g => chip('game', g, defOf({ game: g }).name, f.game === g)).join('') + '</div>' +
+      '</div>' +
+      (list.length ? list.map(r =>
+        '<div class="gm-stcard" data-rid="' + r.id + '">' +
+          '<div class="gm-sthead"><b>' + esc(defOf({ game: r.game }).name) + '</b>' +
+            '<span class="gm-stbig ' + (r.winner === 'me' ? 'w' : r.winner === 'draw' ? 'd' : 'l') + '">' + resultTxt(r) + '</span>' +
+            '<small>' + new Date(r.ts).toLocaleDateString('zh-CN') + ' · 点开看当时</small></div>' +
+          statDetailHidden(r) +
+        '</div>').join('')
+        : '<div class="empty-state"><div class="empty-text">这个筛选下还没有对局</div></div>');
+    /* 行点击展开/收起；筛选切换重渲染 */
+    box.querySelectorAll('.gm-stchip').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.ct) f.ct = b.dataset.ct;
+      if (b.dataset.game) f.game = b.dataset.game;
+      renderStats();
+    }));
+    box.querySelectorAll('.gm-stcard .gm-sthead').forEach(h => h.addEventListener('click', () => {
+      const d = h.parentNode.querySelector('.gm-stdetail');
+      if (d) d.hidden = !d.hidden;
+    }));
+    mountIcons();
   }
+  /* 详情默认藏着：不加 hidden 属性写法会被 innerHTML 里的引号搅，单独出个口 */
+  function statDetailHidden(r) { return statDetail(r).replace('class="gm-stdetail"', 'class="gm-stdetail" hidden'); }
 
   /* ---------- 启动 ---------- */
   function init() {
@@ -22000,6 +22394,7 @@ const Profile = (function () {
     el('pf-readnr').value = pa.readNoReply;
     el('pf-revoke').value = (pa.revokeRate ?? 0);
     el('pf-learn').value = pa.learnRate;
+  el('pf-free').value = pa.gaFree ?? 8;
     el('pf-mopost').value = pa.moPostRate;
     el('pf-mopmin').value = pa.moPostMin;
     el('pf-mopmax').value = pa.moPostMax;
@@ -22206,6 +22601,7 @@ const Profile = (function () {
         p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
         /* 学我说话概率（她 10-02 拍）：学到即入池，这档只是「偶尔用一下」；0=关。默认 15 我拍的 */
         p.learnRate = Math.min(100, Math.max(0, Math.round(+el('pf-learn').value || 0)));
+  p.gaFree = Math.min(100, Math.max(0, Math.round(+el('pf-free').value || 0)));
         /* 朋友圈发帖（二期P16③）：概率% + 间隔区间（单位小时/分钟，支持小数）；09-04 修正旧注释——
            这里早就不是“30~120 秒”那个口径了。默认值也不再在这拄一份（以前写死 60 和 6，
            REPLY_DEF 改了这边不知道，台账 L13 同一个病），一律从 Engine.REPLY_DEF 读。 */
@@ -23762,14 +24158,16 @@ const History = (function () {
     [...document.querySelectorAll('.hist-type.on')].forEach(b => b.classList.remove('on'));
   }
 
-  /* 跳回会话并定位到某条消息 */
+  /* 跳回会话并定位到某条消息。
+     她 10-04 复工：老写法先 locate 再回页——聊天页还藏着，scrollIntoView 在 display:none 上根本不滚动，
+     日期点了就是不动。修：先回页/开会话，等一拍 DOM 真可见了再定位。 */
   function jump(mid) {
     if (typeof Chat !== 'undefined' && Chat.conv && Chat.conv.id === cid) {
-      Chat.locateMsg(mid);
       Router.go('chat');
+      setTimeout(() => Chat.locateMsg(mid), 80);
     } else {
       Home.openConv(cid);
-      Chat.locateMsg(mid);
+      setTimeout(() => Chat.locateMsg(mid), 120);
     }
   }
 
