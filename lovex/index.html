@@ -16,7 +16,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC","Noto Sans Symbols 2","Noto Sans Symbols","Noto Sans Math","Segoe UI Symbol","Apple Symbols",sans-serif;
   font-size:15px;color:var(--t1);background:var(--bg);
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;
 }
@@ -3346,6 +3346,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
   <input type="file" id="msgs-import-file" accept=".json,application/json" hidden>
+  <input type="file" id="batch-img-input" accept="image/*" multiple hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-keepalive"><span class="cell-icon"><i data-icon="pulse"></i></span><span class="cell-text">后台保活</span><span class="cell-value" id="ka-val">关</span></button>
         <button class="cell" id="cell-lkrelay"><span class="cell-icon"><i data-icon="link" data-size="18"></i></span><span class="cell-text">分享封面中转</span><span class="cell-ext" id="lkrelay-state">未接</span><span class="chevron">›</span></button>
@@ -7783,9 +7784,48 @@ const MediaVault = (function () {
     return out;
   }
 
+  /* 全库扫一遍：还有哪些 '@mv' 引用没换回本体（聊天图/表情库/朋友圈图/头像都在 state 里） */
+  function pendingRefs(node) {
+    const out = new Set();
+    const walk = v => {
+      if (typeof v === 'string') { if (isRef(v)) out.add(v); return; }
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') {
+        for (const k in v) if (Object.prototype.hasOwnProperty.call(v, k)) walk(v[k]);
+      }
+    };
+    walk(node);
+    return out;
+  }
+  /* 就地换回：把 state 里所有等于引用串的位置换成真 dataURL，返回换了几处 */
+  function replaceRefs(node, map) {
+    let n = 0;
+    const walk = parent => {
+      for (const k in parent) {
+        if (!Object.prototype.hasOwnProperty.call(parent, k)) continue;
+        const v = parent[k];
+        if (typeof v === 'string') {
+          if (isRef(v) && map[v]) { parent[k] = map[v]; n++; }
+          continue;
+        }
+        if (Array.isArray(v)) {
+          for (let i = 0; i < v.length; i++) {
+            const x = v[i];
+            if (typeof x === 'string') { if (isRef(x) && map[x]) { v[i] = map[x]; n++; } }
+            else if (x && typeof x === 'object') walk(x);
+          }
+          continue;
+        }
+        if (v && typeof v === 'object') walk(v);
+      }
+    };
+    walk(node);
+    return n;
+  }
+
   return {
     enabled() { return !off; },
-    hash, pack, flush, unpack, sweep, refsIn, keepKeys,
+    hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs,
     shadow, readShadow, snap, listSnaps, readSnap,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
@@ -9592,6 +9632,12 @@ const Chat = (function () {
     '🌹','🍀','🌊','❄️','⚡️','🌞','🌽','🍔',
     '🐴','🐢','🦆','🐧','🐳','🐝','🐞','🦢'
   ];
+  /* 她 10-05：颜文字里有些字符在某些手机上显成方框。两个典型来源：
+     ① 组合符（如 •́ 、˃̵ 这种“基符+叠加符”拼出来的）——安卓很多字体叠不上去，直接画豆腐块；
+     ② 个别字体覆盖差的字符（ᴗ 这类）。统一规范化：去掉叠加符、换成覆盖广的等价字。 */
+  const fixKao = s => String(s == null ? '' : s)
+    .replace(/[\u0300-\u036F\u20D0-\u20FF]/g, '')
+    .replace(/\u1D17/g, '\u25E1');
   const KAOMOJI_PANEL = [
     '(＾▽＾)','(｡•́︿•̀｡)','ヾ(≧▽≦*)o','(๑•́ ₃ •̀๑)','(￣▽￣)～',
     '(っ˘ω˘ς)','(◍•ᴗ•◍)','(๑˃̵ᴗ˂̵)و','(¦3[▓▓]','(¬_¬)',
@@ -9653,7 +9699,10 @@ const Chat = (function () {
     });
     const ph = ka.items.filter(i => /^\[.{1,4}\]$/.test(i.text || ''));
     if (ph.length) { ka.items = ka.items.filter(i => !/^\[.{1,4}\]$/.test(i.text || '')); }
-    ['(๑•̀ㅂ•́)و','(｡♥‿♥｡)','(づ￣ 3￣)づ','(´▽`ʃ♡ƪ)','(❁´◡`❁)'].forEach(k => {
+    /* 存量颜文字也过一遗规范化（只去叠加符/换 ᴗ，不改别的）；她手机上已有的库同样受益 */
+    ka.items.forEach(it => { if (it && it.text) { const t = fixKao(it.text); if (t !== it.text) it.text = t; } });
+    ['(๑•̀ㅂ•́)و','(｡♥‿♥｡)','(づ￣ 3￣)づ','(´▽`ʃ♡ƪ)','(❁´◡`❁)'].forEach(k0 => {
+      const k = fixKao(k0);
       if (!ka.items.some(i => i.text === k))
         ka.items.push({ id: 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           text: k, blocked: false, groupId: null });
@@ -9667,9 +9716,9 @@ const Chat = (function () {
           text: e, blocked: false, groupId: def.id }));
     }
     if (!ka.items.length) {
-      KAOMOJI_PANEL.forEach(k => ka.items.push(
+      KAOMOJI_PANEL.forEach(k0 => ka.items.push(
         { id: 'sk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          text: k, blocked: false, groupId: null }));
+          text: fixKao(k0), blocked: false, groupId: null }));
     }
   }
 
@@ -10442,7 +10491,7 @@ const Engine = (function () {
 
   /* emoji/颜文字库化（策划918-920）：AI附加从未屏蔽全集等概率抽取，库空回退内置小集 */
   const EMOJI = ['😊', '😂', '🥺', '😳', '❤️', '✨', '🙈', '😴', '👌', '🎵', '🌙', '🍀'];
-  const KAOMOJI = ['(＾▽＾)', '(｡•́︿•̀｡)', 'ヾ(≧▽≦*)o', '(๑•́ ₃ •̀๑)', '(￣▽￣)～', '(っ˘ω˘ς)'];
+  const KAOMOJI = ['(＾▽＾)', '(｡•︿•｡)', 'ヾ(≧▽≦*)o', '(๑• ₃ •๑)', '(￣▽￣)～', '(っ˘ω˘ς)'];
   function pickDeco(kind) {
     const lib = kind === 'em' ? DB.state.libs.emojis : DB.state.libs.kamoji;
     const items = (lib && lib.items || []).filter(i => !i.blocked && i.text);
@@ -24942,9 +24991,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { snaps = await DB.listSnaps(); } catch (e) {}
       const act = await UI.actionSheet('存储管理', [
         { key: 'info', label: '本机占用概览' },
+        { key: 'batch', label: '批量贴上图片（自动对上丢的）' },
         { key: 'snap', label: snaps.length ? ('按天找回聊天记录（' + snaps.length + ' 天快照）') : '按天找回聊天记录（暂无快照）' }
       ]);
       if (act === 'info') { storageOverview(); return; }
+      if (act === 'batch') { batchInput.value = ''; batchInput.click(); return; }
       if (act !== 'snap') return;
       if (!snaps.length) return UI.toast('还没得快照：每天开页时存一份，只留最近 14 天');
       const day = await UI.actionSheet('选一天合并回来（只补我缺的那几条，不整档覆盖）',
@@ -24954,6 +25005,49 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { n = await DB.restoreSnap(day); } catch (e) {}
       UI.toast(n ? ('已并回 ' + n + ' 条') : '这一天没有新东西可并');
       if (n) setTimeout(() => location.reload(), 800);
+    });
+
+    /* --- 批量贴上图片（她 10-05）：多选一堆图，本体对得上的自动贴回原位 ---
+       匹配靠的是“键=图本体算出来的码”：同一张原图直接选进来就能对上，
+       对上后同时恢复聊天消息/表情库/朋友圈里所有用到这张图的地方；对不上的只回报，不乱贴。 */
+    const batchInput = document.getElementById('batch-img-input');
+    batchInput.addEventListener('change', async () => {
+      const files = Array.prototype.slice.call(batchInput.files || []);
+      batchInput.value = '';
+      if (!files.length) return;
+      const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
+      if (!V) { UI.toast('这个浏览器没开 IndexedDB，本功能用不了'); return; }
+      const need = V.pendingRefs(DB.state);
+      if (!need.size) { UI.toast('现在没有丢图，不用贴'); return; }
+      const map = {};
+      let matched = 0, missed = 0, failed = 0;
+      for (const f of files) {
+        let url = null;
+        try { url = await Media.compressImage(f); } catch (e) { failed++; continue; }
+        const key = V.hash(url);
+        if (!need.has(key)) { missed++; continue; }
+        try { await MediaStore.put(key, url); }
+        catch (e) { logErr('批量贴图：入库失败 ' + (e && e.message || e)); }
+        map[key] = url;
+        matched++;
+      }
+      let sites = 0;
+      if (matched) {
+        sites = V.replaceRefs(DB.state, map);
+        DB.save();
+        Home.render();
+        Chat.rerender();
+        try { Moments.settle(); }
+        catch (e) { logErr('批量贴图：朋友圈重画失败 ' + (e && e.message || e)); }
+      }
+      UI.confirmBox({
+        title: '批量贴图结果',
+        okText: '知道了',
+        text: '选图 ' + files.length + ' 张\n对上了 ' + matched + ' 张，贴回去 ' + sites + ' 处（聊天/表情库/朋友圈一起）\n'
+          + (missed ? ('没对上 ' + missed + ' 张（不是原图或没被清过，可以长按那条记录单独贴）\n') : '')
+          + (failed ? ('读不了 ' + failed + ' 张\n') : '')
+          + '没对上的不会乱贴到别的记录上。'
+      });
     });
 
     /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 --- */
