@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <!-- 手绘钢笔线稿 ♡：轮廓带一点运笔抖动，两笔小排线补体积，黑白双色 -->
+  <g fill="none" stroke="#1a1a1a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 396 C 236 378 148 312 118 254 C 96 212 104 162 146 142 C 186 123 228 138 252 176 C 250 178 254 172 256 168 C 262 158 276 142 298 134 C 340 118 384 138 396 180 C 408 224 388 268 348 312 C 316 347 276 380 258 394"/>
+    <path d="M162 176 C 150 192 146 214 152 234" stroke-width="5"/>
+    <path d="M356 176 C 368 194 370 218 362 240" stroke-width="5"/>
+  </g>
+</svg>

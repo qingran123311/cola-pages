@@ -1,0 +1,12 @@
+{
+  "name": "LOVE♡X",
+  "short_name": "LOVE♡X",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "icon-512.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

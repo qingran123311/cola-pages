@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-512.svg" type="image/svg+xml">
 <style>
 /* =====================================================
    LOVE♡X · base.css
@@ -4460,11 +4462,20 @@ var Notify = (function () {
       && location.protocol === 'https:';
   }
 
-  /* 注册通知中转 SW（仅 HTTPS 有意义；失败静默，走构造器降级） */
+  /* 注册通知中转 SW（仅 HTTPS 有意义；失败静默，走构造器降级）。
+     注册成功后顺手挂 PeriodicSync（她 10-05：页面被杀后到点也能弹的那条腿）——
+     安卓 Chrome 要求页面已装到主屏（manifest 在模板里），支持才注册，不支持静默跳过 */
   function registerSW() {
     if (!swOK_()) return;
     try {
-      navigator.serviceWorker.register('sw.js').catch(function () {});
+      navigator.serviceWorker.register('sw.js').then(function (reg) {
+        runSafe('notify.periodic', function () {
+          if (reg && reg.periodicSync && DB.state.settings.notify
+            && supported() && Notification.permission === 'granted') {
+            reg.periodicSync.register('lovex-due', { minInterval: 6 * 3600e3 }).catch(function () {});
+          }
+        });
+      }).catch(function () {});
     } catch (e) {}
   }
 
@@ -4483,6 +4494,7 @@ var Notify = (function () {
         if (done) return; done = true;
         if (p === 'granted') {
           DB.state.settings.notify = true; DB.save();
+          registerSW();          // 开关刚打开：补挂 PeriodicSync（注册时机不能只靠 boot）
           test();
           UI.toast('已开启，刚发了条测试通知，看看通知栏');
         } else if (p === 'denied') {
@@ -4611,31 +4623,49 @@ var Notify = (function () {
     return supported() && typeof window.TimestampTrigger !== 'undefined'
       && DB.state.settings.notify && Notification.permission === 'granted' && swOK_();
   }
+  function dueItems() {
+    var now = Date.now(), out = [];
+    var plans = (DB.state && DB.state.repPlans) || {};
+    Object.keys(plans).forEach(function (cid) {
+      var pl = plans[cid] || {};
+      var ct = Home.contactById(cid);
+      if (!ct) return;
+      var nm = Home.displayName(ct);
+      [{ at: pl.autoAt, what: '会给你报备' }, { at: pl.chkAt, what: '要来查你岗' }].forEach(function (x) {
+        if (!x.at || x.at <= now || x.at - now > 864e5) return;
+        out.push({ cid: cid, name: nm, body: '大约这个点' + x.what + '——记得回来看看',
+          icon: ct.avatar || undefined, dueAt: x.at, tag: cid + '-' + x.at });
+      });
+    });
+    return out;
+  }
   function armPlanned() {
-    if (!trigOK() || !navigator.serviceWorker.getRegistration) return;
-    navigator.serviceWorker.getRegistration().then(function (reg) {
-      if (!reg || !reg.showNotification) return;
-      var now = Date.now(), n = 0;
-      var plans = (DB.state && DB.state.repPlans) || {};
-      Object.keys(plans).forEach(function (cid) {
-        var pl = plans[cid] || {};
-        var ct = Home.contactById(cid);
-        if (!ct) return;
-        var nm = Home.displayName(ct);
-        [{ at: pl.autoAt, what: '会给你报备' }, { at: pl.chkAt, what: '要来查你岗' }].forEach(function (x) {
-          if (!x.at || x.at <= now || x.at - now > 864e5 || n >= 8) return;
+    if (!supported() || !DB.state.settings.notify || Notification.permission !== 'granted') return;
+    var items = dueItems();
+    if (!items.length) return;
+    /* 路线 A：TimestampTrigger（桌面 Chromium）——精确到点，页面关了也弹 */
+    if (trigOK() && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (!reg || !reg.showNotification) return;
+        items.forEach(function (it) {
           try {
-            reg.showNotification(nm, {
-              body: '大约这个点' + x.what + '——记得回来看看',
-              tag: 'lovex-plan-' + cid + '-' + x.at,
-              icon: ct.avatar || undefined,
-              showTrigger: new TimestampTrigger(x.at)
+            reg.showNotification(it.name, {
+              body: it.body, icon: it.icon, tag: 'lovex-plan-' + it.tag,
+              showTrigger: new TimestampTrigger(it.dueAt)
             });
-            n++;
           } catch (e) { elog('notify.arm: ' + (e && e.message)); }
         });
-      });
-    }).catch(function () {});
+      }).catch(function () {});
+      return;
+    }
+    /* 路线 B：PeriodicSync 兑底（她 10-05）。安卓上 TimestampTrigger 没有，
+       把计划快照写进 IDB，SW 被系统唤醒时补弹错过的——唤醒时机浏览器定（≥6小时一次），
+       尽力而为不承诺。'@planned' 不带 '@mv' 前缀，清扫不碰它 */
+    runSafe('notify.planned', function () {
+      if (typeof MediaStore !== 'undefined' && MediaStore.available && MediaStore.available()) {
+        MediaStore.put('@planned', { at: Date.now(), items: items }).catch(function () {});
+      }
+    });
   }
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', function () {
@@ -24842,7 +24872,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           + (vs.off
               ? '媒体：本机没开 IndexedDB，图片仍直存（受配额限制）\n'
               : '图片/语音已托管 ' + vs.packed + ' 个·' + vs.kb + ' KB（不占主档配额）\n'
-                + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了\n' : ''))
+                + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了（本体被浏览器/手机清掉了，回不来；原图还在相册或微信里的，重新发一遍就补回来）\n' : ''))
           + '存储受浏览器保护：' + (typeof DB.persistState === 'function' ? DB.persistState() : '未知') + '\n'
           + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
