@@ -11585,30 +11585,8 @@ const Engine = (function () {
      15% 单独emoji/颜文字；图片概率内按模式发图（单独/混合可占气泡位）；
      其余字卡文本；附带模式下整轮后追加一张图的独立判定；
      整轮20%概率首条附带对最近10条消息的引用 */
-  /* 她 10-06 晚：把链接发给 TA＝邀请 TA 看——TA 不跳浏览器，就在小窗里看，
-     看完要有回应：这一轮开头先给一条观后回应（《T》占位换成链接标题/站名）。
-     只认近 3 分钟内发的链接：再晚就是旧闻，不该每次开口都提 */
-  const LK_WATCH = [
-    '《T》我看完了，这谁拍的啊，有点东西',
-    '看完了《T》，拍得挺有意思',
-    '《T》看完了，看到一半笑出声',
-    '《T》刷完了——你从哪找来的？',
-    '《T》看了，回头我也发你个类似的'
-  ];
   function fireBatch(conv, p, ct, n, cap) {
-    /* 邀请看链接的回应优先级最高（在学我说话之前）：这是对她邀请的直接答复，
-       不能混进寻常字卡——这一轮就回这一条，其余批次照旧走下一轮 */
-    if (conv.type === 'single') {
-      const arr = DB.state.msgs[conv.id] || [];
-      const lastMe = arr.slice().reverse().find(x => x.from === 'me' && !x.deleted);
-      if (lastMe && lastMe.type === 'link' && lastMe.link && Date.now() - lastMe.ts < 180e3) {
-        const t = lastMe.link.title || lastMe.link.site || '你发的链接';
-        const line = pick(LK_WATCH).replace('《T》', '《' + t + '》');
-        const dt = rollDelay(p);
-        later(conv.id, dt, () => pushAi(conv, line, ct));
-        return dt;
-      }
-    }
+    /* 她 00:13 拍板：不需要 TA 发观后回应——把链接发给 TA 就是邀请看，仅此而已（原先的 LK_WATCH 观后回应池是我外加的，拆） */
     /* 学我说话·用（决策#138）：命中概率整条引用一句学来的话——不拼贴、不重组、不截断；
        提到字卡池检查之前：池子空它也该能用学到的话。群聊不学（学的是每个联系人自己的池子）。 */
     const learned = (typeof Library !== 'undefined' && Library.learnedTexts) ? Library.learnedTexts(ct.id) : (ct.learned || []);
@@ -11910,20 +11888,9 @@ const Engine = (function () {
     }
   }
 
-  /* 她 10-06 抓的「设了管理员却从来没有禁言」：原来只在她自己进群说话那一轮掷——她不开口，
-     TA 管理员就永远没事做。补一条独立巡更：页面开着时每 4 分钟，各群各管理员按概率各自掷一次 */
-  if (typeof document !== 'undefined') {
-    setInterval(runSafe, 240e3, 'engine.adminPatrol', function () {
-      if (document.visibilityState !== 'visible') return;
-      DB.state.convs.filter(c => c.type === 'group' && (c.autoMuteProb || 0) > 0)
-        .forEach(g => (g.adminIds || []).forEach(aid => {
-          if (Home.contactById(aid) && Math.random() * 100 < g.autoMuteProb) {
-            setTimeout(() => { if (typeof GroupManage !== 'undefined' && GroupManage.aiAutoMuteAct) GroupManage.aiAutoMuteAct(g.id, aid); },
-              2000 + Math.floor(Math.random() * 6000));
-          }
-        }));
-    });
-  }
+  /* 管理员 AI 自动行为的触发时机（她 00:13 拍板）：只在群聊聊天过程中掷——startRound
+     每轮各管理员独立掷 autoMuteProb%，命中延迟 4~10 秒执行。原先另加的「每 4 分钟
+     巡更钟」是我外加的，她不要，拆（2026-10-07） */
 
   return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate, learn,
            params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF };
@@ -13775,7 +13742,7 @@ const GroupManage = (function () {
     /* ③ 管理员自动禁言概率 */
     h += '<div class="gm-sec-title">管理员自动行为概率</div>' +
       '<label class="adv-item gm-prob"><span>触发概率</span><em><input type="number" id="gm-autoprob" min="0" max="100" step="0.01" value="' + (g.autoMuteProb != null ? g.autoMuteProb : 0) + '"> %</em></label>' +
-      '<small class="adv-note">大于 0 时，管理员角色的 AI 成员按此概率自动管群：禁言/解禁/移出成员/邀请回来（分布我拍：全员禁言 8%、解禁 40%、禁言 30%、移出 12%、邀请回 10%）。你发群消息时掷一次；页面开着时每 4 分钟也会各自巡一轮</small>';
+      '<small class="adv-note">大于 0 时，管理员角色的 AI 成员按此概率自动管群：禁言/解禁/移出成员/邀请回来（分布我拍：全员禁言 8%、解禁 40%、禁言 30%、移出 12%、邀请回 10%）。在群聊聊天过程中掷——你发群消息那一轮，每个管理员各自掷一次</small>';
 
     /* ④ 批量操作 */
     const selN = sel.size;
@@ -13818,10 +13785,10 @@ const GroupManage = (function () {
         '</div>';
     });
     h += '</div>';
-    /* 她 10-06 晚：已移出的成员列在这，可邀请回来 */
+    /* 她 10-06 晚：已移出的成员列在这，可邀请回来；空也常驻——不然没踢过人时这个入口根本看不见 */
     const kicked = (g.kicked || []).map(id => Home.contactById(id)).filter(Boolean);
+    h += '<div class="gm-sec-title">已移出</div><div class="item-list">';
     if (kicked.length) {
-      h += '<div class="gm-sec-title">已移出</div><div class="item-list">';
       kicked.forEach(c => {
         h += '<div class="lib-item gm-row">' +
           '<span class="avatar li-ava">' + (c.avatar ? '<img src="' + c.avatar + '">' : esc(name(c).slice(0, 1))) + '</span>' +
@@ -13829,8 +13796,10 @@ const GroupManage = (function () {
           '<span class="li-btns"><button class="gm-btn primary" data-op="invite" data-id="' + c.id + '">邀请回来</button></span>' +
         '</div>';
       });
-      h += '</div>';
+    } else {
+      h += '<div class="adv-note" style="padding:10px 14px">暂无已移出的成员。移出的人会列在这，随时可手动邀请回来</div>';
     }
+    h += '</div>';
     return h;
   }
 
