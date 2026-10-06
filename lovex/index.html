@@ -271,6 +271,8 @@ button{-webkit-tap-highlight-color:transparent}
 .sheet-mask.deco-editor-underlay{visibility:hidden}
 .deco-css-editor{width:min(460px,92vw);max-height:92vh;overflow-y:auto;padding:16px}
 .deco-editor-hint{font-size:12px;line-height:1.5;color:var(--t2);margin:8px 0}
+.deco-verdict,.bv-verdict{font-size:12px;line-height:1.55;color:var(--t2);margin:6px 0 0}
+.deco-verdict.bad,.bv-verdict.bad{color:var(--t1)}
 .deco-css-input{min-height:112px;max-height:30vh;resize:vertical;font-family:Consolas,'Cascadia Code',monospace;font-size:12px;line-height:1.45}
 .deco-live-preview{margin-top:12px;border-top:1px solid var(--line)}
 
@@ -782,6 +784,8 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
   padding:9px 11px;font:12.5px/1.55 Consolas,Menlo,monospace;color:var(--t1);outline:none}
 .bv-css:focus{border-color:var(--primary)}
 .bv-preview-wrap{padding-top:6px}
+/* 体检结果那行（10-06：预览提到输入框上面、结论紧跟输入框下面，手机上一眼能看到） */
+.bv-verdict{padding:0 16px;margin:6px 0 0}
 #bv-stage{margin:7px 16px 0;padding:12px;border-radius:12px;background:var(--bg);
   display:flex;flex-direction:column;gap:8px;min-height:86px}
 #bv-stage .msg-row{display:flex}
@@ -6657,6 +6661,79 @@ const UI = (function () {
     });
   }
 
+  /* 样式指纹：只看“有没有变”一眼就能看出的那几项，跳过动画/过渡噪声。
+     她 10-06 报「输入没反应、成功不成功也没反应」——她真正要的是当场告诉她生效了没，
+     所以这里给一个可算的判据：同一批元素在样式前后各取一次指纹，不一样才算真的起作用了。 */
+  const FP_PROPS = ['backgroundColor', 'color', 'borderTopWidth', 'borderTopColor', 'borderTopLeftRadius',
+    'borderBottomLeftRadius', 'borderBottomRightRadius', 'borderTopRightRadius', 'fontSize', 'fontFamily',
+    'fontWeight', 'letterSpacing', 'lineHeight', 'paddingTop', 'paddingLeft', 'marginTop', 'boxShadow',
+    'textShadow', 'gap', 'opacity', 'transform'];
+  function styleFingerprint(roots) {
+    const out = [];
+    roots.forEach(root => {
+      const nodes = [root].concat(Array.prototype.slice.call(root.querySelectorAll('*'), 0, 600));
+      nodes.forEach(n => {
+        const tn = n.tagName;
+        if (tn === 'STYLE' || tn === 'SCRIPT' || tn === 'HEAD') return;
+        const s = getComputedStyle(n);
+        for (let i = 0; i < FP_PROPS.length; i++) out.push(s[FP_PROPS[i]]);
+      });
+    });
+    return out.join('|');
+  }
+
+  /* CSS 体检（10-06 新增）：告诉她这段 CSS 到底生效了没、没生效是哪一步断的。
+     三步：① 浏览器认了几条规则（认不出＝格式问题）② 有没有元素匹配（类名写错了）
+     ③ 样式指纹有没有真变（只是被原有样式压住了）。roots 一般传 [页面, 预览区]，
+     预览区里那两只气泡和真实气泡同类名，所以“在聊天页能用、现在页面没气泡”不会误报。
+     draft 传编辑器自己的草稿 <style>（量之前先摘掉，免得量到旧效果、永远说没变化）。 */
+  function cssVerdict(text, roots, draft) {
+    const out = { rules: 0, matched: 0, changed: false, msg: '' };
+    const t = String(text == null ? '' : text).trim();
+    if (!t) { out.msg = '还没有内容'; return out; }
+    const rs = (roots || []).filter(Boolean);
+    if (!rs.length) rs.push(document.body);
+    /* 量之前把「草稿」和「已保存的用户 CSS」都摘掉：不然量到的是已经生效过的效果，
+       再把同一段贴一次会被说成“没变化”——那是假话 */
+    const off = [draft].concat(Array.prototype.slice.call(
+      document.querySelectorAll('#lx-user-css,#lx-bubble-css')).filter(el => el !== draft)).filter(Boolean);
+    const was = off.map(el => !!el.disabled);
+    off.forEach(el => { try { el.disabled = true; } catch (e) { logErr('ui.cssVerdict 摘样式 ' + ((e && e.message) || e)); } });
+    const temp = document.createElement('style');
+    temp.textContent = t;
+    let before = '', after = '';
+    try {
+      before = styleFingerprint(rs);
+      (document.head || document.documentElement).appendChild(temp);
+      after = styleFingerprint(rs);
+      /* 规则数/匹配数：让浏览器自己解析我贴的这段，它不认的那部分就是格式问题 */
+      const list = temp.sheet ? temp.sheet.cssRules : null;
+      if (list) {
+        out.rules = list.length;
+        Array.prototype.forEach.call(list, r => {
+          if (!r.selectorText) return;
+          rs.forEach(root => {
+            try { out.matched += root.querySelectorAll(r.selectorText).length; }
+            catch (e) { logErr('ui.cssVerdict 认不出选择器 ' + ((e && e.message) || e)); }
+          });
+        });
+      }
+    } catch (e) { logErr('ui.cssVerdict 量样式 ' + ((e && e.message) || e)); }
+    if (temp.parentNode) temp.parentNode.removeChild(temp);
+    off.forEach((el, i) => { try { el.disabled = was[i]; } catch (e) { logErr('ui.cssVerdict 恢复样式 ' + ((e && e.message) || e)); } });
+    out.changed = before !== after;
+    if (out.rules === 0) {
+      out.msg = '这段 CSS 没被读进去——看看是不是少了选择器（要写成 .bubble-mine{…} 这样），或者括号没闭合';
+    } else if (out.matched === 0) {
+      out.msg = '读了 ' + out.rules + ' 条规则，但页面和预览里都没有元素被匹配到（类名对吗？可用：.bubble-mine / .bubble-other / .bubble-text）';
+    } else if (!out.changed) {
+      out.msg = '规则读了、也匹配到 ' + out.matched + ' 个元素，但没有一点变化——多半被原有的样式压住了，选择器写具体一点试试（比如 .bubble-mine{…}）';
+    } else {
+      out.msg = '已生效：' + out.rules + ' 条规则 · 命中 ' + out.matched + ' 个元素 · 有变化';
+    }
+    return out;
+  }
+
   /* 全站唯一转义口（09-02 拢条）：以前 11 个模块各自手拄一份 esc，三种写法并存——
      chat/library 那两份用 String(s)，null 会被打成页面上的“null”字；另一批用 String(s || '')，
      0 会被吞成空。这里统一：null/undefined → 空串，0 照实写，引号也转 */
@@ -6691,7 +6768,7 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile };
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict };
 })();
 
 /* =====================================================
@@ -23259,11 +23336,12 @@ const Profile = (function () {
         '<div class="bv-head"><b>气泡样式 · ' + esc(Home.displayName(c)) + '</b>' +
           '<button class="bv-x" data-bv="x">✕</button></div>' +
         '<div class="bv-tip">可用类名：.bubble-mine 我方 · .bubble-other 对方 · .bubble-text 文字</div>' +
-        '<textarea class="bv-css" spellcheck="false" placeholder="例：\n.bubble-other{background:#E8F0E8;border-radius:4px 16px 16px 16px}\n.bubble-mine{background:#D6E7FF}\n.bubble-text{font-size:14px}"></textarea>' +
         '<div class="bv-preview-wrap"><div class="bv-tag">预览</div>' +
           '<div id="bv-stage"><div class="msg-row"><div class="bubble bubble-other"><div class="bubble-text">对方气泡样式</div></div></div>' +
           '<div class="msg-row mine"><div class="bubble bubble-mine"><div class="bubble-text">我方气泡样式</div></div></div></div>' +
         '</div>' +
+        '<textarea class="bv-css" spellcheck="false" placeholder="例：\n.bubble-other{background:#E8F0E8;border-radius:4px 16px 16px 16px}\n.bubble-mine{background:#D6E7FF}\n.bubble-text{font-size:14px}"></textarea>' +
+        '<div class="bv-verdict" aria-live="polite"></div>' +
         '<div class="bv-tpls"></div>' +
         '<div class="bv-btns">' +
           '<button data-bv="import">导入</button>' +
@@ -23276,17 +23354,29 @@ const Profile = (function () {
     document.body.appendChild(mask);
     const ta = mask.querySelector('.bv-css');
     const pv = document.getElementById('bv-stage');
+    const bvVerdict = mask.querySelector('.bv-verdict');
     ta.value = c.bubbleCSS || '';
     let pvTag = null;
     function renderPreview() {
       if (pvTag) pvTag.remove();
+      pvTag = null;
       if (!ta.value.trim()) return;
       pvTag = document.createElement('style');
       pvTag.textContent = scopeCSS(ta.value, '#bv-stage');
       document.head.appendChild(pvTag);
     }
-    ta.addEventListener('input', renderPreview);
-    renderPreview();
+    /* 成没成当场说清（她 10-06 13:27）——和主题设置里那个 CSS 编辑器走同一套体检 */
+    function showVerdict() {
+      if (!bvVerdict) return null;
+      if (!ta.value.trim()) { bvVerdict.textContent = ''; bvVerdict.className = 'bv-verdict'; return null; }
+      const v = UI.cssVerdict(ta.value, [pv], pvTag);
+      bvVerdict.textContent = v.msg;
+      bvVerdict.className = 'bv-verdict' + (v.changed ? '' : ' bad');
+      return v;
+    }
+    function refresh() { renderPreview(); runSafe('profile.bubbleVerdict', showVerdict); }
+    ta.addEventListener('input', refresh);
+    refresh();
     /* 模板列表 */
     const tpls = DB.state.bubbleTpls || (DB.state.bubbleTpls = []);
     function renderTpls() {
@@ -23300,14 +23390,14 @@ const Profile = (function () {
       const del = e.target.closest('[data-del]');
       const chip = e.target.closest('.bv-chip');
       if (del) { tpls.splice(+del.dataset.del, 1); DB.save(); renderTpls(); return; }
-      if (chip) { ta.value = tpls[+chip.dataset.i].css; renderPreview(); }
+      if (chip) { ta.value = tpls[+chip.dataset.i].css; refresh(); }
     });
     const fileInp = mask.querySelector('#bv-file');
     fileInp.addEventListener('change', async () => {
       const f = fileInp.files[0]; if (!f) return;
       try {
         if (f.size > 64 * 1024) throw new Error('文件过大（限64KB）');
-        ta.value = await f.text(); renderPreview(); UI.toast('已导入');
+        ta.value = await f.text(); refresh(); UI.toast('已导入');
       } catch (err) { UI.toast(err.message); }
       fileInp.value = '';
     });
@@ -23325,13 +23415,15 @@ const Profile = (function () {
         tpls.push({ id: 'bt' + Date.now().toString(36), name: name.trim() || '未命名', css: ta.value });
         DB.save(); renderTpls(); UI.toast('已存入模板库');
       } else if (act === 'reset') {
-        ta.value = ''; renderPreview();
+        ta.value = ''; refresh();
       } else if (act === 'ok') {
+        const saved = !!ta.value.trim();
+        const v = runSafe('profile.bubbleVerdict', showVerdict);
         c.bubbleCSS = ta.value.trim() ? ta.value : '';
         DB.save(); refreshFields(c);
         if (typeof Chat !== 'undefined' && Chat.conv && Chat.conv.peerId === c.id) Chat.applyBubble();
         if (pvTag) pvTag.remove(); mask.remove();
-        UI.toast('气泡样式已保存');
+        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '')) : '气泡样式已清空');
       }
     });
   }
@@ -25938,8 +26030,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     const prop = isGlobal ? 'customCss' : 'bubbleCss';
     const title = isGlobal ? '全局自定义 CSS' : '聊天气泡样式';
     dlg.innerHTML = '<div class="dialog-title"></div>' +
-      '<div class="deco-editor-hint">边输入边看双方气泡效果；保存后生效，取消不改存档。</div>' +
-      '<textarea class="input deco-css-input" spellcheck="false" aria-label="CSS 代码"></textarea>' +
+      '<div class="deco-editor-hint">边输入边看效果；保存后生效，取消不改存档。</div>' +
       '<div class="deco-prev deco-live-preview"><div class="deco-prev-title">双方效果预览</div>' +
         '<div class="deco-preview-chat">' +
           '<div class="msg-row"><div class="avatar msg-avatar"><span class="ava-txt">澈</span></div>' +
@@ -25947,10 +26038,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           '<div class="msg-row mine"><div class="avatar msg-avatar"><span class="ava-txt">清</span></div>' +
             '<div class="msg-col"><div class="bubble bubble-mine"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
         '</div></div>' +
+      '<textarea class="input deco-css-input" spellcheck="false" aria-label="CSS 代码"></textarea>' +
+      '<div class="deco-verdict" aria-live="polite"></div>' +
       '<div class="dialog-btns"><button class="btn btn-secondary" data-deco-cancel>取消</button>' +
         '<button class="btn btn-primary" data-deco-save>保存并应用</button></div>';
     dlg.querySelector('.dialog-title').textContent = title;
     const input = dlg.querySelector('.deco-css-input');
+    const verdictEl = dlg.querySelector('.deco-verdict');
     input.value = DB.state.settings[prop] || '';
     const oldDraft = document.getElementById('lx-deco-draft-css');
     if (oldDraft) oldDraft.remove();
@@ -25958,19 +26052,43 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     draft.id = 'lx-deco-draft-css';
     draft.textContent = input.value;
     (document.head || document.documentElement).appendChild(draft);
-    input.addEventListener('input', () => { draft.textContent = input.value; });
+    /* 预览区放在输入框上面（她 10-06 13:27：手机上键盘一弹，下面的预览就被顶出去了，
+       看着像“预览图没反应”）；体检结果紧跟输入框下面，一眼能看到成没成 */
+    const preview = dlg.querySelector('.deco-preview-chat');
+    const verdictOf = v => UI.cssVerdict(v, [document.getElementById('app'), preview], draft);
+    let vTimer = 0;
+    const showVerdict = () => {
+      const v = verdictOf(input.value);
+      verdictEl.textContent = input.value.trim() ? v.msg : '';
+      verdictEl.className = 'deco-verdict' + (v.changed ? '' : ' bad');
+      return v;
+    };
+    input.addEventListener('input', () => {
+      draft.textContent = input.value;
+      verdictEl.textContent = '看效果中…';
+      if (vTimer) clearTimeout(vTimer);
+      vTimer = setTimeout(() => { vTimer = 0; runSafe('theme.deco.verdict', showVerdict); }, 260);
+    });
+    runSafe('theme.deco.verdict', showVerdict);
     const close = () => {
+      if (vTimer) clearTimeout(vTimer);
       draft.remove();
       mask.remove();
       if (underlay) underlay.classList.remove('deco-editor-underlay');
     };
-    dlg.querySelector('[data-deco-cancel]').addEventListener('click', close);
+    dlg.querySelector('[data-deco-cancel]').addEventListener('click', () => {
+      const dirty = input.value !== (DB.state.settings[prop] || '');
+      close();
+      UI.toast(dirty ? '已取消（没有改动存档）' : '没有改动');
+    });
     dlg.querySelector('[data-deco-save]').addEventListener('click', () => {
+      const v = runSafe('theme.deco.verdict', showVerdict) || { msg: '' };
       DB.state.settings[prop] = input.value;
       DB.save();
       applyDeco();
       close();
-      UI.toast('已保存并应用');
+      /* 成没成都要当场说清楚（她 13:27：“成功不成功也没有反应”） */
+      UI.toast(input.value.trim() ? ('已保存：' + v.msg) : '已保存（内容为空，等于没写）');
     });
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
     mask.appendChild(dlg);
