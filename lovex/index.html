@@ -259,9 +259,13 @@ button{-webkit-tap-highlight-color:transparent}
 .k-dot{left:.32em;bottom:.80em;width:.11em;height:.11em;border-radius:50%}
 .k-stroke{left:.02em;bottom:.44em;width:.58em;height:.06em}
 /* --- 主题美化（她 10-06）：头像框 + 主题设置里的实时预览 ---
-   头像框只画在头像外面（.avatar 本身 overflow:visible，不裁里面的图） */
-.avatar::after{content:'';position:absolute;inset:-22%;border-radius:14px;
-  background-image:var(--lx-ava-frame,none);background-size:100% 100%;background-repeat:no-repeat;pointer-events:none}
+   头像框贴合头像本体（她 10-06 16:01：原先 inset:-22% 把框撑大一圈，白底整张的框就糊成一块白方块；
+   加上“我的主页/资料卡”上照片层级比框高，框的内圈被盖住 → 看着像框没了）。
+   现在：框盒子=头像本体（inset:0）、保持比例不拉伸（contain）、画在照片上层（z-index:2）、
+   border-radius:inherit 跟头像同形；框中间的透明部分透出照片。 */
+.avatar::after{content:'';position:absolute;inset:0;border-radius:inherit;
+  background-image:var(--lx-ava-frame,none);background-size:contain;background-position:center;
+  background-repeat:no-repeat;pointer-events:none;z-index:2}
 .deco-prev{display:block;padding:12px 6px 6px;border-top:1px solid var(--line)}
 .deco-prev-title{font-size:12px;color:var(--t2);margin:0 0 8px}
 .deco-preview-chat{display:flex;flex-direction:column;gap:10px;padding:4px 0}
@@ -672,7 +676,7 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .avatar-lg img{position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;border-radius:8px;z-index:1}
 .avatar.has-img .ava-txt{display:none}
-.avatar .dot{z-index:2}
+.avatar .dot{z-index:3}
 #my-avatar .my-dot{right:0;bottom:0;width:13px;height:13px;background:var(--ok)}
 .mine-id{min-width:0;flex:1}
 .mine-name{font-size:17px;font-weight:700;color:var(--t1);line-height:1.3;
@@ -1186,8 +1190,12 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
 .call-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .call-stage::after{content:'';position:absolute;inset:0;
   background:linear-gradient(rgba(0,0,0,.42),transparent 22%,transparent 62%,rgba(0,0,0,.55));pointer-events:none}
-.call-far{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;
-  align-items:center;justify-content:center}
+/* 她 10-06 16:01：大屏中间不再摆头像/名字（对端画面本来就铺满这一屏），
+   名字改成顶栏计时器左边一行小字；绝对定位，不把居中的计时器挤歪。
+   原来那条 .call-far（居中头像+名字）随这次一并删掉，不再留着当死样式。 */
+.call-title{position:absolute;left:54px;top:50%;transform:translateY(-50%);
+  font-size:13px;color:#e8eaf0;opacity:.88;max-width:42%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .call-me{position:absolute;right:12px;bottom:114px;width:96px;height:140px;
   border-radius:14px;overflow:hidden;background:#2e333d;z-index:2;
   box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer}
@@ -6725,7 +6733,7 @@ const UI = (function () {
     if (out.rules === 0) {
       out.msg = '这段 CSS 没被读进去——看看是不是少了选择器（要写成 .bubble-mine{…} 这样），或者括号没闭合';
     } else if (out.matched === 0) {
-      out.msg = '读了 ' + out.rules + ' 条规则，但页面和预览里都没有元素被匹配到（类名对吗？可用：.bubble-mine / .bubble-other / .bubble-text）';
+      out.msg = '读了 ' + out.rules + ' 条规则，但页面和预览里都没有元素被匹配到（类名对吗？可用：.bubble-mine/.message-sent 我方 · .bubble-other/.message-received 对方 · .bubble-text 文字）';
     } else if (!out.changed) {
       out.msg = '规则读了、也匹配到 ' + out.matched + ' 个元素，但没有一点变化——多半被原有的样式压住了，选择器写具体一点试试（比如 .bubble-mine{…}）';
     } else {
@@ -6778,7 +6786,135 @@ const UI = (function () {
     '.bubble-mine{background:#1C1C1E;color:#FFFFFF;border-top-right-radius:4px}\n' +
     '.bubble-text{font-size:15px;line-height:1.55;letter-spacing:.2px}';
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE };
+  /* ---------- 气泡类名、外链图案、头像框：三件事各只此一处（她 10-06 16:01） ---------- */
+
+  /* ① 气泡类名一处生成。她那套贴来的微信风 CSS 用的是 .message-received / .message-sent，
+     我们页面真实类名是 .bubble-other / .bubble-mine——类名对不上整段就是空转（“图案显示不出来”
+     就是这么来的）。这里给气泡同时挂上两个别名：外面那套 CSS 直接能用，两边预览区
+     （主题美化 / 资料卡气泡编辑器）与真实聊天都从这里取，别再手写。 */
+  function bubbleClass(mine) {
+    return mine ? 'bubble bubble-mine message-sent' : 'bubble bubble-other message-received';
+  }
+
+  /* ② 贴来的 CSS 里若引用外链图案（url(http…)），存之前把图抓回本地内嵌成 data:——
+     外链在断网 / 跨域 / App 里都是空的，那才是“图案显示不出来”的另一半原因。 */
+  const CSS_URL_RE = /url\(\s*(['"]?)(https?:\/\/[^'")]+)\1\s*\)/g;
+  function cssRemoteUrls(css) {
+    const out = [];
+    let m;
+    CSS_URL_RE.lastIndex = 0;
+    while ((m = CSS_URL_RE.exec(String(css || '')))) if (out.indexOf(m[2]) < 0) out.push(m[2]);
+    return out;
+  }
+  async function fetchAsDataUrl(u) {
+    /* 直连优先；被跨域拦了就走公共中转（页面里本就是这套兜底），拿到字节自己转 data: */
+    const tries = [u,
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)];
+    for (const t of tries) {
+      try {
+        const r = await fetch(t, { mode: 'cors' });
+        if (!r.ok) continue;
+        const b = await r.blob();
+        if (!b || !b.size) continue;
+        return await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(String(fr.result || ''));
+          fr.onerror = rej;
+          fr.readAsDataURL(b);
+        });
+      } catch (e) { logErr('ui.fetchAsDataUrl ' + ((e && e.message) || e)); }
+    }
+    return '';
+  }
+  async function localizeCss(css) {
+    const src = String(css || '');
+    const urls = cssRemoteUrls(src);
+    if (!urls.length) return { css: src, got: 0, failed: [] };
+    let out = src, got = 0;
+    const failed = [];
+    for (const u of urls) {
+      const data = await fetchAsDataUrl(u);
+      if (!data) { failed.push(u); continue; }
+      out = out.split(u).join(data);
+      got++;
+    }
+    return { css: out, got, failed };
+  }
+
+  /* ③ 头像框上传前的整理（她 10-06：“我上传了你不知道裁切符合大小吗”“外面还有一圈丑丑的白色底”）：
+     ①抠底：整张不透明的框会糊出一块白方块——四角同为不透明且近色时把那层底色抹成透明；
+     ②裁空白：四周全透明的边裁掉，圈正好贴着头像边，不再“膨胀一圈”。 */
+  function framePrep(dataUrl) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { resolve(null); return; }
+          const cv = document.createElement('canvas');
+          cv.width = w; cv.height = h;
+          const cx = cv.getContext('2d');
+          cx.drawImage(img, 0, 0);
+          const im = cx.getImageData(0, 0, w, h);
+          const px = im.data;
+          const at = (x, y) => ((y * w + x) << 2);
+          const corners = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)];
+          /* “整张一处透明都没有”（拿原图量，抠底之前）——这种图套上去会盖住头像，得当场提醒她换图 */
+          let holePx = 0;
+          const totalPx = w * h;
+          for (let i = 3; i < px.length; i += 4) if (px[i] < 8) holePx++;
+          const noHole = holePx / totalPx < 0.01;
+          const opaque = corners.filter(i => px[i + 3] > 200);
+          let keyed = false;
+          if (opaque.length >= 3) {
+            const avg = k => Math.round(opaque.reduce((a, i) => a + px[i + k], 0) / opaque.length);
+            const br = avg(0), bg = avg(1), bb = avg(2);
+            /* 四角彼此近色才叫“一整片底”；四色差太多（多半是张照片）就別乱抠 */
+            const same = opaque.every(i =>
+              Math.abs(px[i] - br) + Math.abs(px[i + 1] - bg) + Math.abs(px[i + 2] - bb) < 60);
+            if (same) {
+              for (let i = 0; i < px.length; i += 4) {
+                if (px[i + 3] < 8) continue;
+                if (Math.abs(px[i] - br) + Math.abs(px[i + 1] - bg) + Math.abs(px[i + 2] - bb) < 90) px[i + 3] = 0;
+              }
+              keyed = true;
+            }
+          }
+          cx.putImageData(im, 0, 0);
+          let x0 = w, y0 = h, x1 = -1, y1 = -1;
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              if (px[at(x, y) + 3] > 8) {
+                if (x < x0) x0 = x;
+                if (x > x1) x1 = x;
+                if (y < y0) y0 = y;
+                if (y > y1) y1 = y;
+              }
+            }
+          }
+          if (x1 < 0) {
+            resolve({
+              url: '', keyed: keyed, trimmed: 0, noHole: noHole,
+              note: keyed ? '这张是一整块纯色：按底色抠完什么也没剩，换一张带图案的透明底 PNG'
+                : '这张整张都是透明的，等于没内容'
+            });
+            return;
+          }
+          const tw = x1 - x0 + 1, th = y1 - y0 + 1;
+          const trimmed = Math.round((1 - (tw * th) / (w * h)) * 100);
+          const out = document.createElement('canvas');
+          out.width = tw; out.height = th;
+          out.getContext('2d').drawImage(cv, x0, y0, tw, th, 0, 0, tw, th);
+          resolve({ url: out.toDataURL('image/png'), keyed: keyed, trimmed: trimmed, noHole: noHole });
+        } catch (e) { logErr('ui.framePrep ' + ((e && e.message) || e)); resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = dataUrl;
+    });
+  }
+
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, framePrep };
 })();
 
 /* =====================================================
@@ -9023,7 +9159,7 @@ const Chat = (function () {
     }
 
     const bub = document.createElement('div');
-    bub.className = 'bubble ' + (m.from === 'me' ? 'bubble-mine' : 'bubble-other');
+    bub.className = UI.bubbleClass(m.from === 'me');   /* 类名一处生成：同时挂 .message-received/.message-sent 别名 */
 
     /* 引用块：点击可定位原消息 */
     if (m.quote) {
@@ -23345,10 +23481,10 @@ const Profile = (function () {
       '<div class="dialog-card bv-card">' +
         '<div class="bv-head"><b>气泡样式 · ' + esc(Home.displayName(c)) + '</b>' +
           '<button class="bv-x" data-bv="x">✕</button></div>' +
-        '<div class="bv-tip">可用类名：.bubble-mine 我方 · .bubble-other 对方 · .bubble-text 文字</div>' +
+        '<div class="bv-tip">可用类名：.bubble-mine（我方，别名 .message-sent） · .bubble-other（对方，别名 .message-received） · .bubble-text 文字</div>' +
         '<div class="bv-preview-wrap"><div class="bv-tag">预览</div>' +
-          '<div id="bv-stage"><div class="msg-row"><div class="bubble bubble-other"><div class="bubble-text">对方气泡样式</div></div></div>' +
-          '<div class="msg-row mine"><div class="bubble bubble-mine"><div class="bubble-text">我方气泡样式</div></div></div></div>' +
+          '<div id="bv-stage"><div class="msg-row"><div class="' + UI.bubbleClass(false) + '"><div class="bubble-text">对方气泡样式</div></div></div>' +
+          '<div class="msg-row mine"><div class="' + UI.bubbleClass(true) + '"><div class="bubble-text">我方气泡样式</div></div></div></div>' +
         '</div>' +
         '<textarea class="bv-css" spellcheck="false" placeholder="例：\n.bubble-other{background:#E8F0E8;border-radius:4px 16px 16px 16px}\n.bubble-mine{background:#D6E7FF}\n.bubble-text{font-size:14px}"></textarea>' +
         '<div class="bv-verdict" aria-live="polite"></div>' +
@@ -23412,7 +23548,7 @@ const Profile = (function () {
       } catch (err) { UI.toast(err.message); }
       fileInp.value = '';
     });
-    mask.addEventListener('click', e => {
+    mask.addEventListener('click', async e => {
       if (e.target === mask || e.target.closest('[data-bv=x]')) {
         if (pvTag) pvTag.remove(); mask.remove(); return;
       }
@@ -23431,11 +23567,15 @@ const Profile = (function () {
       } else if (act === 'ok') {
         const saved = !!ta.value.trim();
         const v = runSafe('profile.bubbleVerdict', showVerdict);
-        c.bubbleCSS = ta.value.trim() ? ta.value : '';
+        /* 外链图案存之前拓回本地：断网/跨域也不会白屏（她 10-06 16:01） */
+        const loc = await UI.localizeCss(ta.value);
+        c.bubbleCSS = saved ? loc.css : '';
         DB.save(); refreshFields(c);
         if (typeof Chat !== 'undefined' && Chat.conv && Chat.conv.peerId === c.id) Chat.applyBubble();
         if (pvTag) pvTag.remove(); mask.remove();
-        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '')) : '气泡样式已清空');
+        const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
+        const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
+        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + bad) : '气泡样式已清空');
       }
     });
   }
@@ -23914,6 +24054,8 @@ const Call = (function () {
     const peer = single ? peerOf(st.conv) : null;
     const gname = single ? '' : Home.groupName(st.conv);
     let mid = '';
+    /* 顶栏左上角那行小字（她 10-06 16:01：名字从大屏中间挪到这儿） */
+    let topName = gname;
 
     /* 拨出去这一屏只报“在等对方接”：“X 邀请你视频通话”那句属于来电卡（renderCard），
        挂在拨出面上就成了“我给 TA 打，屏幕上却写 TA 邀请我”（她 09-14 20:42 报）。
@@ -23935,16 +24077,13 @@ const Call = (function () {
         const myName = DB.state.profile.name || '我';
         const bgImg = st.conv.callBg || (peer && peer.avatar) ;   /* 自定义背景优先 */
         /* 点击小窗互换（清然 15:19 参考微信）：互换后主画面=我方视角，小窗=对方 */
+        /* 她 10-06 16:01：「接通后正中间还顶着头像和名字」——大屏中间只留画面（对端视频 /
+           背景图本就是对端头像铺满），头像与名字一起撤掉，名字挪到顶栏计时器左边（微信同款）。 */
+        topName = st.swapped ? myName : Home.displayName(peer);
         mid = '<div class="call-stage">' +
           (st.swapped
             ? (st.camOn && stream ? '<video id="call-main-video" class="call-mainvideo" autoplay muted playsinline></video>' : '')
             : (bgImg ? '<img class="call-bg" src="' + bgImg + '">' : '')) +
-          '<div class="call-far">' +
-            (!(st.swapped && st.camOn && stream)
-              ? '<div class="call-avatar">' + (st.swapped ? '<span>' + esc(myName.slice(0, 1)) + '</span>' : avatarHTML(peer)) + '</div>'
-              : '') +   /* 她 10-02：开了摄像头中间就是画面，头像别再压在视频上（微信同款） */
-            '<div class="call-name">' + esc(st.swapped ? myName : Home.displayName(peer)) + '</div>' +
-          '</div>' +
           meSmall() + '</div>';
       } else {
         /* #39x补2 贴微信：我也占一格融入网格；点某人格子设为主格（pinned）。
@@ -23975,6 +24114,7 @@ const Call = (function () {
       }
       mid += '<div class="call-top">' +
         btn('minimize', 'toMini', '', 'sm') +
+        (topName ? '<span class="call-title">' + esc(topName) + '</span>' : '') +
         '<span class="call-dur" id="call-dur">' + fmt(st.secs) + '</span>' +
         (st.mode === 'single'
           ? btn('brush', 'bgset', '', 'sm')
@@ -25482,9 +25622,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!f) return;
       try {
         const txt = (await f.text()).slice(0, 20000);
-        if (kind === 'css') DB.state.settings.customCss = txt; else DB.state.settings.bubbleCss = txt;
+        const loc = await UI.localizeCss(txt);   /* 外链图案一并带回本地 */
+        if (kind === 'css') DB.state.settings.customCss = loc.css; else DB.state.settings.bubbleCss = loc.css;
         DB.save(); applyDeco();
-        UI.toast('已应用：' + f.name);
+        UI.toast('已应用：' + f.name + (loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '')
+          + (loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来') : ''));
       } catch (e) { UI.toast('这个文件读不出来'); }
     });
     const decoFrameFile = document.getElementById('deco-frame-file');
@@ -25494,16 +25636,25 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!f) return;
       /* 头像框要透明底，不能走 JPEG 压缩（会压成黑底方块）——小图直存，大图只提醒 */
       try {
-        const url = await new Promise((res, rej) => {
+        const raw = await new Promise((res, rej) => {
           const r = new FileReader();
           r.onload = () => res(String(r.result || ''));
           r.onerror = rej;
           r.readAsDataURL(f);
         });
+        /* 上传即整理：白底整张的框会糊成一块白方块，四周空白会“膨胀一圈”——这里一并处理掉 */
+        const prep = await UI.framePrep(raw);
+        if (prep && !prep.url) { UI.toast(prep.note || '这张图读不出来'); return; }
+        const url = (prep && prep.url) || raw;
         if (url.length > 400 * 1024) { UI.toast('这张有点大（' + Math.round(url.length / 1024) + 'KB），先换成小一点的更稳'); }
         DB.state.settings.avatarFrame = url;
         DB.save(); applyDeco();
-        UI.toast('头像框已套上');
+        const did = prep ? ((prep.keyed ? '已把不透明底抠成透明' : '透明底') +
+          (prep.trimmed > 2 ? ' · 裁掉四周空白 ' + prep.trimmed + '%' : ' · 没有多余空白')) : '没读出尺寸，按原样套上';
+        /* 整张一处透明都没有的图：带不动。相框套上去就是一块盖住头像的方块——照实说，不让她猜 */
+        const bad = (prep && prep.noHole && !prep.keyed)
+          ? '；但这张整张不透明、也没有纯色底可抠，它会盖住头像照片——建议换成透明底 PNG' : '';
+        UI.toast('头像框已套上（' + did + '）' + bad);
       } catch (e) { UI.toast('这张图读不出来'); }
     });
 
@@ -26046,9 +26197,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       '<div class="deco-prev deco-live-preview"><div class="deco-prev-title">双方效果预览</div>' +
         '<div class="deco-preview-chat">' +
           '<div class="msg-row"><div class="avatar msg-avatar"><span class="ava-txt">澈</span></div>' +
-            '<div class="msg-col"><div class="bubble bubble-other"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
+            '<div class="msg-col"><div class="' + UI.bubbleClass(false) + '"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
           '<div class="msg-row mine"><div class="avatar msg-avatar"><span class="ava-txt">清</span></div>' +
-            '<div class="msg-col"><div class="bubble bubble-mine"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
+            '<div class="msg-col"><div class="' + UI.bubbleClass(true) + '"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
         '</div></div>' +
       '<textarea class="input deco-css-input" spellcheck="false" aria-label="CSS 代码"></textarea>' +
       '<div class="deco-verdict" aria-live="polite"></div>' +
@@ -26099,14 +26250,18 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       close();
       UI.toast(dirty ? '已取消（没有改动存档）' : '没有改动');
     });
-    dlg.querySelector('[data-deco-save]').addEventListener('click', () => {
+    dlg.querySelector('[data-deco-save]').addEventListener('click', async () => {
       const v = runSafe('theme.deco.verdict', showVerdict) || { msg: '' };
-      DB.state.settings[prop] = input.value;
+      /* 存之前把外链图案抓回本地（断网/跨域都还能出图）；取不回来的如实说，不假装成功 */
+      const loc = await UI.localizeCss(input.value);
+      DB.state.settings[prop] = loc.css;
       DB.save();
       applyDeco();
       close();
       /* 成没成都要当场说清楚（她 13:27：“成功不成功也没有反应”） */
-      UI.toast(input.value.trim() ? ('已保存：' + v.msg) : '已保存（内容为空，等于没写）');
+      const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
+      const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次，或把图先存本地再传）') : '';
+      UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + bad) : '已保存（内容为空，等于没写）');
     });
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
     mask.appendChild(dlg);
@@ -26138,9 +26293,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       '<div class="deco-prev"><div class="deco-prev-title">双方效果预览</div>' +
         '<div class="deco-preview-chat">' +
           '<div class="msg-row"><span class="avatar msg-avatar"><span class="ava-txt">澈</span></span>' +
-            '<div class="msg-col"><div class="bubble bubble-other"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
+            '<div class="msg-col"><div class="' + UI.bubbleClass(false) + '"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
           '<div class="msg-row mine"><span class="avatar msg-avatar"><span class="ava-txt">清</span></span>' +
-            '<div class="msg-col"><div class="bubble bubble-mine"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
+            '<div class="msg-col"><div class="' + UI.bubbleClass(true) + '"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
         '</div>' +
       '</div>' +
       '<button class="sheet-cancel">完成</button></div>';
