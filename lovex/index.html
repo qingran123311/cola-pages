@@ -3371,8 +3371,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
   <input type="file" id="msgs-import-file" accept=".json,application/json" hidden>
-  <input type="file" id="batch-img-input" accept="image/*" multiple hidden>
-<input type="file" id="harvest-img-input" accept=".json,application/json" hidden>
+  <input type="file" id="harvest-img-input" accept=".json,application/json" hidden>
 <input type="file" id="deco-css-file" accept=".css,text/css" hidden>
 <input type="file" id="deco-frame-file" accept="image/png,image/svg+xml,image/*" hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
@@ -6582,6 +6581,42 @@ const UI = (function () {
     return el;
   }
 
+  /* ============ 存文件/导出的唯一入口（她 10-06 11:03：「打包APK无法上传导入导出文件和图片」）============
+     APK 壳的 WebView 自己不会下载 blob:，以前导出靠的是一行 <a download>——在壳里点下去什么反应都没有、
+     也不报错，就是文件不见（同一个“静默失败”的家族）。壳里现在给了一条原生桥
+     LovexNative.saveFile(name, mime, base64)：有桥就走桥（写进手机「下载」目录，她自己找得到），
+     没桥才回落到 <a download>（浏览器照旧）。okMsg 由调用方给（比如“聊天记录已导出（3 个会话 · 120 条）”）。 */
+  function saveFile(blob, name, okMsg) {
+    const base = okMsg || '已导出';
+    const nat = (typeof window !== 'undefined' && window.LovexNative
+      && typeof window.LovexNative.saveFile === 'function') ? window.LovexNative : null;
+    if (nat) {
+      try {
+        const fr = new FileReader();
+        fr.onload = () => {
+          const s = String(fr.result || '');
+          const i = s.indexOf(',');
+          let where = '';
+          try { where = nat.saveFile(name, (blob && blob.type) || 'application/json', i >= 0 ? s.slice(i + 1) : s) || ''; }
+          catch (e) { logErr('导出：原生保存失败 ' + (e && e.message || e)); }
+          toast(where ? (base + '（已存到手机「下载」）') : (base + '——存进手机失败了，先用浏览器打开导出一次'));
+        };
+        fr.onerror = () => { logErr('导出：读不到要保存的数据'); toast(base + '——读不到要保存的数据'); };
+        fr.readAsDataURL(blob);
+        return true;
+      } catch (e) { logErr('导出：走原生桥失败 ' + (e && e.message || e)); }
+    }
+    try {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (e) { logErr('导出：下载失败 ' + (e && e.message || e)); }
+    toast(base);
+    return false;
+  }
+
   function toast(msg, ms = 2000) {
     const layer = document.getElementById('toast-layer');
     const t = document.createElement('div');
@@ -6656,7 +6691,7 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress };
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile };
 })();
 
 /* =====================================================
@@ -7279,8 +7314,26 @@ const Diary = (function () {
     const week = ['日','一','二','三','四','五','六'][dObj.getDay()];
     const isToday = day === todayKey();
 
-    /* --- 我的侧（多条=多张拼贴；末尾"再记一条"） --- */
-    let meHtml = mine.map(en => scrapBlock(en, { stamp: true })).join('');
+    /* --- 我的侧（多条=多张拼贴；末尾“再记一条”） ---
+       她 10-06 11:03 定的排序口径：**大便签（我的记录 / TA 的记录）与小便签（留言）按时间排**，
+       不再固定「记录在上、留言在下」——两侧所有块进一个列表按 ts 升序（ts 相同按写入顺序），
+       输入行、按钮、等待提示这些不属于“票面”的东西一律收尾。 */
+    const thMe = rec.threadMe || [];
+    const meItems = mine.map(en => ({ ts: +en.ts || 0, html: scrapBlock(en, { stamp: true }) }));
+    /* TA 对这页的留言：便利贴（时间戳=真实应答时刻）
+       她 08-28 13:41：“对方给我留言后我不能再回复他”——和我的记录同排，收尾接递话输入行 */
+    if (mine.length && (rec.cmt || thMe.length)) {
+      if (rec.cmt) {
+        meItems.push({ ts: +rec.cmt.ts || 0, html:
+          '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
+          '<div class="dy-sticky-from"><i data-icon="cat" data-size="14"></i>' + esc(displayName(cur)) + ' 翻到这页，留下：</div>' +
+          '<div class="dy-sticky-txt">' + esc(rec.cmt.text) + '</div>' +
+          '<div class="dy-sticky-t">' + fmtTs(rec.cmt.ts) + '</div></div>' });
+      }
+      thMe.forEach(t => meItems.push({ ts: +t.ts || 0, html: stickyHtml(t) }));
+    }
+    meItems.sort((a, b) => a.ts - b.ts);
+    let meHtml = meItems.map(x => x.html).join('');
     if (mine.length && !editingMe) {
       meHtml += '<button class="dy-addmore" id="dy-addmore">＋ 再记一条</button>';
     } else if (!mine.length || editingMe) {
@@ -7288,17 +7341,7 @@ const Diary = (function () {
       else meHtml += '<div class="dy-meta-row"><span class="dy-meta-txt dy-dim">这一页还空着</span></div>';
       meHtml += editFormHtml(L);
     }
-    /* TA 对这页的留言：便利贴（时间戳=真实应答时刻）。
-       她 08-28 13:41：“对方给我留言后我不能再回复他”——下面接同一条线程与递话输入行 */
-    const thMe = rec.threadMe || [];
     if (mine.length && (rec.cmt || thMe.length)) {
-      if (rec.cmt) {
-        meHtml += '<div class="dy-sticky dy-sticky-ai"><span class="dy-tape"></span>' +
-                  '<div class="dy-sticky-from"><i data-icon="cat" data-size="14"></i>' + esc(displayName(cur)) + ' 翻到这页，留下：</div>' +
-                  '<div class="dy-sticky-txt">' + esc(rec.cmt.text) + '</div>' +
-                  '<div class="dy-sticky-t">' + fmtTs(rec.cmt.ts) + '</div></div>';
-      }
-      meHtml += thMe.map(t => stickyHtml(t)).join('');
       if (rec.replyPlanMe && !rec.replyPlanMe.done) meHtml += '<div class="dy-reply-wait">TA 正在想怎么回你…</div>';
       meHtml += cmtRowHtml('me', '回 ' + displayName(cur) + ' 一句');
     } else if (mine.length && rec.planCmt && !rec.planCmt.done) {
@@ -7332,15 +7375,18 @@ const Diary = (function () {
                              : (isToday ? (rec.skipped ? 'TA 说今天不想写' : 'TA 今天没写') : 'TA 这一天没有写')) +
                '</div></div>' + pokeHtml;
     } else {
-      /* 展开：已出现的每一页一张拼贴（时间正序），每日一句只在第一页 */
-      aiHtml = shown.map((en, i) => scrapBlock(en, { right: true, html: en.text.map(l => esc(l)).join('<br>') })).join('');
+      /* 展开：TA 已出现的每一页 + 我递的话，按时间合排（她 10-06 11:03 口径）；每日一句只在第一页 */
+      const th = threadOf(rec, 'ai');
+      const aiItems = shown.map(en => ({ ts: +en.ts || 0,
+        html: scrapBlock(en, { right: true, html: en.text.map(l => esc(l)).join('<br>') }) }));
+      th.forEach(t => aiItems.push({ ts: +t.ts || 0, html: stickyHtml(t) }));
+      aiItems.sort((a, b) => a.ts - b.ts);
+      aiHtml = aiItems.map(x => x.html).join('');
       if (shown.length < allAi.length) {
         aiHtml += '<div class="dy-more-later"><i data-icon="feather" data-size="13"></i> TA 之后还会再写几笔…</div>';
       }
       /* 我给 TA 的留言线程（P30）：追加式连续对话，首条回复分钟级缓冲 */
-      const th = threadOf(rec, 'ai');
       if (th.length) {
-        aiHtml += th.map(t => stickyHtml(t)).join('');
         const pl = planOf(rec, 'ai');
         aiHtml += (pl && !pl.done) ? '<div class="dy-reply-wait">TA 正在想怎么回你…</div>' : '';
       }
@@ -11114,20 +11160,27 @@ const Engine = (function () {
       later(conv.id, dt, () => pushAi(conv, line, ct));
       return dt;
     }
-    /* 自由组话（她 10-04 拍板试试）：框架+词典自己「打」一句，打字延迟按拼音键数算。
-       优先级：学我说话 > 自由组话 > 字卡；只顶单条回复的批次——多卡连发（count>1）不被它吞（
-       不然 J6 那类「窗口内连发恰好三条」变成随机的 1 条，节奏就乱了）；
+    /* 自由组话（她 10-04 拍板试试）：框架+词典自己「打」，打字延迟按拼音键数算。
+       优先级：学我说话 > 自由组话 > 字卡。
+       她 10-06 11:03 的新口径：「去掉只顶一条的限制」——命中后不再只出一句，整轮条数照她设的来
+       （单聊按回复条数随机、群里按排程给的名额），一条一条自己打出来；每条各自算打字延迟，
+       首条起算、逐条累加（真人就是这么一句句打出来的）。只要有一条产出，这一轮就走自由说话，不走字卡。
        没产出（搭配两次不过）不硬凑，落回字卡路。gaFree 默认 30%（她 10-06：8% 太少，她说「我现在都没见着」），
-       参数页可调（0＝关）。她 10-06 追问「私聊群聊都用吗」——群聊也开了（发言的那位用他自己的词典）。 */
-    const freeN = (typeof n === 'number') ? n : 1;
-    const freeP = (freeN === 1) ? Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 30))) : 0;
+       参数页可调（0＝关）。她 10-06 追问「私聊群聊都用吗」——群聊也开了（发言的那位用他自己的词典）。
+       注意：自由说话这一轮不走 minSec/maxSec（那是字卡轮的节奏），打字手感走 FreeTalk.typingDelay。
+       量「一轮几条 / 并轮 / 打断后新轮」的断言要把 gaFree 关掉再跑（见 verify-0830 两套里的注释）。 */
+    const freeP = Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 30)));
     if ((conv.type === 'single' || conv.type === 'group') && freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
-      const line = FreeTalk.compose();
-      if (line) {
-        const dt = FreeTalk.typingDelay(line);
-        later(conv.id, dt, () => pushAi(conv, maybeDecorate(line), ct));
-        return dt;
+      const want = Math.max(1, (typeof n === 'number') ? n : pickCount(p, cap));
+      let ft = 0, made = 0;
+      for (let i = 0; i < want; i++) {
+        const line = FreeTalk.compose();
+        if (!line) break;
+        ft += FreeTalk.typingDelay(line);
+        later(conv.id, ft, () => pushAi(conv, maybeDecorate(line), ct));
+        made++;
       }
+      if (made) return ft;
     }
     const cards = usableCards(ct);
     if (!cards.length) { hintNoCards(conv); return 0; }
@@ -11715,13 +11768,11 @@ const Library = (function () {
     return { ok, dup };
   }
 
-  function download(name, obj) {
+  /* 导出一份库 JSON：只走 UI.saveFile（壳里走原生桥写进手机「下载」，浏览器里就是下载）——
+     它是全站唯一的存文件出口（台账 L13：同一个写法别在多处各拄一份） */
+  function download(name, obj, okMsg) {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    UI.saveFile(blob, name, okMsg || (name + ' 已导出'));
   }
 
   /* ---------- 打开弹窗 ---------- */
@@ -11861,8 +11912,7 @@ const Library = (function () {
       const lib = currentLib();
       download('LOVEX-' + KINDS[cur.kind].title + '-' + dateStr() + '.json',
         { app: 'LOVEX-LIB', kind: cur.kind, exportedAt: new Date().toISOString(),
-          data: { groups: lib.groups, items: lib.items } });
-      UI.toast('整库已导出');
+          data: { groups: lib.groups, items: lib.items } }, '整库已导出');
     });
     shell.querySelector('#lib-import').addEventListener('click', () => {
       if (!ready()) { UI.toast('先在上方选择一位角色'); return; }
@@ -12393,8 +12443,7 @@ const Library = (function () {
       const its = lib.items.filter(it => it.groupId === g.id);
       download('LOVEX-' + KINDS[cur.kind].title + '-' + g.name + '-' + dateStr() + '.json',
         { app: 'LOVEX-LIB', kind: cur.kind, exportedAt: new Date().toISOString(),
-          data: { groups: [g], items: its } });
-      UI.toast('本组 ' + its.length + ' 条已导出');
+          data: { groups: [g], items: its } }, '本组 ' + its.length + ' 条已导出');
     }
     else if (op === 'gimport') {
       fileMode = g.id;
@@ -25405,13 +25454,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { bks = await DB.listBackups(); } catch (e) { logErr('存储管理：读备份失败 ' + (e && e.message)); }
       const act = await UI.actionSheet('存储管理', [
         { key: 'info', label: '本机占用概览' },
-        { key: 'batch', label: '批量贴上图片（自动对上丢的）' },
         { key: 'harvest', label: '从旧备份文件里找回图片' },
         { key: 'bk', label: bks.length ? ('每日自动备份（已存 ' + bks.length + ' 份）') : '每日自动备份（还没存过）' },
         { key: 'snap', label: snaps.length ? ('按天找回聊天记录（' + snaps.length + ' 天快照）') : '按天找回聊天记录（暂无快照）' }
       ]);
       if (act === 'info') { storageOverview(); return; }
-      if (act === 'batch') { batchInput.value = ''; batchInput.click(); return; }
       if (act === 'harvest') { harvestInput.value = ''; harvestInput.click(); return; }
       if (act === 'bk') { openBackups(); return; }
       if (act !== 'snap') return;
@@ -25453,12 +25500,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         const hit = day0 ? await DB.readBackup(day0) : null;
         if (!hit) { UI.toast('还没得备份可导'); return; }
         const blob = new Blob([DB.backupText(hit.doc)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'LOVEX自动备份-' + day0 + '.json';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-        UI.toast('已导出这份备份文件');
+        UI.saveFile(blob, 'LOVEX自动备份-' + day0 + '.json', '已导出这份备份文件');
         return;
       }
       if (act === 'rst') {
@@ -25539,66 +25581,12 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (go && sites) setTimeout(() => location.reload(), 700);
     });
 
-    /* --- 批量贴上图片（她 10-05）：多选一堆图，本体对得上的自动贴回原位 ---
-       匹配靠的是“键=图本体算出来的码”：同一张原图直接选进来就能对上，
-       对上后同时恢复聊天消息/表情库/朋友圈里所有用到这张图的地方；对不上的只回报，不乱贴。 */
-    const batchInput = document.getElementById('batch-img-input');
-    batchInput.addEventListener('change', async () => {
-      const files = Array.prototype.slice.call(batchInput.files || []);
-      batchInput.value = '';
-      if (!files.length) return;
-      const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
-      if (!V) { UI.toast('这个浏览器没开 IndexedDB，本功能用不了'); return; }
-      const need = V.pendingRefs(DB.state);
-      if (!need.size) { UI.toast('现在没有丢图，不用贴'); return; }
-      const map = {};
-      let matched = 0, missed = 0, failed = 0;
-      for (const f of files) {
-        let url = null;
-        try { url = await Media.compressImage(f); } catch (e) { failed++; continue; }
-        const key = V.hash(url);
-        if (!need.has(key)) { missed++; continue; }
-        try { await MediaStore.put(key, url); }
-        catch (e) { logErr('批量贴图：入库失败 ' + (e && e.message || e)); }
-        map[key] = url;
-        matched++;
-      }
-      let sites = 0;
-      const keysB = new Set(Object.keys(map));
-      const bChat = countRefsIn(DB.state.msgs, keysB);
-      const bLib = countRefsIn(DB.state.libs, keysB);
-      const bMo = countRefsIn(DB.state.moments, keysB);
-      const bAva = countRefsIn({ contacts: DB.state.contacts, profile: DB.state.profile }, keysB);
-      if (matched) {
-        sites = V.replaceRefs(DB.state, map);
-        DB.save();
-        Home.render();
-        Chat.rerender();
-        try { Moments.settle(); }
-        catch (e) { logErr('批量贴图：朋友圈重画失败 ' + (e && e.message || e)); }
-      }
-      UI.confirmBox({
-        title: '批量贴图结果',
-        okText: '知道了',
-        text: '选图 ' + files.length + ' 张\n对上了 ' + matched + ' 张，贴回去 ' + sites + ' 处\n'
-          + '· 聊天 ' + bChat + ' 处\n· 图片表情库 ' + bLib + ' 处\n· 朋友圈 ' + bMo + ' 处\n· 头像 ' + bAva + ' 处\n'
-          + (missed ? ('没对上 ' + missed + ' 张（不是原图或没被清过，可以长按那条记录单独贴）\n') : '')
-          + (failed ? ('读不了 ' + failed + ' 张\n') : '')
-          + '没对上的不会乱贴到别的记录上。'
-      });
-    });
-
     /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 --- */
     function exportAllData() {
       const blob = new Blob([DB.exportAll()], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
       const d = new Date(), p = n => String(n).padStart(2, '0');
-      a.download = 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-                   '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      UI.toast('备份文件已导出');
+      UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+                   '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出');
     }
     function exportContactData(ct) {
       const cv = DB.state.convs.find(x => x.type === 'single' && x.peerId === ct.id);
@@ -25610,14 +25598,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         msgs: cv ? (DB.state.msgs[cv.id] || []) : []
       };
       const blob = new Blob([JSON.stringify(pack)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
       const d = new Date(), p = n => String(n).padStart(2, '0');
-      a.download = 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
-        d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      UI.toast('「' + Home.displayName(ct) + '」的全部数据已导出');
+      UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
+        d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
+        '「' + Home.displayName(ct) + '」的全部数据已导出');
     }
     function importContactData(raw) {
       let pack;
@@ -25673,14 +25657,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const n = Object.values(pack.msgs).reduce((a, x) => a + x.length, 0);
       if (!n) { UI.toast('还没有聊天记录'); return; }
       const blob = new Blob([JSON.stringify(pack)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
       const d = new Date(), p = x => String(x).padStart(2, '0');
-      a.download = 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-        '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      UI.toast('聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
+      UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+        '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
+        '聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
     }
     function importMsgsData(raw) {
       let pack;
