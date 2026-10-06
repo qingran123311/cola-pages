@@ -26184,6 +26184,25 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       document.documentElement.style.setProperty('--lx-ava-frame',
         s.avatarFrame ? ('url("' + s.avatarFrame + '")') : 'none');
     });
+    /* 老存档里存着“没整理过”的框（今天上线前传的白底整张）：新框层贴着头像本体又在照片上层，
+       不整理就会把头像照片整块盖白。这里做一次性补整理，跑过就插旗，不重复。 */
+    runSafe('theme.deco.frameMigrate', () => {
+      if (!s.avatarFrame || s.avatarFrameFixed) return;
+      UI.framePrep(s.avatarFrame).then(prep => {
+        s.avatarFrameRaw = s.avatarFrame;
+        s.avatarFrameFixed = true;
+        if (prep && prep.url) {
+          s.avatarFrame = prep.url;
+          document.documentElement.style.setProperty('--lx-ava-frame', 'url("' + prep.url + '")');
+        } else {
+          /* 整张不透明又没有可抠的底：套上去就是一块盖住头像的方块——先摘下来，不毁她的头像 */
+          s.avatarFrame = '';
+          document.documentElement.style.setProperty('--lx-ava-frame', 'none');
+          UI.toast('你之前传的头像框整张不透明，会盖住头像，已先摘下来：换一张透明底 PNG 再传一次');
+        }
+        DB.save();
+      }).catch(e => logErr('theme.deco.frameMigrate ' + ((e && e.message) || e)));
+    });
   }
   /* 探针碰不到 IIFE 内部的函数，给一条只读入口（验收套件用，UI 不显示） */
   window.__lxDeco = applyDeco;
