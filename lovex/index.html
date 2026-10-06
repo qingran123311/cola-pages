@@ -26192,14 +26192,16 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         s.avatarFrameRaw = s.avatarFrame;
         s.avatarFrameFixed = true;
         if (prep && prep.url) {
+          /* 整理成功：换成抠过底/裁过空白的那张，原图留在 avatarFrameRaw */
           s.avatarFrame = prep.url;
           document.documentElement.style.setProperty('--lx-ava-frame', 'url("' + prep.url + '")');
-        } else {
+        } else if (prep && prep.noHole && !prep.keyed) {
           /* 整张不透明又没有可抠的底：套上去就是一块盖住头像的方块——先摘下来，不毁她的头像 */
           s.avatarFrame = '';
           document.documentElement.style.setProperty('--lx-ava-frame', 'none');
           UI.toast('你之前传的头像框整张不透明，会盖住头像，已先摘下来：换一张透明底 PNG 再传一次');
         }
+        /* 其余情况（图根本读不出来这类）：存档不动、原样留着——出错不能变成改她的数据 */
         DB.save();
       }).catch(e => logErr('theme.deco.frameMigrate ' + ((e && e.message) || e)));
     });
