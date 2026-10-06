@@ -1063,10 +1063,12 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 .quote-block b{display:block;font-size:11px;color:var(--primary);font-weight:600}
 .quote-block span{display:block;font-size:11px;color:var(--t2);margin-top:1px}
 .bubble-text{white-space:pre-wrap;word-break:break-word}
-/* 表情贴纸：微信式裸贴，去气泡底与内边距（清然 2026-08-23） */
-.bubble-sticker{background:none!important;border:none!important;padding:0!important;
-  box-shadow:none!important}
-.bubble-sticker img{border-radius:6px}
+/* 表情贴纸：微信式裸贴，去气泡底与内边距（清然 2026-08-23）。
+   她 00:48 报 APK 上下露气泡边：贴纸图带圆角，气泡皮肤 CSS（她自导入的装饰）会以同样
+   ！important 把背景盖回来——选择子加粗到必赢皮肤；图四角改直角，不再透出任何底 */
+.msg-row .bubble.bubble-sticker{background:none!important;background-image:none!important;
+  border:0!important;box-shadow:none!important;outline:none!important;padding:0!important}
+.bubble-sticker img{border-radius:0!important}
 /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显 */
 /* 她 10-04：报备消息的情绪小标签（双方同款，缩在气泡内底部） */
 .msg-mood-tag{display:block;font-style:normal;font-size:10.5px;line-height:1;color:var(--t3);
@@ -3603,7 +3605,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
-          <label class="adv-item"><span>学我说话概率</span><em><input type="number" id="pf-learn" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>学我说话收集概率</span><em><input type="number" id="pf-learn" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>自由说话概率</span><em><input type="number" id="pf-free" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖间隔</span><em><input type="number" id="pf-mopmin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-mopmax" min="0" step="0.1" style="width:52px"> <select id="pf-mopunit"><option value="hour">小时</option><option value="min">分钟</option></select></em></label>
@@ -9970,15 +9972,16 @@ const Chat = (function () {
   /* 学我说话·学（她 10-02「先做学我说话」；她 10-06 晚口径演进：学进荟萃也吃同一档概率，
        不是每句都收——以前无概率全收是她点名的 bug）。金额/地址不学的闸仍在 Engine.learn 里。 */
     if (m.type === 'text' && cv.type === 'single') runSafe('chat.learn', () => learnFromMe(cv.id, m.text));
-    /* 她 10-06 晚：图片表情也按同一档概率收进荟萃（库里有这张的不重复收） */
+    /* 她 00:48 拍板「各回各家」：图片表情不进荟萃，按同一档收集概率收进 TA 专属表情库
+       （TA 发图本来就从那抽；库里有这张的不重复收） */
     if (m.type === 'img' && m.sticker && m.img && cv.type === 'single') runSafe('chat.learn.sticker', () => learnFromMe(cv.id, '', m.img));
     if (!convId || (cur && cv.id === cur.id)) renderMsgs();   // 悬浮窗发的消息不重渲主窗
     Home.render();
     Engine.onUserMessage(cv.id);   // 文字/图片/语音都会触发AI回复安排
   }
 
-  /* 学我说话·学的唯一入口：单聊文本按 learnRate 概率进 TA 的荟萃池。
-   她 10-06 晚拍板：这一档概率同时管「学进去」和「拿出来用」两处，不是只管用。
+  /* 学我说话·收的唯一入口：单聊文本按 learnRate（收集概率，默认 5%）进 TA 的荟萃/各表情库
+   （纯 emoji→EMOJI 库、颜文字→颜文字库、图片→专属表情库，各回各家，她 00:48 拍板）。
    返回是否真收了（给探针钉概率行为用）。 */
   function learnFromMe(convId, text, img) {
     const cv = DB.state.convs.find(c => c.id === convId);
@@ -9987,7 +9990,7 @@ const Chat = (function () {
     if (!pc) return false;
     const lr = Math.min(100, Math.max(0, Math.round(+Engine.params(pc).learnRate || 0)));
     if (lr <= 0 || Math.random() * 100 >= lr) return false;
-    if (img) return (typeof Library !== 'undefined' && Library.learnAddImg) ? Library.learnAddImg(cv.peerId, img) : false;
+    if (img) return (typeof Library !== 'undefined' && Library.learnAddSticker) ? Library.learnAddSticker(cv.peerId, img) : false;
     return Engine.learn(cv.peerId, text);
   }
 
@@ -11360,9 +11363,10 @@ const Engine = (function () {
     /* 她 10-02 拍：朋友圈的拼字卡/配图单独两个闸，不跟聊天共用车（聊天拼卡默认仍是 1）。
        只影响没存过这两项的联系人；资料卡朋友圈区可改。 */
     moComboProb: 80, moImgProb: 70,
-    /* 学我说话（决策#138，她 10-02「先做学我说话」）：学到即入池、无字数/条数/冷却限制，
-       这档只是「偶尔用一下」的概率；默认 15 是我拍的，资料卡可调，0=关。 */
-    learnRate: 15,
+    /* 学我说话（她 00:48 改口径）：这档＝收集概率——她发的每句话按此概率收进荟萃/各表情库
+       （默认 5% 她定的）；收集到的话混进字卡池等概率用（见 Library.usableCardPool），
+       不再单独掷「用」。0=关。 */
+    learnRate: 5,
     /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
     gaFree: 30,
     readNoReply: 0, moMutual: 0,
@@ -11587,18 +11591,10 @@ const Engine = (function () {
      整轮20%概率首条附带对最近10条消息的引用 */
   function fireBatch(conv, p, ct, n, cap) {
     /* 她 00:13 拍板：不需要 TA 发观后回应——把链接发给 TA 就是邀请看，仅此而已（原先的 LK_WATCH 观后回应池是我外加的，拆） */
-    /* 学我说话·用（决策#138）：命中概率整条引用一句学来的话——不拼贴、不重组、不截断；
-       提到字卡池检查之前：池子空它也该能用学到的话。群聊不学（学的是每个联系人自己的池子）。 */
-    const learned = (typeof Library !== 'undefined' && Library.learnedTexts) ? Library.learnedTexts(ct.id) : (ct.learned || []);
-    const learnP = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
-    if (conv.type === 'single' && learnP > 0 && learned.length && Math.random() * 100 < learnP) {
-      const line = pick(learned);
-      const dt = rollDelay(p);
-      later(conv.id, dt, () => pushAi(conv, line, ct));
-      return dt;
-    }
+    /* 她 00:48 拍板：收集的话不再单独掷「用」——usableCardPool 已把荟萃混进字卡池等概率用，
+       一样可拼字卡、可被自由组话改写。原来的 learnRate 掷骰整条引用分支已拆。 */
     /* 自由组话（她 10-04 拍板试试）：框架+词典自己「打」，打字延迟按拼音键数算。
-       优先级：学我说话 > 自由组话 > 字卡。
+       优先级：自由组话 > 字卡（收集来的话已在字卡池里等概率参与，不单独掷）。
        她 10-06 11:50 定的口径（当前版本）——**逐条**按概率融入，不是整轮切换：
        「自由组话一个是按照概率随机融入我的全局库的呀，什么叫做全部每一句都是自己组话」
        ⇒ 本轮每一条气泡各自掷一次 gaFree：掷中且组得出话，这一条就是 TA 自己组的话；
@@ -11954,13 +11950,32 @@ const FreeTalk = (function () {
     adjC:  [{ t: '好看', w: 8 }, { t: '温柔', w: 6 }, { t: '可爱', w: 6 }, { t: '厉害', w: 5 }],
     weather: [{ t: '下雨了', w: 6 }, { t: '起风了', w: 4 }, { t: '好冷', w: 5 }, { t: '好晒', w: 4 }, { t: '闷得很', w: 3 }],
     quit:  [{ t: '熬夜', w: 7 }, { t: '生气', w: 5 }, { t: '难过', w: 5 }, { t: '乱想', w: 4 }, { t: '不吃早饭', w: 4 }],
-    /* 她 10-06 晚：短词短句/叠词叠句也归这里出——dup=可整句重复，who=可带称呼尾巴 */
+    /* 她 00:50：转折/连接词也要有——句子的自然焊接点，不是死模板 */
+    conj: [
+      { t: '不过', w: 8 }, { t: '但是', w: 6 }, { t: '可是', w: 5 }, { t: '然后', w: 7 },
+      { t: '对了', w: 7 }, { t: '其实', w: 6 }, { t: '话说', w: 4 }, { t: '突然', w: 5 },
+      { t: '反正', w: 5 }, { t: '就是说', w: 3 }, { t: '结果', w: 4 }, { t: '而且', w: 4 }
+    ],
+    /* 她 00:48：不局限在「今天」——时间词也抽，常用的时间词更常出 */
+    time: [
+      { t: '今天', w: 10 }, { t: '明天', w: 5 }, { t: '后天', w: 3 }, { t: '昨天', w: 5 },
+      { t: '每天', w: 4 }, { t: '晚上', w: 6 }, { t: '刚才', w: 5 }, { t: '等下', w: 4 },
+      { t: '周末', w: 4 }, { t: '半夜', w: 3 }, { t: '一大早', w: 3 }, { t: '放假', w: 3 }
+    ],
+    /* 她 10-06 晚：短词短句/叠词叠句也归这里出——dup=可整句重复，who=可带称呼尾巴；
+       她 00:48：单独一个词也能成一句，继续加 */
     short: [
       { t: '困困', w: 6 }, { t: '饿饿', w: 5 }, { t: '好困好困', w: 5 },
       { t: '嘿嘿', w: 6, dup: true }, { t: '呜呜', w: 4 },
       { t: '想你了', w: 8, dup: true, who: true }, { t: '抱抱', w: 5 }, { t: '嘻嘻', w: 5 },
       { t: '累懒了', w: 3 }, { t: '软软的', w: 4 }, { t: '晕晕的', w: 3 },
-      { t: '迷迷糊糊', w: 4 }, { t: '想抱抱', w: 4, who: true }, { t: '今天好乖', w: 3 }
+      { t: '迷迷糊糊', w: 4 }, { t: '想抱抱', w: 4, who: true }, { t: '今天好乖', w: 3 },
+      { t: '睡了啊', w: 5 }, { t: '吃饭去', w: 5 }, { t: '困死了', w: 5 }, { t: '烦死了', w: 4 },
+      { t: '绝了', w: 4 }, { t: '无语', w: 4 }, { t: '服了', w: 4 }, { t: '真的假的', w: 4 },
+      { t: '算了', w: 4 }, { t: '行吧', w: 4 }, { t: '来了来了', w: 4, dup: true },
+      { t: '睡了睡了', w: 4, dup: true }, { t: '干饭去', w: 3 }, { t: '摸鱼', w: 3 },
+      { t: '躺平', w: 3 }, { t: 'emo了', w: 3 }, { t: '笑死', w: 5 }, { t: '绷不住了', w: 3 },
+      { t: '好耶', w: 3 }, { t: '晚安', w: 4 }, { t: '早安', w: 3 }, { t: '想吃东西', w: 3 }
     ]
   };
   const DIC_CAP = 120;          // 每词性条目上限：防历史消息把词典撑成垃圾场
@@ -11981,13 +11996,18 @@ const FreeTalk = (function () {
     return arr[arr.length - 1];
   }
 
+  /* 主谓宾核心（供多帧复用；她 00:48：句子成分自由拼接） */
+  function svbCore() {
+    const n = wPick(DIC.noun); if (!n) return null;
+    const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
+    const v = wPick(vs); if (!v) return null;
+    return '我' + v.t + n.t;
+  }
+
   /* ---------- 框架：槽位只从对应词性抽，动词×名词过搭配检 ---------- */
   const FRAMES = [
     { id: 'svb', make() {                       // 主谓宾：我想吃火锅
-        const n = wPick(DIC.noun); if (!n) return null;
-        const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
-        const v = wPick(vs); if (!v) return null;
-        return '我' + v.t + n.t;
+        return svbCore();
       } },
     { id: 'svq', make() {                       // 疑问：你看过那部剧吗
         const n = wPick(DIC.noun); if (!n) return null;
@@ -12001,9 +12021,9 @@ const FreeTalk = (function () {
         const v = wPick(vs); if (!v) return null;
         return '我' + v.t + n.t + v.suffix;
       } },
-    { id: 'adjc', make() {                      // 主谓补：今天好累
-        const a = wPick(DIC.adv), j = wPick(DIC.adj);
-        return a && j ? '今天' + a.t + j.t : null;
+    { id: 'adjc', make() {                      // 主谓补（时间词她 00:48 拍板不局限在「今天」）：明天好累
+        const a = wPick(DIC.adv), j = wPick(DIC.adj), tm = wPick(DIC.time);
+        return a && j && tm ? tm.t + a.t + j.t : null;
       } },
     { id: 'weather', make() {                   // 无槽闲句：外面下雨了
         const w = wPick(DIC.weather);
@@ -12013,11 +12033,12 @@ const FreeTalk = (function () {
         const q = wPick(DIC.quit);
         return q ? '别' + q.t + '了' : null;
       } },
-    { id: 'compl', make(ctx) {                     // 感叹：你今天真好看（偶尔带称呼尾巴）
+    { id: 'compl', make(ctx) {                     // 感叹：你今天真好看（偶尔带称呼尾巴；时间词常换）
         const j = wPick(DIC.adjC);
         if (!j) return null;
+        const tm = (Math.random() < 0.5 ? { t: '今天' } : wPick(DIC.time)) || { t: '今天' };
         const who = ctx && (ctx.pet || ctx.myName);
-        return (Math.random() < 0.2 && who) ? '你今天真' + j.t + '，' + who : '你今天真' + j.t;
+        return (Math.random() < 0.2 && who) ? '你' + tm.t + '真' + j.t + '，' + who : '你' + tm.t + '真' + j.t;
       } },
     { id: 'short', make(ctx) {                     // 她 10-06 晚：短词短句（可带语气尾）
         const s = wPick(DIC.short); if (!s) return null;
@@ -12030,6 +12051,22 @@ const FreeTalk = (function () {
         const s = wPick(DIC.short.filter(x => x.who)); if (!s) return null;
         const who = ctx && (ctx.pet || ctx.myName);
         return who ? s.t + '，' + who : s.t;
+      } },
+    { id: 'conjq', make() {                        // 她 00:50：转折/连接词开头：不过我想吃火锅
+        const c = wPick(DIC.conj); if (!c) return null;
+        const core = svbCore(); return core ? c.t + core : null;
+      } },
+    { id: 'long2', make(ctx) {                     // 她 00:48：长句带逗号——两小句自然接一起
+        const rolls = [];
+        const core = svbCore();
+        if (core) {
+          const s = wPick(DIC.short);
+          if (s) rolls.push(core + '，' + s.t);                    // 我想吃火锅，困困
+          const a = wPick(DIC.adv), j = wPick(DIC.adj), tm = wPick(DIC.time);
+          if (a && j && tm) rolls.push(tm.t + a.t + j.t + '，' + core);   // 今天好累，想吃火锅
+        }
+        if (!rolls.length) return null;
+        return rolls[Math.floor(Math.random() * rolls.length)];
       } }
   ];
 
@@ -12054,6 +12091,7 @@ const FreeTalk = (function () {
       if (parts.length > 1) rolls.push(() => parts[Math.floor(Math.random() * parts.length)]);   // 删减：只留半句
       if (t.length <= 4 && !/[。！？]/.test(t)) rolls.push(() => t + t);                            // 叠句
       rolls.push(() => (Math.random() < 0.5 ? '说真的，' : '真的，') + t);                           // 加头
+      rolls.push(() => wPick(DIC.conj).t + '，' + t);                                                // 她 00:50：转折词开头
       if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(['呀', '啦', '哟']));                  // 加尾
       const who = ctx && (ctx.pet || ctx.myName);
       if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼/名字
@@ -12180,7 +12218,9 @@ const Library = (function () {
     return g;
   }
 
-  /* ---------- 抽取池：给回复引擎用（双重屏蔽） ---------- */
+  /* ---------- 抽取池：给回复引擎用（双重屏蔽） ----------
+     她 00:48 拍板：收集来荟萃的话不再单独掷「用」——等概率混进字卡池，
+     一样可拼字卡、可被自由组话改写；池子拢在这一处，聊天/朋友圈吃同一份 */
   function usableCardPool(ctId) {
     const out = [];
     const collect = lib => {
@@ -12189,6 +12229,7 @@ const Library = (function () {
         const g = gm.get(it.groupId);
         if (g && g.blocked) return;      // 第一重：分组屏蔽优先
         if (it.blocked) return;          // 第二重：单条屏蔽
+        if (!it.text) return;            // 防御：荟萃只出文本（图片条目已迁走）
         out.push(it.text);
       });
     };
@@ -12196,6 +12237,7 @@ const Library = (function () {
     if (g0 && g0.items) collect(g0);                 // 防御：库缺失时不炸（导入异常兜底）
     const cc = ctId && DB.state.libs.contactCards[ctId];
     if (cc && cc.items) collect(cc);
+    if (ctId) collect(learnedLib(ctId));             // 荟萃＝等概率的字卡（她 00:48）
     return out;
   }
 
@@ -12691,7 +12733,6 @@ const Library = (function () {
         const label = esc(isVoiceKind(cur.kind) ? ((it.name || '未命名') + ' · ' + (it.dur || 1) + '″') : '');
       /* 她 10-06 晚：荟萃里的图片表情条目画缩略图（其余照旧走文字/颜文字渲染） */
       const labelHtml = isVoiceKind(cur.kind) ? label
-        : it.img ? '<img class="li-img" src="' + esc(it.img) + '" alt="">'
         : (typeof KaoFmt !== 'undefined' ? KaoFmt.render(it.text) : esc(it.text));
         h +=
           '<div class="lib-item' + (effBlocked ? ' off' : '') + '" data-id="' + it.id + '">' +
@@ -12974,16 +13015,6 @@ const Library = (function () {
       if (cur.kind === 'aiStatus') StatusEngine.pruneCurrent([it.text]);
     }
     else if (op === 'edit') {
-      if (it.img) {
-        /* 她 10-06 晚：图片表情条目 编辑＝换一张图（查重按图本体） */
-        pickLibImg(dataUrl => {
-          if (!dataUrl) return;
-          it.img = dataUrl;
-          DB.save(); render();
-          UI.toast('已换图');
-        });
-        return;
-      }
       if (voice) {
         /* 语音条目：编辑=改名（音频不可改，查重按名称） */
         Home.openForm({
@@ -13039,6 +13070,7 @@ const Library = (function () {
 
   function init() {
     ensureLearned();   /* 学舌库：存量 ct.learned 一次性迁进 libs.learned[ctId] */
+    migrateLearnedImgs();   /* 她 00:48「各回各家」：昨天口径收进荟萃的图片条目一次性搬去专属表情库 */
   }
 
   /* ---------- 学我说话库（她 10-03 二批）：主页不再推一整栏，整表进四库统一弹窗 ----------
@@ -13057,6 +13089,18 @@ const Library = (function () {
       });
       delete ct.learned;
       delete ct.learnedSt;
+    });
+  }
+  /* 她 00:48「各回各家」：旧口径把图片表情收进荟萃的条目，一次性搬进 TA 专属表情库（同图不重复），
+     荟萃从此只放话 */
+  function migrateLearnedImgs() {
+    const L = DB.state.libs.learned || {};
+    Object.keys(L).forEach(ctId => {
+      const lib = L[ctId];
+      if (!lib || !lib.items || !lib.items.some(it => it.img)) return;
+      const imgs = lib.items.filter(it => it.img);
+      lib.items = lib.items.filter(it => !it.img);
+      imgs.forEach(it => learnAddSticker(ctId, it.img));
     });
   }
   function learnedLib(ctId) {
@@ -13101,25 +13145,50 @@ const Library = (function () {
     return false;
   }
   function learnAdd(ctId, t) {
+    const key = norm(t);
+    if (!key || inAnyCardLib(ctId, key)) return false;     // 她 10-06：库里有的不重攒（含 emoji/颜文字库）
+    /* 她 00:48 拍板「各回各家」：纯 emoji 进 EMOJI 库、颜文字进颜文字库，荟萃只放话 */
+    if (isEmojiOnly(key)) return libPushText('emojis', key);
+    if (isKamoji(key)) return libPushText('kamoji', key);
     const lib = learnedLib(ctId);
-    if (lib.items.some(x => x.text === t)) return false;   // 查重：同字卡口径
-    if (inAnyCardLib(ctId, t)) return false;               // 她 10-06：字卡库里有的，不重复攒
-    lib.items.push({ id: iid(), text: t, groupId: lib.groups[0].id });
+    if (lib.items.some(x => x.text === key)) return false;   // 查重：同字卡口径
+    lib.items.push({ id: iid(), text: key, groupId: lib.groups[0].id });
     return true;
   }
-  /* 她 10-06 晚：图片表情也收进荟萃（不进 TA 的回话文本池，只在库里可管：可换图可删）。
-     已在任何表情库（我的/共享/专属）或荟萃里有的同一张图，不重复收。 */
+  /* 平铺文本库（emojis/kamoji）的收条口：分组兜底+按文本查重 */
+  function libPushText(kind, t) {
+    const lib = DB.state.libs[kind];
+    if (!lib) return false;
+    defGroups(lib);
+    if ((lib.items || []).some(it => norm(it.text) === t)) return false;
+    lib.items.push({ id: iid(), text: t, groupId: (lib.groups[0] || {}).id });
+    return true;
+  }
+  /* 纯 emoji：整句只有 emoji 及其连接件（FE0F/ZWJ/区域旗），不含普通文字数字 */
+  const EMOJI_ONLY = new RegExp('^(?:[\\u{1F1E6}-\\u{1F1FF}]|[\\u{1F000}-\\u{1FAFF}]|[\\u{2300}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2900}-\\u{297F}\\u{FE0F}\\u{200D}\\u{20E3}\\u{00A9}\\u{00AE}\\u{2122}\\u{3030}\\u{303D}\\u{3297}\\u{3299}\\s])+$', 'u');
+  function isEmojiOnly(t) { try { return EMOJI_ONLY.test(t); } catch (e) { return false; } }
+  /* 颜文字：短、无汉字、由括号/颜文字常用符拼成——纯文字不会误入 */
+  const KAMOJI_MARK = /[()¯﹃﹏╥ツﾉ≧≦▽■□ㅂ๑•─￣´`ωд∀εз]/;
+  function isKamoji(t) {
+    if (!t || t.length > 24 || /[\u4e00-\u9fff]/.test(t)) return false;
+    return KAMOJI_MARK.test(t);
+  }
+  /* 她 00:48 拍板「各回各家」：图片表情不进荟萃（荟萃只放话），收进 TA 的专属表情库——
+     TA 发图本来就从 contactStickers/sharedStickers 抽，收来的图从这出。同图不重复收。 */
   function inAnyStickerLib(img) {
     const L = DB.state.libs || {};
     const pools = [L.userStickers, L.sharedStickers];
     Object.values(L.contactStickers || {}).forEach(lib => pools.push(lib));
     return pools.some(lib => lib && (lib.items || []).some(it => it.img === img));
   }
-  function learnAddImg(ctId, img) {
-    if (!img) return false;
-    const lib = learnedLib(ctId);
-    if (lib.items.some(x => x.img === img)) return false;
+  function learnAddSticker(ctId, img) {
+    if (!img || !ctId) return false;
     if (inAnyStickerLib(img)) return false;
+    const m = DB.state.libs.contactStickers;
+    if (!m[ctId]) m[ctId] = { groups: [{ id: gid(), name: '默认', blocked: false }], items: [] };
+    const lib = m[ctId];
+    if (!lib.groups || !lib.groups.length) lib.groups = [{ id: gid(), name: '默认', blocked: false }];
+    if ((lib.items || []).some(it => it.img === img)) return false;
     lib.items.push({ id: iid(), img, groupId: lib.groups[0].id });
     return true;
   }
@@ -13133,23 +13202,7 @@ const Library = (function () {
     Engine.pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       from: 'ai', type: 'text', text: text, senderId: ctId });
   }
-  /* 她 10-06 晚：荟萃换图用的小文件口（选一张图 → 压到缩略图体量 → 回调 dataURL） */
-  function pickLibImg(cb) {
-    const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*';
-    inp.addEventListener('change', async () => {
-      const f = (inp.files || [])[0];
-      if (!f) return;
-      try {
-        const url = (typeof Media !== 'undefined' && Media.compressImage)
-          ? await Media.compressImage(f, 240, 0.85)
-          : await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
-        cb(url);
-      } catch (e) { if (typeof logErr === 'function') logErr('lib.pickImg ' + ((e && e.message) || e)); }
-    });
-    inp.click();
-  }
-
+  /* 学舌库删除：TA 拒绝/再问由 TA 本人在会话里说话（文案沿用她验收过的那批） */
   function learnedDel(it) {
     const ctId = cur.ctId;
     if (it.denied) {
@@ -13188,7 +13241,7 @@ const Library = (function () {
   }
 
   return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId,
-    learnAdd, learnAddImg, learnedTexts, learnedCount, inAnyCardLib, inAnyStickerLib };
+    learnAdd, learnAddSticker, learnedTexts, learnedCount, inAnyCardLib, inAnyStickerLib };
 })();
 
 /* =====================================================
@@ -15969,10 +16022,8 @@ function coverTap(e) {
     const out = { text: '', imgs: [], text2: '', order: null };
     try {
       const p = Engine.params(ct);
-      /* 学我说话（决策#138）：命中就整条引用一句学来的话——不拼贴、不截断、不装饰；10-03 二批改读学舌库 */
-      const learned = (typeof Library !== 'undefined' && Library.learnedTexts) ? Library.learnedTexts(ct.id) : (ct.learned || []);
-      const lr = Math.min(100, Math.max(0, Math.round(+p.learnRate || 0)));
-      if (lr > 0 && learned.length && Math.random() * 100 < lr) { out.text = pick(learned); return out; }
+      /* 她 00:48 拍板：收集的话不再单独掷「用」——usableCardPool 已把荟萃混进字卡池，
+         朋友圈发帖/评论和聊天吃同一份等概率池子。原 learnRate 整条引用分支已拆。 */
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
       if (!pool.length) return out;
       const comboP = Math.min(100, Math.max(0, Math.round(+p.moComboProb ?? p.cardComboProb ?? 0)));
@@ -23830,8 +23881,8 @@ const Profile = (function () {
         p.readNoReply = Math.min(100, Math.max(0, Math.round(+el('pf-readnr').value || 0)));
         /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回 */
         p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
-        /* 学我说话概率（她 10-02 拍；她 10-06 晚口径演进：这一档同时管「学进荟萃」和「拿出来用」
-       两处——以前收句无概率全收，是她点名的 bug）；0=关。默认 15 我拍的 */
+        /* 学我说话·收集概率（她 00:48 改口径）：这档只管收进荟萃/各表情库（默认 5% 她定的）；
+       收集到的话混进字卡池等概率用，不单独掷「用」）；0=关。 */
         p.learnRate = Math.min(100, Math.max(0, Math.round(+el('pf-learn').value || 0)));
   p.gaFree = Math.min(100, Math.max(0, Math.round(+el('pf-free').value || 0)));
         /* 朋友圈发帖（二期P16③）：概率% + 间隔区间（单位小时/分钟，支持小数）；09-04 修正旧注释——
