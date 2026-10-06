@@ -6768,7 +6768,17 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict };
+  /* 参考气泡样式（她 10-06 14:01 要“一份参考”）：微信的结构——小尾巴那个角就是那两行 4px，
+     不写 fixed height / overflow，避免内容被裁（她的“缺斤少两”多半是这个）；
+     图片/表情那些卡片气泡有页面自己的保护（不上底色），这里也不用 ！important 去扛 */
+  const BUBBLE_SAMPLE =
+    '/* 参考气泡样式：一行管一件事，改数值就行；删掉哪行，那项就回默认 */\n' +
+    '.bubble{max-width:78%;padding:10px 14px;border-radius:16px}\n' +
+    '.bubble-other{background:#FFFFFF;border:1px solid #DDDDDD;color:#111111;border-top-left-radius:4px}\n' +
+    '.bubble-mine{background:#1C1C1E;color:#FFFFFF;border-top-right-radius:4px}\n' +
+    '.bubble-text{font-size:15px;line-height:1.55;letter-spacing:.2px}';
+
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE };
 })();
 
 /* =====================================================
@@ -23345,6 +23355,7 @@ const Profile = (function () {
         '<div class="bv-tpls"></div>' +
         '<div class="bv-btns">' +
           '<button data-bv="import">导入</button>' +
+          '<button data-bv="sample">参考样式</button>' +
           '<button data-bv="save-tpl">存为模板</button>' +
           '<button data-bv="reset">恢复默认</button>' +
           '<button class="bv-ok" data-bv="ok">保存</button>' +
@@ -23408,6 +23419,7 @@ const Profile = (function () {
       const b = e.target.closest('[data-bv]'); if (!b) return;
       const act = b.dataset.bv;
       if (act === 'import') fileInp.click();
+      else if (act === 'sample') { ta.value = UI.bubbleSample; refresh(); }
       else if (act === 'save-tpl') {
         if (!ta.value.trim()) { UI.toast('还没有内容'); return; }
         const name = prompt('模板名称：', '我的气泡 ' + (tpls.length + 1));
@@ -26041,6 +26053,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       '<textarea class="input deco-css-input" spellcheck="false" aria-label="CSS 代码"></textarea>' +
       '<div class="deco-verdict" aria-live="polite"></div>' +
       '<div class="dialog-btns"><button class="btn btn-secondary" data-deco-cancel>取消</button>' +
+        '<button class="btn btn-secondary" data-deco-sample>填入参考样式</button>' +
         '<button class="btn btn-primary" data-deco-save>保存并应用</button></div>';
     dlg.querySelector('.dialog-title').textContent = title;
     const input = dlg.querySelector('.deco-css-input');
@@ -26076,6 +26089,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       mask.remove();
       if (underlay) underlay.classList.remove('deco-editor-underlay');
     };
+    dlg.querySelector('[data-deco-sample]').addEventListener('click', () => {
+      input.value = UI.bubbleSample;
+      draft.textContent = input.value;
+      runSafe('theme.deco.verdict', showVerdict);
+    });
     dlg.querySelector('[data-deco-cancel]').addEventListener('click', () => {
       const dirty = input.value !== (DB.state.settings[prop] || '');
       close();
