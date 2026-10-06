@@ -11162,28 +11162,19 @@ const Engine = (function () {
     }
     /* 自由组话（她 10-04 拍板试试）：框架+词典自己「打」，打字延迟按拼音键数算。
        优先级：学我说话 > 自由组话 > 字卡。
-       她 10-06 11:03 的新口径：「去掉只顶一条的限制」——命中后不再只出一句，整轮条数照她设的来
-       （单聊按回复条数随机、群里按排程给的名额），一条一条自己打出来；每条各自算打字延迟，
-       首条起算、逐条累加（真人就是这么一句句打出来的）。只要有一条产出，这一轮就走自由说话，不走字卡。
-       没产出（搭配两次不过）不硬凑，落回字卡路。gaFree 默认 30%（她 10-06：8% 太少，她说「我现在都没见着」），
-       参数页可调（0＝关）。她 10-06 追问「私聊群聊都用吗」——群聊也开了（发言的那位用他自己的词典）。
-       注意：自由说话这一轮不走 minSec/maxSec（那是字卡轮的节奏），打字手感走 FreeTalk.typingDelay。
+       她 10-06 11:50 定的口径（当前版本）——**逐条**按概率融入，不是整轮切换：
+       「自由组话一个是按照概率随机融入我的全局库的呀，什么叫做全部每一句都是自己组话」
+       ⇒ 本轮每一条气泡各自掷一次 gaFree：掷中且组得出话，这一条就是 TA 自己组的话；
+       没掷中、或者掷中了但两次搭配都不过（compose 返回空）→ 这一条照旧从她的字卡库出
+       （该走表情/图片分支照走）。整轮的**条数完全不受影响**，还是按回复条数/群聊名额来。
+       gaFree 默认 30%（她 10-06：8% 太少，她说「我现在都没见着」），参数页可调（0＝关）。
+       单聊群聊都用（群里发言的那位用他自己的词典）。
+       节奏：自己组的那一条按拼音键数算、累进条间隔；走字卡的那些条仍按 minSec/maxSec 逐条掷。
        量「一轮几条 / 并轮 / 打断后新轮」的断言要把 gaFree 关掉再跑（见 verify-0830 两套里的注释）。 */
     const freeP = Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 30)));
-    if ((conv.type === 'single' || conv.type === 'group') && freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
-      const want = Math.max(1, (typeof n === 'number') ? n : pickCount(p, cap));
-      let ft = 0, made = 0;
-      for (let i = 0; i < want; i++) {
-        const line = FreeTalk.compose();
-        if (!line) break;
-        ft += FreeTalk.typingDelay(line);
-        later(conv.id, ft, () => pushAi(conv, maybeDecorate(line), ct));
-        made++;
-      }
-      if (made) return ft;
-    }
     const cards = usableCards(ct);
-    if (!cards.length) { hintNoCards(conv); return 0; }
+    /* 字卡库空且自由组话也关着，才是真没得发；自由组话开着就还能自己组话，不该掐掉 */
+    if (!cards.length && !freeP) { hintNoCards(conv); return 0; }
     /* 学我说话·用（决策#138）：出口在函数最顶上（池子空也能用），这里不再重复。 */
     /* 拼字卡（二期P9）：命中组合概率时，本条回复由多条字卡拼接为一条消息；
        抽取条数走「拼卡条数」设置、发送时机走外层「回复延迟」，均按用户配置；
@@ -11223,18 +11214,22 @@ const Engine = (function () {
        首条在 minSec~maxSec 内随机，第二条在首条基础上再掷一段，第三条同理。
        之前固定 600~1600ms 是错的（她抓到“只隔不到1秒”） */
     for (let i = 0; i < count; i++) {
-      t += (i === 0 ? 0 : rollDelay(p));
       const r = Math.random() * 100;
-      let text = null, img = null;
+      let text = null, img = null, freeLine = null;
       /* 语音回复（二期P12）：每个气泡位独立 6%，命中且池非空则本位发一条语音（格式同我方语音条） */
       const vp = (typeof Library !== 'undefined' && Library.usableVoicePool)
         ? Library.usableVoicePool(ct ? ct.id : null) : [];
       if (Math.random() * 100 < 6 && vp.length) {
+        t += (i === 0 ? 0 : rollDelay(p));
         const vItem = pick(vp);
         later(conv.id, t, () => pushRaw(conv, { from: 'ai', type: 'voice',
           dur: vItem.dur || 1, audio: vItem.audio, senderId: ct ? ct.id : null }));
         continue;
       }
+      /* 自由组话·逐条融入（她 10-06 11:50 定）：本条先独立掷一次概率，掷中且组得出话就是本条内容；
+         掷不中、组不出，这一条就归字卡/表情/图片那条老路——不硬凑，也不吃掉整个气泡位 */
+      if (freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) freeLine = FreeTalk.compose();
+      t += (i === 0 ? 0 : (freeLine ? FreeTalk.typingDelay(freeLine) : rollDelay(p)));
       /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
          60% 送/40% 不发——旧「回复链 2%」钩子已拆（台账 L12：拢新口必拆旧口） */
       /* 红包（二期P15）：params.giftRedRate 开启后主动发红包，同一钩子链；群聊三模式在 maybeGift 内部分支（L24） */
@@ -11251,12 +11246,16 @@ const Engine = (function () {
       if (conv.type === 'single' && typeof Quiz !== 'undefined' && Quiz.maybeAsk) {
         runSafe('quiz.ask', () => Quiz.maybeAsk(conv, ct));
       }
-      if (r < 15) {
+      if (freeLine) {
+        text = maybeDecorate(freeLine);                            // 本条自己组的话（不再掷 emoji/图片）
+      } else if (r < 15) {
         text = pickDeco(Math.random() < 0.5 ? 'em' : 'kao');       // 单独emoji/颜文字
       } else if (r < 15 + imgProb && soloImgOK && stickers.length) {
         img = pick(stickers);                                      // 图片表情占气泡位
-      } else {
+      } else if (cards.length) {
         text = maybeDecorate(pick(cards));                         // 字卡文本
+      } else {
+        continue;                                                  // 字卡库空、又不是自由组话这一条：空过
       }
       later(conv.id, t, () => {
         if (img) pushAiImg(conv, img, ct);
