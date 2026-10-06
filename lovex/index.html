@@ -262,8 +262,17 @@ button{-webkit-tap-highlight-color:transparent}
    头像框只画在头像外面（.avatar 本身 overflow:visible，不裁里面的图） */
 .avatar::after{content:'';position:absolute;inset:-22%;border-radius:14px;
   background-image:var(--lx-ava-frame,none);background-size:100% 100%;background-repeat:no-repeat;pointer-events:none}
-.deco-prev{display:flex;align-items:center;gap:12px;padding:14px 6px;border-top:1px solid var(--line)}
-.deco-prev .bubble{max-width:none;flex:1}
+.deco-prev{display:block;padding:12px 6px 6px;border-top:1px solid var(--line)}
+.deco-prev-title{font-size:12px;color:var(--t2);margin:0 0 8px}
+.deco-preview-chat{display:flex;flex-direction:column;gap:10px;padding:4px 0}
+.deco-preview-chat .msg-row{width:100%}
+.deco-preview-chat .msg-col{max-width:78%;min-width:0}
+.deco-preview-chat .bubble{max-width:100%;flex:none}
+.sheet-mask.deco-editor-underlay{visibility:hidden}
+.deco-css-editor{width:min(460px,92vw);max-height:92vh;overflow-y:auto;padding:16px}
+.deco-editor-hint{font-size:12px;line-height:1.5;color:var(--t2);margin:8px 0}
+.deco-css-input{min-height:112px;max-height:30vh;resize:vertical;font-family:Consolas,'Cascadia Code',monospace;font-size:12px;line-height:1.45}
+.deco-live-preview{margin-top:12px;border-top:1px solid var(--line)}
 
 /* =====================================================
    LOVE♡X · components.css —— 通用组件规范
@@ -25938,6 +25947,58 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
   /* 探针碰不到 IIFE 内部的函数，给一条只读入口（验收套件用，UI 不显示） */
   window.__lxDeco = applyDeco;
 
+  /* CSS 编辑器：边输入边把草稿套到真实页面与双方气泡预览；取消不写存档 */
+  function openDecoCssEditor(kind, underlay) {
+    const layer = document.getElementById('dialog-layer');
+    if (underlay) underlay.classList.add('deco-editor-underlay');
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask ui-modal';
+    const dlg = document.createElement('div');
+    dlg.className = 'dialog deco-css-editor';
+    const isGlobal = kind === 'css';
+    const prop = isGlobal ? 'customCss' : 'bubbleCss';
+    const title = isGlobal ? '全局自定义 CSS' : '聊天气泡样式';
+    dlg.innerHTML = '<div class="dialog-title"></div>' +
+      '<div class="deco-editor-hint">边输入边看双方气泡效果；保存后生效，取消不改存档。</div>' +
+      '<textarea class="input deco-css-input" spellcheck="false" aria-label="CSS 代码"></textarea>' +
+      '<div class="deco-prev deco-live-preview"><div class="deco-prev-title">双方效果预览</div>' +
+        '<div class="deco-preview-chat">' +
+          '<div class="msg-row"><div class="avatar msg-avatar"><span class="ava-txt">澈</span></div>' +
+            '<div class="msg-col"><div class="bubble bubble-other"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
+          '<div class="msg-row mine"><div class="avatar msg-avatar"><span class="ava-txt">清</span></div>' +
+            '<div class="msg-col"><div class="bubble bubble-mine"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
+        '</div></div>' +
+      '<div class="dialog-btns"><button class="btn btn-secondary" data-deco-cancel>取消</button>' +
+        '<button class="btn btn-primary" data-deco-save>保存并应用</button></div>';
+    dlg.querySelector('.dialog-title').textContent = title;
+    const input = dlg.querySelector('.deco-css-input');
+    input.value = DB.state.settings[prop] || '';
+    const oldDraft = document.getElementById('lx-deco-draft-css');
+    if (oldDraft) oldDraft.remove();
+    const draft = document.createElement('style');
+    draft.id = 'lx-deco-draft-css';
+    draft.textContent = input.value;
+    (document.head || document.documentElement).appendChild(draft);
+    input.addEventListener('input', () => { draft.textContent = input.value; });
+    const close = () => {
+      draft.remove();
+      mask.remove();
+      if (underlay) underlay.classList.remove('deco-editor-underlay');
+    };
+    dlg.querySelector('[data-deco-cancel]').addEventListener('click', close);
+    dlg.querySelector('[data-deco-save]').addEventListener('click', () => {
+      DB.state.settings[prop] = input.value;
+      DB.save();
+      applyDeco();
+      close();
+      UI.toast('已保存并应用');
+    });
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+    mask.appendChild(dlg);
+    layer.appendChild(mask);
+    UI.raise(mask);
+  }
+
   function openThemeSheet() {
     const layer = document.getElementById('dialog-layer');
     const mask = document.createElement('div');
@@ -25959,9 +26020,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         '<small>全局气泡；单个联系人自己的设置优先</small></span><span class="opt-check">' + I('chevron-right', 16) + '</span></button>' +
       '<button class="sheet-opt" data-deco="frame"><span class="opt-main"><b>头像框</b>' +
         '<small>传一张 PNG/SVG，套在所有头像外面</small></span><span class="opt-check">' + I('chevron-right', 16) + '</span></button>' +
-      '<div class="deco-prev">' +
-        '<span class="avatar"><span class="ava-txt">澈</span></span>' +
-        '<span class="bubble bubble-other"><span class="bubble-text">预览：今天也要开心哦</span></span>' +
+      '<div class="deco-prev"><div class="deco-prev-title">双方效果预览</div>' +
+        '<div class="deco-preview-chat">' +
+          '<div class="msg-row"><span class="avatar msg-avatar"><span class="ava-txt">澈</span></span>' +
+            '<div class="msg-col"><div class="bubble bubble-other"><span class="bubble-text">今天也要开心哦</span></div></div></div>' +
+          '<div class="msg-row mine"><span class="avatar msg-avatar"><span class="ava-txt">清</span></span>' +
+            '<div class="msg-col"><div class="bubble bubble-mine"><span class="bubble-text">我也有个好消息</span></div></div></div>' +
+        '</div>' +
       '</div>' +
       '<button class="sheet-cancel">完成</button></div>';
 
@@ -25970,8 +26035,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     colorInput.addEventListener('input', e => Theme.setCustomPrimary(e.target.value));
 
     function fill() {
-      mask.querySelectorAll('.sheet-opt').forEach(btn => {
+      mask.querySelectorAll('.sheet-opt[data-t]').forEach(btn => {
         const t = Theme.LIST.find(x => x.id === btn.dataset.t);
+        if (!t) return;
         btn.querySelector('.opt-main b').textContent = t.name;
         btn.querySelector('.opt-main small').textContent = t.desc;
         const sel = Theme.current === t.id;
@@ -25979,11 +26045,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         btn.querySelector('.opt-check').innerHTML = sel ? I('check', 16) : '';
       });
     }
-    mask.querySelectorAll('.sheet-opt').forEach(btn => {
+    mask.querySelectorAll('.sheet-opt[data-t]').forEach(btn => {
       btn.addEventListener('click', () => {
-        Theme.apply(btn.dataset.t, true);
+        const theme = Theme.LIST.find(x => x.id === btn.dataset.t);
+        if (!theme) return;
+        Theme.apply(theme.id, true);
         fill();
-        UI.toast('已切换：' + Theme.LIST.find(x => x.id === btn.dataset.t).name);
+        UI.toast('已切换：' + theme.name);
       });
     });
     mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
@@ -26013,16 +26081,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           return;
         }
         if (act === 'paste') {
-          Home.openForm({
-            title: kind === 'css' ? '粘贴全局 CSS' : '粘贴气泡样式',
-            fields: [{ key: 't', label: 'CSS 代码（保存即时生效；清空=清除）', type: 'textarea', rows: 5, value: cur }],
-            onSubmit: c => {
-              const txt = (c && c.t) || '';
-              if (kind === 'css') s.customCss = txt; else s.bubbleCss = txt;
-              DB.save(); applyDeco();
-              UI.toast(txt ? '已应用，看下预览' : '已清除');
-            }
-          });
+          openDecoCssEditor(kind, mask);
           return;
         }
       });
