@@ -6798,6 +6798,8 @@ const UI = (function () {
 
   /* ② 贴来的 CSS 里若引用外链图案（url(http…)），存之前把图抓回本地内嵌成 data:——
      外链在断网 / 跨域 / App 里都是空的，那才是“图案显示不出来”的另一半原因。 */
+  /* 内嵌单张图的上限：超过就留外链（主档配额比离线可用性重要——她的数据丢不得） */
+  const MAX_INLINE = 200 * 1024;
   const CSS_URL_RE = /url\(\s*(['"]?)(https?:\/\/[^'")]+)\1\s*\)/g;
   function cssRemoteUrls(css) {
     const out = [];
@@ -6830,16 +6832,19 @@ const UI = (function () {
   async function localizeCss(css) {
     const src = String(css || '');
     const urls = cssRemoteUrls(src);
-    if (!urls.length) return { css: src, got: 0, failed: [] };
+    if (!urls.length) return { css: src, got: 0, failed: [], skipped: [] };
     let out = src, got = 0;
-    const failed = [];
+    const failed = [], skipped = [];
     for (const u of urls) {
       const data = await fetchAsDataUrl(u);
       if (!data) { failed.push(u); continue; }
+      /* 主档里塞大图是配额炸弹（MediaVault 只托管“整个字符串就是 data:”的字段，
+         CSS 文本里夹的图它托管不了）——超过这一档就不内嵌，留外链、如实报数 */
+      if (data.length > MAX_INLINE) { skipped.push({ url: u, kb: Math.round(data.length / 1024) }); continue; }
       out = out.split(u).join(data);
       got++;
     }
-    return { css: out, got, failed };
+    return { css: out, got, failed, skipped };
   }
 
   /* ③ 头像框上传前的整理（她 10-06：“我上传了你不知道裁切符合大小吗”“外面还有一圈丑丑的白色底”）：
@@ -23575,7 +23580,8 @@ const Profile = (function () {
         if (pvTag) pvTag.remove(); mask.remove();
         const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
         const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
-        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + bad) : '气泡样式已清空');
+        const big = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大没内嵌，联网时正常显示') : '';
+        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + bad + big) : '气泡样式已清空');
       }
     });
   }
@@ -25626,7 +25632,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         if (kind === 'css') DB.state.settings.customCss = loc.css; else DB.state.settings.bubbleCss = loc.css;
         DB.save(); applyDeco();
         UI.toast('已应用：' + f.name + (loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '')
-          + (loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来') : ''));
+          + (loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来') : '')
+          + ((loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大没内嵌') : ''));
       } catch (e) { UI.toast('这个文件读不出来'); }
     });
     const decoFrameFile = document.getElementById('deco-frame-file');
@@ -26261,7 +26268,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       /* 成没成都要当场说清楚（她 13:27：“成功不成功也没有反应”） */
       const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
       const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次，或把图先存本地再传）') : '';
-      UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + bad) : '已保存（内容为空，等于没写）');
+      const big = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大（' + loc.skipped[0].kb + 'KB）没内嵌，联网时正常显示') : '';
+      UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + bad + big) : '已保存（内容为空，等于没写）');
     });
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
     mask.appendChild(dlg);
