@@ -4359,23 +4359,95 @@ const DB = (function () {
   }
 
   /* ---- 全站备份 / 恢复（源策划·数据系统） ---- */
-  function exportAll() {
+  function applyImportedState(data) {
+    state = deepMerge(defaults(), data);
+    dropObsoleteKinshipAuto();
     clearTimeout(saveTimer);
-    return JSON.stringify({
-      app: 'LOVEX', version: 1,
-      exportedAt: new Date().toISOString(),
-      data: state
-    }, null, 2);
+    writeNow();
   }
   function importAll(jsonText) {
     const obj = JSON.parse(jsonText);
     if (!obj || obj.app !== 'LOVEX' || !obj.data) {
       throw new Error('这不是 LOVE♡X 的备份文件');
     }
-    state = deepMerge(defaults(), obj.data);
-    dropObsoleteKinshipAuto();
-    clearTimeout(saveTimer);
-    writeNow();
+    applyImportedState(obj.data);
+    return true;
+  }
+
+  /* ---- 带媒体本体的导出/导入（她 10-06 报「导入导出会丢朋友圈视频」的根治）----
+     老导出只带主档 state：视频/大图的本体全在 IndexedDB，主档里只有引用串
+     （'@mv哈希' / 'idb:键'），换个环境一导入全部断链。这里把引用到的本体一并打进文件；
+     导入先把本体放回 IDB 再换档。老格式文件照旧认（v1 纯档 / LOVEX-CONTACT / LOVEX-MSGS）。 */
+  function idbRefsIn(root) {
+    const keys = new Set();
+    const walk = v => {
+      if (typeof v === 'string') {
+        if (/^@mv[0-9a-z]+$/.test(v)) keys.add(v);            // MediaVault 引用（IDB 键＝整串）
+        else if (/^idb:.+/.test(v)) keys.add(v.slice(4));     // 视频/封面引用（IDB 键＝裸键）
+        return;
+      }
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (v && typeof v === 'object') for (const k in v) if (Object.prototype.hasOwnProperty.call(v, k)) walk(v[k]);
+    };
+    walk(root);
+    return keys;
+  }
+  function blobToDataUrl(b) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = () => rej(fr.error || new Error('read-fail'));
+      fr.readAsDataURL(b);
+    });
+  }
+  async function exportBundle(root, kind) {
+    const doc = JSON.parse(JSON.stringify(root));   // 先拷贝，导出途中 state 再变也不影响这份
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    const media = [];
+    if (MS) {
+      const keys = idbRefsIn(doc);
+      for (const k of keys) {
+        try {
+          const b = await MS.get(k);
+          if (b == null) continue;                              // 本体本来就没：引用照旧带走，导入后走「待修」
+          if (typeof b === 'string') { media.push({ k, v: b }); continue; }
+          media.push({ k, v: await blobToDataUrl(b), b: 1 });   // 视频/封面是 Blob，转 dataURL 存 JSON
+        } catch (e) { /* 单个失败不拦整份 */ }
+      }
+    }
+    return JSON.stringify({ app: 'LOVEX-BUNDLE', version: 2, kind: kind || 'all',
+      exportedAt: new Date().toISOString(), data: doc, media }, null, 2);
+  }
+  /* 解析导入文件 + 把媒体本体放回 IDB（不动 state，合并由调用方按 kind 做）。
+     返回 {kind, data, media}；kind: 'all' | 'contact' | 'msgs'。 */
+  async function importBundleText(jsonText) {
+    const obj = JSON.parse(jsonText);
+    if (!obj || typeof obj !== 'object') throw new Error('这不是 LOVE♡X 的备份文件');
+    let kind, data, media = [];
+    if (obj.app === 'LOVEX-BUNDLE') { kind = obj.kind || 'all'; data = obj.data; media = obj.media || []; }
+    else if (obj.app === 'LOVEX' && obj.data) { kind = 'all'; data = obj.data; }
+    else if (obj.app === 'LOVEX-CONTACT') { kind = 'contact'; data = obj; }
+    else if (obj.app === 'LOVEX-MSGS') { kind = 'msgs'; data = obj; }
+    else throw new Error('这不是 LOVE♡X 的备份文件');
+    let n = 0;
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    if (MS && media.length) {
+      for (const it of media) {
+        try {
+          if (!it || !it.k || typeof it.v !== 'string') continue;
+          if (it.b) await MS.put(it.k, MS.dataUrlToBlob(it.v));   // 视频/封面：转回 Blob 再入库
+          else await MS.put(it.k, it.v);                          // @mv：dataURL 字符串原样
+          n++;
+        } catch (e) { /* 单个失败不拦 */ }
+      }
+    }
+    return { kind, data, media: n };
+  }
+  /* 整档换血 + 引用串当场换回真数据（本体刚放回 IDB），界面立刻能看 */
+  async function importAllBundle(data) {
+    applyImportedState(data);
+    const V = vault();
+    if (V) { try { await V.unpack(state); } catch (e) {} }
     return true;
   }
 
@@ -4484,7 +4556,8 @@ const DB = (function () {
       try {
         if (ok && typeof window !== 'undefined' && window.LovexNative
           && typeof window.LovexNative.saveBackup === 'function' && state.settings.dailyBackup !== false) {
-          const where = window.LovexNative.saveBackup(backupText(JSON.parse(JSON.stringify(state))),
+          /* 带媒体本体（exportBundle）：这份文件是「浏览器被清只剩它」时的硬退路，只有引用串等于没备份视频/大图 */
+          const where = window.LovexNative.saveBackup(await exportBundle(state, 'all'),
             'LOVEX每日备份-' + day + '.json');
           if (where && typeof logErr === 'function') logErr('备份：已写到手机 ' + where);
         }
@@ -4523,8 +4596,10 @@ const DB = (function () {
     sweepOrphans,
     save,
     flushSave: writeNow,
-    exportAll,
+    exportBundle,
     importAll,
+    importBundleText,
+    importAllBundle,
     backupInfo,
     recoverFromBackup,
     listSnaps,
@@ -8047,6 +8122,15 @@ const MediaStore = (function () {
   }
   return {
     available() { return !!window.indexedDB; },
+    /* dataURL → Blob（视频/封面导出成 JSON 要转回来；moments 同用这一份，不两处各写一套） */
+    dataUrlToBlob(dataUrl) {
+      const p = String(dataUrl).split(',');
+      const mime = (p[0].match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+      const bin = atob(p[1]);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    },
     put(key, blob) { return run('readwrite', s => s.put(blob, key)); },
     get(key) { return run('readonly', s => s.get(key)); },
     del(key) {
@@ -15323,18 +15407,6 @@ const Moments = (function () {
     if (!back) throw new Error('idb-verify-fail');
     return 'idb:' + key;
   }
-  function dataUrlToBlob(dataUrl) {
-    return new Promise((res, rej) => {
-      try {
-        const p = String(dataUrl).split(',');
-        const mime = (p[0].match(/data:([^;]+)/) || [])[1] || 'video/mp4';
-        const bin = atob(p[1]);
-        const arr = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-        res(new Blob([arr], { type: mime }));
-      } catch (e) { rej(e); }
-    });
-  }
   /* 渲染后异步 hydrate：idb引用→objectURL；遗留 dataURL 直用（src() 已兼容） */
   function hydrateVids(scope) {
     (scope || document).querySelectorAll('video[data-vsrc]').forEach(v => {
@@ -15372,7 +15444,7 @@ const Moments = (function () {
       const v = holder[key];
       if (typeof v !== 'string' || !/^data:video/.test(v)) return;
       try {
-        const ref = await storeVideoBlob(await dataUrlToBlob(v));
+        const ref = await storeVideoBlob(await MediaStore.dataUrlToBlob(v));
         holder[key] = ref;
         moved++;
       } catch (e) { /* 保留 dataURL，绝不清掉 */ }
@@ -15384,7 +15456,7 @@ const Moments = (function () {
       const v = holder[key];
       if (typeof v !== 'string' || !/^data:image/.test(v)) return;
       try {
-        const ref = await storeCoverBlob(await dataUrlToBlob(v));
+        const ref = await storeCoverBlob(await MediaStore.dataUrlToBlob(v));
         holder[key] = ref;
         moved++;
       } catch (e) { /* 保留 dataURL，绝不清掉 */ }
@@ -15538,7 +15610,7 @@ function coverTap(e) {
           if (/^video\//.test(f.type)) blob = f;
           else {
             const url = await Media.compressImage(f, 1280, 0.82);   /* 压到合理体积再进库 */
-            blob = await dataUrlToBlob(url);
+            blob = await MediaStore.dataUrlToBlob(url);
           }
           const ref = await storeCoverBlob(blob);
           data = ref;
@@ -25760,7 +25832,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         const day0 = list.length ? list[0].day : null;
         const hit = day0 ? await DB.readBackup(day0) : null;
         if (!hit) { UI.toast('还没得备份可导'); return; }
-        const blob = new Blob([DB.backupText(hit.doc)], { type: 'application/json' });
+        const blob = new Blob([await DB.exportBundle(hit.doc, 'all')], { type: 'application/json' });
         UI.saveFile(blob, 'LOVEX自动备份-' + day0 + '.json', '已导出这份备份文件');
         return;
       }
@@ -25842,32 +25914,29 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (go && sites) setTimeout(() => location.reload(), 700);
     });
 
-    /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 --- */
-    function exportAllData() {
-      const blob = new Blob([DB.exportAll()], { type: 'application/json' });
+    /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 ---
+       导出全部走 exportBundle：媒体本体一并打包，导入不再丢朋友圈视频/大图（她 10-06） */
+    async function exportAllData() {
+      const blob = new Blob([await DB.exportBundle(DB.state, 'all')], { type: 'application/json' });
       const d = new Date(), p = n => String(n).padStart(2, '0');
       UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-                   '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出');
+                   '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出（含图片视频本体，文件会大一点）');
     }
-    function exportContactData(ct) {
+    async function exportContactData(ct) {
       const cv = DB.state.convs.find(x => x.type === 'single' && x.peerId === ct.id);
       const pack = {
-        app: 'LOVEX-CONTACT', version: 1,
-        exportedAt: new Date().toISOString(),
         contact: JSON.parse(JSON.stringify(ct)),
         conv: cv ? JSON.parse(JSON.stringify(cv)) : null,
         msgs: cv ? (DB.state.msgs[cv.id] || []) : []
       };
-      const blob = new Blob([JSON.stringify(pack)], { type: 'application/json' });
+      const blob = new Blob([await DB.exportBundle(pack, 'contact')], { type: 'application/json' });
       const d = new Date(), p = n => String(n).padStart(2, '0');
       UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
         d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
         '「' + Home.displayName(ct) + '」的全部数据已导出');
     }
-    function importContactData(raw) {
-      let pack;
-      try { pack = JSON.parse(raw); } catch (e) { throw new Error('文件格式不对'); }
-      if (pack.app !== 'LOVEX-CONTACT' || !pack.contact) throw new Error('这不是联系人备份文件');
+    function importContactData(pack) {
+      if (!pack || !pack.contact) throw new Error('这不是联系人备份文件');
       const cIn = pack.contact;
       const exist = DB.state.contacts.find(x => x.id === cIn.id);
       return UI.confirmBox({
@@ -25917,16 +25986,17 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const pack = msgsPack();
       const n = Object.values(pack.msgs).reduce((a, x) => a + x.length, 0);
       if (!n) { UI.toast('还没有聊天记录'); return; }
-      const blob = new Blob([JSON.stringify(pack)], { type: 'application/json' });
+      exportBundle(pack, n);
+    }
+    async function exportBundle(pack, n) {
+      const blob = new Blob([await DB.exportBundle(pack, 'msgs')], { type: 'application/json' });
       const d = new Date(), p = x => String(x).padStart(2, '0');
       UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
         '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
         '聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
     }
-    function importMsgsData(raw) {
-      let pack;
-      try { pack = JSON.parse(raw); } catch (e) { throw new Error('文件格式不对'); }
-      if (pack.app !== 'LOVEX-MSGS' || !pack.msgs) throw new Error('这不是聊天记录文件');
+    function importMsgsData(pack) {
+      if (!pack || !pack.msgs) throw new Error('这不是聊天记录文件');
       const ids = Object.keys(pack.msgs);
       let total = 0;
       ids.forEach(k => { total += (pack.msgs[k] || []).length; });
@@ -25939,7 +26009,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         let added = 0, skipped = 0;
         const meta = {};
         (pack.convs || []).forEach(cv => { if (cv && cv.id) meta[cv.id] = cv; });
-        ids.forEach(cid => {
+        const idsAll = Object.keys(pack.msgs);
+        idsAll.forEach(cid => {
           const incoming = pack.msgs[cid] || [];
           let cv = (DB.state.convs || []).find(x => x.id === cid);
           if (!cv) {
@@ -25973,8 +26044,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!f) return;
       const r = new FileReader();
       r.onload = () => {
-        try { importMsgsData(r.result); }
-        catch (err) { UI.toast((err && err.message) || '导入失败'); }
+        runImportText(r.result).catch(err => {
+          UI.toast((err && err.message) || '导入失败');
+        });
       };
       r.readAsText(f);
       msgsFileInput.value = '';
@@ -26003,8 +26075,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!f) return;
       const r = new FileReader();
       r.onload = () => {
-        try { importContactData(r.result); }
-        catch (err) { UI.toast((err && err.message) || '导入失败'); }
+        runImportText(r.result).catch(err => {
+          UI.toast((err && err.message) || '导入失败');
+        });
       };
       r.readAsText(f);
       contactFileInput.value = '';
@@ -26124,20 +26197,31 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       fileInput.value = '';
       fileInput.click();
     }
+    /* 三个导入口共用一条道：解析（老新格式都认）→ 媒体本体先回库 → 再按 kind 走各自的合并 */
+    async function runImportText(text) {
+      const b = await DB.importBundleText(text);
+      if (b.kind === 'all') {
+        await DB.importAllBundle(b.data);
+        Theme.apply(DB.state.settings.theme, false);
+        renderMine();
+        renderMyAvatar();
+        UI.toast('导入成功，数据已恢复' + (b.media ? ('，带回媒体本体 ' + b.media + ' 个') : ''));
+      } else if (b.kind === 'contact') {
+        await importContactData(b.data);
+      } else if (b.kind === 'msgs') {
+        await importMsgsData(b.data);
+      } else {
+        throw new Error('文件格式不对');
+      }
+    }
     fileInput.addEventListener('change', () => {
       const f = fileInput.files[0];
       if (!f) return;
       const r = new FileReader();
       r.onload = () => {
-        try {
-          DB.importAll(r.result);
-          Theme.apply(DB.state.settings.theme, false);
-          renderMine();
-          renderMyAvatar();
-          UI.toast('导入成功，数据已恢复');
-        } catch (err) {
+        runImportText(r.result).catch(err => {
           UI.toast((err && err.message) || '导入失败：文件格式不对');
-        }
+        });
       };
       r.readAsText(f);
     });
