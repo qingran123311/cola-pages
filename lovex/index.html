@@ -3384,7 +3384,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
   <input type="file" id="msgs-import-file" accept=".json,application/json" hidden>
   <input type="file" id="harvest-img-input" accept=".json,application/json" hidden>
-<input type="file" id="deco-css-file" accept=".css,text/css" hidden>
+<input type="file" id="deco-css-file" accept="*/*" hidden>
 <input type="file" id="deco-frame-file" accept="image/png,image/svg+xml,image/*" hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-keepalive"><span class="cell-icon"><i data-icon="pulse"></i></span><span class="cell-text">后台保活</span><span class="cell-value" id="ka-val">关</span></button>
@@ -6884,13 +6884,18 @@ const UI = (function () {
     return out;
   }
   async function fetchAsDataUrl(u) {
-    /* 直连优先；被跨域拦了就走公共中转（页面里本就是这套兜底），拿到字节自己转 data: */
+    /* 直连优先；被跨域拦了就走公共中转（页面里本就是这套兜底），拿到字节自己转 data:。
+       每路 8 秒必给答案：取不到就换下一路/如实报失败——不能让导入在那儿干等像死了（她 10-06 晚） */
     const tries = [u,
       'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
       'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)];
     for (const t of tries) {
       try {
-        const r = await fetch(t, { mode: 'cors' });
+        const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        const timer = ctl ? setTimeout(() => ctl.abort(), 8000) : 0;
+        let r;
+        try { r = await fetch(t, { mode: 'cors', signal: ctl ? ctl.signal : undefined }); }
+        finally { if (timer) clearTimeout(timer); }
         if (!r.ok) continue;
         const b = await r.blob();
         if (!b || !b.size) continue;
@@ -6907,19 +6912,111 @@ const UI = (function () {
   async function localizeCss(css) {
     const src = String(css || '');
     const urls = cssRemoteUrls(src);
-    if (!urls.length) return { css: src, got: 0, failed: [], skipped: [] };
-    let out = src, got = 0;
+    if (!urls.length) return { css: src, got: 0, failed: [], skipped: [], vaulted: 0 };
+    let out = src, got = 0, vaulted = 0;
     const failed = [], skipped = [];
     for (const u of urls) {
       const data = await fetchAsDataUrl(u);
       if (!data) { failed.push(u); continue; }
-      /* 主档里塞大图是配额炸弹（MediaVault 只托管“整个字符串就是 data:”的字段，
-         CSS 文本里夹的图它托管不了）——超过这一档就不内嵌，留外链、如实报数 */
-      if (data.length > MAX_INLINE) { skipped.push({ url: u, kb: Math.round(data.length / 1024) }); continue; }
+      if (data.length > MAX_INLINE) {
+        /* 小图内嵌进 CSS 文本没问题；大图内嵌是主档配额炸弹（MediaVault 只托管整串 data: 字段）。
+           但留在 CSS 里就是外链——手机网络上很多图床根本打不开，“图案显示不出来”就出在这。
+           所以大图本体搬进媒体库（IDB），CSS 里留 token，应用/预览时再解析回真图：离线也在、主档不胖。 */
+        try {
+          const key = (typeof MediaVault !== 'undefined' && MediaVault.enabled()) ? MediaVault.hash(data) : '';
+          if (key) {
+            await MediaStore.put(key, data);
+            out = out.split(u).join('lxmv:' + key);
+            vaulted++;
+            continue;
+          }
+        } catch (e) { logErr('ui.localizeCss.vault ' + ((e && e.message) || e)); }
+        skipped.push({ url: u, kb: Math.round(data.length / 1024) }); continue;   // 没 IDB 的老环境退回老路
+      }
       out = out.split(u).join(data);
       got++;
     }
-    return { css: out, got, failed, skipped };
+    return { css: out, got, failed, skipped, vaulted };
+  }
+  /* CSS 里的 token（lxmv:@mv…）→ 真图：本体在媒体库里，取出来直接当 dataURL 用 */
+  const LX_TOKEN_RE = /lxmv:(@mv[0-9a-z]+)/g;
+  async function cssResolve(css) {
+    const src = String(css || '');
+    if (src.indexOf('lxmv:') < 0) return src;
+    const keys = [];
+    let m; LX_TOKEN_RE.lastIndex = 0;
+    while ((m = LX_TOKEN_RE.exec(src))) if (keys.indexOf(m[1]) < 0) keys.push(m[1]);
+    const got = {};
+    for (const k of keys) {
+      if (k in got) continue;
+      let v = '';
+      try { v = (await MediaStore.get(k)) || ''; } catch (e) { if (typeof logErr === 'function') logErr('ui.cssResolve ' + ((e && e.message) || e)); }
+      got[k] = v;
+    }
+    return src.replace(/lxmv:(@mv[0-9a-z]+)/g, (_, k) => got[k] || 'about:blank');   // 本体丢了：不画东西，不冒充
+  }
+
+  /* 文件→文字：她手里那份 CSS 多半是 Word 存的 .docx（zip 容器），直接 f.text() 读出来全是乱码。
+     这里认 zip 就解包抽正文；纯文本遇 GBK 也兑底转一遍（老记事本存的编码）。 */
+  async function textFromFile(file) {
+    if (!file) throw new Error('没有文件');
+    const buf = await file.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    if (u8.length > 3 && u8[0] === 0x50 && u8[1] === 0x4B) return docxText(buf);   // 'PK' = zip 容器（docx）
+    let t = new TextDecoder('utf-8', { fatal: false }).decode(u8);
+    const bad = (t.match(/\uFFFD/g) || []).length;
+    if (bad > t.length * 0.02) {
+      try { t = new TextDecoder('gbk').decode(u8); } catch (e) { if (typeof logErr === 'function') logErr('ui.textFromFile.gbk ' + ((e && e.message) || e)); }   // 乱码太多＝多半是 GBK 文本，兑底重解
+    }
+    return t;
+  }
+  async function docxText(buf) {
+    if (typeof DecompressionStream === 'undefined')
+      throw new Error('这个 WebView 太老，读不了 docx——把里面的 CSS 文字复制出来粘进输入框一样能用');
+    const entries = await zipEntries(buf);
+    const doc = entries['word/document.xml'];
+    if (!doc) throw new Error('这个 docx 里没有正文');
+    const xml = new TextDecoder().decode(doc);
+    return xml
+      .replace(/<w:p\b[^>]*>/g, '\n')            // 段落 → 换行
+      .replace(/<w:br\b[^>]*\/>/g, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+      .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  /* 最小 zip 读取：只走中央目录（尺寸永远写在这儿，不怕 data descriptor），deflate 用 DecompressionStream */
+  async function zipEntries(buf) {
+    const dv = new DataView(buf), u8 = new Uint8Array(buf);
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= 0 && i > u8.length - 66000; i--) {
+      if (u8[i] === 0x50 && u8[i + 1] === 0x4B && u8[i + 2] === 0x05 && u8[i + 3] === 0x06) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('不是能解的压缩容器');
+    const n = dv.getUint16(eocd + 10, true);
+    let p = dv.getUint32(eocd + 16, true);
+    const out = {};
+    for (let i = 0; i < n; i++) {
+      if (!(u8[p] === 0x50 && u8[p + 1] === 0x4B && u8[p + 2] === 0x01 && u8[p + 3] === 0x02)) break;
+      const method = dv.getUint16(p + 10, true);
+      const csize = dv.getUint32(p + 20, true);
+      const nameLen = dv.getUint16(p + 28, true);
+      const extraLen = dv.getUint16(p + 30, true);
+      const cmtLen = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
+      const nl2 = dv.getUint16(lho + 26, true);
+      const el2 = dv.getUint16(lho + 28, true);
+      const s0 = lho + 30 + nl2 + el2;
+      const data = u8.subarray(s0, s0 + csize);
+      if (method === 0) out[name] = data;
+      else if (method === 8) out[name] = await inflateRaw(data);
+      p += 46 + nameLen + extraLen + cmtLen;
+    }
+    return out;
+  }
+  async function inflateRaw(u8) {
+    const st = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(st).arrayBuffer());
   }
 
   /* ③ 头像框上传前的整理（她 10-06：“我上传了你不知道裁切符合大小吗”“外面还有一圈丑丑的白色底”）：
@@ -6994,7 +7091,7 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, framePrep };
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, cssResolve, textFromFile, framePrep };
 })();
 
 /* =====================================================
@@ -9155,6 +9252,13 @@ const Chat = (function () {
     tag.id = 'bubble-usercss';
     tag.textContent = css;
     document.head.appendChild(tag);
+    /* 样式里若有大图 token（lxmv:@mv…），异步解析回真图；只认还是最新那个标签，不覆盖后来者 */
+    if (css.indexOf('lxmv:') >= 0) {
+      UI.cssResolve(css).then(t => {
+        const now = document.getElementById('bubble-usercss');
+        if (now && now === tag) tag.textContent = t;
+      }).catch(() => {});
+    }
   }
 
   /* ---------------- 消息渲染 ---------------- */
@@ -23573,7 +23677,7 @@ const Profile = (function () {
           '<button data-bv="reset">恢复默认</button>' +
           '<button class="bv-ok" data-bv="ok">保存</button>' +
         '</div>' +
-        '<input type="file" id="bv-file" accept=".css,.txt" hidden>' +
+        '<input type="file" id="bv-file" accept="*/*" hidden>' +
       '</div>';
     document.body.appendChild(mask);
     const ta = mask.querySelector('.bv-css');
@@ -23588,6 +23692,13 @@ const Profile = (function () {
       pvTag = document.createElement('style');
       pvTag.textContent = scopeCSS(ta.value, '#bv-stage');
       document.head.appendChild(pvTag);
+      /* 预览里的大图 token 也要解析回真图（和真聊天气泡同一条路） */
+      if (ta.value.indexOf('lxmv:') >= 0) {
+        const my = pvTag;
+        UI.cssResolve(ta.value).then(t => {
+          if (document.head.contains(my)) my.textContent = scopeCSS(t, '#bv-stage');
+        }).catch(() => {});
+      }
     }
     /* 成没成当场说清（她 10-06 13:27）——和主题设置里那个 CSS 编辑器走同一套体检 */
     function showVerdict() {
@@ -23620,8 +23731,11 @@ const Profile = (function () {
     fileInp.addEventListener('change', async () => {
       const f = fileInp.files[0]; if (!f) return;
       try {
-        if (f.size > 64 * 1024) throw new Error('文件过大（限64KB）');
-        ta.value = await f.text(); refresh(); UI.toast('已导入');
+        if (f.size > 512 * 1024) throw new Error('文件过大（限512KB）');
+        /* Word 存的 .docx 也收（zip 解包抽正文）；GBK 文本兑底重解（她 10-06 晚：docx 读不出来） */
+        const txt = await UI.textFromFile(f);
+        if (!txt || !/[{}]/.test(txt)) throw new Error('读出来不像 CSS：里面没有花括号规则');
+        ta.value = txt.slice(0, 40000); refresh(); UI.toast('已导入：' + f.name);
       } catch (err) { UI.toast(err.message); }
       fileInp.value = '';
     });
@@ -23650,10 +23764,11 @@ const Profile = (function () {
         DB.save(); refreshFields(c);
         if (typeof Chat !== 'undefined' && Chat.conv && Chat.conv.peerId === c.id) Chat.applyBubble();
         if (pvTag) pvTag.remove(); mask.remove();
-        const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
+        const pic = loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '';
+        const vault = loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '';
         const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
-        const big = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大没内嵌，联网时正常显示') : '';
-        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + bad + big) : '气泡样式已清空');
+        const skp = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大且媒体库不可用，留了外链') : '';
+        UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + vault + bad + skp) : '气泡样式已清空');
       }
     });
   }
@@ -25698,15 +25813,18 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const kind = decoCssFile.dataset.decoKind || 'css';
       decoCssFile.value = '';
       if (!f) return;
+      UI.toast('在读文件、抓图案，几秒钟…');
       try {
-        const txt = (await f.text()).slice(0, 20000);
-        const loc = await UI.localizeCss(txt);   /* 外链图案一并带回本地 */
+        /* Word 存的 .docx 也收（zip 解包抽正文）；乱码/GBK 文本兑底重解（她 10-06 晚：docx 读不出来） */
+        const txt = (await UI.textFromFile(f)).slice(0, 40000);
+        if (!txt || !/[{}]/.test(txt)) throw new Error('读出来不像 CSS：里面没有花括号规则');
+        const loc = await UI.localizeCss(txt);
         if (kind === 'css') DB.state.settings.customCss = loc.css; else DB.state.settings.bubbleCss = loc.css;
         DB.save(); applyDeco();
-        UI.toast('已应用：' + f.name + (loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '')
-          + (loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来') : '')
-          + ((loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大没内嵌') : ''));
-      } catch (e) { UI.toast('这个文件读不出来'); }
+        UI.toast('已应用：' + f.name + (loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '')
+          + (loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '')
+          + (loc.failed.length ? ('；' + loc.failed.length + ' 张没取回来') : ''));
+      } catch (e) { UI.toast((e && e.message) || '这个文件读不出来'); }
     });
     const decoFrameFile = document.getElementById('deco-frame-file');
     decoFrameFile.addEventListener('change', async () => {
@@ -26260,10 +26378,24 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     }
     return el;
   }
+  let decoSeq = 0;
   function applyDeco() {
     const s = DB.state.settings || {};
-    runSafe('theme.deco.css', () => { decoStyleTag('lx-user-css').textContent = s.customCss || ''; });
-    runSafe('theme.deco.bubble', () => { decoStyleTag('lx-bubble-css').textContent = s.bubbleCss || ''; });
+    const seq = ++decoSeq;
+    /* CSS 里可能带着大图 token（lxmv:@mv…）：先原样上（无 token 时立刻生效），
+       有 token 再异步解析回真图——两次写入只在还是最新一版时才落，不互相覆盖 */
+    runSafe('theme.deco.css', () => {
+      const tag = decoStyleTag('lx-user-css');
+      tag.textContent = s.customCss || '';
+      if ((s.customCss || '').indexOf('lxmv:') >= 0)
+        UI.cssResolve(s.customCss).then(t => { if (seq === decoSeq) tag.textContent = t; });
+    });
+    runSafe('theme.deco.bubble', () => {
+      const tag = decoStyleTag('lx-bubble-css');
+      tag.textContent = s.bubbleCss || '';
+      if ((s.bubbleCss || '').indexOf('lxmv:') >= 0)
+        UI.cssResolve(s.bubbleCss).then(t => { if (seq === decoSeq) tag.textContent = t; });
+    });
     runSafe('theme.deco.frame', () => {
       document.documentElement.style.setProperty('--lx-ava-frame',
         s.avatarFrame ? ('url("' + s.avatarFrame + '")') : 'none');
@@ -26331,6 +26463,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     /* 预览区放在输入框上面（她 10-06 13:27：手机上键盘一弹，下面的预览就被顶出去了，
        看着像“预览图没反应”）；体检结果紧跟输入框下面，一眼能看到成没成 */
     const preview = dlg.querySelector('.deco-preview-chat');
+    let draftTimer = 0;
     const verdictOf = v => UI.cssVerdict(v, [document.getElementById('app'), preview], draft);
     let vTimer = 0;
     const showVerdict = () => {
@@ -26342,9 +26475,20 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     input.addEventListener('input', () => {
       draft.textContent = input.value;
       verdictEl.textContent = '看效果中…';
+      /* 草稿里若有大图 token，也要解析回真图预览（和存档后的展示同一条路） */
+      if (input.value.indexOf('lxmv:') >= 0) {
+        if (draftTimer) clearTimeout(draftTimer);
+        draftTimer = setTimeout(() => {
+          draftTimer = 0;
+          UI.cssResolve(input.value).then(t => { draft.textContent = t; }).catch(() => {});
+        }, 300);
+      }
       if (vTimer) clearTimeout(vTimer);
       vTimer = setTimeout(() => { vTimer = 0; runSafe('theme.deco.verdict', showVerdict); }, 260);
     });
+    if (input.value.indexOf('lxmv:') >= 0) {
+      UI.cssResolve(input.value).then(t => { draft.textContent = t; }).catch(() => {});
+    }
     runSafe('theme.deco.verdict', showVerdict);
     const close = () => {
       if (vTimer) clearTimeout(vTimer);
@@ -26371,10 +26515,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       applyDeco();
       close();
       /* 成没成都要当场说清楚（她 13:27：“成功不成功也没有反应”） */
-      const pic = loc.got ? ('；图片已存进本地 ' + loc.got + ' 张') : '';
-      const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次，或把图先存本地再传）') : '';
-      const big = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大（' + loc.skipped[0].kb + 'KB）没内嵌，联网时正常显示') : '';
-      UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + bad + big) : '已保存（内容为空，等于没写）');
+      const pic = loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '';
+      const big = loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '';
+      const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
+      const skp = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大且媒体库不可用，留了外链') : '';
+      UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + big + bad + skp) : '已保存（内容为空，等于没写）');
     });
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
     mask.appendChild(dlg);
