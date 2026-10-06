@@ -4668,9 +4668,13 @@ var Notify = (function () {
         runSafe('notify.native.test', function () { N.notifyNow('LOVE♡X 通知打通了', '能看见这条就通了～TA 来消息也这样弹'); });
         /* 她 10-04 给的参考：光有精确闹钟不够，还得让系统放行——顺手帮她把电池优化豁免要下来 */
         if (N.requestExemption) runSafe('notify.exempt', function () { N.requestExemption(); });
+        /* 她 10-06：「通知又断了」——开了不挂钟等于白开：开当天就把该弹的时刻交给系统 */
+        runSafe('notify.arm.afterOn', function () { armPlanned(); });
         UI.toast('已开启，刚发了条测试通知，看下通知栏');
       } else {
         DB.state.settings.notify = false; DB.save();
+        /* 关了就把挂出去的闹钟全撤掉，别嘴上关了还继续弹 */
+        if (N.cancelAlarms) runSafe('notify.native.cancel', function () { N.cancelAlarms(); });
         UI.toast('新消息通知已关闭');
       }
       refreshRow();
@@ -4856,16 +4860,19 @@ var Notify = (function () {
   }
   function armPlanned() {
     var N = native();
-    /* 路线 0（APK 壳）：把该提醒的时刻交给系统的精确闹钟——应用被杀也能到点弹 */
+    /* 路线 0（APK 壳）：把该提醒的时刻交给系统的精确闹钟——应用被杀也能到点弹。
+       顺带把槽位号交给原生（同一槽位覆盖、不同槽位互不顶掉），并记下挂了几把给诊断看 */
+    lastArmCount = 0;
     if (N && N.armAt && DB.state.settings.notify) {
       var ns = dueItems();
       if (!ns.length) return;
       var cap = Math.min(ns.length, 24);
       for (var i = 0; i < cap; i++) {
-        (function (it) {
-          runSafe('notify.native.arm', function () { N.armAt(it.dueAt, it.name, it.body); });
-        })(ns[i]);
+        (function (it, i) {
+          runSafe('notify.native.arm', function () { N.armAt(it.dueAt, it.name, it.body, i); });
+        })(ns[i], i);
       }
+      lastArmCount = cap;
       return;
     }
     if (!supported() || !DB.state.settings.notify || Notification.permission !== 'granted') return;
@@ -4904,13 +4911,21 @@ var Notify = (function () {
 
   /* 开机静默重挂的最近一次结果（只活在内存里，给诊断/探针看，不入档） */
   let lastResume = null;
+  /* 壳里最近一次实际挂上系统闹钟的把数（-1=还没挂过；她 10-06「通知又断了」补的实话数字） */
+  let lastArmCount = -1;
 
   /* 她 10-05：
      「后台通知和保活我一退出重进就不行了，虽然显示开启但我还得再点一遍」——
      开关状态是存下来的，但重进后没人把「挂」重新接上：这里在开机时静默重挂（权限还在的话）。
      权限真被系统/浏览器撤了就如实把开关改回关，不让界面撑面子。 */
   function resume() {
-    if (native()) { lastResume = { on: !!DB.state.settings.notify, perm: 'native', armed: true }; refreshRow(); return; }
+    if (native()) {
+      /* 她 10-06：「通知又断了，APK 不是都开了吗」——以前壳里开机只刷文案不挂钟，
+         离开页面的那一下若没发生（直接划掉/升级重装/重启手机），闹钟就一直空着。
+         现在每次开应用都重新挂一遍，并把真实挂载数记进诊断 */
+      runSafe('notify.native.resumeArm', function () { armPlanned(); });
+      lastResume = { on: !!DB.state.settings.notify, perm: 'native', armed: lastArmCount }; refreshRow(); return;
+    }
     if (!supported()) return;
     const on = !!DB.state.settings.notify;
     if (!on) { lastResume = { on: false, perm: null, armed: false }; refreshRow(); return; }
@@ -4950,6 +4965,14 @@ var Notify = (function () {
     var l = [];
     l.push('运行方式：打包后的 APP（系统通知）');
     l.push('开关：' + (DB.state.settings.notify ? '已开启' : '未开启'));
+    /* 她 10-06：「通知又断了」——光说「已开启」会撑面子：这里给真实挂载数，
+       挂上几把钟是几把，0 把就是现在什么都不会到点弹 */
+    var armed = (typeof lastArmCount === 'number') ? lastArmCount : -1;
+    if (armed < 0) {
+      runSafe('notify.diagArm', function () { armPlanned(); armed = lastArmCount; });
+    }
+    l.push('到点提醒：' + (DB.state.settings.notify ? ('已挂 ' + armed + ' 把闹钟') : '未挂（开关关着）'));
+    if (!DB.state.settings.notify) l.push('（开关打开后重新进这一页，这里会变成真实数字）');
     l.push('');
     l.push('弹不弹最终看系统脸色，请在系统设置里给 LOVE♡X 开：');
     l.push('① 自启动 / 允许后台运行');
@@ -4975,7 +4998,7 @@ var Notify = (function () {
     if (el) el.textContent = rowText();
   }
 
-  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, armPlanned: armPlanned, refreshRow: refreshRow, diag: diag, test: test, resume: resume, lastResume: () => lastResume, native: native, diagPanel: diagPanel };
+  return { supported: supported, registerSW: registerSW, toggle: toggle, maybeSys: maybeSys, rowText: rowText, refreshRow: refreshRow, armPlanned: armPlanned, refreshRow: refreshRow, diag: diag, test: test, resume: resume, lastResume: () => lastResume, lastArmCount: () => lastArmCount, native: native, diagPanel: diagPanel };
 })();
 
 /* ============================================================
