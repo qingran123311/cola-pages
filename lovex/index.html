@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261008-000404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261008-011129 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -3839,6 +3839,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
             <option value="mix">混合发送</option>
           </select></em></label>
           <label class="adv-item"><span>图片概率</span><em><input type="number" id="pf-imgprob" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>涂鸦率（TA 画给你看）</span><em><input type="number" id="pf-doodlerate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>气泡情绪/意图标记概率</span><em><input type="number" id="pf-emotionrate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>拼卡概率</span><em><input type="number" id="pf-comboprob" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
@@ -9636,7 +9637,7 @@ const Chat = (function () {
   /* ---------------- 消息渲染 ---------------- */
   /* 消息摘要（引用预览用） */
   function snippetOf(m) {
-    return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
+    return m.type === 'img' ? (m.doodle ? '[涂鸦]' : '[图片]') : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : m.type === 'game' ? '[游戏邀请]'
       : m.type === 'mall' ? '[订单]'
@@ -10333,7 +10334,7 @@ const Chat = (function () {
     }, extra);
     (DB.state.msgs[cv.id] = DB.state.msgs[cv.id] || []).push(m);
     cv.lastMsg = m.type === 'text' ? m.text
-                : m.type === 'img' ? '[图片]'
+                : m.type === 'img' ? (m.doodle ? '[涂鸦]' : '[图片]')
                 : m.type === 'video' ? '[视频]'
                 : m.type === 'kinship' ? '[亲属卡]'
                 : m.type === 'redpacket' ? '[红包]'
@@ -11998,6 +11999,10 @@ const Engine = (function () {
     /* 购物率（她 10-07 23:06 拍板④）：TA 聊着聊着给我买东西/点外卖的概率，默认 3%（她定的），
        联系人独立、资料卡回复设置可调、0=关；每回复批次掷一次，内部另有 2 小时防抖（Mall.maybeGift） */
     shopRate: 3,
+    /* 涂鸦率（她 10-08 00:58 拍板）：TA 聊天过程里随机发一张他现画的涂鸦，默认 1%（她定的），
+       联系人独立、资料卡回复设置可调、0=关；每个气泡位独立掷（同 emoji/图片位口径），
+       画的是 doodle.js 的手绘线稿小纸片（52 种主题+马克笔配色，每次现画不重样） */
+    doodleRate: 1,
     /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
     gaFree: 30,
     readNoReply: 0, moMutual: 0,
@@ -12336,6 +12341,9 @@ const Engine = (function () {
     const imgMode = p.imgMode || 'single';
     const soloImgOK = imgMode !== 'attach';
     const stickers = Library.usableStickerPool(ct);
+    /* 涂鸦率（她 10-08 00:58）：占气泡位，排在图片位后面不蚕食它；池子就是 Doodle 现画，永远有货 */
+    const doodleProb = Math.min(100, Math.max(0, Math.round(+p.doodleRate ?? 1)));
+    const doodleOK = typeof Doodle !== 'undefined' && doodleProb > 0;
 
     /* 对方20%随机引用最近10条：每轮最多附一次，落在首条上 */
     let quote = null;
@@ -12354,7 +12362,7 @@ const Engine = (function () {
        之前固定 600~1600ms 是错的（她抓到“只隔不到1秒”） */
     for (let i = 0; i < count; i++) {
       const r = Math.random() * 100;
-      let text = null, img = null, freeLine = null;
+      let text = null, img = null, freeLine = null, doodle = false;
       /* 语音回复（二期P12）：每个气泡位独立 6%，命中且池非空则本位发一条语音（格式同我方语音条） */
       const vp = (typeof Library !== 'undefined' && Library.usableVoicePool)
         ? Library.usableVoicePool(ct ? ct.id : null) : [];
@@ -12396,13 +12404,23 @@ const Engine = (function () {
         text = pickDeco(Math.random() < 0.5 ? 'em' : 'kao');       // 单独emoji/颜文字
       } else if (r < 15 + imgProb && soloImgOK && stickers.length) {
         img = pick(stickers);                                      // 图片表情占气泡位
+      } else if (r < 15 + imgProb + doodleProb && doodleOK) {
+        /* 涂鸦占气泡位（她 10-08）：现画现发——调度时就画好，发送只管推 */
+        const d = runSafe('doodle.make', () => Doodle.make());
+        if (d && d.dataUrl) doodle = d.dataUrl;
+        else if (cards.length) text = maybeDecorate(pick(cards));   // 画砸了回落字卡，这一位不空过
+        else continue;
       } else if (cards.length) {
         text = maybeDecorate(pick(cards));                         // 字卡文本
       } else {
         continue;                                                  // 字卡库空、又不是自由组话这一条：空过
       }
       later(conv.id, t, () => {
-        if (img) pushAiImg(conv, img, ct);
+        if (doodle) {
+          pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            from: 'ai', type: 'img', img: doodle, doodle: true, senderId: ct ? ct.id : null });
+        }
+        else if (img) pushAiImg(conv, img, ct);
         else pushAi(conv, text, ct, i === 0 ? quote : null);
       });
     }
@@ -12481,7 +12499,7 @@ const Engine = (function () {
   }
 
   function snippetIn(m) {
-    return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
+    return m.type === 'img' ? (m.doodle ? '[涂鸦]' : '[图片]') : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
       : m.type === 'mall' ? '[订单]'
@@ -12611,6 +12629,470 @@ const Engine = (function () {
 
   return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate, learn,
            params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF, emotionLibrary: EMOTION_LIBRARY, pickEmotionTag };
+})();
+
+/* =====================================================
+   LOVE♡X · doodle.js —— TA 的随手涂鸦（她 10-08 00:58 定）
+   · 聊天气泡位独立掷「涂鸦率」（默认 1% 她拍的），掷中发一张 TA 现画的小画
+   · 种类要丰富（她："什么各种图案，种类，生物不同的，物品啥的都可以，颜色也都可以，各种丰富"）：
+     五大主题库 52 种 + 随机抖动线稿 + 马克笔配色 + 角落小装饰，同一主题每次画出来都不重样
+   · 画法：程序手绘——点位全部过一遍随机抖动再二次贝塞尔连笔（圆头笔帽），
+     纸底奶白 + 墨线，像拍照发群里的一张手绘小纸片；不碰网络、不占媒体库（单张 2~4KB 内联）
+   · 渲染全走既有图片管道（m.type='img' + m.doodle 标记）：撤回/长按/引用/摘要一条不漏；
+     摘要显示「[涂鸦]」不冒充图片
+   ===================================================== */
+const Doodle = (function () {
+
+  const INK = '#3A3A42';
+  /* 马克笔色板：内容色，她说颜色各种丰富——不套 UI 四色禁令（那是界面口径） */
+  const PAL = ['#D96A5B', '#E8A33D', '#E5C95C', '#7FA86B', '#5E8FB8', '#8F7BB8', '#D886AE', '#8A6F5C', '#5FA8A0'];
+
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  /* ---------- 手绘工具 ---------- */
+  /* 点位抖动：每个点随机偏移，出来就是「手不稳」的味道（amp 不给就用默认 1.2，别出 NaN） */
+  function J(pts, amp) { const k = (amp == null) ? 1.2 : amp; return pts.map(p => [p[0] + rnd(-k, k), p[1] + rnd(-k, k)]); }
+  /* 椭圆环：closed=true 首尾相接 */
+  function E(cx, cy, rx, ry, closed, a0, a1, n) {
+    const s = a0 || 0, e = (a1 == null) ? (s + Math.PI * 2) : a1;
+    const N = n || Math.max(8, Math.round(Math.abs(e - s) * 4));
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const a = s + (e - s) * i / N;
+      pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+    }
+    if (closed) pts.push(pts[0].slice());
+    return pts;
+  }
+  /* 二次贝塞尔连笔（过中点），圆头笔帽下零长线就是圆点 */
+  function smooth(pts) {
+    if (pts.length < 2) return 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+    let d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      d += ' Q' + pts[i][0].toFixed(1) + ' ' + pts[i][1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1);
+    }
+    const l = pts[pts.length - 1];
+    d += ' L' + l[0].toFixed(1) + ' ' + l[1].toFixed(1);
+    return d;
+  }
+  const dot = (x, y) => [[x, y], [x + 0.01, y]];
+
+  /* ---------- 主题库：52 种 ---------- */
+  /* 每个主题 = f(A) → 笔画数组；A={ink, a:[三个马克笔色]}；笔画={pts, c:'ink'|0|1|2, w} */
+  const CATS = ['生物', '食物', '物品', '自然', '图案'];
+  const SUBJECTS = [
+    /* ===== 生物 ===== */
+    { n: '小猫', cat: 0, f: A => [
+      { pts: J(E(50, 52, 20, 17), 1.2), c: 'ink' },
+      { pts: J([[34, 40], [28, 22], [44, 33]]), c: 'ink' },
+      { pts: J([[66, 40], [72, 22], [56, 33]]), c: 'ink' },
+      { pts: dot(43, 50), c: 'ink', w: 3.4 }, { pts: dot(57, 50), c: 'ink', w: 3.4 },
+      { pts: J(E(50, 58, 4, 3), 0.5), c: A.a[0] },
+      { pts: J([[46, 63], [50, 66], [54, 63]]), c: 'ink' },
+      { pts: J([[30, 54], [22, 52]]), c: 'ink' }, { pts: J([[30, 58], [22, 59]]), c: 'ink' },
+      { pts: J([[70, 54], [78, 52]]), c: 'ink' }, { pts: J([[70, 58], [78, 59]]), c: 'ink' }
+    ] },
+    { n: '小狗', cat: 0, f: A => [
+      { pts: J(E(50, 52, 19, 17), 1.2), c: 'ink' },
+      { pts: J(E(30, 44, 8, 14, false, Math.PI * 0.7, Math.PI * 1.5)), c: A.a[0] },
+      { pts: J(E(70, 44, 8, 14, false, Math.PI * 1.5, Math.PI * 2.3)), c: A.a[0] },
+      { pts: dot(44, 49), c: 'ink', w: 3 }, { pts: dot(56, 49), c: 'ink', w: 3 },
+      { pts: J(E(50, 59, 5, 4), 0.5), c: 'ink' },
+      { pts: J([[47, 64], [50, 70], [53, 64]]), c: A.a[1] }
+    ] },
+    { n: '兔子', cat: 0, f: A => [
+      { pts: J(E(50, 60, 18, 16), 1.2), c: 'ink' },
+      { pts: J(E(42, 26, 5, 14)), c: A.a[0] },
+      { pts: J(E(58, 26, 5, 14)), c: A.a[0] },
+      { pts: dot(44, 57), c: 'ink', w: 3 }, { pts: dot(56, 57), c: 'ink', w: 3 },
+      { pts: dot(50, 64), c: A.a[1], w: 2.6 },
+      { pts: J([[36, 74], [50, 70], [64, 74]]), c: 'ink' }
+    ] },
+    { n: '小熊', cat: 0, f: A => [
+      { pts: J(E(50, 54, 20, 18), 1.2), c: A.a[0] },
+      { pts: J(E(34, 36, 7, 7)), c: A.a[0] },
+      { pts: J(E(66, 36, 7, 7)), c: A.a[0] },
+      { pts: J(E(50, 61, 8, 6), 0.8), c: 'ink' },
+      { pts: dot(50, 58), c: 'ink', w: 3.2 },
+      { pts: dot(43, 50), c: 'ink', w: 3 }, { pts: dot(57, 50), c: 'ink', w: 3 }
+    ] },
+    { n: '小鸟', cat: 0, f: A => [
+      { pts: J(E(48, 52, 16, 13), 1.2), c: A.a[0] },
+      { pts: J(E(48, 50, 9, 7, false, -Math.PI * 0.2, Math.PI * 0.8)), c: 'ink' },
+      { pts: J([[64, 50], [74, 54], [64, 56]]), c: A.a[1] },
+      { pts: dot(56, 46), c: 'ink', w: 3 },
+      { pts: J([[44, 65], [44, 74]]), c: 'ink' }, { pts: J([[54, 65], [54, 74]]), c: 'ink' }
+    ] },
+    { n: '小鱼', cat: 0, f: A => [
+      { pts: J(E(46, 52, 20, 12), 1.1), c: A.a[0] },
+      { pts: J([[66, 52], [82, 42], [82, 62], [66, 52]]), c: A.a[0] },
+      { pts: dot(36, 49), c: 'ink', w: 3 },
+      { pts: J(E(46, 52, 8, 5, false, Math.PI, Math.PI * 2)), c: 'ink' },
+      { pts: J([[24, 38], [21, 34]]), c: 'ink' }, { pts: J([[30, 34], [28, 29]]), c: 'ink' }
+    ] },
+    { n: '蝴蝶', cat: 0, f: A => [
+      { pts: J([[50, 34], [50, 66]]), c: 'ink' },
+      { pts: J(E(34, 44, 14, 11)), c: A.a[0] },
+      { pts: J(E(66, 44, 14, 11)), c: A.a[0] },
+      { pts: J(E(38, 62, 10, 8)), c: A.a[1] },
+      { pts: J(E(62, 62, 10, 8)), c: A.a[1] },
+      { pts: J([[46, 34], [40, 24]]), c: 'ink' }, { pts: J([[54, 34], [60, 24]]), c: 'ink' },
+      { pts: dot(40, 24), c: 'ink', w: 2.4 }, { pts: dot(60, 24), c: 'ink', w: 2.4 }
+    ] },
+    { n: '乌龟', cat: 0, f: A => [
+      { pts: J(E(50, 54, 20, 14, false, Math.PI, Math.PI * 2)), c: A.a[0] },
+      { pts: J([[30, 54], [70, 54]]), c: A.a[0] },
+      { pts: J(E(50, 44, 9, 7)), c: 'ink' },
+      { pts: J(E(78, 52, 6, 5)), c: 'ink' },
+      { pts: J([[36, 68], [36, 74]]), c: 'ink' }, { pts: J([[62, 68], [62, 74]]), c: 'ink' }
+    ] },
+    { n: '恐龙', cat: 0, f: A => [
+      { pts: J(E(44, 56, 16, 12), 1.1), c: A.a[0] },
+      { pts: J([[58, 56], [58, 40], [66, 40]]), c: A.a[0] },
+      { pts: J([[28, 56], [14, 48], [20, 60]]), c: A.a[0] },
+      { pts: J([[40, 68], [40, 76]]), c: 'ink' }, { pts: J([[54, 68], [54, 76]]), c: 'ink' },
+      { pts: J([[44, 38], [50, 30], [56, 38]]), c: 'ink' },
+      { pts: dot(62, 44), c: 'ink', w: 2.8 }
+    ] },
+    { n: '青蛙', cat: 0, f: A => [
+      { pts: J(E(50, 58, 20, 15), 1.2), c: A.a[0] },
+      { pts: J(E(41, 40, 7, 7)), c: A.a[0] },
+      { pts: J(E(59, 40, 7, 7)), c: A.a[0] },
+      { pts: dot(41, 40), c: 'ink', w: 2.8 }, { pts: dot(59, 40), c: 'ink', w: 2.8 },
+      { pts: J([[38, 62], [50, 66], [62, 62]]), c: 'ink' }
+    ] },
+    { n: '章鱼', cat: 0, f: A => [
+      { pts: J(E(50, 44, 18, 15), 1.2), c: A.a[0] },
+      { pts: J([[38, 56], [34, 70], [40, 74]]), c: A.a[0] },
+      { pts: J([[46, 58], [45, 74], [51, 76]]), c: A.a[0] },
+      { pts: J([[56, 57], [60, 72], [56, 77]]), c: A.a[0] },
+      { pts: J([[64, 54], [70, 68], [66, 73]]), c: A.a[0] },
+      { pts: dot(44, 42), c: 'ink', w: 3 }, { pts: dot(56, 42), c: 'ink', w: 3 },
+      { pts: J([[46, 50], [50, 53], [54, 50]]), c: 'ink' }
+    ] },
+    { n: '企鹅', cat: 0, f: A => [
+      { pts: J(E(50, 54, 16, 20), 1.2), c: 'ink' },
+      { pts: J(E(50, 58, 9, 13), 0.8), c: A.a[0] },
+      { pts: dot(45, 46), c: 'ink', w: 2.8 }, { pts: dot(55, 46), c: 'ink', w: 2.8 },
+      { pts: J([[48, 52], [52, 52], [50, 56], [48, 52]]), c: A.a[1] },
+      { pts: J([[44, 74], [42, 78]]), c: A.a[1] }, { pts: J([[56, 74], [58, 78]]), c: A.a[1] }
+    ] },
+    { n: '猫头鹰', cat: 0, f: A => [
+      { pts: J(E(50, 54, 17, 19), 1.2), c: A.a[0] },
+      { pts: J(E(43, 46, 7, 7)), c: 'ink' },
+      { pts: J(E(57, 46, 7, 7)), c: 'ink' },
+      { pts: dot(43, 46), c: 'ink', w: 2.8 }, { pts: dot(57, 46), c: 'ink', w: 2.8 },
+      { pts: J([[48, 52], [52, 52], [50, 56], [48, 52]]), c: A.a[1] },
+      { pts: J([[36, 36], [32, 28]]), c: 'ink' }, { pts: J([[64, 36], [68, 28]]), c: 'ink' },
+      { pts: J([[42, 66], [58, 66]]), c: 'ink' }
+    ] },
+    { n: '刺猬', cat: 0, f: A => [
+      { pts: J(E(56, 58, 16, 12, false, -Math.PI, 0)), c: 'ink' },
+      { pts: J([[40, 58], [34, 46], [42, 50], [40, 38], [48, 46], [50, 34], [56, 44], [62, 36], [62, 48], [70, 42], [68, 54], [76, 54]]), c: A.a[0] },
+      { pts: dot(72, 60), c: 'ink', w: 2.8 },
+      { pts: dot(64, 57), c: 'ink', w: 2.6 }
+    ] },
+
+    /* ===== 食物 ===== */
+    { n: '蛋糕', cat: 1, f: A => [
+      { pts: J([[28, 72], [28, 56], [72, 56], [72, 72], [28, 72]]), c: A.a[0] },
+      { pts: J([[32, 56], [32, 44], [68, 44], [68, 56]]), c: A.a[1] },
+      { pts: J([[48, 44], [48, 32]]), c: 'ink' }, { pts: J([[58, 44], [58, 34]]), c: 'ink' },
+      { pts: J(E(48, 28, 2.4, 3.4)), c: A.a[2] }, { pts: J(E(58, 30, 2.4, 3.4)), c: A.a[2] },
+      { pts: J([[28, 72], [72, 72]]), c: 'ink' }
+    ] },
+    { n: '冰淇淋', cat: 1, f: A => [
+      { pts: J([[38, 52], [50, 82], [62, 52]]), c: A.a[0] },
+      { pts: J([[38, 52], [62, 52]]), c: A.a[0] },
+      { pts: J(E(50, 42, 13, 11)), c: A.a[1] },
+      { pts: J(E(44, 32, 8, 7)), c: A.a[2] },
+      { pts: dot(46, 60), c: 'ink', w: 1.8 }, { pts: dot(54, 68), c: 'ink', w: 1.8 }
+    ] },
+    { n: '甜甜圈', cat: 1, f: A => [
+      { pts: J(E(50, 52, 22, 19)), c: A.a[0] },
+      { pts: J(E(50, 52, 8, 6.5)), c: 'ink' },
+      { pts: J([[38, 40], [42, 36]]), c: A.a[1] }, { pts: J([[58, 38], [62, 42]]), c: A.a[2] },
+      { pts: J([[36, 60], [40, 64]]), c: A.a[2] }, { pts: J([[60, 60], [64, 56]]), c: A.a[1] }
+    ] },
+    { n: '草莓', cat: 1, f: A => [
+      { pts: J(E(50, 56, 15, 17, false, Math.PI * 0.15, Math.PI * 0.85)), c: A.a[0] },
+      { pts: J(E(50, 56, 15, 17, false, Math.PI * 1.15, Math.PI * 1.85)), c: A.a[0] },
+      { pts: J(E(50, 40, 10, 4.5)), c: A.a[1] },
+      { pts: J([[50, 40], [50, 30]]), c: A.a[1] },
+      { pts: dot(44, 56), c: 'ink', w: 1.6 }, { pts: dot(56, 56), c: 'ink', w: 1.6 }, { pts: dot(50, 66), c: 'ink', w: 1.6 }
+    ] },
+    { n: '西瓜', cat: 1, f: A => [
+      { pts: J(E(50, 46, 24, 22, false, 0, Math.PI)), c: A.a[0] },
+      { pts: J(E(50, 46, 20, 18, false, 0.15, Math.PI - 0.15)), c: A.a[1] },
+      { pts: dot(42, 56), c: 'ink', w: 2 }, { pts: dot(52, 60), c: 'ink', w: 2 }, { pts: dot(60, 54), c: 'ink', w: 2 },
+      { pts: J([[26, 46], [74, 46]]), c: 'ink' }
+    ] },
+    { n: '奶茶', cat: 1, f: A => [
+      { pts: J([[36, 34], [40, 76], [60, 76], [64, 34]]), c: 'ink' },
+      { pts: J([[34, 34], [66, 34]]), c: A.a[0] },
+      { pts: J([[56, 12], [50, 34]]), c: A.a[1] },
+      { pts: dot(46, 70), c: A.a[2], w: 3.4 }, { pts: dot(54, 72), c: A.a[2], w: 3.4 }, { pts: dot(50, 66), c: A.a[2], w: 3.4 }
+    ] },
+    { n: '糖葫芦', cat: 1, f: A => [
+      { pts: J([[50, 20], [50, 84]]), c: A.a[0] },
+      { pts: J(E(50, 32, 9, 9)), c: A.a[1] },
+      { pts: J(E(50, 50, 9, 9)), c: A.a[1] },
+      { pts: J(E(50, 68, 9, 9)), c: A.a[1] }
+    ] },
+    { n: '汉堡', cat: 1, f: A => [
+      { pts: J(E(50, 42, 22, 12, false, Math.PI, Math.PI * 2)), c: A.a[0] },
+      { pts: J([[28, 54], [72, 54]]), c: A.a[1] },
+      { pts: J([[28, 60], [72, 60]]), c: A.a[2] },
+      { pts: J([[28, 60], [28, 66], [72, 66], [72, 60]]), c: A.a[0] },
+      { pts: dot(42, 36), c: 'ink', w: 1.6 }, { pts: dot(54, 34), c: 'ink', w: 1.6 }
+    ] },
+
+    /* ===== 物品 ===== */
+    { n: '咖啡杯', cat: 2, f: A => [
+      { pts: J([[34, 42], [38, 74], [62, 74], [66, 42]]), c: 'ink' },
+      { pts: J([[32, 42], [68, 42]]), c: A.a[0] },
+      { pts: J(E(68, 54, 7, 8, false, -Math.PI * 0.5, Math.PI * 0.5)), c: 'ink' },
+      { pts: J([[44, 20], [42, 30]]), c: A.a[1] },
+      { pts: J([[54, 18], [52, 30]]), c: A.a[1] }
+    ] },
+    { n: '礼物盒', cat: 2, f: A => [
+      { pts: J([[28, 48], [28, 76], [72, 76], [72, 48], [28, 48]]), c: A.a[0] },
+      { pts: J([[50, 48], [50, 76]]), c: A.a[1] },
+      { pts: J([[28, 48], [24, 40], [76, 40], [72, 48]]), c: A.a[0] },
+      { pts: J(E(43, 34, 6, 5)), c: A.a[1] }, { pts: J(E(57, 34, 6, 5)), c: A.a[1] }
+    ] },
+    { n: '雨伞', cat: 2, f: A => [
+      { pts: J(E(50, 46, 26, 22, false, Math.PI, Math.PI * 2)), c: A.a[0] },
+      { pts: J([[50, 24], [50, 76]]), c: 'ink' },
+      { pts: J(E(50, 70, 6, 6, false, 0, Math.PI)), c: 'ink' },
+      { pts: J([[24, 46], [76, 46]]), c: 'ink' }
+    ] },
+    { n: '吉他', cat: 2, f: A => [
+      { pts: J(E(46, 64, 16, 13)), c: A.a[0] },
+      { pts: J(E(46, 64, 6, 5)), c: 'ink' },
+      { pts: J([[52, 52], [62, 22]]), c: A.a[1] },
+      { pts: J([[60, 20], [68, 26]]), c: A.a[1] },
+      { pts: J([[50, 48], [58, 20]]), c: 'ink' }
+    ] },
+    { n: '一本书', cat: 2, f: A => [
+      { pts: J([[50, 34], [50, 72]]), c: 'ink' },
+      { pts: J(E(50, 34, 24, 6, false, Math.PI, Math.PI * 2)), c: A.a[0] },
+      { pts: J([[26, 34], [26, 70], [50, 72]]), c: A.a[0] },
+      { pts: J([[74, 34], [74, 70], [50, 72]]), c: A.a[0] }
+    ] },
+    { n: '灯泡', cat: 2, f: A => [
+      { pts: J(E(50, 42, 16, 16)), c: A.a[0] },
+      { pts: J([[44, 58], [44, 68], [56, 68], [56, 58]]), c: 'ink' },
+      { pts: J([[44, 72], [56, 72]]), c: 'ink' },
+      { pts: J([[46, 42], [50, 50], [54, 42]]), c: A.a[1] },
+      { pts: J([[50, 14], [50, 20]]), c: 'ink' }, { pts: J([[26, 42], [32, 42]]), c: 'ink' },
+      { pts: J([[68, 42], [74, 42]]), c: 'ink' }
+    ] },
+    { n: '气球', cat: 2, f: A => [
+      { pts: J(E(50, 38, 15, 18)), c: A.a[0] },
+      { pts: J([[48, 56], [50, 60], [52, 56]]), c: A.a[0] },
+      { pts: J([[50, 60], [46, 70], [52, 78], [48, 86]]), c: 'ink' }
+    ] },
+    { n: '自行车', cat: 2, f: A => [
+      { pts: J(E(30, 62, 12, 12)), c: 'ink' },
+      { pts: J(E(70, 62, 12, 12)), c: 'ink' },
+      { pts: J([[30, 62], [44, 40], [62, 40], [70, 62]]), c: A.a[0] },
+      { pts: J([[30, 62], [50, 62], [70, 62]]), c: A.a[0] },
+      { pts: J([[44, 40], [40, 34], [48, 34]]), c: 'ink' },
+      { pts: J([[62, 40], [58, 34]]), c: 'ink' }
+    ] },
+    { n: '信封', cat: 2, f: A => [
+      { pts: J([[24, 36], [24, 70], [76, 70], [76, 36], [24, 36]]), c: 'ink' },
+      { pts: J([[24, 36], [50, 56], [76, 36]]), c: A.a[0] },
+      { pts: J(E(74, 26, 2.4, 2.4)), c: A.a[1] }
+    ] },
+    { n: '相机', cat: 2, f: A => [
+      { pts: J([[26, 40], [26, 70], [74, 70], [74, 40], [26, 40]]), c: 'ink' },
+      { pts: J([[40, 40], [44, 32], [56, 32], [60, 40]]), c: 'ink' },
+      { pts: J(E(50, 55, 11, 10)), c: A.a[0] },
+      { pts: J(E(50, 55, 5, 4.5)), c: A.a[1] },
+      { pts: dot(68, 46), c: A.a[2], w: 2.6 }
+    ] },
+    { n: '花盆', cat: 2, f: A => [
+      { pts: J([[38, 60], [42, 78], [58, 78], [62, 60]]), c: A.a[0] },
+      { pts: J([[50, 60], [50, 40]]), c: A.a[1] },
+      { pts: J(E(50, 34, 8, 8)), c: A.a[2] },
+      { pts: J(E(40, 30, 6, 6)), c: A.a[2] }, { pts: J(E(60, 30, 6, 6)), c: A.a[2] },
+      { pts: J(E(45, 40, 6, 6)), c: A.a[2] }, { pts: J(E(55, 40, 6, 6)), c: A.a[2] }
+    ] },
+    { n: '眼镜', cat: 2, f: A => [
+      { pts: J(E(36, 52, 12, 10)), c: A.a[0] },
+      { pts: J(E(64, 52, 12, 10)), c: A.a[0] },
+      { pts: J([[48, 52], [52, 52]]), c: 'ink' },
+      { pts: J([[24, 52], [16, 48]]), c: 'ink' }, { pts: J([[76, 52], [84, 48]]), c: 'ink' }
+    ] },
+    { n: '时钟', cat: 2, f: A => [
+      { pts: J(E(50, 52, 22, 22)), c: 'ink' },
+      { pts: J([[50, 52], [50, 38]]), c: A.a[0] },
+      { pts: J([[50, 52], [60, 58]]), c: A.a[1] },
+      { pts: dot(50, 34), c: 'ink', w: 1.6 }, { pts: dot(68, 52), c: 'ink', w: 1.6 },
+      { pts: dot(50, 70), c: 'ink', w: 1.6 }, { pts: dot(32, 52), c: 'ink', w: 1.6 }
+    ] },
+    { n: '手机', cat: 2, f: A => [
+      { pts: J([[38, 22], [38, 80], [62, 80], [62, 22], [38, 22]]), c: 'ink' },
+      { pts: J([[42, 30], [42, 70], [58, 70], [58, 30], [42, 30]]), c: A.a[0] },
+      { pts: dot(50, 75), c: 'ink', w: 2.2 }
+    ] },
+
+    /* ===== 自然 ===== */
+    { n: '太阳', cat: 3, f: A => [
+      { pts: J(E(50, 50, 14, 14)), c: A.a[0] },
+      { pts: J([[50, 22], [50, 14]]), c: A.a[0] }, { pts: J([[50, 78], [50, 86]]), c: A.a[0] },
+      { pts: J([[22, 50], [14, 50]]), c: A.a[0] }, { pts: J([[78, 50], [86, 50]]), c: A.a[0] },
+      { pts: J([[31, 31], [25, 25]]), c: A.a[0] }, { pts: J([[69, 69], [75, 75]]), c: A.a[0] },
+      { pts: J([[69, 31], [75, 25]]), c: A.a[0] }, { pts: J([[31, 69], [25, 75]]), c: A.a[0] }
+    ] },
+    { n: '月亮', cat: 3, f: A => [
+      { pts: J(E(48, 50, 20, 20, false, Math.PI * 0.42, Math.PI * 1.58)), c: A.a[0] },
+      { pts: J(E(30, 50, 24, 20, false, Math.PI * 1.55, Math.PI * 2.45)), c: A.a[0] },
+      { pts: dot(66, 30), c: 'ink', w: 2 }, { pts: dot(74, 42), c: 'ink', w: 1.6 },
+      { pts: dot(70, 56), c: 'ink', w: 1.6 }
+    ] },
+    { n: '星星', cat: 3, f: A => [
+      { pts: J([[50, 20], [58, 42], [82, 42], [63, 56], [70, 78], [50, 64], [30, 78], [37, 56], [18, 42], [42, 42], [50, 20]]), c: A.a[0] }
+    ] },
+    { n: '云朵', cat: 3, f: A => [
+      { pts: J(E(38, 54, 12, 11, false, Math.PI * 0.5, Math.PI * 1.5)), c: A.a[0] },
+      { pts: J(E(50, 44, 13, 12, false, Math.PI, Math.PI * 1.9)), c: A.a[0] },
+      { pts: J(E(62, 54, 12, 11, false, Math.PI * 1.5, Math.PI * 0.5)), c: A.a[0] },
+      { pts: J([[38, 65], [62, 65]]), c: A.a[0] }
+    ] },
+    { n: '彩虹', cat: 3, f: A => [
+      { pts: J(E(50, 68, 30, 30, false, Math.PI, Math.PI * 2)), c: A.a[0] },
+      { pts: J(E(50, 68, 23, 23, false, Math.PI, Math.PI * 2)), c: A.a[1] },
+      { pts: J(E(50, 68, 16, 16, false, Math.PI, Math.PI * 2)), c: A.a[2] },
+      { pts: dot(28, 70), c: 'ink', w: 2.4 }, { pts: dot(72, 70), c: 'ink', w: 2.4 }
+    ] },
+    { n: '大树', cat: 3, f: A => [
+      { pts: J([[46, 60], [46, 80]]), c: A.a[0] }, { pts: J([[54, 60], [54, 80]]), c: A.a[0] },
+      { pts: J(E(50, 44, 20, 18)), c: A.a[1] },
+      { pts: J(E(36, 52, 10, 9)), c: A.a[1] }, { pts: J(E(64, 52, 10, 9)), c: A.a[1] }
+    ] },
+    { n: '小花', cat: 3, f: A => [
+      { pts: J(E(50, 36, 7, 7)), c: A.a[0] },
+      { pts: J(E(38, 30, 7, 7)), c: A.a[1] }, { pts: J(E(62, 30, 7, 7)), c: A.a[1] },
+      { pts: J(E(42, 44, 7, 7)), c: A.a[1] }, { pts: J(E(58, 44, 7, 7)), c: A.a[1] },
+      { pts: J([[50, 50], [50, 78]]), c: A.a[2] },
+      { pts: J([[50, 62], [40, 56]]), c: A.a[2] }, { pts: J([[50, 70], [60, 64]]), c: A.a[2] }
+    ] },
+    { n: '小山', cat: 3, f: A => [
+      { pts: J([[16, 74], [42, 34], [60, 60]]), c: A.a[0] },
+      { pts: J([[52, 74], [70, 46], [86, 74]]), c: A.a[1] },
+      { pts: J([[36, 42], [42, 34], [48, 42]]), c: 'ink' },
+      { pts: J([[14, 74], [88, 74]]), c: 'ink' }
+    ] },
+    { n: '雪人', cat: 3, f: A => [
+      { pts: J(E(50, 68, 17, 13)), c: 'ink' },
+      { pts: J(E(50, 44, 12, 11)), c: 'ink' },
+      { pts: dot(46, 42), c: 'ink', w: 2.4 }, { pts: dot(54, 42), c: 'ink', w: 2.4 },
+      { pts: J(E(50, 48, 3, 2.4)), c: A.a[0] },
+      { pts: J([[38, 56], [62, 56]]), c: A.a[1] },
+      { pts: J([[33, 66], [22, 58]]), c: A.a[2] }, { pts: J([[67, 66], [78, 58]]), c: A.a[2] }
+    ] },
+    { n: '叶子', cat: 3, f: A => [
+      { pts: J(E(50, 50, 12, 22, false, -Math.PI * 0.5, Math.PI * 1.5)), c: A.a[0] },
+      { pts: J([[50, 28], [50, 72]]), c: A.a[0] },
+      { pts: J([[50, 44], [40, 40]]), c: 'ink' }, { pts: J([[50, 56], [60, 52]]), c: 'ink' },
+      { pts: J([[50, 64], [42, 62]]), c: 'ink' }
+    ] },
+
+    /* ===== 图案 ===== */
+    { n: '爱心', cat: 4, f: A => [
+      { pts: J(E(41, 40, 12, 11, false, Math.PI * 0.8, Math.PI * 2.2)), c: A.a[0] },
+      { pts: J(E(59, 40, 12, 11, false, Math.PI * 0.8, Math.PI * 2.2)), c: A.a[0] },
+      { pts: J([[29, 46], [50, 76], [71, 46]]), c: A.a[0] }
+    ] },
+    { n: '波浪', cat: 4, f: A => [
+      { pts: J(E(50, 36, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[0] },
+      { pts: J(E(50, 50, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[1] },
+      { pts: J(E(50, 64, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[2] }
+    ] },
+    { n: '蜗牛线', cat: 4, f: A => {
+      const pts = [];
+      for (let i = 0; i <= 40; i++) { const a = i * 0.32, r = 3 + i * 1.05; pts.push([50 + r * Math.cos(a), 52 + r * Math.sin(a) * 0.9]); }
+      return [{ pts: J(pts, 0.6), c: A.a[0] }];
+    } },
+    { n: '音符', cat: 4, f: A => [
+      { pts: J(E(42, 68, 8, 6, false, 0, Math.PI * 2, 10)), c: A.a[0] },
+      { pts: J([[49, 68], [49, 30]]), c: 'ink' },
+      { pts: J([[49, 30], [64, 36], [64, 46]]), c: 'ink' }
+    ] },
+    { n: '烟花', cat: 4, f: A => [
+      { pts: J([[50, 50], [50, 24]]), c: A.a[0] }, { pts: J([[50, 50], [72, 38]]), c: A.a[1] },
+      { pts: J([[50, 50], [72, 62]]), c: A.a[0] }, { pts: J([[50, 50], [50, 76]]), c: A.a[1] },
+      { pts: J([[50, 50], [28, 62]]), c: A.a[0] }, { pts: J([[50, 50], [28, 38]]), c: A.a[1] },
+      { pts: dot(50, 20), c: 'ink', w: 2.2 }, { pts: dot(76, 36), c: 'ink', w: 2.2 },
+      { pts: dot(76, 64), c: 'ink', w: 2.2 }, { pts: dot(50, 80), c: 'ink', w: 2.2 }
+    ] },
+    { n: '星座', cat: 4, f: A => [
+      { pts: dot(28, 30), c: A.a[0], w: 3.2 }, { pts: dot(50, 22), c: A.a[0], w: 3.2 },
+      { pts: dot(70, 34), c: A.a[0], w: 3.2 }, { pts: dot(62, 58), c: A.a[1], w: 3.2 },
+      { pts: dot(36, 68), c: A.a[1], w: 3.2 },
+      { pts: J([[28, 30], [50, 22], [70, 34], [62, 58], [36, 68], [28, 30]]), c: 'ink' }
+    ] }
+  ];
+
+  /* ---------- 角落小装饰（0~2 个，随手点的） ---------- */
+  const GARNISH = [
+    A => ({ pts: J([[0, -3], [3, 0], [0, 3], [-3, 0], [0, -3]]), c: A.a[0], w: 1.6 }),          // 小星
+    A => [{ pts: J(E(0, 0, 3, 2.6, false, Math.PI * 0.9, Math.PI * 2.1)), c: A.a[1], w: 1.5 },
+          { pts: J(E(0, 0, 3, 2.6, false, Math.PI * 2.9, Math.PI * 4.1)), c: A.a[1], w: 1.5 },
+          { pts: J([[-3, 1], [0, 4], [3, 1]]), c: A.a[1], w: 1.5 }],                            // 小爱心
+    A => [{ pts: J([[-3, 0], [3, 0]]), c: 'ink', w: 1.4 }, { pts: J([[0, -3], [0, 3]]), c: 'ink', w: 1.4 }], // 十字星光
+    A => [{ pts: J([[-4, 2], [0, -2], [4, 2]]), c: A.a[2], w: 1.5 }]                             // 小勾
+  ];
+
+  /* ---------- 出图 ---------- */
+  function make() {
+    const sub = pick(SUBJECTS);
+    /* 每张抽 2~3 支马克笔 */
+    const pool = PAL.slice();
+    const a = [];
+    const nColor = 2 + (Math.random() < 0.45 ? 1 : 0);
+    for (let i = 0; i < nColor; i++) a.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    const A = { ink: INK, a: a };
+    const strokes = sub.f(A).map(s => ({
+      d: smooth(s.pts),
+      col: (s.c === 'ink') ? INK : (A.a[s.c] || INK),
+      w: s.w || rnd(2.1, 3.1)
+    }));
+    /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
+    const gCount = Math.random() < 0.5 ? (Math.random() < 0.3 ? 2 : 1) : 0;
+    const corners = [[16, 16], [84, 16], [16, 86], [84, 86]].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < gCount; i++) {
+      const g = pick(GARNISH)(A);
+      /* 装饰有的是单笔画有的是一组（小爱心三笔）——归一成数组再逐笔推 */
+      const gs = Array.isArray(g) ? g : [g];
+      const gx = corners[i][0] + rnd(-4, 4), gy = corners[i][1] + rnd(-4, 4);
+      gs.forEach(g => {
+        strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: g.w || 1.6 });
+      });
+    }
+    const rot = rnd(-6, 6).toFixed(1);
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+      '<rect x="2" y="2" width="96" height="96" rx="7" fill="#FFFEF8"/>' +
+      '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="' + INK + '" stroke-width="1.1" opacity="0.55"/>' +
+      '<g transform="rotate(' + rot + ' 50 50)">' +
+      strokes.map(s =>
+        '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + s.w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.94"/>'
+      ).join('') +
+      '</g></svg>';
+    return {
+      dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
+      name: sub.n, cat: CATS[sub.cat]
+    };
+  }
+
+  /* 只读口：探针验收用（种类数/类目/逐主题自检） */
+  return { make, count: SUBJECTS.length, cats: CATS, subjects: SUBJECTS };
 })();
 
 /* =====================================================
@@ -25392,6 +25874,7 @@ const Profile = (function () {
     el('pf-imgmode').value = pa.imgMode;
     el('pf-imgprob').value = pa.imgProb;
     el('pf-emotionrate').value = pa.emotionRate;
+    el('pf-doodlerate').value = pa.doodleRate;
     el('pf-letterrate').value = pa.letterRate;
     el('pf-comboprob').value = pa.cardComboProb;
     el('pf-comin').value = pa.cardComboMin;
@@ -25602,7 +26085,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-doodlerate', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
@@ -25613,6 +26096,7 @@ const Profile = (function () {
         p.imgMode = el('pf-imgmode').value;
         p.imgProb = Math.min(100, Math.max(0, Math.round(+el('pf-imgprob').value || 0)));
         p.emotionRate = Math.min(100, Math.max(0, Math.round(+el('pf-emotionrate').value || 0)));
+    p.doodleRate = Math.min(100, Math.max(0, Math.round(+el('pf-doodlerate').value || 0)));
         p.letterRate = Math.min(100, Math.max(0, Math.round(+el('pf-letterrate').value || 0)));
         /* 拼字卡（二期P9）：概率%+条数区间（最少≥2） */
         p.cardComboProb = Math.min(100, Math.max(0, Math.round(+el('pf-comboprob').value || 0)));
@@ -25675,12 +26159,14 @@ const Profile = (function () {
         }
         /* 没动情绪概率且联系人原本没存过时，不把默认 10% 偷写成她的选择。 */
         if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'emotionRate') && id !== 'pf-emotionrate') delete p.emotionRate;
+    if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'doodleRate') && id !== 'pf-doodlerate') delete p.doodleRate;
         if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'shopRate') && id !== 'pf-shoprate') delete p.shopRate;
         c.params = p;
         el('pf-calllo').value = p.callLo;
         el('pf-callhi').value = p.callHi;
         el('pf-imgprob').value = p.imgProb;
         el('pf-emotionrate').value = p.emotionRate;
+    el('pf-doodlerate').value = p.doodleRate;
         el('pf-shoprate').value = p.shopRate;
         el('pf-letterrate').value = p.letterRate;
         el('pf-ltr-min').value = p.ltrMinH;
