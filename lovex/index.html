@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261007-213013 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261008-000404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -3263,6 +3263,183 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .call-grid .call-cell.invite{border:1px dashed var(--line);background:transparent;color:var(--t2);cursor:pointer;justify-content:center}
 .call-grid .call-cell.invite .call-avatar.sm{display:flex;align-items:center;justify-content:center;color:inherit}
 
+
+/* =====================================================
+   P64 商城与外卖（她 10-07 拍板）——线稿风、圆角、墨+主题色+语义绿
+   ===================================================== */
+
+/* ---------- 页面骨架：双 Tab + 类目金刚区 + 商品列表 ---------- */
+.mall-tabs{display:flex;gap:6px;padding:10px 14px 4px}
+.mall-tabs button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--t2);
+  border-radius:var(--r-btn);padding:8px 0;font-size:var(--fs-body);cursor:pointer}
+.mall-tabs button.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.mall-cats{display:flex;gap:10px;overflow-x:auto;padding:8px 14px 10px;scrollbar-width:none}
+.mall-cats::-webkit-scrollbar{display:none}
+.mall-cat{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px;
+  min-width:52px;padding:8px 6px;border:1px solid var(--line);background:var(--card);
+  border-radius:12px;color:var(--t2);cursor:pointer}
+.mall-cat.on{border-color:var(--primary);color:var(--t1);background:var(--primary-ultra)}
+.mall-cat span{font-size:var(--fs-small)}
+.mall-list{padding:0 14px 24px;display:flex;flex-direction:column;gap:10px}
+.mall-upload{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 0;
+  border:1.5px dashed var(--line);border-radius:var(--r-card);background:transparent;
+  color:var(--t3);font-size:var(--fs-aux);cursor:pointer}
+.mall-p{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);
+  border-radius:var(--r-card);background:var(--card);cursor:pointer;text-align:left;width:100%}
+.mall-p-thumb,.moc-thumb,.sku-thumb,.cart-thumb{flex:0 0 auto;width:56px;height:56px;border-radius:10px;
+  background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--t3);overflow:hidden}
+.mall-p-thumb img,.moc-thumb img,.sku-thumb img,.cart-thumb img{width:100%;height:100%;object-fit:cover}
+.mall-p-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mall-p-mid b{font-size:var(--fs-body);color:var(--t1);font-weight:600}
+.mall-p-mid small{font-size:var(--fs-small);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mall-p-price{font-size:var(--fs-body);color:var(--t1);font-weight:600;display:flex;align-items:center;gap:6px}
+.mall-p-price em{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;font-weight:400}
+.mall-p-mine{font-style:normal;font-size:11px;color:var(--t2);border:1px solid var(--line);
+  border-radius:var(--r-tag);padding:0 4px;font-weight:400}
+.mall-p-go{color:var(--t3)}
+#mall-cart-dot{position:absolute;top:-4px;right:-6px;min-width:15px;height:15px;border-radius:8px;
+  background:var(--ok);color:#fff;font-size:10px;font-style:normal;line-height:15px;text-align:center;padding:0 3px}
+
+/* ---------- 底部弹层（商城唯一弹层：SKU/购物车/结算/订单/地址/上传） ---------- */
+.mall-mask{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1200;display:flex;
+  align-items:flex-end;justify-content:center}
+.mall-sheet{width:100%;max-width:420px;max-height:78vh;background:var(--card);
+  border-radius:var(--r-card) var(--r-card) 0 0;display:flex;flex-direction:column;
+  animation:msUp .22s ease}
+.mall-sheet.tall{max-height:88vh}
+@keyframes msUp{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+.ms-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.ms-head b{font-size:var(--fs-title)}
+.ms-x{border:0;background:var(--fill);color:var(--t2);width:26px;height:26px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ms-body{overflow-y:auto;padding:6px 16px calc(18px + env(safe-area-inset-bottom))}
+
+/* ---------- SKU 弹窗 ---------- */
+.sku-top{display:flex;gap:12px;padding:6px 0 12px}
+.sku-thumb{width:72px;height:72px;border-radius:12px}
+.sku-mid{display:flex;flex-direction:column;gap:4px;justify-content:center}
+.sku-mid b{font-size:20px;color:var(--t1)}
+.sku-mid small{font-size:var(--fs-small);color:var(--t3)}
+.sku-orig{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;margin-left:6px;font-weight:400}
+.sku-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
+.sku-row-name{flex:0 0 auto;font-size:var(--fs-aux);color:var(--t2);line-height:28px}
+.sku-opts{display:flex;flex-wrap:wrap;gap:8px}
+.sku-opt{border:1px solid var(--line);background:var(--card);color:var(--t2);border-radius:var(--r-btn);
+  padding:5px 12px;font-size:var(--fs-aux);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.sku-opt.on{border-color:var(--primary);background:var(--primary-ultra);color:var(--t1)}
+.sku-qty{display:flex;align-items:center;gap:14px}
+.sku-qty button{width:28px;height:28px;border-radius:14px;border:1px solid var(--line);
+  background:var(--card);color:var(--t1);font-size:16px;cursor:pointer}
+.sku-qty b{min-width:20px;text-align:center}
+.sku-acts{display:flex;gap:10px;padding:14px 0 4px}
+.sku-acts .btn{flex:1}
+
+/* ---------- 购物车 / 结算 ---------- */
+.cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cart-chk{flex:0 0 auto;width:20px;height:20px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);color:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cart-chk.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.cart-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cart-mid b{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
+.cart-mid small{font-size:var(--fs-small);color:var(--t3)}
+.cart-price{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
+.cart-del{border:0;background:transparent;color:var(--t3);cursor:pointer;padding:6px}
+.cart-foot{display:flex;align-items:center;gap:12px;padding:14px 0 4px}
+.cart-foot span{display:flex;align-items:center;gap:6px;font-size:var(--fs-aux);color:var(--t2);flex:1}
+.cart-foot b{font-size:var(--fs-body);color:var(--t1)}
+.ck-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0}
+.ck-row-name{flex:0 0 auto;font-size:var(--fs-aux);color:var(--t2);line-height:28px}
+.ck-people{display:flex;flex-wrap:wrap;gap:8px}
+.ck-person{border:1px solid var(--line);background:var(--card);color:var(--t2);border-radius:var(--r-btn);
+  padding:5px 12px;font-size:var(--fs-aux);cursor:pointer}
+.ck-person.on{border-color:var(--primary);background:var(--primary-ultra);color:var(--t1)}
+.ck-addr{flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);padding:6px 10px;
+  font-size:var(--fs-aux);color:var(--t2);cursor:pointer;background:var(--card)}
+.ck-addr b{color:var(--t1);margin-right:4px}
+.ck-items{border-top:1px solid var(--line);padding-top:4px}
+.ck-item{display:flex;align-items:center;gap:10px;padding:8px 0}
+.ck-pay{border-top:1px solid var(--line);padding-top:6px}
+.ck-total{text-align:right;padding:10px 0;font-size:var(--fs-aux);color:var(--t2)}
+.ck-total b{font-size:18px;color:var(--t1);margin-left:4px}
+.ck-go{width:100%}
+
+/* ---------- 支付成功（对标参考图：绿勾 + 余额提示；绿=既有语义绿） ---------- */
+.pay-ok{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0 10px}
+.pay-ok-ring{width:56px;height:56px;border-radius:28px;border:2px solid var(--ok);color:var(--ok);
+  display:flex;align-items:center;justify-content:center}
+.pay-ok b{font-size:24px;color:var(--t1)}
+.pay-ok small{font-size:var(--fs-aux);color:var(--t3)}
+
+/* ---------- 订单列表 / 详情 ---------- */
+.mo-tabs{display:flex;gap:6px;padding:2px 0 10px}
+.mo-tabs button{flex:1;border:0;background:transparent;color:var(--t2);border-radius:var(--r-btn);
+  padding:7px 0;font-size:var(--fs-aux);cursor:pointer}
+.mo-tabs button.on{background:var(--fill);color:var(--t1);font-weight:600}
+.mo-row{display:flex;align-items:center;gap:10px;width:100%;padding:10px 0;border:0;
+  border-bottom:1px solid var(--line);background:transparent;cursor:pointer;text-align:left}
+.mo-row-state{flex:0 0 auto;font-size:var(--fs-small);color:var(--t2);width:44px}
+.mo-row-state.ok{color:var(--ok)}
+.mo-row-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mo-row-mid b{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
+.mo-row-mid small{font-size:var(--fs-small);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mo-row-amt{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
+.od-state{padding:4px 0 10px}
+.od-state b{font-size:var(--fs-body);color:var(--t1)}
+.od-line{border-top:1px solid var(--line);padding-top:4px}
+.od-amount{display:flex;justify-content:flex-end;gap:8px;padding:10px 0;font-size:var(--fs-aux);color:var(--t2)}
+.od-amount b{color:var(--t1);font-size:16px}
+.od-timeline{border-top:1px solid var(--line);padding:12px 0 4px}
+.od-node{position:relative;display:flex;align-items:baseline;gap:10px;padding:0 0 18px 22px}
+.od-node i{position:absolute;left:2px;top:5px;width:8px;height:8px;border-radius:4px;
+  border:1.5px solid var(--line);background:var(--card)}
+.od-node.on i{background:var(--primary);border-color:var(--primary)}
+.od-node span{font-size:var(--fs-aux);color:var(--t3);min-width:56px}
+.od-node.on span{color:var(--t1)}
+.od-node small{font-size:var(--fs-small);color:var(--t3)}
+.od-meta{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px;
+  font-size:var(--fs-aux);color:var(--t1)}
+.od-meta span{display:inline-block;min-width:52px;color:var(--t3);margin-right:8px}
+.od-review{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+.od-review-name{font-size:var(--fs-aux);color:var(--t2)}
+.od-review p{font-size:var(--fs-aux);color:var(--t1);padding:6px 0 0}
+.od-acts{display:flex;gap:10px;padding:14px 0 4px}
+.od-acts .btn{flex:1}
+
+/* ---------- 地址 / 上传商品 ---------- */
+.addr-row{display:flex;align-items:center;gap:10px;width:100%;padding:11px 0;
+  border-bottom:1px solid var(--line);background:transparent;border-left:0;border-right:0;border-top:0;
+  cursor:pointer;text-align:left}
+.addr-row b{flex:0 0 auto;font-size:var(--fs-small);color:var(--t1);border:1px solid var(--line);
+  border-radius:var(--r-tag);padding:1px 6px;font-weight:500}
+.addr-row span{flex:1;font-size:var(--fs-aux);color:var(--t2)}
+.addr-row.on{background:var(--primary-ultra)}
+.addr-del{border:0;background:transparent;color:var(--t3);cursor:pointer;padding:6px}
+.addr-add{width:100%;margin-top:12px}
+.addr-input{display:flex;align-items:center;gap:10px;padding:8px 0}
+.addr-input input,.addr-input select{flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);
+  padding:8px 10px;font-size:var(--fs-aux);background:var(--card);color:var(--t1)}
+.up-img-row{display:flex;gap:12px;padding:6px 0 10px;align-items:center}
+.up-img{width:72px;height:72px;border-radius:12px;background:var(--fill);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;color:var(--t3);overflow:hidden}
+.up-img img{width:100%;height:100%;object-fit:cover}
+.up-img-side{display:flex;flex-direction:column;gap:6px}
+.up-img-side small{font-size:var(--fs-small);color:var(--t3)}
+.up-img-btn{position:relative;overflow:hidden;cursor:pointer}
+
+/* ---------- 聊天订单卡（bubble-kin 复用卡片底，内容自成一块） ---------- */
+.moc{width:100%}
+.moc.gone{font-size:var(--fs-aux);color:var(--t3)}
+.moc-head{display:flex;align-items:center;gap:6px;padding-bottom:6px;font-size:var(--fs-small);color:var(--t2)}
+.moc-head span{flex:1}
+.moc-head b{color:var(--t1);font-weight:600}
+.moc-item{display:flex;align-items:center;gap:10px;padding:4px 0 8px}
+.moc-thumb{width:44px;height:44px;border-radius:8px}
+.moc-mid{display:flex;flex-direction:column;gap:2px;min-width:0}
+.moc-mid b{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
+.moc-mid small{font-size:var(--fs-small);color:var(--t3)}
+.moc-bar{height:3px;border-radius:2px;background:var(--fill);overflow:hidden;margin:2px 0 6px}
+.moc-bar i{display:block;height:100%;background:var(--primary);border-radius:2px}
+.moc-eta{font-size:var(--fs-small);color:var(--t2)}
 </style>
 </head>
 <body>
@@ -3294,6 +3471,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="card cell-group">
         <button class="cell" id="disc-moments"><span class="cell-icon"><i data-icon="camera" data-size="20"></i></span><span class="cell-text">朋友圈</span><span class="chevron">›</span></button>
         <button class="cell" id="disc-game"><span class="cell-icon"><i data-icon="gamepad" data-size="20"></i></span><span class="cell-text">游戏</span><span class="chevron">›</span></button>
+        <!-- P64（她 10-07 23:06 拍板①）：发现页一个「商城」，里面分 商城|外卖 两个 Tab -->
+        <button class="cell" id="disc-mall"><span class="cell-icon"><i data-icon="shop" data-size="20"></i></span><span class="cell-text">商城</span><span class="chevron">›</span></button>
       </div>
       <div id="sched-body"></div>
       <!-- 预留扩展位：她后续会往发现页加东西 -->
@@ -3675,6 +3854,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>朋友圈互评</span><em><select id="pf-momutual"><option value="0">只有我能评 TA</option><option value="1">联系人可互评（30% 追评）</option></select></em></label>
           <label class="adv-item"><span>主动发消息间隔</span><em><input type="number" id="pf-promin" min="0" step="0.1" style="width:52px"> - <input type="number" id="pf-promax" min="0" step="0.1" style="width:52px"> 分钟</em></label>
           <label class="adv-item"><span>主动发红包概率</span><em><input type="number" id="pf-redgift" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>购物率（TA 给我买）</span><em><input type="number" id="pf-shoprate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>来信概率</span><em><input type="number" id="pf-letterrate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>通话时长</span><em>
             <input type="number" id="pf-calllo" min="0" step="0.5" style="width:52px"> - <input type="number" id="pf-callhi" min="0" step="0.5" style="width:52px">
@@ -3747,6 +3927,24 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   </header>
   <div class="page-body" id="dy-body"></div>
 </section>
+
+  <!-- ===== 页面：商城与外卖（P64，她 10-07 拍板：发现页入口、内页双 Tab、购物车/订单右上角） ===== -->
+  <section class="page" id="page-mall">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
+      <div class="navbar-title">商城</div>
+      <button class="nav-act" id="mall-orders-btn" title="我的订单"><i data-icon="box" data-size="18"></i></button>
+      <button class="nav-act" id="mall-cart-btn" title="购物车"><i data-icon="cart" data-size="18"></i><i class="mall-cart-dot" id="mall-cart-dot" hidden></i></button>
+    </header>
+    <div class="page-body page-body-flush">
+      <div class="mall-tabs" id="mall-tabs">
+        <button class="on" data-mtab="shop">商城</button>
+        <button data-mtab="takeout">外卖</button>
+      </div>
+      <div class="mall-cats" id="mall-cats"></div>
+      <div class="mall-list" id="mall-list"></div>
+    </div>
+  </section>
 
 <!-- ===== 页面：游戏大厅（P40，她定：发现页朋友圈下方入口） ===== -->
 <section class="page" id="page-game">
@@ -3887,6 +4085,10 @@ const DB = (function () {
       },
       letters: {},                     // contactId -> 信件往来（P8）
       aiRuntime: {}                    // contactId -> 状态轮换运行时（下次判定时间戳等，P5）
+      ,
+      /* P64 商城与外卖（她 10-07 拍板）：自定义商品/订单/购物车/双层地址。内置商品是代码常量（Mall.BUILTIN），
+         不进档；订单时间轴在生成时就定好各节点真实时刻，关页错过也补得回来 */
+      mall: { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {} }
     };
   }
 
@@ -4145,6 +4347,20 @@ const DB = (function () {
           n += rec.people.length - kept.length; rec.people = kept;
         });
       });
+    }
+
+    /* P64 商城：与 TA 相关的订单、TA 的地址跟人走（订单卡在聊天里，聊天记录随会话已清） */
+    if (st.mall) {
+      if (Array.isArray(st.mall.orders)) {
+        const gone = st.mall.orders.filter(o => o && (o.buyerUid === cid || o.toUid === cid));
+        if (gone.length) {
+          collectMedia(gone, 0);
+          st.mall.orders = st.mall.orders.filter(o => !(o && (o.buyerUid === cid || o.toUid === cid)));
+          n += gone.length;
+        }
+      }
+      if (st.mall.addr) kill(st.mall.addr.byContact, cid);
+      if (st.mall.lastGiftAt) kill(st.mall.lastGiftAt, cid);
     }
 
     /* 8) 朋友圈：TA 发的动态（连本体）、TA 的评论与点赞、「给谁看」名单 */
@@ -6997,8 +7213,13 @@ const UI = (function () {
   }
   async function fetchAsDataUrl(u) {
     /* 直连优先；被跨域拦了就走公共中转（页面里本就是这套兜底），拿到字节自己转 data:。
-       每路 8 秒必给答案：取不到就换下一路/如实报失败——不能让导入在那儿干等像死了（她 10-06 晚） */
+       每路 8 秒必给答案：取不到就换下一路/如实报失败——不能让导入在那儿干等像死了（她 10-06 晚）。
+       10-08 加 weserv 双线：她手机实测 postimg 图案三路全折（直连+两中转），“变色不图案”就出在这——
+       多铺两条 CDN 图图中转，总有一条能通；weserv 系不吃带协议的完整串，去掉头再传 */
+    const imgFree = u.replace(/^https?:\/\//, '');
     const tries = [u,
+      'https://wsrv.nl/?url=' + encodeURIComponent(imgFree),
+      'https://images.weserv.nl/?url=' + encodeURIComponent(imgFree),
       'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
       'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)];
     for (const t of tries) {
@@ -7203,7 +7424,7 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, cssResolve, textFromFile, framePrep };
+  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, cssResolve, cssRemoteUrls, textFromFile, framePrep };
 })();
 
 /* =====================================================
@@ -7281,7 +7502,23 @@ const ICONS = {
   'cards-ddz':     '<rect x="3.2" y="7.4" width="9.4" height="13.2" rx="2"/><rect x="11.4" y="4" width="9.4" height="13.2" rx="2"/><path d="M16.1 8.4c1.5 1.4 2.2 2.2 2.2 3a1.2 1.2 0 0 1-2.2.7 1.2 1.2 0 0 1-2.2-.7c0-.8.7-1.6 2.2-3z"/><path d="M12.4 19.6h7.4"/>',
   /* 飞行棋：俯视喷气机，一笔画完（线稿风，不拿 EMOJI 当图标） */
   'plane':         '<path d="M12 3c1.5 0 2.4 2.4 2.4 5.2 0 1.4-.1 2.5-.3 3.3l6.4 3.7v2.1l-6.5-2-.2 3 2.4 2.2v1.4L12 20.8l-4.2 1.1v-1.4l2.4-2.2-.2-3-6.5 2v-2.1l6.4-3.7c-.2-.8-.3-1.9-.3-3.3C9.6 5.4 10.5 3 12 3z"/>',
+  /* P64 商城与外卖：商城/购物车/外卖袋/类目图标，全站统一线稿风（她 10-07 拍板） */
+  'shop':          '<path d="M4 9.5h16l-1 10.5H5z"/><path d="M4 9.5L6 4.5h12l2 5"/><path d="M9.5 9.5v3a2.5 2.5 0 0 0 5 0v-3"/>',
+  'cart':          '<circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17.5" cy="19.5" r="1.5"/><path d="M3 4.5h2.5l2 11h11l2-8H6.2"/>',
+  'takeout':       '<rect x="5.5" y="8.5" width="13" height="12" rx="1.5"/><path d="M9 8.5V6a3 3 0 0 1 6 0v2.5"/><path d="M5.5 13h13"/>',
+  'bowl':          '<path d="M4 12.5h16a8 8 0 0 1-5 7.4H9a8 8 0 0 1-5-7.4z"/><path d="M9 9.5c0-1.2 1-1.6 1-2.8M12.5 9.5c0-1.2 1-1.6 1-2.8"/>',
+  'cup':           '<path d="M7 7.5h10l-1.2 13H8.2z"/><path d="M9.5 7.5L12 3.5l2.5 4"/><path d="M7.5 11h9"/>',
+  'fruit':         '<path d="M12 8.5c-3.5-1.8-7 .8-7 4.7 0 4 3.1 7.3 7 7.3s7-3.3 7-7.3c0-3.9-3.5-6.5-7-4.7z"/><path d="M12 8.5c0-2.3 1.2-3.6 3.2-4"/>',
+  'cookie':        '<circle cx="12" cy="12" r="8.5"/><path d="M9.5 10.5h.01M14.5 9.5h.01M10 15h.01M14.5 14.5h.01" stroke-width="2.4"/>',
+  'shirt':         '<path d="M8.5 4.5L4 7.5l2 3.5 2-1v9.5h8V10l2 1 2-3.5-4.5-3a3.5 3.5 0 0 1-7 0z"/>',
+  'gem':           '<path d="M7 4.5h10l3.5 5-8.5 10-8.5-10z"/><path d="M3.5 9.5h17M9.5 4.5L8 9.5l4 10 4-10-1.5-5"/>',
+  'bear':          '<circle cx="12" cy="13.5" r="6"/><circle cx="6.5" cy="7" r="2"/><circle cx="17.5" cy="7" r="2"/><path d="M9.5 12.5h.01M14.5 12.5h.01M10.5 15.8c.9.7 2.1.7 3 0"/><circle cx="9.8" cy="15.8" r=".6" fill="currentColor" stroke="none"/>',
+  'headset':       '<path d="M4.5 13.5v-2a7.5 7.5 0 0 1 15 0v2"/><rect x="3.5" y="13.5" width="4" height="6" rx="1.5"/><rect x="16.5" y="13.5" width="4" height="6" rx="1.5"/>',
+  'flower':        '<circle cx="12" cy="9.5" r="2"/><path d="M12 7.5c-2.5-.6-3.3-2.8-1.5-3.8S13.7 5 12 7.5zM14 8.5c2.3-1 4.2.2 3.9 2.1-.3 2-2.8 2.2-3.9.9zM12 11.5c.6 2.4-.8 4-2.4 3.4S8.6 12.4 12 11.5zM10 10.2c-2.4-.4-3.6 1.2-2.8 2.8.9 1.7 3.2 1 2.8-.9"/><path d="M12 13.5v7"/>',
+  'cake':          '<path d="M4 19.5h16M5 19.5v-6.5h14v6.5"/><path d="M5 13c0-2 1.5-3.5 3.5-3.5S11 11 12 11s2-1.5 3.5-1.5S19 11 19 13"/><path d="M12 9.5V7"/><circle cx="12" cy="6" r=".8"/>',
+  'box':           '<rect x="4" y="7.5" width="16" height="12" rx="1.5"/><path d="M4 11.5h16M12 7.5v12M4 7.5l2-3.5h12l2 3.5"/>',
   /* 大富翁：一张方环棋盘（外圈画格、中间一颗骰子），线稿风 */
+  'star':          '<path d="M12 4l2.4 5 5.4.7-4 3.8 1 5.5-4.8-2.7L7.2 19l1-5.5-4-3.8L9.6 9z"/>',
   'map-mono':    '<rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.4"/><rect x="7.4" y="7.4" width="9.2" height="9.2" rx="1.6"/><path d="M3.2 7.4h4.2M16.6 7.4h4.2M3.2 16.6h4.2M16.6 16.6h4.2M7.4 3.2v4.2M7.4 16.6v4.2M16.6 3.2v4.2M16.6 16.6v4.2"/><circle cx="10.4" cy="10.4" r=".8"/><circle cx="13.6" cy="13.6" r=".8"/>'
 };
 
@@ -9402,6 +9639,7 @@ const Chat = (function () {
     return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : m.type === 'game' ? '[游戏邀请]'
+      : m.type === 'mall' ? '[订单]'
       : m.type === 'link' ? (m.watchInvite ? '[一起看邀请]' : '[链接]') : (m.text || '');
   }
 
@@ -9578,6 +9816,13 @@ const Chat = (function () {
         cap.insertBefore(head, cap.firstChild);
       }
       bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
+    } else if (m.type === 'mall') {
+      /* P64 商城订单卡（她 10-07 拍板）：真实订单、进度与 ETA 由 Mall 20s 心跳刷新；
+         代付的（TA 给我买）带「已代付」标，点卡看订单详情 */
+      bub.classList.add('bubble-kin');
+      const order = (typeof Mall !== 'undefined') ? Mall.orderById(m.orderId) : null;
+      bub.innerHTML = typeof Mall !== 'undefined' ? Mall.cardHtml(m, order) : '<div class="moc gone">订单组件未加载</div>';
+      if (order) bub.addEventListener('click', e => { e.stopPropagation(); Mall.openOrderDetail(order.id); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
       bub.classList.add('bubble-kin');
@@ -10094,6 +10339,7 @@ const Chat = (function () {
                 : m.type === 'redpacket' ? '[红包]'
                 : m.type === 'quiz' ? '[灵魂拷问]'
                 : m.type === 'game' ? '[游戏邀请]'
+                : m.type === 'mall' ? '[订单]'
                 : m.type === 'link' ? '[链接]'
                 : '[语音]';
     cv.lastTime = m.ts;
@@ -11749,6 +11995,9 @@ const Engine = (function () {
     learnRate: 5,
     /* 清然 10-07：每条 AI 文字气泡独立掷情绪/意图小标，默认 10%，资料卡回复设置可调 */
     emotionRate: 10,
+    /* 购物率（她 10-07 23:06 拍板④）：TA 聊着聊着给我买东西/点外卖的概率，默认 3%（她定的），
+       联系人独立、资料卡回复设置可调、0=关；每回复批次掷一次，内部另有 2 小时防抖（Mall.maybeGift） */
+    shopRate: 3,
     /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
     gaFree: 30,
     readNoReply: 0, moMutual: 0,
@@ -12191,6 +12440,11 @@ const Engine = (function () {
       const revokeAt = t + rand(800, 2200);
       later(conv.id, revokeAt, () => runSafe('chat.revoke', () => Chat.maybeRevoke(conv, ct)));
     }
+    /* 购物率（她 10-07 23:06 拍板④，默认 3%）：挂整批回复之后（同拍一拍/撤回层级），
+       每回复批次掷一次；真商品真扣钱，订单卡进聊天，钱与账单全走老口径（Mall.maybeGift 内部） */
+    if (conv.type === 'single' && typeof Mall !== 'undefined' && Mall.maybeGift) {
+      later(conv.id, t + rand(1200, 2600), () => runSafe('mall.gift', () => Mall.maybeGift(conv, ct)));
+    }
 
     return t;
   }
@@ -12230,6 +12484,7 @@ const Engine = (function () {
     return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
+      : m.type === 'mall' ? '[订单]'
       : m.type === 'link' ? (m.watchInvite ? '[一起看邀请]' : '[链接]') : (m.text || '');
   }
   function authorNameIn(conv, m) {
@@ -14634,11 +14889,12 @@ const Wallet = (function () {
 
   const TYPES = [
     ['recharge', '充值'], ['redpacket', '红包'], ['transfer', '转账'],
-    ['groupcollect', '群收款'], ['consume', '用户消费'], ['refund', '有退款']
+    ['groupcollect', '群收款'], ['consume', '用户消费'], ['refund', '有退款'],
+    ['mall', '商城']   /* P64：商城/外卖消费（她 10-07 拍板）；走 Pay 唯一口，只是账单上看得懂 */
   ];
   const TICON = {
     recharge: 'download', redpacket: 'heart', transfer: 'chat',
-    groupcollect: 'chat-group', consume: 'tag', refund: 'check'
+    groupcollect: 'chat-group', consume: 'tag', refund: 'check', mall: 'shop'
   };
 
   function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
@@ -15557,6 +15813,752 @@ const Pay = (function () {
   function detach() { m = null; }
 
   return { attach, refresh, detach, render, summary, options, settle, settlePeer, refundFor, pref, setPref, BALANCE };
+})();
+
+/* =====================================================
+   LOVE♡X · mall.js —— 商城与外卖（P64，她 10-07 22:40 提案、23:06 拍板）
+   她 23:06 拍板口径：
+     ① 入口：发现页一个「商城」，里面分 商城|外卖 两个 Tab
+     ② 外卖时长：随机时间（区间为工程值，对标真实外卖节奏，见 TAKEOUT_NODES）
+     ③ 商城物流：也分段（完整时间轴，按小时走，见 SHOP_NODES）
+     ④ TA 给我买：概率叫「购物率」，默认 3%（联系人独立，0=关；REPLY_DEF.shopRate）
+     ⑤ 内置商品：一批直接可用的，种类全一些（价格是示例，她可改）
+     ⑥ 规格：要有——食物有口味/甜度，衣物有尺码，没规格的只有数量，按商品配
+     ⑦ 地址：要——「我的地址 / 角色地址」双层（对标乙游），没填过就没有
+   钱的口径一律走老规矩：支付只走 Pay（零钱/亲属卡）、记账只走 Wallet.addBill、
+   金额只走 Wallet.toFen；TA 掏钱走 Pay.settlePeer，不够就当这笔没发生。
+   商品图：自建商品图走 Media.compressImage 压缩成 dataURL，落盘时 MediaVault 自动搬 IDB。
+   ===================================================== */
+const Mall = (function () {
+
+  /* ---------- 内置类目与商品（她 23:06⑤：直接可用、种类全；价格为示例她可改） ---------- */
+  const CATS = [
+    { key: 'food',    name: '美食', icon: 'bowl',    takeout: true },
+    { key: 'tea',     name: '奶茶', icon: 'cup',     takeout: true },
+    { key: 'fruit',   name: '水果', icon: 'fruit',   takeout: true },
+    { key: 'snack',   name: '零食', icon: 'cookie' },
+    { key: 'cloth',   name: '衣物', icon: 'shirt' },
+    { key: 'acc',     name: '饰品', icon: 'gem' },
+    { key: 'toy',     name: '玩具', icon: 'bear' },
+    { key: 'digital', name: '数码', icon: 'headset' },
+    { key: 'flower',  name: '鲜花', icon: 'flower' },
+    { key: 'cake',    name: '蛋糕', icon: 'cake',    takeout: true }
+  ];
+  const BUILTIN = [
+    { id: 'bp01', cat: 'food',    name: '秘制排骨饭',   desc: '排骨给得多，酱汁拌饭一绝', fen: 3000,  origFen: 5000, icon: 'bowl',    takeout: true,  specs: [{ name: '口味', opts: ['不辣', '微辣', '中辣'] }] },
+    { id: 'bp02', cat: 'food',    name: '麻辣烫',       desc: '自己挑的菜，烫出来最香',   fen: 2200,  icon: 'bowl',  takeout: true,  specs: [{ name: '辣度', opts: ['微微辣', '中辣', '特辣'] }] },
+    { id: 'bp03', cat: 'food',    name: '鲜虾小馄饨',   desc: '皮薄馅大，汤头清甜',       fen: 1500,  icon: 'bowl',  takeout: true,  specs: [{ name: '份量', opts: ['一碗', '两碗'] }] },
+    { id: 'bp04', cat: 'tea',     name: '焦糖奶茶',     desc: '现煮红茶底，焦糖香不齁',   fen: 1990,  origFen: 2500, icon: 'cup',     takeout: true,  specs: [{ name: '甜度', opts: ['无糖', '三分糖', '五分糖', '七分糖', '全糖'] }, { name: '杯型', opts: ['中杯', '大杯'] }] },
+    { id: 'bp05', cat: 'tea',     name: '手打柠檬茶',   desc: '暴打柠檬，冰爽解腻',       fen: 1500,  icon: 'cup',   takeout: true,  specs: [{ name: '甜度', opts: ['无糖', '三分糖', '五分糖'] }] },
+    { id: 'bp06', cat: 'fruit',   name: '菠萝',         desc: '盐水泡过，不扎嘴',         fen: 3000,  origFen: 5000, icon: 'fruit' },
+    { id: 'bp07', cat: 'fruit',   name: '车厘子盒装',   desc: '个大核小，一口一个',       fen: 4500,  icon: 'fruit', specs: [{ name: '规格', opts: ['250g', '500g'] }] },
+    { id: 'bp08', cat: 'snack',   name: '黄油小饼干',   desc: '铁盒装，配奶茶正好',       fen: 990,   icon: 'cookie' },
+    { id: 'bp09', cat: 'snack',   name: '每日坚果礼盒', desc: '三十包小袋，一天一包',     fen: 3900,  icon: 'cookie' },
+    { id: 'bp10', cat: 'cloth',   name: '夏季纯棉T恤',  desc: '厚实不透，洗了不变形',     fen: 9900,  icon: 'shirt', specs: [{ name: '尺码', opts: ['S', 'M', 'L', 'XL'] }] },
+    { id: 'bp11', cat: 'cloth',   name: '针织围巾',     desc: '软糯不扎脖子',             fen: 12800, icon: 'shirt', specs: [{ name: '颜色', opts: ['燕麦色', '炭灰色'] }] },
+    { id: 'bp12', cat: 'acc',     name: '星星项链',     desc: '细链小星星，日常也能戴',   fen: 15800, icon: 'gem' },
+    { id: 'bp13', cat: 'acc',     name: '贝壳手链',     desc: '海边捡的那种感觉',         fen: 6600,  icon: 'gem' },
+    { id: 'bp14', cat: 'toy',     name: '轻松熊玩偶',   desc: '抱起来刚好一整个手臂',     fen: 11000, icon: 'bear',  specs: [{ name: '尺码', opts: ['20cm', '40cm'] }] },
+    { id: 'bp15', cat: 'toy',     name: '月球灯',       desc: '会发光，放在床头刚好',     fen: 8900,  icon: 'bear' },
+    { id: 'bp16', cat: 'toy',     name: '千片拼图',     desc: '拼完能裱起来的那种',       fen: 6900,  icon: 'bear' },
+    { id: 'bp17', cat: 'digital', name: '蓝牙耳机',     desc: '戴上耳朵不痛，续航够用',   fen: 19900, icon: 'headset' },
+    { id: 'bp18', cat: 'digital', name: '手机支架',     desc: '躺着追剧不用举着手',       fen: 2900,  icon: 'headset' },
+    { id: 'bp19', cat: 'flower',  name: '玫瑰花束',     desc: '包好送到手上的一束',       fen: 6600,  icon: 'flower' },
+    { id: 'bp20', cat: 'flower',  name: '向日葵',       desc: '看着就精神的那种花',       fen: 5200,  icon: 'flower', specs: [{ name: '规格', opts: ['单支', '三支'] }] },
+    { id: 'bp21', cat: 'cake',    name: '六寸奶油蛋糕', desc: '动物奶油，不甜腻',         fen: 12800, icon: 'cake',  takeout: true,  specs: [{ name: '口味', opts: ['原味', '巧克力', '抹茶'] }] },
+    { id: 'bp22', cat: 'cake',    name: '提拉米苏盒装', desc: '一勺到底，可可粉厚厚的',   fen: 3200,  icon: 'cake',  takeout: true }
+  ];
+  /* 快捷地址标签（乙游式；文本她填，没填过就没有，不造默认地址） */
+  const MY_TAGS = ['家', '公司', '学校'];
+  const TA_TAGS = ['TA的房间', 'TA的公司', 'TA的学校', '宿舍'];
+
+  /* ---------- 物流节奏（她 23:06②③拍「随机时间/分段」；区间为工程值，对标真实节奏，她可改） ---------- */
+  const TAKEOUT_NODES = [
+    { key: 'placed',     label: '已下单',   min: 0, max: 0 },
+    { key: 'merchant',   label: '商家接单', min: 2, max: 5 },     // 分钟
+    { key: 'rider',      label: '骑手接单', min: 2, max: 4 },     // 分钟（距上一节点）
+    { key: 'delivering', label: '派送中',   min: 8, max: 20 },    // 分钟
+    { key: 'done',       label: '已送达',   min: 3, max: 8 }      // 分钟（派送开始后再走一程，别一进派送就送达）
+  ];
+  const SHOP_NODES = [
+    { key: 'placed',   label: '已下单',   min: 0, max: 0 },
+    { key: 'shipped',  label: '商家发货', min: 60, max: 180 },  // 分钟（1~3 小时）
+    { key: 'transit',  label: '运输中',   min: 360, max: 720 }, // 分钟（6~12 小时）
+    { key: 'lastmile', label: '派送中',   min: 60, max: 120 },  // 分钟（1~2 小时）
+    { key: 'done',     label: '已送达',   min: 30, max: 90 }    // 分钟（派送开始后再走一程）
+  ];
+
+  function st() {
+    const s = DB.state;
+    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {} };
+    if (!s.mall.custom) s.mall.custom = [];
+    if (!s.mall.orders) s.mall.orders = [];
+    if (!s.mall.cart) s.mall.cart = [];
+    if (!s.mall.addr) s.mall.addr = { me: [], byContact: {} };
+    if (!s.mall.lastGiftAt) s.mall.lastGiftAt = {};
+    return s.mall;
+  }
+  function products() { return BUILTIN.concat(st().custom); }
+  function productById(id) { return products().find(p => p.id === id) || null; }
+  function catName(key) { const c = CATS.find(x => x.key === key); return c ? c.name : '商品'; }
+  function esc(s) { return UI.escapeHtml(s); }
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function pick(arr) { return arr[rand(0, arr.length - 1)]; }
+  function fmtHM(ts) { const d = new Date(ts), p = n => String(n).padStart(2, '0'); return p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function fmtMDHM(ts) { const d = new Date(ts), p = n => String(n).padStart(2, '0'); return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + fmtHM(ts); }
+
+  /* ---------- 订单 ---------- */
+  function buildTimeline(kind, from) {
+    const nodes = (kind === 'takeout' ? TAKEOUT_NODES : SHOP_NODES);
+    let t = from, out = [];
+    nodes.forEach(n => {
+      if (n.max > 0) t += rand(n.min, n.max) * 60000;
+      out.push({ key: n.key, label: n.label, ts: t });
+    });
+    return out;
+  }
+  function createOrder(o) {
+    const now = Date.now();
+    const order = {
+      id: 'mo' + now.toString(36) + Math.random().toString(36).slice(2, 5),
+      kind: o.kind, items: o.items, totalFen: o.totalFen,
+      buyerUid: o.buyerUid || 'me', toUid: o.toUid || 'me',
+      pay: o.pay || null, createdAt: now,
+      timeline: buildTimeline(o.kind, now),
+      addr: o.addr || null, signed: false, reacted: false, review: null
+    };
+    st().orders.push(order);
+    DB.save();
+    return order;
+  }
+  function orderById(id) { return st().orders.find(o => o.id === id) || null; }
+  /* 进度：idx=已到达的节点下标；done=全部节点到点 */
+  function statusOf(order) {
+    if (!order) return { idx: 0, done: false, etaTs: 0 };
+    const now = Date.now();
+    let idx = 0;
+    order.timeline.forEach((n, i) => { if (now >= n.ts) idx = i; });
+    return { idx, done: idx >= order.timeline.length - 1, etaTs: order.timeline[order.timeline.length - 1].ts, placedTs: order.timeline[0].ts };
+  }
+  function etaText(order) {
+    const s = statusOf(order);
+    const who = order.toUid === 'me' ? '你那里' : (Home.displayName(Home.contactById(order.toUid)) || 'TA') + '那里';
+    if (s.done) return '';
+    if (order.kind === 'takeout') {
+      const leftMin = Math.max(1, Math.ceil((s.etaTs - Date.now()) / 60000));
+      return '预计 ' + fmtHM(s.etaTs) + ' 送达 · 还有 ' + leftMin + ' 分钟到' + who;
+    }
+    return '预计 ' + fmtMDHM(s.etaTs) + ' 送达';
+  }
+
+  /* 送达结算：TA 收的礼物在送达那刻「签收 + 聊一句 + 落评语」（真实语料，不造话） */
+  function settleAll() {
+    let changed = false;
+    st().orders.forEach(order => {
+      if (order.reacted) return;
+      const s = statusOf(order);
+      if (!s.done) return;
+      /* 我买给 TA 的：TA 自动收货，聊一句、评一句 */
+      if (order.buyerUid === 'me' && order.toUid !== 'me') {
+        order.reacted = true; order.signed = true;
+        const ct = Home.contactById(order.toUid);
+        const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(order.toUid) : [];
+        if (ct) {
+          const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === ct.id);
+          if (conv && pool.length) {
+            /* D4 门禁：吞异常口只减不增——能 runSafe 的都用 runSafe（tag 进错误台账，不是静默吞） */
+    runSafe('mall.react', () => Engine.pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), from: 'ai', type: 'text', text: pick(pool), ts: Date.now(), senderId: ct.id }));
+          }
+          if (pool.length) order.review = { by: 'ta', text: pick(pool), ts: Date.now() };
+        }
+        changed = true;
+      }
+    });
+    if (changed) DB.save();
+    return changed;
+  }
+
+  /* ---------- 聊天订单卡 ---------- */
+  function itemMain(order) { return order.items[0] || { name: '商品', qty: 1 }; }
+  function specText(it) {
+    const s = it.spec && Object.keys(it.spec).filter(k => it.spec[k]).map(k => it.spec[k]);
+    return s && s.length ? '（' + s.join(' / ') + '）' : '';
+  }
+  function barPct(order) {
+    const s = statusOf(order);
+    if (s.done) return 100;
+    const span = s.etaTs - s.placedTs;
+    return Math.min(96, Math.max(3, Math.round((Date.now() - s.placedTs) / Math.max(1, span) * 100)));
+  }
+  function cardStateHtml(order) {
+    const s = statusOf(order);
+    if (s.done) {
+      if (order.signed) return order.review
+        ? '已签收 · TA 说：' + esc(order.review.text)
+        : (order.toUid === 'me' ? '已签收' : '已签收 · 可看评价');
+      return order.toUid === 'me' ? '已送达 · 点卡确认签收' : '已送达 · TA 已收货';
+    }
+    return (order.kind === 'takeout' ? TAKEOUT_NODES : SHOP_NODES)[s.idx].label + ' · ' + esc(etaText(order));
+  }
+  function thumbHtml(p, cls) {
+    if (p && p.img && !/^@mv/.test(p.img)) return '<img class="' + cls + '" src="' + esc(p.img) + '" alt="">';
+    if (p && p.img && /^@mv/.test(p.img)) return '<span class="' + cls + '"><i data-icon="image" data-size="20"></i></span>';
+    return '<span class="' + cls + '"><i data-icon="' + ((p && p.icon) || 'tag') + '" data-size="22"></i></span>';
+  }
+  /* m: 聊天消息（带 orderId / paidBy）；o: 订单（可能已删除） */
+  function cardHtml(m, o) {
+    if (!o) return '<div class="moc gone">这笔订单已删除</div>';
+    const kindName = o.kind === 'takeout' ? '外卖' : '商城';
+    const gift = o.buyerUid !== 'me' || m.paidBy;
+    const head = kindName + (gift ? ' · 已代付' : '');
+    const it = itemMain(o);
+    const p = productById(it.pid);
+    return '<div class="moc" data-order="' + o.id + '">' +
+      '<div class="moc-head"><i data-icon="' + (o.kind === 'takeout' ? 'takeout' : 'shop') + '" data-size="14"></i>' +
+      '<span>' + head + '</span><b>¥' + Wallet.yuan(o.totalFen) + '</b></div>' +
+      '<div class="moc-item">' + thumbHtml(p, 'moc-thumb') +
+      '<div class="moc-mid"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b>' +
+      '<small>' + esc(specText(it)) + '</small></div></div>' +
+      '<div class="moc-bar"><i style="width:' + barPct(o) + '%"></i></div>' +
+      '<div class="moc-eta">' + cardStateHtml(o) + '</div>' +
+      '</div>';
+  }
+
+  /* ---------- 底部弹层（商城一个入口：SKU/购物车/结算/订单/地址全走这一层） ---------- */
+  function sheet(title, opts) {
+    const o = opts || {};
+    const layer = document.getElementById('dialog-layer');
+    const mask = document.createElement('div');
+    mask.className = 'mall-mask ui-modal';
+    mask.innerHTML = '<div class="mall-sheet' + (o.tall ? ' tall' : '') + '">' +
+      '<div class="ms-head"><b></b><button class="ms-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
+      '<div class="ms-body"></div></div>';
+    mask.querySelector('.ms-head b').textContent = title;
+    const close = () => mask.remove();
+    mask.querySelector('.ms-x').addEventListener('click', close);
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+    layer.appendChild(mask);
+    UI.raise(mask);
+    mountIcons(mask);
+    return { el: mask, body: mask.querySelector('.ms-body'), close, setTitle: t => { mask.querySelector('.ms-head b').textContent = t; } };
+  }
+
+  /* ---------- 商品图渲染（自建商品 img=dataURL，落盘自动进 IDB；破了画占位不画破图） ---------- */
+  function renderPage() { renderCats(); renderList(); updateCartDot(); }
+
+  let tab = 'shop';      // shop | takeout
+  let cat = 'all';
+
+  function renderCats() {
+    const box = document.getElementById('mall-cats');
+    if (!box) return;
+    const cats = CATS.filter(c => tab === 'shop' ? true : !!c.takeout);
+    box.innerHTML = [{ key: 'all', name: '全部', icon: 'shop' }].concat(cats).map(c =>
+      '<button class="mall-cat' + (cat === c.key || (cat === 'all' && c.key === 'all') ? ' on' : '') + '" data-cat="' + c.key + '">' +
+      '<i data-icon="' + c.icon + '" data-size="20"></i><span>' + c.name + '</span></button>').join('');
+    box.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
+      cat = b.dataset.cat; renderCats(); renderList();
+    }));
+    mountIcons(box);
+  }
+
+  function renderList() {
+    const box = document.getElementById('mall-list');
+    if (!box) return;
+    let list = products().filter(p => tab === 'shop' ? true : !!p.takeout);
+    if (cat !== 'all') list = list.filter(p => p.cat === cat);
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="shop" data-size="40"></i></div><div class="empty-text">这个类目还没有商品</div></div>';
+      mountIcons(box); return;
+    }
+    const rows = list.map(p =>
+      '<button class="mall-p" data-pid="' + p.id + '">' +
+      thumbHtml(p, 'mall-p-thumb') +
+      '<span class="mall-p-mid"><b>' + esc(p.name) + '</b>' +
+      (p.desc ? '<small>' + esc(p.desc) + '</small>' : '') +
+      '<span class="mall-p-price">¥' + Wallet.yuan(p.fen) +
+      (p.origFen ? '<em>¥' + Wallet.yuan(p.origFen) + '</em>' : '') +
+      ((st().custom || []).some(c => c.id === p.id) ? '<i class="mall-p-mine">我的商品</i>' : '') +
+      '</span></span>' +
+      '<span class="mall-p-go"><i data-icon="chevron-right" data-size="14"></i></span></button>').join('');
+    /* 她 23:06⑤：自建商品的入口放列表顶上一张虚线卡，商城只有一个上传入口 */
+    const upload = '<button class="mall-upload" id="mall-upload-btn"><i data-icon="plus" data-size="16"></i>上传我的商品</button>';
+    box.innerHTML = (tab === 'shop' ? upload : '') + rows;
+    box.querySelectorAll('[data-pid]').forEach(b => b.addEventListener('click', () => {
+      const p = productById(b.dataset.pid); if (p) openProduct(p);
+    }));
+    const up = document.getElementById('mall-upload-btn');
+    if (up) up.addEventListener('click', openUpload);
+    mountIcons(box);
+  }
+
+  function updateCartDot() {
+    const dot = document.getElementById('mall-cart-dot');
+    if (!dot) return;
+    const n = st().cart.reduce((s, c) => s + c.qty, 0);
+    dot.hidden = !n;
+    dot.textContent = n > 99 ? '99+' : n;
+  }
+
+  /* ---------- SKU 弹窗（拼多多式：规格胶囊 + 数量；食物有口味，衣物有尺码，没有的只有数量） ---------- */
+  function openProduct(p) {
+    const sh = sheet(p.name, {});
+    const sel = {};   // 已选规格：{规格名: 选项}——没配规格的商品就只有数量
+    (p.specs || []).forEach(sp => { sel[sp.name] = sp.opts[0]; });
+    let qty = 1;
+    function render() {
+      sh.body.innerHTML =
+        '<div class="sku-top">' + thumbHtml(p, 'sku-thumb') +
+        '<div class="sku-mid"><b>¥' + Wallet.yuan(p.fen) + (p.origFen ? '<em class="sku-orig">¥' + Wallet.yuan(p.origFen) + '</em>' : '') + '</b>' +
+        '<small>' + esc(p.desc || '') + '</small></div></div>' +
+        (p.specs || []).map(sp =>
+          '<div class="sku-row"><span class="sku-row-name">' + esc(sp.name) + '</span><span class="sku-opts">' +
+          sp.opts.map(o => '<button type="button" class="sku-opt' + (sel[sp.name] === o ? ' on' : '') + '" data-spec="' + esc(sp.name) + '" data-opt="' + esc(o) + '">' + esc(o) + '</button>').join('') +
+          '</span></div>').join('') +
+        '<div class="sku-row"><span class="sku-row-name">数量</span><span class="sku-qty">' +
+        '<button type="button" data-q="-1">−</button><b>' + qty + '</b><button type="button" data-q="1">＋</button></span></div>' +
+        '<div class="sku-acts"><button class="btn btn-secondary" data-act="cart">加入购物车</button>' +
+        '<button class="btn btn-primary" data-act="buy">立即购买</button></div>';
+      sh.body.querySelectorAll('.sku-opt').forEach(b => b.addEventListener('click', () => {
+        sel[b.dataset.spec] = b.dataset.opt; render();
+      }));
+      sh.body.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => {
+        qty = Math.min(99, Math.max(1, qty + (+b.dataset.q))); render();
+      }));
+      const add = sh.body.querySelector('[data-act="cart"]');
+      const buy = sh.body.querySelector('[data-act="buy"]');
+      if (add) add.addEventListener('click', () => {
+        st().cart.push({ id: 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), pid: p.id, qty, spec: Object.assign({}, sel), ts: Date.now() });
+        DB.save(); updateCartDot(); sh.close();
+        UI.toast('已加入购物车');
+      });
+      if (buy) buy.addEventListener('click', () => { sh.close(); openCheckout([{ pid: p.id, qty, spec: Object.assign({}, sel) }]); });
+    }
+    render();
+  }
+
+  /* ---------- 购物车 ---------- */
+  function openCart() {
+    const sh = sheet('购物车', {});
+    let checked = {};   // cartItemId -> bool
+    function render() {
+      const list = st().cart;
+      if (!list.length) {
+        sh.body.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="cart" data-size="40"></i></div><div class="empty-text">购物车还空着</div></div>';
+        mountIcons(sh.body); return;
+      }
+      list.forEach(c => { if (!(c.id in checked)) checked[c.id] = true; });
+      const chosen = list.filter(c => checked[c.id]);
+      const totalFen = chosen.reduce((s, c) => { const p = productById(c.pid); return s + (p ? p.fen * c.qty : 0); }, 0);
+      sh.body.innerHTML = list.map(c => {
+        const p = productById(c.pid);
+        return '<div class="cart-row"><button type="button" class="cart-chk' + (checked[c.id] ? ' on' : '') + '" data-chk="' + c.id + '"><i data-icon="check" data-size="12"></i></button>' +
+          (p ? thumbHtml(p, 'cart-thumb') + '<div class="cart-mid"><b>' + esc(p.name) + '</b><small>' + esc(specText(c)) + '</small>' +
+            '<span class="cart-price">¥' + Wallet.yuan(p.fen) + '</span></div>' : '<div class="cart-mid"><b>商品已下架</b></div>') +
+          '<button type="button" class="cart-del" data-del="' + c.id + '"><i data-icon="trash" data-size="14"></i></button></div>';
+      }).join('') +
+        '<div class="cart-foot"><span>全选 <button type="button" class="cart-chk all' + (chosen.length === list.length ? ' on' : '') + '" data-chk="*"><i data-icon="check" data-size="12"></i></button></span>' +
+        '<b>合计 ¥' + Wallet.yuan(totalFen) + '</b>' +
+        '<button class="btn btn-primary" data-act="go"' + (chosen.length ? '' : ' disabled') + '>结算（' + chosen.length + '）</button></div>';
+      sh.body.querySelectorAll('[data-chk]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.chk === '*') { const all = chosen.length === list.length; list.forEach(c => checked[c.id] = !all); }
+        else checked[b.dataset.chk] = !checked[b.dataset.chk];
+        render();
+      }));
+      sh.body.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+        const m = st(); m.cart = m.cart.filter(c => c.id !== b.dataset.del);
+        DB.save(); updateCartDot(); render();
+      }));
+      const go = sh.body.querySelector('[data-act="go"]');
+      if (go) go.addEventListener('click', () => {
+        if (!chosen.length) return;
+        sh.close();
+        openCheckout(chosen.map(c => ({ pid: c.pid, qty: c.qty, spec: c.spec, cartId: c.id })));
+      });
+      mountIcons(sh.body);
+    }
+    render();
+  }
+
+  /* ---------- 结算（收货人 → 地址 → 支付方式 → 提交；全走 Pay 唯一口） ---------- */
+  function openCheckout(lines) {
+    const items = lines.map(l => ({ l, p: productById(l.pid) })).filter(x => x.p);
+    if (!items.length) { UI.toast('商品都不在了'); return; }
+    const sh = sheet('确认订单', { tall: true });
+    let toUid = 'me';
+    let addrId = '';
+    let payBox = null;
+    const totalFen = items.reduce((s, x) => s + x.p.fen * x.l.qty, 0);
+
+    function addrList(uid) { return uid === 'me' ? st().addr.me : (st().addr.byContact[uid] || []); }
+    function curAddr() {
+      const list = addrList(toUid);
+      return list.find(a => a.id === addrId) || null;
+    }
+
+    function render() {
+      const contacts = (DB.state.contacts || []).filter(c => !c.isGroup);
+      const list = addrList(toUid);
+      const a = curAddr();
+      sh.body.innerHTML =
+        '<div class="ck-row"><span class="ck-row-name">送给</span><span class="ck-people">' +
+        '<button type="button" class="ck-person' + (toUid === 'me' ? ' on' : '') + '" data-uid="me">我自己</button>' +
+        contacts.map(c => '<button type="button" class="ck-person' + (toUid === c.id ? ' on' : '') + '" data-uid="' + c.id + '">' + esc(Home.displayName(c)) + '</button>').join('') +
+        '</span></div>' +
+        '<div class="ck-row"><span class="ck-row-name">地址</span><span class="ck-addr" data-act="addr">' +
+        (a ? '<b>' + esc(a.tag) + '</b> ' + esc(a.text) : (list.length ? '选一个地址 ›' : '添加收货地址 ›')) + '</span></div>' +
+        '<div class="ck-items">' + items.map(x =>
+          '<div class="ck-item">' + thumbHtml(x.p, 'cart-thumb') +
+          '<div class="cart-mid"><b>' + esc(x.p.name) + '</b><small>' + esc(specText(x.l)) + '</small></div>' +
+          '<span class="cart-price">¥' + Wallet.yuan(x.p.fen * x.l.qty) + '</span></div>').join('') + '</div>' +
+        /* Pay 老规矩：一张亲属卡都没有时支付行不出现（零钱直接结算）——空标题也不留 */
+        ((typeof Pay !== 'undefined' && Pay.options(totalFen).cards) ? '<div class="ck-pay"><div class="ck-row-name">付款方式</div><div id="mall-pay-box"></div></div>' : '<div id="mall-pay-box"></div>') +
+        '<div class="ck-total">合计 <b>¥' + Wallet.yuan(totalFen) + '</b></div>' +
+        '<button class="btn btn-primary ck-go" data-act="submit">提交订单</button>';
+      sh.body.querySelectorAll('[data-uid]').forEach(b => b.addEventListener('click', () => {
+        toUid = b.dataset.uid; addrId = ''; render();
+      }));
+      sh.body.querySelector('[data-act="addr"]').addEventListener('click', () => openAddr(toUid, addrId, id => { addrId = id; render(); }));
+      payBox = sh.body.querySelector('#mall-pay-box');
+      if (typeof Pay !== 'undefined') Pay.attach(payBox, { getAmt: () => totalFen });
+      sh.body.querySelector('[data-act="submit"]').addEventListener('click', submit);
+    }
+
+    function submit() {
+      /* 先验钱再下单：一笔都扣不了就别开单（余额不被扣成负数是老规矩） */
+      if (typeof Pay === 'undefined') return;
+      const o = Pay.options(totalFen);
+      if (!o.list.some(x => !x.why)) { UI.toast('余额不够，先去充值吧'); return; }
+      const a = curAddr();
+      const made = [];
+      for (const x of items) {
+        const r = Pay.settle(x.p.fen * x.l.qty, {
+          type: 'mall',
+          note: (x.p.takeout ? '外卖-' : '商城-') + x.p.name,
+          peer: toUid !== 'me' ? toUid : null
+        });
+        if (r.err) {
+          /* 中途不够：已下的单原路退掉，这笔订单整批不算发生 */
+          made.forEach(ord => Pay.refundFor({ fromUid: 'me', pay: ord.pay }, ord.totalFen, '订单退回', ord.toUid !== 'me' ? ord.toUid : null));
+          made.forEach(ord => { const m = st(); m.orders = m.orders.filter(z => z.id !== ord.id); });
+          DB.save();
+          UI.toast(r.err);
+          return;
+        }
+        const order = createOrder({
+          kind: x.p.takeout ? 'takeout' : 'shop',
+          items: [{ pid: x.p.id, name: x.p.name, icon: x.p.icon, img: x.p.img || null, fen: x.p.fen, qty: x.l.qty, spec: x.l.spec || {} }],
+          totalFen: x.p.fen * x.l.qty,
+          buyerUid: 'me', toUid, pay: r,
+          addr: a ? { tag: a.tag, text: a.text } : null
+        });
+        made.push(order);
+      }
+      /* 购物车里勾选的清掉 */
+      const ids = items.map(x => x.l.cartId).filter(Boolean);
+      if (ids.length) { const m = st(); m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0); }
+      DB.save(); updateCartDot();
+      /* 送给 TA 的：聊天里落订单卡（对标「找人代付」卡） */
+      made.forEach(order => { if (order.toUid !== 'me') pushOrderCard(order, 'me', null); });
+      showSuccess(made);
+    }
+    render();
+  }
+
+  /* 订单卡进聊天：from=下单人一侧；paidBy=下单人≠收货人时为真 */
+  function pushOrderCard(order, fromUid, paidBy) {
+    const peerUid = order.toUid !== 'me' ? order.toUid : order.buyerUid;
+    if (!peerUid || peerUid === 'me') return;   // 自己买给自己不进聊天
+    const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === peerUid);
+    if (!conv || typeof Engine === 'undefined') return;
+    Engine.pushRaw(conv, {
+      id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      from: fromUid === 'me' ? 'me' : 'ai', type: 'mall',
+      orderId: order.id, senderId: fromUid === 'me' ? null : fromUid,
+      paidBy: !!paidBy, ts: Date.now()
+    });
+  }
+
+  /* 支付成功弹层（对标参考图：绿勾 + 余额提示） */
+  function showSuccess(orders) {
+    const sh = sheet('支付成功', {});
+    const total = orders.reduce((s, o) => s + o.totalFen, 0);
+    sh.body.innerHTML = '<div class="pay-ok"><span class="pay-ok-ring"><i data-icon="check" data-size="30"></i></span>' +
+      '<b>¥' + Wallet.yuan(total) + '</b>' +
+      '<small>零钱余额 ¥' + Wallet.yuan(Wallet.bal('me')) + '</small>' +
+      '<button class="btn btn-primary" data-act="ok">完成</button></div>';
+    sh.body.querySelector('[data-act="ok"]').addEventListener('click', () => {
+      sh.close();
+      if (orders.length) openOrders();
+    });
+    mountIcons(sh.body);
+  }
+
+  /* ---------- 订单列表 / 详情 ---------- */
+  function openOrders() {
+    const sh = sheet('我的订单', { tall: true });
+    let f = 'all';   // all | going | signed | done
+    function filtered() {
+      return st().orders.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => {
+        const s = statusOf(o);
+        if (f === 'going') return !s.done;
+        if (f === 'signed') return s.done && !o.signed;
+        if (f === 'done') return o.signed;
+        return true;
+      });
+    }
+    function render() {
+      const list = filtered();
+      const tabs = [['all', '全部'], ['going', '配送中'], ['signed', '待签收'], ['done', '已完成']];
+      sh.body.innerHTML = '<div class="mo-tabs">' + tabs.map(t =>
+        '<button class="' + (f === t[0] ? 'on' : '') + '" data-f="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+        (list.length ? list.map(o => {
+          const it = itemMain(o);
+          const p = productById(it.pid);
+          const s = statusOf(o);
+          const state = !s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? '已完成' : '待签收');
+          return '<button class="mo-row" data-oid="' + o.id + '">' +
+            '<span class="mo-row-state ' + (s.done ? 'ok' : '') + '">' + state + '</span>' +
+            thumbHtml(p, 'cart-thumb') +
+            '<span class="mo-row-mid"><b>' + esc(it.name) + (o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</b>' +
+            '<small>' + esc(cardStateHtml(o)) + '</small></span>' +
+            '<span class="mo-row-amt">¥' + Wallet.yuan(o.totalFen) + '</span></button>';
+        }).join('') : '<div class="empty-state"><div class="empty-icon"><i data-icon="box" data-size="40"></i></div><div class="empty-text">还没有订单</div></div>');
+      sh.body.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { f = b.dataset.f; render(); }));
+      sh.body.querySelectorAll('[data-oid]').forEach(b => b.addEventListener('click', () => { sh.close(); openOrderDetail(b.dataset.oid); }));
+      mountIcons(sh.body);
+    }
+    render();
+  }
+
+  function openOrderDetail(oid) {
+    const order = orderById(oid);
+    if (!order) { UI.toast('订单不存在或已删除'); return; }
+    const sh = sheet(order.kind === 'takeout' ? '外卖订单' : '商城订单', { tall: true });
+    function render() {
+      const s = statusOf(order);
+      const nodes = order.kind === 'takeout' ? TAKEOUT_NODES : SHOP_NODES;
+      const buyerName = order.buyerUid === 'me' ? '我' : Home.displayName(Home.contactById(order.buyerUid));
+      const toName = order.toUid === 'me' ? '我' : Home.displayName(Home.contactById(order.toUid));
+      sh.body.innerHTML =
+        '<div class="od-state"><b>' + cardStateHtml(order) + '</b></div>' +
+        '<div class="od-line">' + order.items.map(it => {
+          const p = productById(it.pid);
+          return '<div class="ck-item">' + thumbHtml(p, 'cart-thumb') +
+            '<div class="cart-mid"><b>' + esc(it.name) + ' ×' + it.qty + '</b><small>' + esc(specText(it)) + '</small></div>' +
+            '<span class="cart-price">¥' + Wallet.yuan(it.fen * it.qty) + '</span></div>';
+        }).join('') +
+        '<div class="od-amount"><span>实付</span><b>¥' + Wallet.yuan(order.totalFen) + '</b></div></div>' +
+        '<div class="od-timeline">' + order.timeline.map((n, i) =>
+          '<div class="od-node' + (i <= s.idx ? ' on' : '') + (i === s.idx && !s.done ? ' now' : '') + '">' +
+          '<i></i><span>' + esc(n.label) + '</span><small>' + (i <= s.idx ? fmtMDHM(n.ts) : '预计 ' + fmtMDHM(n.ts)) + '</small></div>').join('') + '</div>' +
+        '<div class="od-meta"><div><span>下单人</span>' + esc(buyerName) + '</div>' +
+        '<div><span>收货人</span>' + esc(toName) + '</div>' +
+        (order.addr ? '<div><span>地址</span><b>' + esc(order.addr.tag) + '</b> ' + esc(order.addr.text) + '</div>' : '') +
+        '<div><span>订单号</span>' + order.id + '</div></div>' +
+        (order.review ? '<div class="od-review"><span class="od-review-name">收货感言</span><p>' + esc(order.review.text) + '</p></div>' : '') +
+        '<div class="od-acts">' +
+        (s.done && !order.signed && order.toUid === 'me' ? '<button class="btn btn-primary" data-act="sign">确认签收</button>' : '') +
+        (s.idx === 0 && !s.done ? '<button class="btn btn-secondary" data-act="cancel">取消订单</button>' : '') +
+        (order.signed ? '<button class="btn btn-secondary" data-act="del">删除订单</button>' : '') +
+        '</div>';
+      const sign = sh.body.querySelector('[data-act="sign"]');
+      if (sign) sign.addEventListener('click', () => {
+        order.signed = true; DB.save(); render(); UI.toast('已签收');
+      });
+      const cancel = sh.body.querySelector('[data-act="cancel"]');
+      if (cancel) cancel.addEventListener('click', async () => {
+        if (!(await UI.confirmBox({ title: '取消订单', text: '钱会按原路退回，确定取消？', okText: '取消订单', danger: true }))) return;
+        Pay.refundFor({ fromUid: order.buyerUid, pay: order.pay }, order.totalFen, '商城订单取消', order.toUid !== 'me' ? order.toUid : null);
+        const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
+        DB.save(); sh.close(); UI.toast('已取消，钱原路退回');
+      });
+      const del = sh.body.querySelector('[data-act="del"]');
+      if (del) del.addEventListener('click', async () => {
+        if (!(await UI.confirmBox({ title: '删除订单', text: '订单记录会删掉，不可找回。', okText: '删除', danger: true }))) return;
+        const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
+        DB.save(); sh.close();
+      });
+      mountIcons(sh.body);
+    }
+    render();
+  }
+
+  /* ---------- 地址（我的 / 角色双层；没填过就没有，不造默认地址） ---------- */
+  function openAddr(uid, curId, onPick) {
+    const isMe = uid === 'me';
+    const sh = sheet(isMe ? '我的地址' : (Home.displayName(Home.contactById(uid)) || 'TA') + '的地址', { tall: true });
+    function render() {
+      const list = addrListOf(uid);
+      sh.body.innerHTML =
+        (list.length ? list.map(a =>
+          '<button class="addr-row' + (a.id === curId ? ' on' : '') + '" data-aid="' + a.id + '">' +
+          '<b>' + esc(a.tag) + '</b><span>' + esc(a.text) + '</span>' +
+          '<button type="button" class="addr-del" data-del="' + a.id + '"><i data-icon="trash" data-size="14"></i></button></button>').join('')
+          : '<div class="empty-state"><div class="empty-icon"><i data-icon="pin" data-size="36"></i></div><div class="empty-text">还没有收货地址</div></div>') +
+        '<button class="btn btn-secondary addr-add" data-act="add">＋ 添加地址</button>';
+      sh.body.querySelectorAll('[data-aid]').forEach(b => b.addEventListener('click', e => {
+        if (e.target.closest('[data-del]')) return;
+        sh.close(); onPick(b.dataset.aid);
+      }));
+      sh.body.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const m = st();
+        if (isMe) m.addr.me = m.addr.me.filter(a => a.id !== b.dataset.del);
+        else m.addr.byContact[uid] = (m.addr.byContact[uid] || []).filter(a => a.id !== b.dataset.del);
+        DB.save(); render();
+      }));
+      sh.body.querySelector('[data-act="add"]').addEventListener('click', () => {
+        addAddr(uid, () => render());
+      });
+    }
+    render();
+  }
+  function addrListOf(uid) { return uid === 'me' ? st().addr.me : (st().addr.byContact[uid] || []); }
+  function addAddr(uid, onDone) {
+    const isMe = uid === 'me';
+    const sh = sheet('添加地址', {});
+    const tags = isMe ? MY_TAGS : TA_TAGS;
+    let tag = tags[0];
+    sh.body.innerHTML =
+      '<div class="sku-row"><span class="sku-row-name">标签</span><span class="sku-opts" id="addr-tags">' +
+      tags.map(t => '<button type="button" class="sku-opt' + (t === tag ? ' on' : '') + '" data-tag="' + esc(t) + '">' + esc(t) + '</button>').join('') + '</span></div>' +
+      '<div class="addr-input"><span class="sku-row-name">地址</span><input id="addr-text" placeholder="' + (isMe ? '如：幸福小区 3 栋 502' : 'TA 住的地方，写不写都行') + '"></div>' +
+      '<button class="btn btn-primary" data-act="save" style="width:100%">保存</button>';
+    sh.body.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
+      tag = b.dataset.tag;
+      sh.body.querySelectorAll('[data-tag]').forEach(x => x.classList.toggle('on', x.dataset.tag === tag));
+    }));
+    sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
+      const text = (sh.body.querySelector('#addr-text').value || '').trim();
+      if (!text) { UI.toast('写一句地址吧'); return; }
+      const m = st();
+      const a = { id: 'ad' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), tag, text };
+      if (isMe) m.addr.me.push(a);
+      else { if (!m.addr.byContact[uid]) m.addr.byContact[uid] = []; m.addr.byContact[uid].push(a); }
+      DB.save(); sh.close(); onDone && onDone();
+    });
+  }
+
+  /* ---------- 自建商品（对标上传商品弹窗：图/名/类目/卖点/价格/原价） ---------- */
+  function openUpload() {
+    const sh = sheet('上传我的商品', { tall: true });
+    let img = null;         // dataURL（Media.compressImage 压缩）
+    let icon = 'tag';       // 没传图就用线性图标
+    const ICON_CHOICES = ['tag', 'bowl', 'cup', 'fruit', 'cookie', 'shirt', 'gem', 'bear', 'headset', 'flower', 'cake', 'heart'];
+    function render() {
+      sh.body.innerHTML =
+        '<div class="up-img-row"><div class="up-img" id="up-img-box">' + (img ? '<img src="' + esc(img) + '" alt="">' : '<i data-icon="' + icon + '" data-size="30"></i>') + '</div>' +
+        '<div class="up-img-side"><label class="btn btn-secondary up-img-btn">上传图片<input type="file" id="up-file" accept="image/*" hidden></label>' +
+        '<small>不传图就用下面的默认图标</small></div></div>' +
+        '<div class="sku-row"><span class="sku-row-name">默认图标</span><span class="sku-opts" id="up-icons">' +
+        ICON_CHOICES.map(k => '<button type="button" class="sku-opt' + (k === icon && !img ? ' on' : '') + '" data-icon-k="' + k + '"><i data-icon="' + k + '" data-size="16"></i></button>').join('') + '</span></div>' +
+        '<div class="addr-input"><span class="sku-row-name">名称</span><input id="up-name" maxlength="20" placeholder="商品名称"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">类目</span><select id="up-cat">' + CATS.map(c => '<option value="' + c.key + '">' + c.name + '</option>').join('') + '</select></div>' +
+        '<div class="addr-input"><span class="sku-row-name">卖点</span><input id="up-desc" maxlength="30" placeholder="一句话卖点（可选）"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">价格（元）</span><input id="up-price" type="number" min="0.01" placeholder="0.00"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">原价（元，可选）</span><input id="up-orig" type="number" min="0" placeholder="划线价"></div>' +
+        '<button class="btn btn-primary" data-act="save" style="width:100%">上架</button>';
+      sh.body.querySelector('#up-file').addEventListener('change', async e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        try { img = await Media.compressImage(f); render(); }
+        catch (err) { UI.toast(err.message || '图片读取失败'); }
+      });
+      sh.body.querySelectorAll('[data-icon-k]').forEach(b => b.addEventListener('click', () => {
+        icon = b.dataset.iconK; img = null; render();
+      }));
+      sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
+        const name = (sh.body.querySelector('#up-name').value || '').trim();
+        const chk = Wallet.toFen(sh.body.querySelector('#up-price').value);
+        if (!name) { UI.toast('商品得有个名字'); return; }
+        if (chk.err) { UI.toast(chk.err); return; }
+        const origRaw = (sh.body.querySelector('#up-orig').value || '').trim();
+        let origFen = 0;
+        if (origRaw) {
+          const o2 = Wallet.toFen(origRaw);
+          if (o2.err) { UI.toast('原价：' + o2.err); return; }
+          origFen = o2.fen;
+        }
+        const c = sh.body.querySelector('#up-cat').value;
+        st().custom.push({
+          id: 'cm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+          cat: c, name, desc: (sh.body.querySelector('#up-desc').value || '').trim(),
+          fen: chk.fen, origFen: origFen > chk.fen ? origFen : 0,
+          icon: img ? null : icon, img, takeout: !!(CATS.find(x => x.key === c) || {}).takeout
+        });
+        DB.save(); sh.close(); renderList();
+        UI.toast('已上架：' + name);
+      });
+      mountIcons(sh.body);
+    }
+    render();
+  }
+
+  /* ---------- TA 给我买（购物率，她 23:06④：默认 3%、联系人独立、0=关） ----------
+     触发：每回复批次掷一次（engine fireBatch 尾部挂），另有 2 小时防抖（工程防抖，不改口径）。
+     买什么：从商城真实在架商品里抽一个，真扣 TA 的钱（Pay.settlePeer，不够=这笔没发生）；
+     订单卡以「已代付」样式进聊天，钱与账单全部走老口径。 */
+  function maybeGift(conv, ct) {
+    if (!conv || !ct || conv.type !== 'single') return false;
+    let rate = 3;
+    try { rate = Math.min(100, Math.max(0, Math.round(+Engine.params(ct).shopRate))); } catch (e) { rate = 0; }
+    if (!rate || Math.random() * 100 >= rate) return false;
+    const last = st().lastGiftAt[ct.id] || 0;
+    if (Date.now() - last < 2 * 3600 * 1000) return false;
+    const pool = products();
+    if (!pool.length) return false;
+    const p = pick(pool);
+    const r = Pay.settlePeer(ct.id, p.fen, {
+      type: 'mall',
+      note: (p.takeout ? '外卖-' : '商城-') + p.name + ' · 替你买',
+      peer: 'me'
+    });
+    if (r.err) return false;   // 钱 不够就当这笔没发生，余额不准被掏成负数
+    st().lastGiftAt[ct.id] = Date.now();
+    const order = createOrder({
+      kind: p.takeout ? 'takeout' : 'shop',
+      items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
+      totalFen: p.fen, buyerUid: ct.id, toUid: 'me', pay: r, addr: null
+    });
+    pushOrderCard(order, ct.id, true);
+    return true;
+  }
+
+  /* ---------- 心跳：到点的节点推进 + 可见卡片 ETA 刷新（20s，轻量） ---------- */
+  function tick() {
+    runSafe('mall.tick.settle', () => settleAll());
+    runSafe('mall.tick.paint', () => {
+      if (document.getElementById('page-mall').classList.contains('active')) { renderCats(); renderList(); }
+      document.querySelectorAll('#page-chat .moc[data-order]').forEach(card => {
+        const o = orderById(card.dataset.order);
+        if (!o) return;
+        const bar = card.querySelector('.moc-bar i');
+        const eta = card.querySelector('.moc-eta');
+        if (bar) bar.style.width = barPct(o) + '%';
+        if (eta) eta.textContent = cardStateHtml(o);
+      });
+    });
+  }
+
+  function open() { Router.go('mall'); }
+
+  function init() {
+    const cartBtn = document.getElementById('mall-cart-btn');
+    const ordersBtn = document.getElementById('mall-orders-btn');
+    if (cartBtn) cartBtn.addEventListener('click', openCart);
+    if (ordersBtn) ordersBtn.addEventListener('click', openOrders);
+    const tabs = document.getElementById('mall-tabs');
+    if (tabs) tabs.querySelectorAll('[data-mtab]').forEach(b => b.addEventListener('click', () => {
+      tab = b.dataset.mtab; cat = 'all';
+      tabs.querySelectorAll('[data-mtab]').forEach(x => x.classList.toggle('on', x === b));
+      renderPage();
+    }));
+    setInterval(tick, 20000);
+  }
+
+  return { init, open, renderPage, maybeGift, orderById, cardHtml, settleAll, openOrders, products, productById,
+    openProduct, openCart, openCheckout, openOrderDetail, openAddr, openUpload };
 })();
 
 /* =====================================================
@@ -24397,6 +25399,7 @@ const Profile = (function () {
     el('pf-readnr').value = pa.readNoReply;
     el('pf-revoke').value = (pa.revokeRate ?? 0);
     el('pf-tadel').value = (pa.taDelRate ?? 0);
+    el('pf-shoprate').value = pa.shopRate;
     el('pf-learn').value = pa.learnRate;
   el('pf-free').value = pa.gaFree ?? (Engine.REPLY_DEF ? Engine.REPLY_DEF.gaFree : 30);
     el('pf-mopost').value = pa.moPostRate;
@@ -24599,7 +25602,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
@@ -24622,6 +25625,8 @@ const Profile = (function () {
         /* TA 删自己朋友圈概率（她 09:41 定）：联系人主页按人填，0=不删；
            命中后从 TA 最近五帖内等概率抽一条自删；我的页全局开关已拆 */
         p.taDelRate = Math.min(100, Math.max(0, Math.round(+el('pf-tadel').value || 0)));
+        /* 购物率（她 10-07 23:06 拍板④）：TA 给我买东西/点外卖的概率，默认 3%，0=关 */
+        p.shopRate = Math.min(100, Math.max(0, Math.round(+el('pf-shoprate').value || 0)));
         /* 学我说话·收集概率（她 00:48 改口径）：这档只管收进荟萃/各表情库（默认 5% 她定的）；
        收集到的话混进字卡池等概率用，不单独掷「用」）；0=关。 */
         p.learnRate = Math.min(100, Math.max(0, Math.round(+el('pf-learn').value || 0)));
@@ -24670,11 +25675,13 @@ const Profile = (function () {
         }
         /* 没动情绪概率且联系人原本没存过时，不把默认 10% 偷写成她的选择。 */
         if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'emotionRate') && id !== 'pf-emotionrate') delete p.emotionRate;
+        if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'shopRate') && id !== 'pf-shoprate') delete p.shopRate;
         c.params = p;
         el('pf-calllo').value = p.callLo;
         el('pf-callhi').value = p.callHi;
         el('pf-imgprob').value = p.imgProb;
         el('pf-emotionrate').value = p.emotionRate;
+        el('pf-shoprate').value = p.shopRate;
         el('pf-letterrate').value = p.letterRate;
         el('pf-ltr-min').value = p.ltrMinH;
         el('pf-ltr-max').value = p.ltrMaxH;
@@ -24756,6 +25763,7 @@ const Profile = (function () {
         '<div class="bv-btns">' +
           '<button data-bv="import">导入</button>' +
           '<button data-bv="sample">参考样式</button>' +
+          '<button data-bv="fiximg" hidden>图案修复</button>' +
           '<button data-bv="save-tpl">存为模板</button>' +
           '<button data-bv="reset">恢复默认</button>' +
           '<button class="bv-ok" data-bv="ok">保存</button>' +
@@ -24792,7 +25800,15 @@ const Profile = (function () {
       bvVerdict.className = 'bv-verdict' + (v.changed ? '' : ' bad');
       return v;
     }
-    function refresh() { renderPreview(); runSafe('profile.bubbleVerdict', showVerdict); }
+    function refresh() { renderPreview(); runSafe('profile.bubbleVerdict', showVerdict); syncFix(); }
+    /* 10-08 图案修复：同主题编辑器那条回头路——样式里残留外链图就亮出，点一下抓一轮内嵌回草稿，
+       仍要点「保存」才落档（取消不改存档的老规矩不动） */
+    let fixing = false;
+    function syncFix() {
+      const b = mask.querySelector('[data-bv=fiximg]');
+      if (b) b.hidden = !UI.cssRemoteUrls(ta.value).length;
+    }
+    syncFix();
     ta.addEventListener('input', refresh);
     refresh();
     /* 模板列表 */
@@ -24829,6 +25845,25 @@ const Profile = (function () {
       const b = e.target.closest('[data-bv]'); if (!b) return;
       const act = b.dataset.bv;
       if (act === 'import') fileInp.click();
+      else if (act === 'fiximg') {
+        if (fixing) return;
+        fixing = true;
+        const urls = UI.cssRemoteUrls(ta.value);
+        bvVerdict.textContent = '抓图案中…（' + urls.length + ' 张外链，多条线路轮着试，最多等几十秒）';
+        const loc = await UI.localizeCss(ta.value);
+        fixing = false;
+        const gotN = loc.got + loc.vaulted;
+        if (!gotN) {
+          bvVerdict.textContent = '';
+          syncFix();
+          UI.toast(urls.length + ' 张图哪条线路都没取回来：这个图床到不了，换图源吧');
+          return;
+        }
+        ta.value = loc.css;
+        refresh();
+        UI.toast('抓回 ' + gotN + ' 张' + (loc.got ? '（内嵌）' : '（进媒体库）') + '；点「保存」生效'
+          + (loc.failed.length ? ('；仍有 ' + loc.failed.length + ' 张没取回来，可再点一次') : ''));
+      }
       else if (act === 'sample') { ta.value = UI.bubbleSample; refresh(); }
       else if (act === 'save-tpl') {
         if (!ta.value.trim()) { UI.toast('还没有内容'); return; }
@@ -24849,7 +25884,7 @@ const Profile = (function () {
         if (pvTag) pvTag.remove(); mask.remove();
         const pic = loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '';
         const vault = loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '';
-        const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
+        const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（编辑器里可点「图案修复」再抓）') : '';
         const skp = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大且媒体库不可用，留了外链') : '';
         UI.toast(saved ? ('气泡样式已保存：' + ((v && v.msg) || '') + pic + vault + bad + skp) : '气泡样式已清空');
       }
@@ -26818,6 +27853,7 @@ const Schedule = (function () {
       runSafe('quiz', () => Quiz.advanceAll());   /* P34：回前台补跑到点卷子 */
       runSafe('moments', () => Moments.settle());    /* 朋友圈错过的赞/评/回评立刻补跑 */
       runSafe('games', () => Games.advance());     /* P40：错过的落子/接话立刻补跑 */
+      runSafe('mall', () => Mall.settleAll());     /* P64：错过的外卖/物流节点推进与 TA 收货立刻补跑 */
       Home.render();
     });
     /* P24（清然 20:08）：Router 返回刷新钩子 —— 根治“返回不刷新”全站通病
@@ -26835,6 +27871,7 @@ Router.register('report', () => Report.render());   /* P25 */
     Router.register('game', () => Games.renderHall());   /* P40 游戏大厅 */
     Router.register('room', () => Games.renderRoom());   /* P40 对局页（含存档续局） */
     Router.register('gstats', () => Games.renderStats());/* P40 战绩档案 */
+    Router.register('mall', () => Mall.renderPage());    /* P64 商城与外卖（进页/返回重渲，幂等） */
     /* 她 09:41：排班表页面拆了，模块内嵌发现页（Router 走 discover 刷新钩子） */
     Home.init();
     Chat.init();
@@ -26850,6 +27887,7 @@ Router.register('report', () => Report.render());   /* P25 */
   Library.init();    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
   Games.init();    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
   Schedule.init(); /* 排班表（她 10-03）：页面事件绑定 */
+  Mall.init();     /* P64 商城与外卖：页面事件绑定 + 20s 心跳（节点推进/ETA 刷新） */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
   /* 她 10-06：主题美化（全局 CSS / 气泡样式 / 头像框）开机就套上 */
   runSafe('theme.deco', () => applyDeco());
@@ -26879,6 +27917,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     /* 发现页：游戏入口（P40，她定：朋友圈下方） */
     const dg = document.getElementById('disc-game');
     if (dg) dg.addEventListener('click', () => Games.open());
+    /* 发现页：商城入口（P64，她 10-07 23:06 拍板①：一个入口，内页分 商城|外卖） */
+    const dml = document.getElementById('disc-mall');
+    if (dml) dml.addEventListener('click', () => Mall.open());
   }
 
   /* ---------------- 返回键 / 占位入口 ---------------- */
@@ -27057,7 +28098,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         DB.save(); applyDeco();
         UI.toast('已应用：' + f.name + (loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '')
           + (loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '')
-          + (loc.failed.length ? ('；' + loc.failed.length + ' 张没取回来') : ''));
+          + (loc.failed.length ? ('；' + loc.failed.length + ' 张没取回来（样式编辑器里可点「图案修复」再抓）') : ''));
       } catch (e) { UI.toast((e && e.message) || '这个文件读不出来'); }
     });
     const decoFrameFile = document.getElementById('deco-frame-file');
@@ -27683,6 +28724,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       '<div class="deco-verdict" aria-live="polite"></div>' +
       '<div class="dialog-btns"><button class="btn btn-secondary" data-deco-cancel>取消</button>' +
         '<button class="btn btn-secondary" data-deco-sample>填入参考样式</button>' +
+        '<button class="btn btn-secondary" data-deco-fiximg hidden>图案修复</button>' +
         '<button class="btn btn-primary" data-deco-save>保存并应用</button></div>';
     dlg.querySelector('.dialog-title').textContent = title;
     const input = dlg.querySelector('.deco-css-input');
@@ -27708,6 +28750,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     };
     input.addEventListener('input', () => {
       draft.textContent = input.value;
+      syncFixBtn();
       verdictEl.textContent = '看效果中…';
       /* 草稿里若有大图 token，也要解析回真图预览（和存档后的展示同一条路） */
       if (input.value.indexOf('lxmv:') >= 0) {
@@ -27724,6 +28767,38 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       UI.cssResolve(input.value).then(t => { draft.textContent = t; }).catch(() => {});
     }
     runSafe('theme.deco.verdict', showVerdict);
+
+    /* 10-08 图案修复：样式里残留外链图时亮出，点一下把图再抓一轮、抓到就内嵌回草稿。
+       根治件：手机导入时图床到不了，图案永远画不出来——那时只有这句提示救不了图，
+       给一条回头路（她 10-07 深夜问“其他的气泡该怎么办”）。不动存档，修复后仍要点保存 */
+    const fixBtn = dlg.querySelector('[data-deco-fiximg]');
+    const syncFixBtn = () => { fixBtn.hidden = !UI.cssRemoteUrls(input.value).length; };
+    syncFixBtn();
+    let fixing = false;
+    fixBtn.addEventListener('click', async () => {
+      if (fixing) return;
+      fixing = true;
+      const urls = UI.cssRemoteUrls(input.value);
+      verdictEl.textContent = '抓图案中…（' + urls.length + ' 张外链，多条线路轮着试，最多等几十秒）';
+      const loc = await UI.localizeCss(input.value);
+      fixing = false;
+      const gotN = loc.got + loc.vaulted;
+      if (!gotN) {
+        verdictEl.textContent = '';
+        syncFixBtn();
+        UI.toast(urls.length + ' 张图哪条线路都没取回来：这个图床到不了，换图源吧');
+        return;
+      }
+      input.value = loc.css;
+      draft.textContent = input.value;
+      if (input.value.indexOf('lxmv:') >= 0) {
+        UI.cssResolve(input.value).then(t => { draft.textContent = t; }).catch(() => {});
+      }
+      runSafe('theme.deco.verdict', showVerdict);
+      syncFixBtn();
+      UI.toast('抓回 ' + gotN + ' 张' + (loc.got ? '（内嵌）' : '（进媒体库）') + '；点「保存并应用」生效'
+        + (loc.failed.length ? ('；仍有 ' + loc.failed.length + ' 张没取回来，可再点一次') : ''));
+    });
     const close = () => {
       if (vTimer) clearTimeout(vTimer);
       draft.remove();
@@ -27751,7 +28826,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       /* 成没成都要当场说清楚（她 13:27：“成功不成功也没有反应”） */
       const pic = loc.got ? ('；小图内嵌 ' + loc.got + ' 张') : '';
       const big = loc.vaulted ? ('；大图进了媒体库 ' + loc.vaulted + ' 张（离线也在）') : '';
-      const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（联网后再存一次）') : '';
+      const bad = loc.failed.length ? ('；' + loc.failed.length + ' 张图没取回来（编辑器里可点「图案修复」再抓）') : '';
       const skp = (loc.skipped || []).length ? ('；' + loc.skipped.length + ' 张太大且媒体库不可用，留了外链') : '';
       UI.toast(input.value.trim() ? ('已保存：' + v.msg + pic + big + bad + skp) : '已保存（内容为空，等于没写）');
     });
