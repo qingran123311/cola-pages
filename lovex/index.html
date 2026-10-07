@@ -2,6 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
+<!-- lovex-build:20261007-213013 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -1073,6 +1074,10 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 /* 她 10-04：报备消息的情绪小标签（双方同款，缩在气泡内底部） */
 .msg-mood-tag{display:block;font-style:normal;font-size:10.5px;line-height:1;color:var(--t3);
   background:var(--fill);border-radius:999px;padding:3px 8px;margin-top:6px;align-self:flex-end;width:fit-content}
+/* 每条 AI 气泡概率显示的小情绪/意图框：保留窄小圆角，不抢正文 */
+.msg-emotion-tag{display:block;align-self:flex-end;width:fit-content;max-width:100%;margin-top:5px;padding:2px 6px;
+  border:1px solid var(--line);border-radius:5px;background:var(--fill);color:var(--t3);
+  font-style:normal;font-size:10px;line-height:1.2;white-space:normal}
 .msg-img-fade{opacity:0;transition:opacity .3s ease}
 .msg-img-fade.loaded{opacity:1}
 /* 她 10-04：媒体本体丢失的占位（不画破图；找回口＝个人中心→存储管理→导出备份） */
@@ -1770,8 +1775,22 @@ html.dark .rp-put{background:#E8E8E8;color:#111}
 .mo-nav .nav-back,.mo-nav .nav-act{position:absolute;top:50%;transform:translateY(-50%);z-index:3;filter:drop-shadow(0 1px 3px rgba(0,0,0,.65)) drop-shadow(0 0 6px rgba(0,0,0,.35))}
 .mo-nav .nav-back{left:8px}
 .mo-nav .nav-act{right:8px}
-.mo-nav.solid .nav-act,.mo-nav.solid .nav-back{color:var(--t1);filter:none}
+.mo-nav .mo-notifications{position:absolute;left:54px;top:50%;transform:translateY(-50%);z-index:3;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:0;border-radius:9px;background:transparent;color:#fff;padding:0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.65)) drop-shadow(0 0 6px rgba(0,0,0,.35));cursor:pointer}
+.mo-nav.solid .nav-act,.mo-nav.solid .nav-back,.mo-nav.solid .mo-notifications{color:var(--t1);filter:none}
+.mo-notify-dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--t1);box-shadow:0 0 0 1px var(--bg)}
+.mo-notify-dot[hidden]{display:none}
 .mo-body{overflow-y:auto;height:100%;padding-bottom:40px}
+.mo-notify-sheet{overflow:hidden}
+.mo-notify-list{max-height:62vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.mo-notify-row{display:flex;flex-direction:column;gap:5px;width:100%;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:11px 4px;color:var(--t1);font:inherit;cursor:pointer}
+.mo-notify-row:active{background:var(--fill)}
+.mo-notify-main{display:flex;align-items:center;gap:6px;font-size:12px;min-width:0}
+.mo-notify-main b{font-weight:600;white-space:nowrap}
+.mo-notify-main time{margin-left:auto;flex:none;font-size:10.5px;color:var(--t3)}
+.mo-notify-post{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mo-notify-comment{font-size:11px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mo-notify-empty{padding:28px 8px;text-align:center;font-size:12px;color:var(--t3)}
+.mo-notif-target{background:var(--fill)!important;outline:1px solid var(--line);transition:background .2s}
 .mo-cover{position:relative;height:min(58vw,300px);cursor:pointer;background:#ECECEC;display:flex;align-items:center;justify-content:center;transition:height .34s cubic-bezier(.25,.8,.25,1);overflow:hidden}
 .mo-cover.zoom{height:80vh}   /* 点击展开：拉到八成屏高就够（清然 00:01） */
 /* 展开态：封面铺满无黑边（L44 完整展示不变形=cover 裁切，禁黑底） */
@@ -3177,20 +3196,63 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .sched-sheet .sched-pick-row .sched-check{width:16px;height:16px;border:1.5px solid var(--line);border-radius:50%;flex:none}
 .sched-sheet .sched-ok{width:100%;margin-top:10px}
 .sched-sheet .sched-sheet-tip{font-size:10.5px;color:var(--t3);padding:8px 2px 2px;text-align:center}
+.sched-kind-head .sched-day{flex:none;border:0;background:transparent;color:var(--t2);font:inherit;font-size:11px;padding:5px 2px;cursor:pointer;white-space:nowrap}
+.sched-history-sheet{overflow-y:auto}
+.sched-history-modes{display:flex;gap:6px;padding:8px 0}
+.sched-history-modes button{flex:1;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--t2);padding:8px;font:inherit;font-size:12px}
+.sched-history-modes button.on{border-color:var(--t1);color:var(--t1);background:var(--fill)}
+.sched-history-datebox label{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 2px;color:var(--t2);font-size:12px}
+.sched-history-datebox input{min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--t1);padding:8px 10px;font:inherit}
+.sched-history-datebox label[hidden]{display:none}
+.sched-history-content{max-height:52vh;overflow-y:auto;padding:4px 0 10px}
+.sched-history-date-title,.sched-history-month-title{font-size:13px;font-weight:600;color:var(--t1);padding:8px 2px}
+.sched-history-day-people{display:flex;flex-wrap:wrap;gap:8px;padding:4px 2px 12px}
+.sched-history-record{display:grid;grid-template-columns:1fr auto 20px;align-items:center;gap:8px;width:100%;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:10px 2px;color:var(--t1);font:inherit;font-size:12px}
+.sched-history-record span:nth-child(2){color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sched-history-record b{color:var(--t3);text-align:right}
+.sched-history-stats{border-top:1px solid var(--line);margin-top:8px;padding-top:8px;display:flex;flex-direction:column;gap:7px}
+.sched-history-stats> b{font-size:12px;color:var(--t1);margin-top:4px}
+.sched-stat-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;font-size:11.5px;color:var(--t2)}
+.sched-stat-row b{color:var(--t1);font-weight:600}
+.sched-stat-row small{font-size:10px;color:var(--t3)}
+.sched-week-grid{display:flex;flex-wrap:wrap;gap:6px}
+.sched-week-count{border:1px solid var(--line);border-radius:8px;padding:5px 7px;font-size:10.5px;color:var(--t2)}
+.sched-week-count b{color:var(--t1);padding-left:3px}
+.sched-history-empty{font-size:11.5px;color:var(--t3);padding:10px 2px}
 
-/* 链接悬浮小窗（她 10-06 晚口径：发出去/点卡/TA发来都直接弹窗即播，
-   窗口浮在聊天上方不挡消息，标题在窗口下方；可拖，关了回默认位） */
-.lk-float{position:fixed;z-index:3100;width:min(320px,78vw);border-radius:12px;overflow:hidden;
+/* 链接悬浮小窗（她 10-06 晚：窗口浮在聊天上方、标题在下方；10-07：拖动换位 + 四角自由调宽高） */
+.lk-float{position:fixed;z-index:3100;width:min(320px,78vw);min-width:180px;border-radius:12px;overflow:hidden;
   background:var(--card);box-shadow:0 6px 24px rgba(0,0,0,.22);border:1px solid var(--line)}
 .lk-float .lk-float-stage{display:block;width:100%;aspect-ratio:16/9;background:#000}
 .lk-float .lk-float-stage video,.lk-float .lk-float-stage iframe{display:block;width:100%;height:100%;border:none;background:#000}
-.lk-float .lk-float-cap{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;cursor:grab;touch-action:none}
+/* 播放器互动：暂停遮罩与一起看状态标 */
+.lk-float-paused{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.55);color:#fff;font-size:13px;cursor:pointer}
+/* 聊天里的持久一起看邀请卡，打开链接后再选择接听/拒绝 */
+.lk-watch-head{font-size:11.5px;line-height:1.35;font-weight:600;color:var(--t1)}
+.lk-watch-state{margin-top:3px;font-size:10.5px;line-height:1.3;color:var(--t3)}
+.lk-together{position:absolute;top:6px;left:6px;z-index:5;padding:3px 8px;border-radius:8px;
+  background:rgba(0,0,0,.45);color:#fff;font-size:11px}
+.lk-float.lk-sized{display:flex;flex-direction:column}
+.lk-float.lk-sized .lk-float-stage{flex:1;min-height:0;aspect-ratio:auto}
+.lk-float .lk-float-cap{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
 .lk-float .lk-float-cap:active{cursor:grabbing}
 .lk-float .lk-float-meta{flex:1;min-width:0}
 .lk-float .lk-float-t{font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lk-float .lk-float-s{font-size:10.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
 .lk-float .lk-float-cap button{flex:none;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:6px;background:transparent;color:var(--t2);cursor:pointer}
 .lk-float .lk-float-cap button:active{background:var(--fill)}
+.lk-float .lk-float-resize{position:absolute;z-index:4;display:block;width:30px;height:30px;padding:0;border:0;border-radius:0;
+  appearance:none;background:transparent;touch-action:none;user-select:none;-webkit-user-select:none}
+.lk-float .lk-float-resize::after{content:'';position:absolute;width:9px;height:9px;opacity:.88;pointer-events:none}
+.lk-float .lk-rz-nw{left:0;top:0;cursor:nwse-resize}
+.lk-float .lk-rz-ne{right:0;top:0;cursor:nesw-resize}
+.lk-float .lk-rz-sw{left:0;bottom:0;cursor:nesw-resize}
+.lk-float .lk-rz-se{right:0;bottom:0;cursor:nwse-resize}
+.lk-float .lk-rz-nw::after{left:7px;top:7px;border-left:2px solid var(--t2);border-top:2px solid var(--t2)}
+.lk-float .lk-rz-ne::after{right:7px;top:7px;border-right:2px solid var(--t2);border-top:2px solid var(--t2)}
+.lk-float .lk-rz-sw::after{left:7px;bottom:7px;border-left:2px solid var(--t2);border-bottom:2px solid var(--t2)}
+.lk-float .lk-rz-se::after{right:7px;bottom:7px;border-right:2px solid var(--t2);border-bottom:2px solid var(--t2)}
 /* 链接卡片：封面+下方标题的小屏卡，可播的右下角 ▶ 角标（她 10-06 晚：卡不负责播，播放走浮窗） */
 .lk-card .lk-mini{position:relative}
 .lk-card .lk-playmark{position:absolute;right:6px;bottom:6px;width:22px;height:22px;border-radius:50%;
@@ -3242,6 +3304,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   <section class="page" id="page-moments">
     <header class="navbar mo-nav" id="mo-nav">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
+      <button type="button" class="mo-notifications" id="mo-notifications" aria-label="朋友圈互动通知"><i data-icon="bell" data-size="19"></i><i class="mo-notify-dot" id="mo-notify-dot" hidden></i></button>
       <div class="navbar-title" id="mo-nav-title">朋友圈</div>
       <button class="nav-act" id="mo-publish"><i data-icon="camera" data-size="20"></i></button>
     </header>
@@ -3597,6 +3660,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
             <option value="mix">混合发送</option>
           </select></em></label>
           <label class="adv-item"><span>图片概率</span><em><input type="number" id="pf-imgprob" min="0" max="100"> %</em></label>
+          <label class="adv-item"><span>气泡情绪/意图标记概率</span><em><input type="number" id="pf-emotionrate" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>拼卡概率</span><em><input type="number" id="pf-comboprob" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
@@ -3818,6 +3882,7 @@ const DB = (function () {
       redpackets: {},                  // 红包（二期P15）：rpId→{id,convId,fromUid,toUid,totalFen,note,coverId,status,claimTs,expireAt}
       moments: {                       // 朋友圈（二期P16）：
         posts: [],                     // {id,uid,ts,text,images[],location,likes[uid],comments[{id,uid,toUid,text,ts}]}
+        notifications: [],              // 新发生的赞/评/回复事件；不从无时刻的旧 likes 反推
         covers: { me: null, byContact: {} }   // 每人独立背景封面（dataUrl，支持视频 poster 后续扩展）
       },
       letters: {},                     // contactId -> 信件往来（P8）
@@ -4066,6 +4131,22 @@ const DB = (function () {
       }
     }
 
+    /* P60+：陪睡/自定义班种的当前排班与历史统计跟联系人一起清理，不能留下幽灵名字。 */
+    if (st.schedule) {
+      Object.keys(st.schedule.duty || {}).forEach(kid => {
+        const a = st.schedule.duty[kid] || [], kept = a.filter(uid => uid !== cid);
+        n += a.length - kept.length; st.schedule.duty[kid] = kept;
+      });
+      Object.keys(st.schedule.history || {}).forEach(day => {
+        Object.keys(st.schedule.history[day] || {}).forEach(kid => {
+          const rec = st.schedule.history[day][kid];
+          if (!rec || !Array.isArray(rec.people)) return;
+          const kept = rec.people.filter(uid => uid !== cid);
+          n += rec.people.length - kept.length; rec.people = kept;
+        });
+      });
+    }
+
     /* 8) 朋友圈：TA 发的动态（连本体）、TA 的评论与点赞、「给谁看」名单 */
     if (st.moments && Array.isArray(st.moments.posts)) {
       const gone = st.moments.posts.filter(p => p.uid === cid);
@@ -4086,6 +4167,14 @@ const DB = (function () {
           p.comments = kept;
         }
       });
+      if (Array.isArray(st.moments.notifications)) {
+        const postIds = new Set(st.moments.posts.map(p => p.id));
+        const commentIds = new Set();
+        st.moments.posts.forEach(p => (p.comments || []).forEach(c => commentIds.add(c.id)));
+        const kept = st.moments.notifications.filter(x => x.actorUid !== cid && x.replyToUid !== cid && postIds.has(x.postId) && (!x.commentId || commentIds.has(x.commentId)));
+        n += st.moments.notifications.length - kept.length;
+        st.moments.notifications = kept;
+      }
     }
 
     /* 9) 灵魂拷问：把 TA 从「问谁」里摘掉，没人可问的卷子整张作废 */
@@ -7159,6 +7248,7 @@ const ICONS = {
   'check':         '<path d="M4.5 12.5l5 5L19.5 7"/>',
   'clock':         '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
   'calendar':      '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3.2v3.6M16 3.2v3.6M7.5 13.5h3M7.5 17h6"/>',
+  'bell':          '<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   'chat-group':    '<path d="M8.5 10.5a3 3 0 100-6 3 3 0 000 6z"/><path d="M2.5 19c0-3 2.7-5 6-5s6 2 6 5"/><path d="M16.5 11a2.6 2.6 0 100-5.2M15.5 14.2c2.8.3 5 2.1 5 4.8"/>',
   'wallet':        '<rect x="3.5" y="6" width="17" height="13" rx="3"/><path d="M3.5 9.5h17"/><circle cx="16.5" cy="14.3" r="1.2"/>',
   'camera':        '<path d="M4.5 8h3.2l1.4-2h5.8l1.4 2h3.2v11h-15z"/><circle cx="12" cy="13" r="3.2"/>',
@@ -9312,7 +9402,7 @@ const Chat = (function () {
     return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]' : m.type === 'game' ? '[游戏邀请]'
-      : m.type === 'link' ? '[链接]' : (m.text || '');
+      : m.type === 'link' ? (m.watchInvite ? '[一起看邀请]' : '[链接]') : (m.text || '');
   }
 
   function appendOne(listEl, m) {
@@ -9470,12 +9560,23 @@ const Chat = (function () {
         bub.addEventListener('click', () => UI.toast('（模拟语音，时长 ' + m.dur + ' 秒）'));
       }
     } else if (m.type === 'link' && m.link) {
-      /* P36 V2（她 08-27 定）：链接发过去就是小屏卡片的样子；
-         她 10-06 晚口径再演进：卡片只当封面+标题，播放走悬浮小窗——发送/点卡/TA发来都直接弹窗即播，
-         不卡内直播放（那要“进卡片里面”），不跳浏览器（lkInlineMount 那条路拆了） */
+      /* 普通聊天链接按既有浮窗口径；一起看邀请是持久聊天卡，点开后由我选择接听/拒绝。 */
       bub.classList.add('bubble-card');
+      if (m.watchInvite) bub.classList.add('bubble-watch-invite');
       bub.innerHTML = linkCardHtml(m.link, false);
       lkHydratePoster(bub, m.link);
+      if (m.watchInvite) {
+        const cap = bub.querySelector('.lk-cap');
+        const head = document.createElement('div');
+        head.className = 'lk-watch-head';
+        head.textContent = (sender ? Home.displayName(sender) : 'TA') + ' 邀请你一起看';
+        const state = document.createElement('div');
+        state.className = 'lk-watch-state';
+        state.textContent = m.watchStatus === 'accepted' ? '已接听 · 点开回看'
+          : m.watchStatus === 'declined' ? '已拒绝加入' : '点开链接选择接听或拒绝';
+        cap.insertBefore(state, cap.firstChild);
+        cap.insertBefore(head, cap.firstChild);
+      }
       bub.addEventListener('click', e => { e.stopPropagation(); tapLinkCard(bub, m, e); });
     } else if (m.type === 'kinship') {
       /* 亲属卡卡片消息（二期P14.5）：受赠方「送你一张亲属卡」/赠送方「给XXX的亲属卡」 */
@@ -9744,6 +9845,16 @@ const Chat = (function () {
       sp.className = 'bubble-text';
       sp.innerHTML = kaoHtml(m.text || '');   // 用 innerHTML 是为了画颜文字的叠加标记；文本内部已转义
       bub.appendChild(sp);
+      /* AI 每条消息可独立带情绪/意图小框；既有报备心情标签仍保留自己的口径。 */
+      if (m.emotion) {
+        const emotion = typeof m.emotion === 'string' ? { kind: '情绪', label: m.emotion } : m.emotion;
+        if (emotion && emotion.label) {
+          const tag = document.createElement('em');
+          tag.className = 'msg-emotion-tag';
+          tag.textContent = (emotion.kind ? emotion.kind + ' · ' : '') + emotion.label;
+          bub.appendChild(tag);
+        }
+      }
       /* 她 10-04：报备的情绪不跟在内容后面，缩成气泡内底部小标签（双方同款；旧消息没这字段不动） */
       if (m.mood) {
         const tag = document.createElement('em');
@@ -9961,7 +10072,7 @@ const Chat = (function () {
     appendOne(document.getElementById('msg-list'), m);
     scrollBottom();
     /* 她 10-06 晚：把链接发给 TA＝邀请 TA 看；TA 发来链接也一样——聊天页开着就直接弹小窗播，不用点卡 */
-    if (m.type === 'link' && m.link && lkCanPlay(m.link) && !document.querySelector('.lk-float')) {
+    if (m.type === 'link' && !m.watchInvite && m.link && lkCanPlay(m.link) && !document.querySelector('.lk-float')) {
       runSafe('chat.link.autopop', () => lkOpenMini(m.link, 0));
     }
   }
@@ -10275,9 +10386,47 @@ const Chat = (function () {
       '</div>' +
     '</div>';
   }
-  /* 她 09:41：视频站永不跳浏览器——B站/YouTube 点卡只进悬浮小窗；直链没解析到就明说，不跳 */
+  function watchInviteStateText(status) {
+    return status === 'accepted' ? '已接听 · 点开回看'
+      : status === 'declined' ? '已拒绝加入' : '点开链接选择接听或拒绝';
+  }
+  function updateWatchInviteState(m, status) {
+    m.watchStatus = status;
+    DB.save();
+    document.querySelectorAll('.msg-row[data-mid]').forEach(row => {
+      if (row.dataset.mid !== m.id) return;
+      const state = row.querySelector('.lk-watch-state');
+      if (state) state.textContent = watchInviteStateText(status);
+    });
+  }
+  async function openWatchInvite(m) {
+    const convId = cur && cur.id;
+    const L = m && m.link;
+    const ctId = m && (m.senderId || (cur && cur.type === 'single' ? cur.peerId : null));
+    const ct = ctId ? Home.contactById(ctId) : null;
+    if (!cur || !convId || !ct || !L || !lkCanPlay(L)) { UI.toast('这条一起看链接现在打不开'); return; }
+    const name = Home.displayName(ct);
+    const startTogether = () => {
+      const current = document.querySelector('.lk-float');
+      if (current && current.dataset.lkUrl === L.url) { lkAddTogetherBadge(current, name); return; }
+      lkOpenMini(Object.assign({}, L), 0, {
+        fromTa: true, playbackInteraction: true, togetherName: name, watchContactId: ct.id
+      });
+    };
+    if (m.watchStatus === 'declined') { UI.toast('你已拒绝加入这次一起看'); return; }
+    if (m.watchStatus === 'accepted') { startTogether(); return; }
+    const answer = await UI.actionSheet(name + ' 邀请你一起看《' + (L.title || L.site || '链接') + '》', [
+      { key: 'decline', label: '拒绝加入一起看' },
+      { key: 'answer', label: '接听' }
+    ]);
+    if (!answer || !cur || cur.id !== convId) return;
+    if (answer === 'decline') { updateWatchInviteState(m, 'declined'); return; }
+    if (answer === 'answer') { updateWatchInviteState(m, 'accepted'); startTogether(); }
+  }
+  /* 视频站聊天链接仍走悬浮窗；一起看邀请由邀请卡上的链接触发接听/拒绝。 */
   function tapLinkCard(root, m, e) {
     const L = m.link;
+    if (m.watchInvite) { openWatchInvite(m); return; }
     if (lkCanPlay(L)) { lkOpenMini(L, 0); return; }
     if (lkImgMode(L)) { lkOpenGallery(L); return; }
     if (L.site === '哔哩哔哩' || L.site === 'YouTube') { UI.toast('直链没解析到，稍后再点一次'); return; }
@@ -10285,9 +10434,35 @@ const Chat = (function () {
   }
   function openLink(L) {
     if (L && lkImgMode(L)) { lkOpenGallery(L); return; }
-    if (L && (L.embed || L.vsrc)) lkOpenMini(L);   /* 她 10-03 二批：小窗播放，不进全屏层 */
+    if (L && (L.embed || L.vsrc)) lkOpenMini(L);   /* 聊天链接沿用悬浮播放 */
     else if (L && (L.site === '哔哩哔哩' || L.site === 'YouTube')) UI.toast('直链没解析到，稍后再点一次');
     else if (L && L.url) window.open(L.url, '_blank', 'noopener');
+  }
+  /* 朋友圈链接只在原卡片封面位播放；不可播链接走原站，不借用聊天浮窗或一起看状态。 */
+  function playMomentLink(L, mini) {
+    if (!L) return false;
+    if (!lkCanPlay(L) || !mini) {
+      if (L.site === '哔哩哔哩' || L.site === 'YouTube') UI.toast('直链没解析到，稍后再点一次');
+      else if (L.url) window.open(L.url, '_blank', 'noopener');
+      return false;
+    }
+    if (mini.querySelector('video,iframe')) return true;
+    mini.classList.add('lk-on');
+    if (!L.embed && L.vsrc) {
+      const video = document.createElement('video');
+      video.controls = true; video.autoplay = true; video.playsInline = true;
+      if (L.poster && !/^idb:/.test(L.poster)) video.poster = L.poster;
+      video.src = L.vsrc;
+      mini.appendChild(video);
+      const started = video.play(); if (started && started.catch) started.catch(() => {});
+    } else {
+      const frame = document.createElement('iframe');
+      frame.src = L.embed;
+      frame.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+      frame.setAttribute('scrolling', 'no'); frame.setAttribute('frameborder', '0');
+      mini.appendChild(frame);
+    }
+    return true;
   }
   /* 全屏看图（V4.4，她要的是“小屏 + 实际内容”）：图经中转实时回源，不热链不存库；
      多图靠“取下一张失败就定住总数”探边界，不多要一个接口；弹层显隐三件套同红线 */
@@ -10332,15 +10507,18 @@ const Chat = (function () {
   }
   /* 站内播放：现在只有一个口——悬浮小窗（lkOpenMini，上面那个 openLink）。旧的全屏播放层拆了
     （她 10-06 晚：不要再跳来跳去，浮窗就是唯一播放面）；图集型链接仍走 lkOpenGallery。 */
-  let lkMiniPos = null;   /* 浮窗位置记忆（同一会话内复用） */
-  /* 可拖动小窗（.lk-float）：她 10-06 晚口径——链接发出去/点卡片/TA发来，直接弹这个窗即播：
-     窗口浮在聊天上方（小屏/小半屏，不挡消息），标题在窗口下方，聊天照常；可拖动，位置记忆。
-     （10-03 的「回全屏」钮拆了：点卡片本身就是最短路径，不需要再进全屏层） */
-  function lkOpenMini(L, resumeSec) {
+  let lkMiniPos = null;   /* 浮窗位置记忆（同一会话内复用；关闭后回默认位） */
+  let lkMiniSize = null;  /* 浮窗尺寸记忆（同一会话内复用；关闭后回默认尺寸） */
+  let lkMiniGestureStop = null;
+  /* 可拖动/四角可调尺寸小窗（.lk-float）：播放层仍是原有 iframe/video，只改浮窗外框交互。
+     标题栏拖动换位置；四角各自调宽/高（自由比例，不锁 16:9）；关闭后位置与尺寸恢复默认。 */
+  function lkOpenMini(L, resumeSec, opts) {
+    if (lkMiniGestureStop) lkMiniGestureStop();
     document.querySelectorAll('.lk-float').forEach(x => x.remove());
     const isVid = !L.embed && !!L.vsrc;
     const el = document.createElement('div');
     el.className = 'lk-float';
+    el.dataset.lkUrl = L.url || '';
     el.innerHTML =
       '<div class="lk-float-stage">' + (isVid
         ? '<video src="' + esc(L.vsrc) + '" controls autoplay playsinline></video>'
@@ -10349,37 +10527,160 @@ const Chat = (function () {
         '<div class="lk-float-meta"><div class="lk-float-t">' + esc(L.title || L.site || '链接') + '</div>' +
           '<div class="lk-float-s">' + esc(L.site || '') + (L.vid ? ' · ' + esc(L.vid) : '') + '</div></div>' +
         '<button class="lk-float-x" title="关闭">' + I('x', 14) + '</button>' +
-      '</div>';
+      '</div>' +
+      '<button type="button" class="lk-float-resize lk-rz-nw" data-corner="nw" title="拖动调整大小" aria-label="左上角调整播放器大小"></button>' +
+      '<button type="button" class="lk-float-resize lk-rz-ne" data-corner="ne" title="拖动调整大小" aria-label="右上角调整播放器大小"></button>' +
+      '<button type="button" class="lk-float-resize lk-rz-sw" data-corner="sw" title="拖动调整大小" aria-label="左下角调整播放器大小"></button>' +
+      '<button type="button" class="lk-float-resize lk-rz-se" data-corner="se" title="拖动调整大小" aria-label="右下角调整播放器大小"></button>';
     if (lkMiniPos) { el.style.left = lkMiniPos.left + 'px'; el.style.top = lkMiniPos.top + 'px'; }
     else { el.style.right = '10px'; el.style.bottom = '90px'; }   /* 默认停在输入栏上方，不遮住正在聊的话 */
+    if (lkMiniSize) {
+      const w = Math.min(lkMiniSize.width, Math.max(180, window.innerWidth - 16));
+      const h = Math.min(lkMiniSize.height, Math.max(132, window.innerHeight - 16));
+      lkMiniSize = { width: w, height: h };
+      el.classList.add('lk-sized'); el.style.width = w + 'px'; el.style.height = h + 'px';
+    }
     const keep = () => {
       const r = el.getBoundingClientRect();
-      lkMiniPos = { left: Math.max(0, r.left), top: Math.max(0, r.top) };
-      el.style.left = lkMiniPos.left + 'px'; el.style.top = lkMiniPos.top + 'px';
+      const left = Math.min(Math.max(0, window.innerWidth - Math.min(60, r.width)), Math.max(0, r.left));
+      const top = Math.min(Math.max(0, window.innerHeight - Math.min(40, r.height)), Math.max(0, r.top));
+      lkMiniPos = { left, top };
+      el.style.left = left + 'px'; el.style.top = top + 'px';
       el.style.right = 'auto'; el.style.bottom = 'auto';
     };
-    /* 拖动口：标题那一栏（iframe/video 会吃掉手勢，拖窗从窗下的标题栏拖） */
+    const beginGesture = (ev, mode, corner) => {
+      if (lkMiniGestureStop || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const r = el.getBoundingClientRect(), sx = ev.clientX, sy = ev.clientY, pid = ev.pointerId;
+      el.style.left = r.left + 'px'; el.style.top = r.top + 'px';
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+      if (mode === 'resize') {
+        el.classList.add('lk-sized'); el.style.width = r.width + 'px'; el.style.height = r.height + 'px';
+      }
+      const move = e2 => {
+        if (e2.pointerId !== pid) return;
+        const dx = e2.clientX - sx, dy = e2.clientY - sy;
+        if (mode === 'move') {
+          el.style.left = Math.min(window.innerWidth - Math.min(60, r.width), Math.max(0, r.left + dx)) + 'px';
+          el.style.top = Math.min(window.innerHeight - Math.min(40, r.height), Math.max(0, r.top + dy)) + 'px';
+          return;
+        }
+        const west = corner.indexOf('w') >= 0, north = corner.indexOf('n') >= 0;
+        const maxW = Math.max(180, Math.min(720, window.innerWidth - 16));
+        const maxH = Math.max(132, window.innerHeight - 16);
+        const width = Math.max(180, Math.min(maxW, r.width + (west ? -dx : dx)));
+        const height = Math.max(132, Math.min(maxH, r.height + (north ? -dy : dy)));
+        const left = Math.max(0, Math.min(window.innerWidth - width, west ? r.right - width : r.left));
+        const top = Math.max(0, Math.min(window.innerHeight - height, north ? r.bottom - height : r.top));
+        el.style.width = width + 'px'; el.style.height = height + 'px';
+        el.style.left = left + 'px'; el.style.top = top + 'px';
+      };
+      const stop = e2 => {
+        if (e2 && e2.pointerId !== pid) return;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', stop);
+        window.removeEventListener('pointercancel', stop);
+        if (lkMiniGestureStop === stop) lkMiniGestureStop = null;
+        if (mode === 'resize') {
+          const q = el.getBoundingClientRect(); lkMiniSize = { width: q.width, height: q.height };
+        }
+        keep();
+      };
+      lkMiniGestureStop = stop;
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
+    };
+    /* 手机/桌面共用 Pointer Events；标题栏是移动把手，关闭键不参与拖动 */
     el.querySelector('.lk-float-cap').addEventListener('pointerdown', ev => {
       if (ev.target.closest('button')) return;
-      ev.preventDefault();
-      const r = el.getBoundingClientRect(), ox = ev.clientX - r.left, oy = ev.clientY - r.top;
-      el.style.right = 'auto'; el.style.bottom = 'auto';
-      const move = e2 => {
-        el.style.left = Math.min(window.innerWidth - 60, Math.max(0, e2.clientX - ox)) + 'px';
-        el.style.top = Math.min(window.innerHeight - 40, Math.max(0, e2.clientY - oy)) + 'px';
-      };
-      const up = () => { keep(); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
+      beginGesture(ev, 'move');
     });
+    el.querySelectorAll('.lk-float-resize').forEach(h => h.addEventListener('pointerdown', ev => {
+      beginGesture(ev, 'resize', h.dataset.corner);
+    }));
     el.querySelector('.lk-float-x').addEventListener('click', () => {
+      if (lkMiniGestureStop) lkMiniGestureStop();
+      lkActClear();
       const v = el.querySelector('video'); if (v) v.pause();
-      lkMiniPos = null;   /* 关了就回默认位：下次弹回输入栏上方，不记得上次的旧位置（她要的是“每次都在那儿”） */
+      lkMiniPos = null; lkMiniSize = null;   /* 关了回默认位/默认尺寸 */
       el.remove();
     });
     document.body.appendChild(el);
     UI.raise(el);
+    if (opts && opts.togetherName) lkAddTogetherBadge(el, opts.togetherName);
     if (resumeSec) { const v = el.querySelector('video'); if (v) { v.currentTime = resumeSec; } }
+    if (!(opts && opts.fromTa) || (opts && opts.playbackInteraction)) lkActBegin(L, opts);   /* TA 自动切链不重判；接听一起看后仍是正常播放会话 */
+  }
+
+  /* ---------- 播放器互动（全局统一，不按联系人分；#174 经清然 10-07 新口径演进）----------
+     每次聊天浮窗播放独立分类：20% 播放中暂停；原有关闭/换链各保留 5%；其它安静。
+     暂停落在 12–45 秒后；本地 video 真暂停，跨域 iframe 以浮窗遮罩表现。一起看邀请已移到聊天消息，不在此处发邀请。 */
+  const LK_ACT = { pause: 20, close: 5, switch: 5, minDelayMs: 12000, maxDelayMs: 45000 };
+  let lkActSession = null;   /* 播放会话互动状态：浮窗关了就作废，不落档 */
+  function lkActClear() {
+    if (lkActSession) (lkActSession.timers || []).forEach(t => clearTimeout(t));
+    lkActSession = null;
+  }
+  function lkMyLinks(exceptUrl) {
+    if (!cur) return [];
+    return (DB.state.msgs[cur.id] || [])
+      .filter(m => m.from === 'me' && m.type === 'link' && m.link && lkCanPlay(m.link) && m.link.url !== exceptUrl);
+  }
+  function lkActPause(ct) {
+    const fl = document.querySelector('.lk-float');
+    if (!fl) return;
+    fl.querySelectorAll('.lk-float-paused').forEach(x => x.remove());
+    const v = fl.querySelector('video');
+    if (v && v.paused) return;   /* 只在视频确实播放时暂停，不把用户已暂停算成 TA 的动作 */
+    if (v) v.pause();             /* 跨域 iframe 无法控制，用遮罩表示 TA 暂停 */
+    const ov = document.createElement('div');
+    ov.className = 'lk-float-paused';
+    ov.textContent = ct.name + '按了暂停 · 点按继续';
+    ov.addEventListener('click', () => {
+      ov.remove();
+      const v2 = fl.querySelector('video');
+      if (v2) { const p = v2.play(); if (p && p.catch) p.catch(() => {}); }
+    });
+    fl.appendChild(ov);
+  }
+  function lkAddTogetherBadge(fl, name) {
+    if (!fl) return;
+    let badge = fl.querySelector('.lk-together');
+    if (!badge) { badge = document.createElement('div'); badge.className = 'lk-together'; fl.appendChild(badge); }
+    badge.textContent = '和 ' + name + ' 一起看';
+  }
+  function lkActBegin(L, opts) {
+    lkActClear();
+    const page = document.getElementById('page-chat');
+    if (!page || !page.classList.contains('active')) return;   /* 朋友圈封面播放不带聊天互动 */
+    const ctId = (opts && opts.watchContactId) || (cur && cur.type === 'single' ? cur.peerId : null);
+    const ct = ctId ? Home.contactById(ctId) : null;
+    if (!ct) return;
+    const s = lkActSession = { timers: [], url: L.url };
+    const roll = Math.random() * 100;
+    const pauseEdge = LK_ACT.pause;
+    const closeEdge = pauseEdge + LK_ACT.close;
+    const switchEdge = closeEdge + LK_ACT.switch;
+    const act = roll < pauseEdge ? 'pause' : roll < closeEdge ? 'close' : roll < switchEdge ? 'switch' : '';
+    if (!act) return;
+    const delay = LK_ACT.minDelayMs + Math.floor(Math.random() * (LK_ACT.maxDelayMs - LK_ACT.minDelayMs));
+    s.timers.push(setTimeout(() => {
+      if (lkActSession !== s) return;
+      const fl = document.querySelector('.lk-float');
+      if (!fl) return;
+      if (act === 'pause') { lkActPause(ct); return; }
+      if (act === 'close') {
+        const v = fl.querySelector('video'); if (v) v.pause();
+        lkActClear(); fl.remove();
+        UI.toast(ct.name + ' 把视频关了');
+        return;
+      }
+      const list = lkMyLinks(s.url);
+      if (!list.length) return;   /* 没有其它真实链接时不编造切换目标 */
+      UI.toast(ct.name + ' 换了个视频');
+      lkOpenMini(Object.assign({}, list[Math.floor(Math.random() * list.length)].link), 0, { fromTa: true });
+    }, delay));
   }
   /* 分享链接 sheet：粘贴→实时识别→小屏卡片预览（异步拉封面/标题，拉不到不拦发送）；「发纯文本」已删（她 08-27 定） */
   function openLinkSheet() {
@@ -11344,8 +11645,9 @@ const Chat = (function () {
   function rerender() { if (!cur) return; refreshHeader(); renderMsgs(); }
 
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
-    locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo, learnFromMe,
+    locateMsg, rerender, maybeRevoke, parseLink, openLink, playMomentLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo, learnFromMe,
      lkResolve, fetchLinkMeta,   /* 她 10-07：朋友圈链接大卡要用（b23 解直链 + 抓封面标题） */
+    lkActCfg: LK_ACT,   /* 播放器互动全局概率（不按联系人分）；探针可临时改延时，不改概率值 */
     get conv() { return cur; } };
 })();
 
@@ -11445,6 +11747,8 @@ const Engine = (function () {
        （默认 5% 她定的）；收集到的话混进字卡池等概率用（见 Library.usableCardPool），
        不再单独掷「用」。0=关。 */
     learnRate: 5,
+    /* 清然 10-07：每条 AI 文字气泡独立掷情绪/意图小标，默认 10%，资料卡回复设置可调 */
+    emotionRate: 10,
     /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
     gaFree: 30,
     readNoReply: 0, moMutual: 0,
@@ -11455,8 +11759,78 @@ const Engine = (function () {
        一人一天约 0.7 条）；仍然只动默认值，已设过的人一个字节不盖。 */
     moPostRate: 30, moPostMin: 6, moPostMax: 24, moPostUnit: 'hour'
   };
+  /* 内置情绪/状态/意图/想法词库：分维度维护，常见词句优先匹配相关维度；不匹配时退到中性交流状态。
+     词条只存于消息的 emotion 字段，不另建联系人档或外部数据表。 */
+  const EMOTION_LIBRARY = [
+    { kind: '愉悦', match: /开心|高兴|快乐|幸福|太好了|真好|喜欢|谢谢|感谢|感激|赞|棒|期待|惊喜|满足|舒服|安心|感动|好耶|嘿嘿|哈哈|嘻嘻|笑死|可爱|厉害/, labels: [
+      '开心','高兴','快乐','愉快','欣喜','雀跃','兴奋','幸福','满足','踏实','安心','感动','感谢','感激','期待','惊喜','轻松','畅快','甜甜的','心情不错','被治愈','被理解','小小得意','有点骄傲','真开心','心里亮堂','松了口气','好满足','乐在其中','觉得很棒','想笑'
+    ]},
+    { kind: '亲近', match: /想你|想念|抱抱|贴贴|亲亲|爱你|喜欢你|陪你|在乎你|心疼|宝贝|亲爱的|撒娇|黏你|靠近|依赖|想见你|想和你/, labels: [
+      '想你','想念','有点想你','想抱抱','想贴贴','想亲近你','想陪着你','想听你说','心疼你','在意你','喜欢靠近你','想依赖你','想被你抱抱','想黏一会儿','想见你','想和你待着','舍不得你','有点想撒娇','想让你哄','想保护你','想照顾你','觉得亲密','心软了','被你牵动','想确认你在','只想陪着你','想和你分享','对你温柔一点','有点甜','想靠近一点'
+    ]},
+    { kind: '好奇', match: /\?|？|吗|呢|怎么|为什么|哪一个|什么感觉|想知道|好奇|真的假的|是吗|你觉得/, labels: [
+      '好奇','想知道','想听细节','有点好奇','想问清楚','认真求证','在等答案','想听你的看法','感兴趣','注意到了','有个疑问','想确认一下','突然好奇','想多了解','追问中','边听边想','等你解释','对这个在意','想知道后来呢','想看看你的反应'
+    ]},
+    { kind: '认真', match: /认真|确实|其实|说真的|我觉得|我认为|重点|仔细|记得|答应|保证|当然|一定|明白|懂了|听着|在听/, labels: [
+      '在听','认真听着','认真回答','专注','仔细想想','留心了','记下了','正在思考','很在意这句','仔细琢磨','想说清楚','认真对待','尽量理解','听进去了','保持专注','仔细回应','心里有数','愿意沟通','想讲明白','准备好好说'
+    ]},
+    { kind: '低落', match: /难过|伤心|失落|低落|委屈|孤单|寂寞|遗憾|失望|哭|心酸|无助|不开心|心碎|想哭|别离|离开/, labels: [
+      '难过','伤心','失落','低落','有点委屈','心酸','孤单','寂寞','失望','遗憾','无助','闷闷的','有点想哭','心里空空','被戳中了','有点脆弱','舍不得','不太开心','需要安慰','情绪低低的','有点灰心','心里发沉','落差很大','想躲一会儿','有点受伤','在消化情绪','想被抱抱','不知道怎么说','压着难受','需要一点温柔'
+    ]},
+    { kind: '烦躁', match: /生气|烦|恼火|火大|讨厌|不爽|气死|无语|不耐烦|受够|别烦|气人|凭什么|胡说|吵架|争/, labels: [
+      '生气','恼火','烦躁','不耐烦','有点火大','不悦','不服气','觉得被冒犯','憋着气','有点暴躁','心里不爽','不想争吵','想反驳','不太接受','气呼呼','有点恼','不想忍了','正在克制','被惹到了','想讲清界限','不想被打断','有点冲','忍住没发作','觉得不公平','想冷静一下'
+    ]},
+    { kind: '不安', match: /担心|害怕|紧张|焦虑|不安|慌|没把握|怕你|会不会|怎么办|来不及|不确定|纠结|犹豫|拿不准|压力/, labels: [
+      '担心','不安','紧张','焦虑','有点害怕','心里没底','犹豫','拿不准','纠结','担忧中','有点慌','怕弄错','怕你误会','需要确认','心里打鼓','不太确定','有些压力','忐忑','犹豫不决','想再想想','需要一点时间','不敢确定','想听你意见','担心你难受','怕说错话','有点心虚','迟疑','正在权衡','想稳一稳','需要安全感'
+    ]},
+    { kind: '亲密意图', match: /陪你|抱抱|哄你|安慰|想见|想靠近|想你|想念|撒娇|夸我|在乎|喜欢你|爱你|贴贴|约你|一起/, labels: [
+      '想陪你','想抱抱你','想哄哄你','想安慰你','想听你倾诉','想被你安慰','想靠近你','想让你注意我','想被你夸','想和你见面','想约你','想黏着你','想逗你开心','想给你鼓劲','想保护你','想被你在意','想要回应','想确认你喜欢我','想和你和好','想分享此刻','想一起待着','想听你说话','想让你放心','想陪你慢慢来','想对你好'
+    ]},
+    { kind: '表达意图', match: /对不起|抱歉|谢谢|感谢|解释|说明|告诉你|分享|说实话|坦白|提醒|建议|劝你|帮我|求你|拜托|想说|说一下/, labels: [
+      '想解释','想道歉','想感谢你','想分享','想倾诉','想把话说清楚','想坦白','想提醒你','想给建议','想劝劝你','想求助','想听意见','想确认想法','想认真聊聊','想把心里话说出','有话想说','不知道怎么开口','话到嘴边','欲言又止','想讲和','想澄清误会','想说声谢谢','想问你一件事','想把原因告诉你','想得到理解','想听你回应','希望你别误会','想说点真心话','想请你帮忙','正在组织语言'
+    ]},
+    { kind: '俏皮意图', match: /哈哈|嘿嘿|逗你|开玩笑|调皮|坏笑|哼|略|捉弄|可爱|撒娇|才不|才怪|骗你|逗逗/, labels: [
+      '想逗你','故意调皮','想逗你笑','想撒个娇','故意卖关子','想捉弄你一下','有点小坏','正在偷笑','想耍赖','想讨个抱抱','想让你哄我','想装作不在意','嘴硬心软','想跟你开玩笑','故意逗逗你','想被你发现','想小小炫耀','想听你夸我','有点小得意','想活跃气氛'
+    ]},
+    { kind: '思绪', match: /突然想到|想一想|考虑|琢磨|也许|可能|换个角度|仔细想|明白了|原来|恍然|等等|让我想想|想想看/, labels: [
+      '想一想','思路打结','突然想到','转念一想','恍然大悟','还在消化','正在琢磨','重新考虑中','有个新想法','想换个角度','心里有答案','思绪飘远','灵机一动','需要捋一捋','想得有点多','在权衡','想通了一点','还有些疑问','暂时没结论','正在组织想法','拿不定主意','想等一等','先缓一缓','思考中','思路清晰','捕捉到重点','正在回味','突然明白','有点走神','想法变了'
+    ]},
+    { kind: '状态', match: /累|疲惫|困|睡|忙|饿|冷|热|精神|没电|休息|走神|发呆|沉默|安静|清醒/, labels: [
+      '在听','认真听着','安静陪着','有点疲惫','困倦','刚缓过来','脑子有点慢','想休息一会儿','忙着呢','暂时走神','发了会儿呆','正在回神','精力不错','有点累了','还挺清醒','需要充充电','慢慢来','状态平稳','有点恍惚','在等你说完','保持安静','刚放松下来','注意力回来了','需要喘口气','心情平和'
+    ]}
+  ];
+  const EMOTION_NEUTRAL = [
+    '在听','认真听着','专注','想一想','思考中','留心了','愿意倾听','在意这句话','正在回味','等你说完',
+    '想确认一下','有点好奇','边听边想','安静陪着','准备回应','正在组织语言','仔细琢磨','关注中','认真回应','想听你说'
+  ];
+  function pickEmotionTag(text) {
+    const src = String(text || '');
+    const matched = EMOTION_LIBRARY.filter(g => g.match.test(src));
+    const pool = [];
+    matched.forEach(g => g.labels.forEach(label => pool.push({ kind: g.kind, label })));
+    if (!pool.length) EMOTION_NEUTRAL.forEach(label => pool.push({ kind: '状态', label }));
+    return pick(pool);
+  }
+
   function params(ct) {
     return Object.assign({}, REPLY_DEF, (ct && ct.params) || {});
+  }
+
+  /* 一起看邀请：每位联系人每个已完成的回复批次独立掷 1%；只引用本会话里清然发过的真实可播链接，绝不造链接。 */
+  const WATCH_INVITE_RATE = 1;
+  let watchInviteSeq = 0;
+  function maybeInviteWatch(conv, ct) {
+    if (!conv || !ct) return false;
+    const arr = DB.state.msgs[conv.id] || [];
+    const links = arr.filter(m => m && m.from === 'me' && m.type === 'link' && m.link && m.link.url && (m.link.embed || m.link.vsrc));
+    if (!links.length || Math.random() * 100 >= WATCH_INVITE_RATE) return false;
+    const chosen = pick(links).link;
+    let id;
+    do { id = 'wi' + Date.now().toString(36) + (++watchInviteSeq).toString(36); }
+    while (arr.some(m => m && m.id === id));
+    pushRaw(conv, { id, from: 'ai', type: 'link', senderId: ct.id, ts: Date.now(),
+      link: Object.assign({}, chosen), watchInvite: true, watchStatus: 'pending' });
+    return true;
   }
 
   /* 条数抽签唯一入口：min~max 均匀掷；cap 传进来就再截一次（群聊分到的份额） */
@@ -11572,6 +11946,8 @@ const Engine = (function () {
 
     later(conv.id, delay, () => {
       const total = fireBatch(conv, p, ct, n, typeof share === 'number' ? share : null);
+      /* 1% 一起看邀请是聊天批次行为，不依赖浮窗；安排在本轮聊天回复之后，保留真实链接卡供回看。 */
+      later(conv.id, Math.max(total, 0), () => maybeInviteWatch(conv, ct));
       // 「正在输入」持续到本批最后一条落地；全员结束才熄灭
       later(conv.id, Math.max(total, 0) + 60, () => {
         timers.delete(key);
@@ -11854,7 +12230,7 @@ const Engine = (function () {
     return m.type === 'img' ? '[图片]' : m.type === 'video' ? '[视频]' : m.type === 'voice' ? '[语音]'
       : m.type === 'letter' ? '[信件]' : m.type === 'kinship' ? '[亲属卡]'
       : m.type === 'redpacket' ? '[红包]' : m.type === 'quiz' ? '[灵魂拷问]'
-      : m.type === 'link' ? '[链接]' : (m.text || '');
+      : m.type === 'link' ? (m.watchInvite ? '[一起看邀请]' : '[链接]') : (m.text || '');
   }
   function authorNameIn(conv, m) {
     if (m.from === 'me') return DB.state.profile.name || '我';
@@ -11883,6 +12259,15 @@ const Engine = (function () {
 
   function pushRaw(conv, m) {
     if (!m.ts) m.ts = Date.now();          // 防御：外部调用漏带 ts 会导致时间显示错乱
+    /* 情绪/意图标签：每条 AI 文字消息各掷一次；按实际发送者读其回复设置，不影响图片/系统消息。 */
+    if (m.from === 'ai' && m.type === 'text' && !m.emotion && typeof Home !== 'undefined') {
+      const emotionUid = m.senderId || (conv && conv.type === 'single' ? conv.peerId : null);
+      const emotionCt = emotionUid ? Home.contactById(emotionUid) : null;
+      if (emotionCt) {
+        const emotionRate = Math.min(100, Math.max(0, Math.round(+params(emotionCt).emotionRate || 0)));
+        if (emotionRate > 0 && Math.random() * 100 < emotionRate) m.emotion = pickEmotionTag(m.text);
+      }
+    }
     /* 按 ts 有序插入（#39p补2）：离线补跑的信/消息回填真实时刻后，落在时间线的正确位置 */
     const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
     let i = arr.length;
@@ -11970,7 +12355,7 @@ const Engine = (function () {
      巡更钟」是我外加的，她不要，拆（2026-10-07） */
 
   return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate, learn,
-           params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF };
+           params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF, emotionLibrary: EMOTION_LIBRARY, pickEmotionTag };
 })();
 
 /* =====================================================
@@ -15853,8 +16238,9 @@ const Moments = (function () {
   function name(uid) { return Home.uidName(uid); }   // 唯一口径在 Home.uidName（09-02 拢条）
   function avaHtml(uid) { return Home.avaInner(uid); }   // 头像口径全站一份在 Home.avaInner（09-14 拢条）
   function store() {
-    if (!DB.state.moments) DB.state.moments = { posts: [], covers: { me: null, byContact: {} } };
+    if (!DB.state.moments) DB.state.moments = { posts: [], notifications: [], covers: { me: null, byContact: {} } };
     if (!DB.state.moments.covers) DB.state.moments.covers = { me: null, byContact: {} };
+    if (!Array.isArray(DB.state.moments.notifications)) DB.state.moments.notifications = [];
     return DB.state.moments;
   }
   function fmtTime(ts) {
@@ -16010,6 +16396,92 @@ const Moments = (function () {
     return (s.posts || []).some(p => p && p.uid !== 'me' && (p.at || p.ts) > seen);
   }
   function markSeen() { const s = store(); s.seenAt = Date.now(); DB.save(); }
+  let notificationSeq = 0;
+  function addNotification(type, post, actorUid, ts, commentId, replyToUid, commentText) {
+    if (!post || !actorUid || actorUid === 'me') return;
+    const s = store(), at = +ts || Date.now(), list = (s.notifications = s.notifications || []);
+    let id;
+    do { id = 'mn' + at.toString(36) + (++notificationSeq).toString(36) + Math.random().toString(36).slice(2, 6); }
+    while (list.some(n => n.id === id));
+    list.push({
+      id,
+      type, actorUid, postId: post.id, commentId: commentId || '', replyToUid: replyToUid || '', ts: at, read: false,
+      postText: (post.text || '').slice(0, 80), commentText: String(commentText || '').slice(0, 80)
+    });
+  }
+  function renderNotificationDot() {
+    const dot = document.getElementById('mo-notify-dot');
+    if (dot) dot.hidden = !store().notifications.some(n => !n.read);
+  }
+  /* 评论 ID 统一入口：原来三处各写 'mc'+Date.now()+rand，同毫秒内两班互动会撞 ID，
+     跳转定位就找错人——跟通知 ID 同一个防撞口径：序号+随机尾缀，落档前查重 */
+  let commentSeq = 0;
+  function uniqCommentId() {
+    const posts = store().posts || [];
+    let id;
+    do { id = 'mc' + Date.now().toString(36) + (++commentSeq).toString(36) + Math.random().toString(36).slice(2, 6); }
+    while (posts.some(p => (p.comments || []).some(c => c.id === id)));
+    return id;
+  }
+  function notificationTime(ts) {
+    const d = new Date(+ts || 0);
+    if (!isFinite(d.getTime())) return '';
+    return String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  function notificationLabel(n) {
+    return n.type === 'like' ? '赞了你的朋友圈' : (n.type === 'reply' ? '回复了你的评论' : '评论了你的朋友圈');
+  }
+  function openNotifications() {
+    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .mo-notify-mask').forEach(x => x.remove());
+    const items = store().notifications.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0));
+    items.forEach(n => { n.read = true; });
+    DB.save(); renderNotificationDot();
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal mo-notify-mask';
+    mask.innerHTML = '<div class="sheet mo-notify-sheet"><div class="sheet-title">朋友圈互动</div>' +
+      (items.length ? '<div class="mo-notify-list">' + items.map(n =>
+        '<button type="button" class="mo-notify-row" data-notice="' + esc(n.id) + '">' +
+          '<span class="mo-notify-main"><b>' + esc(name(n.actorUid)) + '</b><span>' + esc(notificationLabel(n)) + '</span><time>' + esc(notificationTime(n.ts)) + '</time></span>' +
+          '<span class="mo-notify-post">' + esc(n.postText || '朋友圈') + '</span>' +
+          (n.commentText ? '<span class="mo-notify-comment">' + esc(n.commentText) + '</span>' : '') + '</button>').join('') +
+      '</div>' : '<div class="mo-notify-empty">还没有朋友圈互动</div>') +
+      '<button type="button" class="sheet-cancel">关闭</button></div>';
+    mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', e => {
+      const row = e.target.closest('[data-notice]');
+      if (row) { jumpToNotification(row.dataset.notice, mask); return; }
+      if (e.target === mask) mask.remove();
+    });
+    layer.appendChild(mask); UI.raise(mask);
+  }
+  function jumpToNotification(id, mask) {
+    const n = store().notifications.find(x => x.id === id);
+    if (!n) return;
+    n.read = true; DB.save(); renderNotificationDot();
+    if (mask) mask.remove();
+    const post = findPost(n.postId);
+    if (!post) { UI.toast('这条朋友圈已经不在了'); return; }
+    viewUid = null; pageLimit = 30;
+    settle(); Router.go('moments'); renderCover();
+    const feed = visiblePosts();
+    const index = feed.findIndex(x => x.id === n.postId);
+    if (index < 0) { renderList(); UI.toast('这条朋友圈当前不可见'); return; }
+    pageLimit = Math.max(pageLimit, index + 1);
+    renderList(); bindOnce(); markSeen(); dotDiscover();
+    setTimeout(() => {
+      const body = document.getElementById('mo-scroll');
+      const item = Array.from(document.querySelectorAll('#mo-list .mo-item')).find(x => x.dataset.id === n.postId);
+      if (!body || !item) return;
+      const comment = n.commentId ? Array.from(item.querySelectorAll('.mo-cmt')).find(x => x.dataset.id === n.commentId) : null;
+      if (n.commentId && !comment) UI.toast('原评论已经不在了，已跳到朋友圈');
+      const target = comment || item;
+      body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top - 72;
+      target.classList.add('mo-notif-target');
+      setTimeout(() => target.classList.remove('mo-notif-target'), 1800);
+    }, 80);
+  }
   function dotDiscover() {
     const el = document.getElementById('disc-moments');
     if (el) el.classList.toggle('has-fresh', hasFresh());
@@ -16041,6 +16513,9 @@ const Moments = (function () {
   function bindOnce() {
     const body = document.getElementById('mo-scroll');
     if (!body || body.dataset.bound) return;
+    const bell = document.getElementById('mo-notifications');
+    if (bell) bell.addEventListener('click', openNotifications);
+    renderNotificationDot();
     body.dataset.bound = '1';
     body.addEventListener('scroll', () => {
       document.getElementById('mo-nav').classList.toggle('solid', body.scrollTop > 170);
@@ -16308,13 +16783,20 @@ function coverTap(e) {
     const post = store().posts.find(x => x.id === postId);
     if (!post) return;
     const t0 = +at || Date.now();        // 09-04：评论时刻=这班互动该到的时刻（补排的不再挂“刚刚”）
-    if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
+    if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) {
+      post.likes.push(ct.id);   // 点赞70%（P16③口径）
+      if (post.uid === 'me') addNotification('like', post, ct.id, t0, '');
+    }
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
       /* 评论正文与配图：拼卡/装饰/配图都在 taBody 里算；文-图-文的尾句在 text2 */
       const b = taBody(ct, true);
-      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: t0 });
+      if (b.text || b.imgs.length) {
+        const c = { id: uniqCommentId(), uid: ct.id, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: t0 };
+        post.comments.push(c);
+        if (post.uid === 'me') addNotification('comment', post, ct.id, t0, c.id, '', c.text || c.text2 || ((c.imgs || []).length ? '发了图片' : ''));
+      }
     }
-    DB.save();
+    DB.save(); renderNotificationDot();
     renderList();
     /* 她 08-26：互评开启时，动态主人 30% 会回复这条评论（楼中楼）——同样落库排程 */
     const justCommented = post.comments.length && post.comments[post.comments.length - 1].uid === ct.id;
@@ -16356,7 +16838,9 @@ function coverTap(e) {
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
         const b = taBody(ct, true);
         if (!b.text && !b.imgs.length) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: pl.at || Date.now() });
+        const c = { id: uniqCommentId(), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: pl.at || Date.now() };
+        (p.comments = p.comments || []).push(c);
+        if (p.uid === 'me' || pl.to === 'me') addNotification(pl.to === 'me' ? 'reply' : 'comment', p, pl.ct, c.ts, c.id, c.toUid, c.text || c.text2 || ((c.imgs || []).length ? '发了图片' : ''));
       });
       acted = true;
     });
@@ -16410,11 +16894,11 @@ function coverTap(e) {
     });
     /* 补发的动态发生时刻比现在早，直接 unshift 会把时间线顶到最前 → 按发生时刻重排（渲染读的就是这个数组顺序） */
     if (bornN) s.posts.sort((x, y) => (y.ts || 0) - (x.ts || 0));
-    if (acted) { DB.save(); renderList(); }
+    if (acted) { DB.save(); renderNotificationDot(); renderList(); }
     /* 她正盯着这页 → 到点的动态当场就算看过，别让墨点亮在已经读了的人脸上 */
     const pg = document.getElementById('page-moments');
     if (pg && pg.classList.contains('active')) markSeen();
-    dotDiscover();
+    dotDiscover(); renderNotificationDot();
   }
   /* 08-27 晚 #41 重构把“我的动态”误伤成全程零互动（scheduleReactions 对 uid='me' 早退），
      窗口内发出的动态一个赞/评都没排上。补排只挑受害窗口内、零赞零评、还没排过计划的；
@@ -16652,19 +17136,22 @@ function coverTap(e) {
   /* ---------- 时间线（viewUid：个人相册只看该联系人，L45；实时读库=联系人变化即时更新） ---------- */
   let viewUid = null;
   let pageLimit = 30, loadingPage = false, totalPosts = 0;   // 分页渲染：每次30条，接近底部追加（九-1）
-  function renderList() {
-    const list = document.getElementById('mo-list');
-    if (!list) return;
+  function visiblePosts() {
     const all = store().posts;
     let posts = viewUid ? all.filter(p => p.uid === viewUid) : all;
     /* 谁可以看（L49）：私密仅自己；给谁看=名单内；不给谁看=名单外 */
-    posts = posts.filter(p => {
+    return posts.filter(p => {
       if (p.uid === 'me') return true;
       if (p.visibility === 'private') return false;
       if (p.visibility === 'include') return (p.visList || []).includes('me');
       if (p.visibility === 'exclude') return !(p.visList || []).includes('me');
       return true;
     });
+  }
+  function renderList() {
+    const list = document.getElementById('mo-list');
+    if (!list) return;
+    let posts = visiblePosts();
     const totalAll = posts.length;
     totalPosts = totalAll;
     posts = posts.slice(0, pageLimit);
@@ -16861,10 +17348,11 @@ function coverTap(e) {
       openViewer(t.style.backgroundImage.slice(5, -2));
     }));
     list.querySelectorAll('.mo-item-link').forEach(el => el.addEventListener('click', () => {
-      /* 她 10-07：朋友圈链接=封面大卡（同聊天同一套），可播的弹悬浮小窗即播，不跳浏览器；
-         解析对象 hydrate 时已存在 el.__L，没解析到才退回系统打开 */
+      /* 清然 10-07：朋友圈链接就地在封面卡播放；不调聊天浮窗，也不进入一起看邀请链。 */
       const L = el.__L || ((typeof Chat !== 'undefined' && Chat.parseLink) ? Chat.parseLink(el.dataset.lk || '') : null);
-      if (L && Chat.openLink) Chat.openLink(L);
+      const mini = el.querySelector('.lk-mini');
+      if (L && typeof Chat !== 'undefined' && Chat.playMomentLink) Chat.playMomentLink(L, mini);
+      else if (L && L.url) window.open(L.url, '_blank', 'noopener');
       else window.open((el.dataset.lk || '').trim(), '_blank', 'noopener');
     }));
     /* 评论区表情包小图点击放大（八-3） */
@@ -16951,7 +17439,7 @@ function coverTap(e) {
     shell.querySelector('#mo-cmt-go').addEventListener('click', () => {
       const text = shell.querySelector('#mo-cmt-text').value.trim();
       if (!text && !cmtImg) return UI.toast('说点什么吧');
-      p.comments.push({ id: 'mc' + Date.now().toString(36), uid: 'me', toUid: toUid || null, text, img: cmtImg, ts: Date.now() });
+      p.comments.push({ id: uniqCommentId(), uid: 'me', toUid: toUid || null, text, img: cmtImg, ts: Date.now() });
       DB.save();
       closeShell();
       renderList();
@@ -16993,7 +17481,7 @@ function coverTap(e) {
       /* 她 09:41：排班卡内嵌在发现页，进页就重渲（幂等），值班人永远新鲜 */
       if (typeof Schedule !== 'undefined' && Schedule.render) Schedule.render();
     });
-    dotDiscover();
+    dotDiscover(); renderNotificationDot();
   }
 
   /* 她 09:41：我的页「TA 删朋友圈模式」全局开关拆除——按联系人去主页填 taDelRate（0=不删） */
@@ -23901,6 +24389,7 @@ const Profile = (function () {
     const pa = Object.assign({}, PFORM_DEF, Engine.params(c));   // 默认值只住一处：引擎读的在 REPLY_DEF，表单专属的在 PFORM_DEF
     el('pf-imgmode').value = pa.imgMode;
     el('pf-imgprob').value = pa.imgProb;
+    el('pf-emotionrate').value = pa.emotionRate;
     el('pf-letterrate').value = pa.letterRate;
     el('pf-comboprob').value = pa.cardComboProb;
     el('pf-comin').value = pa.cardComboMin;
@@ -24110,7 +24599,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
@@ -24120,6 +24609,7 @@ const Profile = (function () {
         const oldMoMax = +((c.params || {}).moPostMax ?? -1), oldMoUnit = (c.params || {}).moPostUnit || '';
         p.imgMode = el('pf-imgmode').value;
         p.imgProb = Math.min(100, Math.max(0, Math.round(+el('pf-imgprob').value || 0)));
+        p.emotionRate = Math.min(100, Math.max(0, Math.round(+el('pf-emotionrate').value || 0)));
         p.letterRate = Math.min(100, Math.max(0, Math.round(+el('pf-letterrate').value || 0)));
         /* 拼字卡（二期P9）：概率%+条数区间（最少≥2） */
         p.cardComboProb = Math.min(100, Math.max(0, Math.round(+el('pf-comboprob').value || 0)));
@@ -24178,10 +24668,13 @@ const Profile = (function () {
         if (oldLetterRate !== p.letterRate || oldLtrMin !== p.ltrMinH || oldLtrMax !== p.ltrMaxH) {
           DB.state.convs.forEach(cv => { if (cv.type === 'single' && cv.peerId === c.id) delete cv.letterNextAt; });
         }
+        /* 没动情绪概率且联系人原本没存过时，不把默认 10% 偷写成她的选择。 */
+        if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'emotionRate') && id !== 'pf-emotionrate') delete p.emotionRate;
         c.params = p;
         el('pf-calllo').value = p.callLo;
         el('pf-callhi').value = p.callHi;
         el('pf-imgprob').value = p.imgProb;
+        el('pf-emotionrate').value = p.emotionRate;
         el('pf-letterrate').value = p.letterRate;
         el('pf-ltr-min').value = p.ltrMinH;
         el('pf-ltr-max').value = p.ltrMaxH;
@@ -25861,13 +26354,59 @@ const Schedule = (function () {
 
   function esc(s) { return UI.escapeHtml(s); }
 
+  function today() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function normalizeDay(day) {
+    const m = String(day || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    return m ? (m[1] + '-' + String(+m[2]).padStart(2, '0') + '-' + String(+m[3]).padStart(2, '0')) : '';
+  }
+  function snapshot(s, day) {
+    if (!s || !day) return;
+    s.history = s.history || {};
+    const row = Object.assign({}, s.history[day] || {});
+    (s.kinds || []).forEach(k => {
+      row[k.id] = { name: k.name, people: (s.duty[k.id] || []).slice() };
+    });
+    s.history[day] = row;
+  }
+  function snapshotToday(s) { snapshot(s, today()); }
+  function weekday(day) {
+    const p = String(day || '').split('-').map(Number);
+    if (p.length !== 3 || !p[0] || !p[1] || !p[2]) return '';
+    return ['日', '一', '二', '三', '四', '五', '六'][new Date(p[0], p[1] - 1, p[2]).getDay()];
+  }
+  function dayLabel(day) {
+    const p = String(day || '').split('-');
+    return p.length === 3 ? (Number(p[1]) + '月' + Number(p[2]) + '日 周' + weekday(day)) : day;
+  }
+  function fullDayLabel(day) {
+    const p = String(day || '').split('-');
+    return p.length === 3 ? (p[0] + '年' + Number(p[1]) + '月' + Number(p[2]) + '日 星期' + weekday(day)) : day;
+  }
+
   function S() {
-    const s = DB.state.schedule = DB.state.schedule || { kinds: [], day: '', duty: {}, manual: {} };
-    if (!s.kinds.length) s.kinds = [{ id: 'k' + Date.now().toString(36), name: '陪睡' }];
-    s.duty = s.duty || {}; s.manual = s.manual || {};
+    const s = DB.state.schedule = DB.state.schedule || { kinds: [], day: '', duty: {}, manual: {}, history: {} };
+    if (!Array.isArray(s.kinds) || !s.kinds.length) s.kinds = [{ id: 'k' + Date.now().toString(36), name: '陪睡' }];
+    s.duty = s.duty || {}; s.manual = s.manual || {}; s.history = s.history || {};
+    /* 旧版日期没有补零（如 2026-10-7）；先归一化，不能因此误判手动值班日或让历史日期失联。 */
+    let migrated = false;
+    const dayKey = normalizeDay(s.day);
+    if (dayKey && dayKey !== s.day) { s.day = dayKey; migrated = true; }
+    Object.keys(s.manual).forEach(id => {
+      const manualDay = normalizeDay(s.manual[id]);
+      if (manualDay && manualDay !== s.manual[id]) { s.manual[id] = manualDay; migrated = true; }
+    });
+    Object.keys(s.history).forEach(day => {
+      const normalized = normalizeDay(day);
+      if (normalized && normalized !== day) {
+        if (!s.history[normalized]) s.history[normalized] = s.history[day];
+        delete s.history[day]; migrated = true;
+      }
+    });
+    /* 升级旧存档：只把存档明确标记的那一天当前名单归档，不推造更早日期。 */
+    if (s.day && !s.history[s.day]) { snapshot(s, s.day); migrated = true; }
+    if (migrated) DB.save();
     return s;
   }
-  function today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   /* 每天值班人数：指数递减，上限 = 全部联系人。
      GEOM=0.2 → 1人 80% / 2人 16% / 3人 3.2% / 4人 0.64%…（越往后越接近 0，但不停在 3 人）
      她 10-05 口径：上限是所有联系人，只是出现全部人的概率极其小。 */
@@ -25885,13 +26424,16 @@ const Schedule = (function () {
   }
   /* 跨天重掷：她手动定过的班种当天不动 */
   function rollDay(force) {
-    const s = S();
-    if (!force && s.day === today()) return false;
-    s.day = today();
+    const s = S(), now = today();
+    if (!force && s.day === now) return false;
+    /* 跨日先存下刚结束那天的真实名单，再生成新一天；不补造停机期间的日期。 */
+    if (s.day && s.day !== now) snapshot(s, s.day);
+    s.day = now;
     s.kinds.forEach(k => {
       if (s.manual[k.id] === s.day) return;
       s.duty[k.id] = pickDistinct(countOf());
     });
+    snapshot(s, now);
     DB.save();
     return true;
   }
@@ -25912,6 +26454,7 @@ const Schedule = (function () {
         const manual = s.manual[k.id] === today();
         return '<div class="card sched-kind" data-k="' + k.id + '">' +
           '<div class="sched-kind-head"><b class="sched-kind-name">' + esc(k.name) + '</b>' +
+          '<button type="button" class="sched-day" data-sched-history="' + k.id + '" aria-label="查看' + esc(k.name) + '历史记录">' + esc(dayLabel(today())) + ' ›</button>' +
           (manual ? '<em class="sched-tag">今天你定的</em>' : '') +
           '</div>' +
           '<button class="sched-duty" data-k="' + k.id + '">' +
@@ -25919,6 +26462,89 @@ const Schedule = (function () {
           '</button></div>';
       }).join('') +
       '<button class="card sched-addbtn" id="sched-add">＋ 自定义班种</button>';
+  }
+
+  function historyRows(kindId) {
+    const h = S().history || {};
+    return Object.keys(h).filter(day => h[day] && h[day][kindId])
+      .sort((a, b) => b.localeCompare(a))
+      .map(day => ({ day, rec: h[day][kindId] }));
+  }
+  function statHtml(rows) {
+    const people = {}, weekdays = Array(7).fill(0), byPersonDay = {};
+    rows.forEach(({ day, rec }) => {
+      const p = day.split('-').map(Number), wd = new Date(p[0], p[1] - 1, p[2]).getDay();
+      weekdays[wd]++;
+      (rec.people || []).forEach(uid => {
+        people[uid] = (people[uid] || 0) + 1;
+        byPersonDay[uid] = byPersonDay[uid] || Array(7).fill(0);
+        byPersonDay[uid][wd]++;
+      });
+    });
+    const ranks = Object.keys(people).sort((a, b) => people[b] - people[a]);
+    const weekNames = ['日', '一', '二', '三', '四', '五', '六'];
+    const personLine = ranks.length ? ranks.map(uid => {
+      const top = Math.max.apply(null, byPersonDay[uid]);
+      const days = byPersonDay[uid].map((n, i) => n === top ? '周' + weekNames[i] : '').filter(Boolean).join('、');
+      return '<div class="sched-stat-row"><span>' + esc(Home.uidName(uid)) + '</span><b>' + people[uid] + '次</b><small>常值：' + days + '</small></div>';
+    }).join('') : '<div class="sched-history-empty">暂无可统计的值班记录</div>';
+    const weekLine = weekNames.map((w, i) => '<span class="sched-week-count">周' + w + ' <b>' + weekdays[i] + '</b></span>').join('');
+    return '<div class="sched-history-stats"><b>所选月份 · 谁值班次数多</b>' + personLine + '<b>这个班种各星期出现次数</b><div class="sched-week-grid">' + weekLine + '</div></div>';
+  }
+  function openHistory(kindId) {
+    const s = S(), kind = s.kinds.find(k => k.id === kindId);
+    if (!kind) return;
+    const layer = document.getElementById('dialog-layer');
+    document.querySelectorAll('#dialog-layer > .sched-history-mask').forEach(x => x.remove());
+    const mask = document.createElement('div');
+    mask.className = 'sheet-mask ui-modal sched-history-mask';
+    mask.innerHTML = '<div class="sheet sched-history-sheet">' +
+      '<div class="sheet-title">' + esc(kind.name) + '记录与统计</div>' +
+      '<div class="sched-history-modes"><button type="button" class="on" data-mode="day">按天</button><button type="button" data-mode="month">按月</button></div>' +
+      '<div class="sched-history-datebox"><label class="sched-h-day">选择日期<input type="date" class="sched-date-input" value="' + today() + '"></label>' +
+      '<label class="sched-h-month" hidden>选择月份<input type="month" class="sched-month-input" value="' + today().slice(0, 7) + '"></label></div>' +
+      '<div class="sched-history-content"></div><button type="button" class="sheet-cancel">关闭</button></div>';
+    const content = mask.querySelector('.sched-history-content');
+    let mode = 'day';
+    function draw() {
+      const rows = historyRows(kindId);
+      if (mode === 'day') {
+        const day = mask.querySelector('.sched-date-input').value || today();
+        const row = rows.find(x => x.day === day);
+        const names = row && row.rec.people && row.rec.people.length ? personChips(row.rec.people) : '';
+        const detail = row ? (names || '<div class="sched-history-empty">这天没有排人</div>') : '<div class="sched-history-empty">这天没有已保存的记录</div>';
+        const monthRows = rows.filter(x => x.day.slice(0, 7) === day.slice(0, 7));
+        content.innerHTML = '<div class="sched-history-date-title">' + esc(fullDayLabel(day)) + '</div>' +
+          '<div class="sched-history-day-people">' + detail + '</div>' + statHtml(monthRows);
+      } else {
+        const month = mask.querySelector('.sched-month-input').value || today().slice(0, 7);
+        const rowsInMonth = rows.filter(x => x.day.slice(0, 7) === month).sort((a, b) => b.day.localeCompare(a.day));
+        const list = rowsInMonth.length ? rowsInMonth.map(x => '<button type="button" class="sched-history-record" data-day="' + x.day + '"><span>' + esc(fullDayLabel(x.day)) + '</span><span>' + esc((x.rec.people || []).map(Home.uidName).join('、') || '无值班人') + '</span><b>›</b></button>').join('') : '<div class="sched-history-empty">这个月没有已保存的记录</div>';
+        content.innerHTML = '<div class="sched-history-month-title">' + esc(month.replace('-', '年') + '月记录') + '</div>' + list + statHtml(rowsInMonth);
+      }
+    }
+    mask.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+      mode = b.dataset.mode;
+      mask.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+      mask.querySelector('.sched-h-day').hidden = mode !== 'day';
+      mask.querySelector('.sched-h-month').hidden = mode !== 'month';
+      draw();
+    }));
+    mask.querySelector('.sched-date-input').addEventListener('change', draw);
+    mask.querySelector('.sched-month-input').addEventListener('change', draw);
+    content.addEventListener('click', e => {
+      const row = e.target.closest('.sched-history-record');
+      if (!row) return;
+      mode = 'day';
+      mask.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x.dataset.mode === 'day'));
+      mask.querySelector('.sched-h-day').hidden = false;
+      mask.querySelector('.sched-h-month').hidden = true;
+      mask.querySelector('.sched-date-input').value = row.dataset.day;
+      draw();
+    });
+    mask.querySelector('.sheet-cancel').addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+    layer.appendChild(mask); UI.raise(mask); draw();
   }
 
   function pickDuty(kindId) {
@@ -25966,6 +26592,7 @@ const Schedule = (function () {
     ok.addEventListener('click', () => {
       s.duty[kindId] = [...picked];
       if (picked.size) s.manual[kindId] = today(); else delete s.manual[kindId];
+      snapshotToday(s);
       DB.save();
       mask.remove();
       render();
@@ -25989,6 +26616,7 @@ const Schedule = (function () {
         const k = { id: 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), name };
         s.kinds.push(k);
         s.duty[k.id] = pickDistinct(countOf());
+        snapshotToday(s);
         DB.save();
         render();
         UI.toast('「' + name + '」班已加，今天就有人值班了');
@@ -26007,6 +26635,7 @@ const Schedule = (function () {
         const name = (v.v || '').trim();
         if (!name) return;
         k.name = name;
+        snapshotToday(s);
         DB.save();
         render();
       }
@@ -26017,8 +26646,14 @@ const Schedule = (function () {
     const k = s.kinds.find(x => x.id === kindId);
     if (!k) return;
     if (s.kinds.length <= 1) { UI.toast('至少要留一个班种'); return; }
+    /* 删除班种时连它自己的历史一起删，避免留下再也进不去的孤儿统计；其他班种记录保留。 */
     s.kinds = s.kinds.filter(x => x.id !== kindId);
     delete s.duty[kindId]; delete s.manual[kindId];
+    Object.keys(s.history || {}).forEach(day => {
+      const row = s.history[day];
+      if (row && row[kindId]) delete row[kindId];
+      if (row && !Object.keys(row).length) delete s.history[day];
+    });
     DB.save();
     render();
     UI.toast('「' + k.name + '」班已删');
@@ -26029,6 +26664,8 @@ const Schedule = (function () {
     if (!box) return;
     box.addEventListener('click', e => {
       if (e.target.closest('#sched-add')) { addKind(); return; }
+      const history = e.target.closest('[data-sched-history]');
+      if (history) { openHistory(history.dataset.schedHistory); return; }
       const duty = e.target.closest('.sched-duty');
       const name = e.target.closest('.sched-kind-name');
       const card = e.target.closest('.sched-kind');
