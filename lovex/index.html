@@ -10098,23 +10098,55 @@ const Chat = (function () {
     }
     return '';
   }
-  /* 封面/标题抓取（仅发送/预览时拉一次，消息里存结果；代理全挂→返回 null 降级，不影响发送） */
+  /* 她 10-07 15:15 她报「B站也解析不到了」——根因：解析全押两个海外公共代理，
+     国内网络下实测全挂（allorigins 超时、codetabs 503、corsproxy 要 key；电脑直连 B站本身是通的）。
+     根治：候选链改成 ①APK 原生桥 fetchText（壳里没有 CORS 这个概念，手机直连 B站，最稳）
+     ②她自建中转（fetch 通道，lkRelayFix 剔鉴权参数）③公共代理兜底（桌面浏览器环境）。
+     谁先拿到谁说了算，全挂才降级——降级口径不变（不发文字卡、不跳浏览器、永不空转）。 */
+  /* 原生桥回包的落点：id -> resolve。壳那边 evaluateJavascript 调 window.__LXLK.done(id, text)。
+     只挂一次（热更新/多模块都走这一个），回调分发完自删 */
+  if (typeof window !== 'undefined' && !window.__LXLK) {
+    window.__LXLK = { cbs: {}, done: function (id, txt) {
+      const f = window.__LXLK.cbs[id];
+      if (!f) return;
+      delete window.__LXLK.cbs[id];
+      f(txt || '');
+    } };
+  }
+  let lkNatSeq = 0;
+  function lkNativeFetch(url) {
+    return new Promise(res => {
+      const nv = (typeof window !== 'undefined') && window.LovexNative;
+      if (!nv || !nv.fetchText) return res('');
+      const id = 'lk' + (++lkNatSeq) + '_' + Date.now();
+      const tm = setTimeout(() => { delete window.__LXLK.cbs[id]; res(''); }, 12000);
+      window.__LXLK.cbs[id] = txt => { clearTimeout(tm); res(txt || ''); };
+      try { nv.fetchText(url, id); } catch (e) { clearTimeout(tm); delete window.__LXLK.cbs[id]; res(''); }
+    });
+  }
+  function lkFetchOne(u, ms, asJson) {
+    return new Promise(done => {
+      const ctl = new AbortController();
+      const tm = setTimeout(() => ctl.abort(), ms);
+      fetch(u, { signal: ctl.signal }).then(r => r.ok ? r.text() : '').then(txt => {
+        clearTimeout(tm);
+        if (txt && asJson) { try { const w = JSON.parse(txt); if (typeof w.contents === 'string') txt = w.contents; } catch (_) {}
+        }
+        done(txt || '');
+      }).catch(() => { clearTimeout(tm); done(''); });
+    });
+  }
+  /* 封面/标题抓取（仅发送/预览时拉一次，消息里存结果；候选全挂→返回 '' 降级，不影响发送） */
   function lkViaProxy(target, asJson) {
+    const cands = [];
+    cands.push(u => lkNativeFetch(u));                       /* 没壳=立刻空串跳下一个 */
+    const relay = lkRelayOn();
+    if (relay) cands.push(u => lkFetchOne(relay + (relay.indexOf('?') >= 0 ? '&' : '?') + 'url=' + encodeURIComponent(u), 15000, asJson));
     const base = asJson
       ? ['https://api.allorigins.win/get?url=', 'https://api.codetabs.com/v1/proxy?quest=']
       : ['https://api.allorigins.win/raw?url=', 'https://api.codetabs.com/v1/proxy?quest='];
-    return base.map(p => p + encodeURIComponent(target)).reduce(
-      (chain, u) => chain.then(res => res || new Promise(done => {
-        const ctl = new AbortController();
-        const tm = setTimeout(() => ctl.abort(), 9000);
-        fetch(u, { signal: ctl.signal }).then(r => r.ok ? r.text() : '').then(txt => {
-          clearTimeout(tm);
-          if (txt && asJson) { try { const w = JSON.parse(txt); if (typeof w.contents === 'string') txt = w.contents; } catch (_) {}
-          }
-          done(txt || '');
-        }).catch(() => { clearTimeout(tm); done(''); });
-      })),
-      Promise.resolve(''));
+    base.forEach(p => cands.push(u => lkFetchOne(p + encodeURIComponent(u), 8000, asJson)));
+    return cands.reduce((chain, f) => chain.then(res => res || f(target)), Promise.resolve(''));
   }
   /* 黑匣子写入必须永不抛错：logErr 住在 app.js 的 IIFE 里，跳模块直接调会 ReferenceError，
      把“抓不到就降级成标题卡”的兼容分支本身炸掉（她 08-27“一直转圈没小屏”的真根因） */
