@@ -1815,6 +1815,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-vthumb.vid-lost{background:var(--fill)!important;display:flex;align-items:center;justify-content:center}
 .mo-vthumb.vid-lost::after{content:'视频不在本机';font-size:10px;color:var(--t2)}
 .mo-item-link{cursor:pointer;border-left:3px solid var(--line);background:var(--fill);padding:6px 10px;margin-bottom:6px;font-size:var(--fs-small);color:var(--primary);word-break:break-all}
+/* 她 10-07：朋友圈链接=封面大卡（同聊天 .lk-card 一套），老文字条样式只留给不带卡的历史节点 */
+.mo-item-link.mo-linkcard{border-left:none;background:none;padding:0;max-width:82%}
+.mo-linkcard .lk-card{width:100%;margin:0}
 .mo-item-loc{font-size:var(--fs-small);color:var(--primary);margin-bottom:4px}
 .mo-item-meta{display:flex;align-items:center;gap:12px;font-size:var(--fs-small);color:var(--t3);margin-bottom:6px}
 .mo-ops{position:absolute;right:0;margin-top:-32px;display:flex;align-items:center;gap:6px;background:var(--fill);border-radius:999px;padding:2px 4px}
@@ -7331,6 +7334,26 @@ const Diary = (function () {
   function poolOf(ctId) {
     try { return Library.usableCardPool(ctId) || []; } catch (e) { return []; }
   }
+  /* 她 10-07：心事簿 TA 的话也吃自由组话——跟联系人主页回复设置（gaFree）走，
+     组不出回落心事词库，不硬凑；一半现组、一半拿词库条目改写，与聊天同口径 */
+  function taLine(ct, pool) {
+    try {
+      const p = (typeof Engine !== 'undefined' && Engine.params) ? Engine.params(ct) : {};
+      const freeP = Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 30)));
+      if (freeP > 0 && typeof FreeTalk !== 'undefined' && FreeTalk.compose && Math.random() * 100 < freeP) {
+        const ctx = {
+          taName: (typeof Home !== 'undefined' && Home.displayName) ? Home.displayName(ct) : '',
+          myName: (DB.state.profile && DB.state.profile.name) || '',
+          pet: (ct && (ct.petName || ct.identity)) || ''
+        };
+        const line = (pool.length && Math.random() < 0.5 && FreeTalk.remake)
+          ? FreeTalk.remake(pick(pool), ctx)
+          : FreeTalk.compose(ctx);
+        if (line) return String(line);
+      }
+    } catch (e) { /* 组话挂了就回落心事词库，不硬凑 */ }
+    return pool.length ? pick(pool) : '';
+  }
   /* 当天随机时刻：8:00 ~ 22:59 */
   function randTsOfDay(dkey) {
     const h = randI(8, 22), m = randI(0, 59);
@@ -7423,7 +7446,7 @@ const Diary = (function () {
       /* TA 给我留言（响应式：saveMine 生成的计划） */
       if (d.planCmt && !d.planCmt.done && now >= d.planCmt.at && !d.cmt) {
         const pool = poolOf(ct.id);
-        if (pool.length) d.cmt = { text: pick(pool), ts: d.planCmt.at };
+        if (pool.length) d.cmt = { text: taLine(ct, pool), ts: d.planCmt.at };
         d.planCmt.done = true;
       }
       /* TA 回复我的留言（P30：thread 追加式，支持连续对话）。
@@ -7434,7 +7457,7 @@ const Diary = (function () {
         if (pl && !pl.done && now >= pl.at && th && th.length) {
           const pool = poolOf(ct.id);
           if (pool.length) {
-            const lines = Array.from({ length: randI(1, 3) }, () => pick(pool));
+            const lines = Array.from({ length: randI(1, 3) }, () => taLine(ct, pool));
             th.push({ who: 'ta', text: lines, ts: pl.at });
           }
           pl.done = true;
@@ -11290,6 +11313,7 @@ const Chat = (function () {
 
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
     locateMsg, rerender, maybeRevoke, parseLink, openLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo, learnFromMe,
+     lkResolve, fetchLinkMeta,   /* 她 10-07：朋友圈链接大卡要用（b23 解直链 + 抓封面标题） */
     get conv() { return cur; } };
 })();
 
@@ -11766,7 +11790,7 @@ const Engine = (function () {
   /* 拼字卡公共函数（二期P9）：聊天引擎与朋友圈发帖/评论共用（09-02 起朋友圈真的接上了，
      以前这句注释是假的——朋友圈没调过它）。cards=字卡文本池，minN/maxN=抽取条数区间，
      逐位随机间隔符；每条自带 emoji/颜文字装饰（内部走 maybeDecorate） */
-  const COMBO_SEPS = ['', ' '];   /* 她 10-02 拍：间隔符只要「直接拼接 / 空格」两种，逗号句号那套符号混合废了 */
+  const COMBO_SEPS = ['', ' ', '，'];   /* 她 10-07 口径演进：三种随机模式——直接拼接 / 空格 / 逗号（10-02 只拍两种，今天她点名补回逗号），等概率逐位抽 */
   function buildCardCombo(cards, minN, maxN) {
     const lo = Math.max(2, Math.min(minN, maxN));
     const hi = Math.max(lo, maxN);
@@ -15845,7 +15869,50 @@ const Moments = (function () {
         if (u) v.src = u;
         else { const w = v.closest('.mo-vthumb'); if (w) w.classList.add('vid-lost'); }
       });
+      /* 首帧海报：抽到就挂 poster，WebView 里视频块不再黑底 */
+      if (v.dataset.vpos) ensurePoster(v.dataset.vpos).then(p => { if (p) v.poster = p; });
     });
+  }
+  /* ---------- 视频首帧海报（她 10-07：封面就是视频本身，发出来不许是黑漆漆的播放封皮） ----------
+     WebView 里 <video> 不播放就不出画面（黑底），按需抽首帧存 IDB（pos_ 前缀）当 poster——
+     缩略图/封面永远显示视频里的真实画面，点开才真正播；存量视频第一次渲染时补抽，之后走缓存 */
+  async function ensurePoster(ref) {
+    if (typeof MediaStore === 'undefined' || !MediaStore.available() || !MediaStore.isRef(ref)) return '';
+    const key = ref.slice(4);
+    if (!key) return '';
+    try {
+      const pkey = 'pos_' + key;
+      const cached = await MediaStore.get(pkey);
+      if (typeof cached === 'string' && cached) return cached;
+      const blob = await MediaStore.get(key);
+      if (!blob || !/^video/.test(blob.type || '')) return '';
+      const url = URL.createObjectURL(blob);
+      const poster = await new Promise(resolve => {
+        const v = document.createElement('video');
+        v.muted = true; v.preload = 'metadata';
+        let settled = false;
+        const fin = ok => {
+          if (settled) return; settled = true;
+          try { URL.revokeObjectURL(url); } catch (_) { /* 释放失败不影响取帧 */ }
+          if (!ok || !v.videoWidth) return resolve('');
+          try {
+            const cv = document.createElement('canvas');
+            const sc = Math.min(1, 640 / Math.max(v.videoWidth, v.videoHeight));
+            cv.width = Math.max(1, Math.round(v.videoWidth * sc));
+            cv.height = Math.max(1, Math.round(v.videoHeight * sc));
+            cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+            resolve(cv.toDataURL('image/jpeg', 0.8));
+          } catch (e) { resolve(''); }
+        };
+        v.onloadeddata = () => { try { v.currentTime = Math.min(0.2, (v.duration || 1) * 0.1); } catch (_) { fin(true); } };
+        v.onseeked = () => fin(true);
+        v.onerror = () => fin(false);
+        setTimeout(() => fin(v.readyState >= 2), 5000);   /* 兕底：5 秒还没帧就用手头这帧 */
+        v.src = url;
+      });
+      if (poster) { try { await MediaStore.put(pkey, poster); } catch (_) { /* 缓存失败不影响本次显示，下次重抽 */ } }
+      return poster;
+    } catch (e) { return ''; }
   }
   /* 视频点开全屏看（媒体规则：无黑封面无播放键装饰，controls 留给用户自己按） */
   function openVideoViewer(ref) {
@@ -16006,7 +16073,7 @@ const Moments = (function () {
         if (!b) { box.classList.remove('has-img'); return; }
         MediaStore.src(cv).then(u => {
           if (!u) return;
-          if (/^video/.test(b.type)) { vid.hidden = false; vid.src = u; }
+          if (/^video/.test(b.type)) { vid.hidden = false; vid.src = u; ensurePoster(cv).then(pp => { if (pp) vid.poster = pp; }); }
           else { img.hidden = false; img.src = u; }
         });
       });
@@ -16027,6 +16094,9 @@ function coverTap(e) {
   }
   box.classList.toggle('zoom');
 }function changeCover() {
+    /* 严格模式下这里原来漏声明 data——赋值直接 ReferenceError 被 catch 吞成「读取失败」，
+       封面图/视频封面全都传不上（她 10-07 报的 APK 传不了封面，实锤根因） */
+    let data;
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*,video/*';
     inp.addEventListener('change', async () => {
@@ -16070,6 +16140,20 @@ function coverTap(e) {
     let minS = Math.max(0, +p.minSec || 0);
     return { minS, maxS: Math.max(minS, +p.maxSec || minS) };
   }
+  /* 毫秒级等概率（她 10-07 重申）：回复延迟就是设置区间内每个毫秒时刻等概率，整秒档是假等概率 */
+  function msSpan(w) {
+    const lo = Math.max(0, w.minS) * 1000;
+    const span = Math.max(1, (Math.max(w.minS, w.maxS) - Math.max(0, w.minS)) * 1000);
+    return lo + Math.floor(Math.random() * span);
+  }
+  /* 自由组话的称呼料（与 engine 的同份口径，不引内部函数） */
+  function ftCtx(ct) {
+    return {
+      taName: ct ? Home.displayName(ct) : '',
+      myName: (DB.state.profile && DB.state.profile.name) || '',
+      pet: (ct && (ct.petName || ct.identity)) || ''
+    };
+  }
   /* 可用表情池：专属 + 共用，未屏蔽等概率混合——实体在 Library.usableStickerPool（09-01 拢条） */
   function contactsAll() { return (DB.state.contacts || []).filter(c => !c.isGroup); }
   function canSee(post, ct) {
@@ -16091,32 +16175,50 @@ function coverTap(e) {
   }
   /* 她 10-02 两刀：① 不限字数——以前 maxLen 把字卡拦腰截成半句，她从来没说过评论/发帖要限字数；
      ② 图和文的先后顺序等概率打乱（单图评论才谈顺序；发帖多图本来就在文字下面）。等概率随机是铁口径。 */
-  function taBody(ct) {
+  /* 她 10-07 两刀：
+     ① 加 asComment 入参——评论区不吃发帖的 moComboProb/moImgProb（80/70 那对闸只管 TA 自己发圈），
+        评论回复跟联系人主页的聊天回复设置走：拼卡 cardComboProb、配图 imgProb、自由组话 gaFree；
+     ② 配图逐位独立等概率抽、允许重复——她点名「不要给我设置表情包不允许重复」，洗牌去重的 bag 拆了 */
+  function taBody(ct, asComment) {
     const out = { text: '', imgs: [], text2: '', order: null };
     try {
       const p = Engine.params(ct);
       /* 她 00:48 拍板：收集的话不再单独掷「用」——usableCardPool 已把荟萃混进字卡池，
          朋友圈发帖/评论和聊天吃同一份等概率池子。原 learnRate 整条引用分支已拆。 */
       const pool = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) : [];
-      if (!pool.length) return out;
-      const comboP = Math.min(100, Math.max(0, Math.round(+p.moComboProb ?? p.cardComboProb ?? 0)));
+      const comboP = asComment
+        ? Math.min(100, Math.max(0, Math.round(+p.cardComboProb || 0)))
+        : Math.min(100, Math.max(0, Math.round(+p.moComboProb ?? p.cardComboProb ?? 0)));
       let combo = false;
-      if (pool.length >= 2 && comboP > 0 && Math.random() * 100 < comboP) {
-        const cMin = Math.max(2, Math.round(+p.cardComboMin) || 2);
-        const cMax = Math.max(cMin, Math.round(+p.cardComboMax) || cMin);
-        out.text = Engine.buildCardCombo(pool, cMin, cMax);
-        combo = true;
-      } else {
-        out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool));
+      /* 自由组话（她 10-07：评论回复也吃 gaFree，跟联系人主页设置；组不出回落字卡老路，不硬凑） */
+      if (asComment) {
+        const freeP = Math.min(100, Math.max(0, Math.round(+p.gaFree ?? 30)));
+        if (freeP > 0 && typeof FreeTalk !== 'undefined' && FreeTalk.compose && Math.random() * 100 < freeP) {
+          const line = (pool.length && Math.random() < 0.5 && FreeTalk.remake)
+            ? FreeTalk.remake(pick(pool), ftCtx(ct))
+            : FreeTalk.compose(ftCtx(ct));
+          if (line) out.text = String(line);
+        }
       }
-      const ip = Math.min(100, Math.max(0, Math.round(+p.moImgProb ?? p.imgProb ?? 0)));
+      if (!out.text) {
+        if (!pool.length) return out;
+        if (pool.length >= 2 && comboP > 0 && Math.random() * 100 < comboP) {
+          const cMin = Math.max(2, Math.round(+p.cardComboMin) || 2);
+          const cMax = Math.max(cMin, Math.round(+p.cardComboMax) || cMin);
+          out.text = Engine.buildCardCombo(pool, cMin, cMax);
+          combo = true;
+        } else {
+          out.text = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool));
+        }
+      }
+      const ip = asComment
+        ? Math.min(100, Math.max(0, Math.round(+p.imgProb || 0)))
+        : Math.min(100, Math.max(0, Math.round(+p.moImgProb ?? p.imgProb ?? 0)));
       if (ip > 0 && Math.random() * 100 < ip) {
         const sp = Library.usableStickerPool(ct);
         if (sp.length) {
           const want = pickImgCount();
-          const bag = sp.slice();                 /* 不重复抽：洗牌取前 N，池子不够就用整池 */
-          for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
-          out.imgs = bag.slice(0, Math.min(want, bag.length));
+          out.imgs = Array.from({ length: want }, () => pick(sp));   /* 逐位等概率、可重复 */
           if (out.imgs.length === 1) {
             if (combo && Math.random() < 0.5)
               out.text2 = String(Engine.decorate ? Engine.decorate(pick(pool)) : pick(pool));
@@ -16152,7 +16254,7 @@ function coverTap(e) {
       const w = chatWindowOf(ct);
       /* 计划时刻制（她 08-28“回评要补”）：时刻预生成落库，刷新/重开到点由 settle() 补跑——
          不再是内存 setTimeout（决策 #60 的根治） */
-      addPlan(target, { kind: 'react', ct: ct.id, at: t0 + rand(0, 60) * 1000 + rand(w.minS, w.maxS) * 1000 });
+      addPlan(target, { kind: 'react', ct: ct.id, at: t0 + rand(0, 60) * 1000 + msSpan(w) });
     });
   }
   /* 我回复TA的评论后TA再回：只按聊天回复延迟，无缓冲。
@@ -16168,7 +16270,7 @@ function coverTap(e) {
     if (rnr > 0 && Math.random() * 100 < rnr) return;
     const post = store().posts.find(x => x.id === pid);
     if (!post) return;
-    addPlan(post, { kind: 'reply', ct: toUid, to: 'me', at: Date.now() + rand(w.minS, w.maxS) * 1000 + (first ? rand(0, 60) * 1000 : 0) });
+    addPlan(post, { kind: 'reply', ct: toUid, to: 'me', at: Date.now() + msSpan(w) + (first ? rand(0, 60) * 1000 : 0) });
   }
   function reactOnce(postId, ct, at) {
     const post = store().posts.find(x => x.id === postId);
@@ -16177,8 +16279,8 @@ function coverTap(e) {
     if (Math.random() * 100 < 70 && !post.likes.includes(ct.id)) post.likes.push(ct.id);   // 点赞70%（P16③口径）
     if (Math.random() * 100 < 90 && !(post.comments || []).some(c => c.uid === ct.id)) {
       /* 评论正文与配图：拼卡/装饰/配图都在 taBody 里算；文-图-文的尾句在 text2 */
-      const b = taBody(ct);
-      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: t0 });
+      const b = taBody(ct, true);
+      if (b.text || b.imgs.length) post.comments.push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: ct.id, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: t0 });
     }
     DB.save();
     renderList();
@@ -16187,8 +16289,8 @@ function coverTap(e) {
     if (justCommented && post.uid !== 'me' && post.uid !== ct.id && Math.random() < 0.3) {
       const owner = Home.contactById(post.uid);
       const w2 = owner ? chatWindowOf(owner) : null;
-      const delayS = w2 ? rand(w2.minS, w2.maxS) : rand(3, 15);
-      addPlan(post, { kind: 'reply', ct: post.uid, to: ct.id, at: t0 + delayS * 1000 });
+      const delayMs = w2 ? msSpan(w2) : 3000 + Math.floor(Math.random() * 12000);
+      addPlan(post, { kind: 'reply', ct: post.uid, to: ct.id, at: t0 + delayMs });
     }
   }
   /* ---------- 计划时刻制（她 08-28“回评要补”）：TA 的赞/评/回评全部落库排程 ----------
@@ -16220,9 +16322,9 @@ function coverTap(e) {
         if (pl.kind === 'react') { reactOnce(p.id, ct, pl.at); return; }
         /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
-        const b = taBody(ct);
+        const b = taBody(ct, true);
         if (!b.text && !b.imgs.length) return;
-        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: pl.at || Date.now() });
+        (p.comments = p.comments || []).push({ id: 'mc' + Date.now().toString(36) + rand(100, 999), uid: pl.ct, toUid: pl.to === 'me' ? 'me' : pl.to, text: b.text, imgs: b.imgs.slice(), img: b.imgs[0] || null, text2: b.text2, order: b.order, ts: pl.at || Date.now() });
       });
       acted = true;
     });
@@ -16494,7 +16596,7 @@ function coverTap(e) {
     shell.addEventListener('click', e => { if (e.target === shell) quitPublish(); });
     /* P36d：草稿没发表就关→顺手把已存 IDB 的视频删掉，不留孤儿 */
     function quitPublish() {
-      if (video && MediaStore.isRef(video)) MediaStore.del(video.slice(4));
+      if (video && MediaStore.isRef(video)) { MediaStore.del(video.slice(4)); MediaStore.del('pos_' + video.slice(4)); }
       closeShell();
     }
     shell.querySelector('#mo-send').addEventListener('click', () => {
@@ -16551,10 +16653,12 @@ function coverTap(e) {
           (p.text ? '<p class="mo-item-text">' + esc(p.text) + '</p>' : '') +
           ((p.videos || []).length
             ? '<div class="mo-item-imgs n' + Math.min(p.videos.length, 9) + '">' +
-              p.videos.map(d => '<div class="mo-thumb mo-vthumb"><video data-vsrc="' + esc(d) + '" muted preload="metadata" playsinline></video></div>').join('') + '</div>'
+              p.videos.map(d => '<div class="mo-thumb mo-vthumb"><video data-vsrc="' + esc(d) + '" data-vpos="' + esc(d) + '" muted preload="metadata" playsinline></video></div>').join('') + '</div>'
             : '') +
           (p.link
-            ? '<div class="mo-item-link"><span>' + esc(p.link) + '</span></div>'
+            ? '<div class="mo-item-link mo-linkcard" data-lk="' + esc(p.link) + '">' +
+              '<div class="lk-card lk-big"><div class="lk-mini"><div class="lk-poster-ghost">链接</div></div>' +
+              '<div class="lk-cap"><div class="lk-title">' + esc(p.link) + '</div><div class="lk-line">链接</div></div></div></div>'
             : '') +
           ((p.images || []).length
             ? '<div class="mo-item-imgs n' + Math.min(p.images.length, 9) + '">' +
@@ -16571,9 +16675,10 @@ function coverTap(e) {
             ? '<div class="mo-comments">' + p.comments.map(c => {
               /* 她 10-02：评论段落顺序等概率随机（order 缺省=老数据的固定 文→图→尾） */
               const seg = (c.order && c.order.length) ? c.order : ['t', 'i', 'x'];
+              const cimgs = (c.imgs && c.imgs.length) ? c.imgs : (c.img ? [c.img] : []);   /* 老评论单图字段兼容 */
               const body = seg.map(k =>
                 k === 't' ? '<span>' + esc(c.text || '') + '</span>'
-                : k === 'i' ? (c.img ? '<img class="mo-cmt-img" src="' + c.img + '" alt="">' : '')
+                : k === 'i' ? cimgs.map(d => '<img class="mo-cmt-img" src="' + d + '" alt="">').join('')
                 : (c.text2 ? '<span>' + esc(c.text2) + '</span>' : '')).join('');
               return '<div class="mo-cmt" data-id="' + c.id + '" data-uid="' + c.uid + '"><b>' + esc(name(c.uid)) + '</b>' +
                 (c.toUid ? '<span>回复</span><b>' + esc(name(c.toUid)) + '</b>' : '') +
@@ -16586,6 +16691,39 @@ function coverTap(e) {
     mountIcons();
     bindItemEvents(list);
     hydrateVids(list);   /* P36d：idb 引用异步接上 */
+    hydrateLinkCards(list);   /* 她 10-07：链接大卡补水（B站先解直链再抓封面） */
+  }
+
+  /* 朋友圈链接卡补水：B站（b23 先解直链）/YouTube 抓封面标题出大卡，可播的带 ▶ 角标；
+     其他站出「站点名+链接」的通用卡。卡片结构与聊天 .lk-card 同一套 CSS，点击走同一个 openLink */
+  async function hydrateLinkCards(list) {
+    const cards = list.querySelectorAll('.mo-linkcard');
+    for (const el of cards) {
+      const raw = el.dataset.lk || '';
+      if (!raw || typeof Chat === 'undefined' || !Chat.parseLink) continue;
+      let L = Chat.parseLink(raw);
+      try {
+        if (L && L.needRes && L.site === '哔哩哔哩' && Chat.lkResolve) L = await Chat.lkResolve(Object.assign({}, L)) || L;
+        if (L && !L.title && !L.poster && Chat.fetchLinkMeta) {
+          const mt = await Chat.fetchLinkMeta(L);
+          if (mt) { L.title = L.title || mt.title || ''; L.poster = L.poster || mt.poster || ''; }
+        }
+      } catch (e) { /* 解析/取封面失败：保留通用卡，不出文字条 */ }
+      el.__L = L;
+      const mini = el.querySelector('.lk-mini');
+      const cap = el.querySelector('.lk-cap');
+      if (!mini || !cap || !L) continue;
+      const playable = !!(L.embed || L.vsrc);
+      if (L.poster) {
+        mini.innerHTML = '<img class="lk-poster" src="' + esc(L.poster) + '" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">' +
+          (playable ? '<div class="lk-playmark"></div>' : '');
+      } else if (playable) {
+        mini.innerHTML = '<div class="lk-poster-ghost">' + esc((L.site || '?').slice(0, 6)) + '</div><div class="lk-playmark"></div>';
+      }
+      cap.innerHTML =
+        (L.title ? '<div class="lk-title">' + esc(L.title) + '</div>' : '') +
+        '<div class="lk-line">' + esc(L.site || L.host || '链接') + (L.vid ? ' · ' + esc(L.vid) : '') + '</div>';
+    }
   }
 
   /* ---------- 申请 TA 删帖（她 10-06 晚） ----------
@@ -16691,9 +16829,11 @@ function coverTap(e) {
       openViewer(t.style.backgroundImage.slice(5, -2));
     }));
     list.querySelectorAll('.mo-item-link').forEach(el => el.addEventListener('click', () => {
-      /* L40「朋友圈发链接点击可播放」：与聊天链接卡同一套本地解析 */
-      const L = (typeof Chat !== 'undefined' && Chat.parseLink) ? Chat.parseLink(el.textContent) : null;
-      if (L && Chat.openLink) Chat.openLink(L); else window.open(el.textContent.trim(), '_blank', 'noopener');
+      /* 她 10-07：朋友圈链接=封面大卡（同聊天同一套），可播的弹悬浮小窗即播，不跳浏览器；
+         解析对象 hydrate 时已存在 el.__L，没解析到才退回系统打开 */
+      const L = el.__L || ((typeof Chat !== 'undefined' && Chat.parseLink) ? Chat.parseLink(el.dataset.lk || '') : null);
+      if (L && Chat.openLink) Chat.openLink(L);
+      else window.open((el.dataset.lk || '').trim(), '_blank', 'noopener');
     }));
     /* 评论区表情包小图点击放大（八-3） */
     list.querySelectorAll('.mo-cmt-img').forEach(im => im.addEventListener('click', e => {
@@ -16806,7 +16946,7 @@ function coverTap(e) {
         if (!ok) return;
         const s = store();
         const gone = s.posts.find(p => p.id === id);
-        if (gone) (gone.videos || []).forEach(v => { if (MediaStore.isRef(v)) MediaStore.del(v.slice(4)); });  /* P36d：删动态连文件带走，防孤儿 */
+        if (gone) (gone.videos || []).forEach(v => { if (MediaStore.isRef(v)) { MediaStore.del(v.slice(4)); MediaStore.del('pos_' + v.slice(4)); } });  /* P36d：删动态连文件带走（含首帧海报），防孤儿 */
         s.posts = s.posts.filter(p => p.id !== id);
         DB.save(); renderList();
       });
