@@ -1064,11 +1064,11 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 .quote-block span{display:block;font-size:11px;color:var(--t2);margin-top:1px}
 .bubble-text{white-space:pre-wrap;word-break:break-word}
 /* 表情贴纸：微信式裸贴，去气泡底与内边距（清然 2026-08-23）。
-   她 00:48 报 APK 上下露气泡边：贴纸图带圆角，气泡皮肤 CSS（她自导入的装饰）会以同样
-   ！important 把背景盖回来——选择子加粗到必赢皮肤；图四角改直角，不再透出任何底 */
+   她 09:41：喜欢圆角，不要直角——图保持圆角；她的气泡皮肤 CSS 会把背景盖回裸贴气泡，
+   选择子加粗到必赢皮肤，露边根除，圆角照旧 */
 .msg-row .bubble.bubble-sticker{background:none!important;background-image:none!important;
   border:0!important;box-shadow:none!important;outline:none!important;padding:0!important}
-.bubble-sticker img{border-radius:0!important}
+.bubble-sticker img{border-radius:10px!important}
 /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显 */
 /* 她 10-04：报备消息的情绪小标签（双方同款，缩在气泡内底部） */
 .msg-mood-tag{display:block;font-style:normal;font-size:10.5px;line-height:1;color:var(--t3);
@@ -3155,16 +3155,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* 学我说话 · 积累管理（资料卡下方折叠栏） */
 /* 学我说话：主页只留一行入口（.cell 通用样式），整表在文件管理·四库弹窗里，无专属样式 */
 
-/* 排班表（入口：聊天＋号面板第2页链接后面） */
-.sched-head{display:flex;flex-direction:column;gap:4px;padding:14px 15px}
-.sched-head .sched-date{font-size:16px;font-weight:600}
-.sched-head .sched-sub{font-size:11px;color:var(--t3)}
+/* 排班卡（她 09:41：模块在发现页；点名字改名、双击删卡） */
 .sched-kind{padding:12px 15px;margin-top:10px}
 .sched-kind-head{display:flex;align-items:center;gap:8px}
 .sched-kind-head .sched-kind-name{font-size:14px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sched-kind-head .sched-tag{flex:none;font-style:normal;font-size:10px;color:var(--t3);border:1px solid var(--line);border-radius:3px;padding:1px 4px}
-.sched-kind-head .sched-ops{display:flex;gap:6px}
-.sched-kind-head .sched-ops button{font:inherit;font-size:11px;line-height:1;padding:5px 9px;border:1px solid var(--t1);border-radius:999px;background:var(--card);color:var(--t1);cursor:pointer}
 .sched-duty{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;background:transparent;font:inherit;text-align:left;cursor:pointer;min-height:46px}
 .sched-duty:active{background:var(--fill)}
 .sched-person{display:inline-flex;align-items:center;gap:5px}
@@ -3172,7 +3167,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .sched-person .sched-ava img{width:100%;height:100%;object-fit:cover;display:block}
 .sched-person .sched-ava .ava-txt{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:12px}
 .sched-person b{font-size:12.5px;font-weight:500}
-.sched-none{font-size:12px;color:var(--t3)}
 .sched-addbtn{display:block;width:100%;margin-top:12px;padding:13px;border:1px dashed var(--line);border-radius:12px;background:var(--card);color:var(--t2);font:inherit;font-size:13px;text-align:center;cursor:pointer}
 .sched-addbtn:active{background:var(--fill)}
 .sched-sheet .sched-pick{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -3236,6 +3230,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="disc-moments"><span class="cell-icon"><i data-icon="camera" data-size="20"></i></span><span class="cell-text">朋友圈</span><span class="chevron">›</span></button>
         <button class="cell" id="disc-game"><span class="cell-icon"><i data-icon="gamepad" data-size="20"></i></span><span class="cell-text">游戏</span><span class="chevron">›</span></button>
       </div>
+      <div id="sched-body"></div>
       <!-- 预留扩展位：她后续会往发现页加东西 -->
     </div>
   </section>
@@ -3278,7 +3273,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="cell-group card">
         <button class="cell" id="my-wallet-row"><span class="cell-icon"><i data-icon="wallet"></i></span><span class="cell-text">钱包</span><span class="chevron">›</span></button>
         <button class="cell" id="my-moments-row"><span class="cell-icon"><i data-icon="camera"></i></span><span class="cell-text">我的朋友圈</span><span class="chevron">›</span></button>
-        <button class="cell" id="my-tadel-row"><span class="cell-icon"><i data-icon="trash"></i></span><span class="cell-text">TA 删朋友圈模式</span><span class="cell-ext" id="my-tadel-ext">未开启</span><span class="chevron">›</span></button>
         <button class="cell" data-go="settings"><span class="cell-icon"><i data-icon="settings"></i></span><span class="cell-text">前往个人中心</span><span class="chevron">›</span></button>
       </div>
     </div>
@@ -3445,7 +3439,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <!-- P36a（她 08-27 定：往右滑第2页，像微信） -->
       <div class="cmp-page">
         <button class="more-tile" data-more="link"><span class="tile-ico"><i data-icon="link" data-size="20"></i></span><span>链接</span></button>
-        <button class="more-tile" data-more="sched"><span class="tile-ico"><i data-icon="calendar" data-size="20"></i></span><span>排班表</span></button>
       </div>
       </div>
       <div class="cmp-dots" id="cmp-dots"><i class="on"></i><i></i></div>
@@ -3605,6 +3598,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
           <label class="adv-item"><span>拼卡条数</span><em><input type="number" id="pf-comin" min="2" max="10" style="width:52px"> - <input type="number" id="pf-comax" min="2" max="10" style="width:52px"> 条</em></label>
           <label class="adv-item"><span>已读不回概率</span><em><input type="number" id="pf-readnr" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>TA 撤回消息概率</span><em><input type="number" id="pf-revoke" min="0" max="100"> %</em></label>
+ <label class="adv-item"><span>TA 删自己朋友圈概率</span><em><input type="number" id="pf-tadel" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>学我说话收集概率</span><em><input type="number" id="pf-learn" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>自由说话概率</span><em><input type="number" id="pf-free" min="0" max="100"> %</em></label>
           <label class="adv-item"><span>朋友圈发帖概率</span><em><input type="number" id="pf-mopost" min="0" max="100"> %</em></label>
@@ -3635,15 +3629,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     </div>
   </section>
 
-  <!-- 排班表（她 10-03：给联系人排班，默认「陪睡」，可自定义班种；入口在聊天加号面板） -->
-  <section class="page" id="page-schedule">
-    <header class="navbar">
-      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
-      <div class="navbar-title">排班表</div>
-    </header>
-    <div class="page-body" id="sched-body"></div>
-  </section>
-
+  <!-- 排班表（她 09:41：模块搬到发现页，页面骨架已拆） -->
   <!-- ===== 页面：群聊信息&群资料（P2 收尾） ===== -->
   <section class="page" id="page-ginfo">
     <header class="navbar">
@@ -9898,16 +9884,21 @@ const Chat = (function () {
   }
 
   /* P35（她 20:17 定）：TA 以 revokeRate%（默认0）概率手滑撤回——
-   * 挂 engine fireBatch 钩子链（同 quizask 条件只限单聊）；
-   * 掷中后从会话最近七条消息里挑一条 TA 发的，隔 1~3.5 秒“反应过来”再撤，
-   * 原地替换成「XX 撤回了一条消息」系统行。没有可撤的就静默跳过。 */
+   * 挂 engine fireBatch 钩子链（同 quizask 条件只限单聊）。
+   * 她 09:41 改口径：候选＝双方互动最近 15 条里 TA 自己发的消息，**等概率**抽一条撤；
+   * 撤的若正好是最新一条，可以再重发一遍（打错重发的真实感，概率我拍 50%，可调）。
+   * 没有可撤的就静默跳过。 */
+  const REVOKE_WINDOW = 15, REVOKE_RESEND = 0.5;
   function maybeRevoke(conv, ct) {
     const rate = Math.min(100, Math.max(0, Math.round(+((ct.params || {}).revokeRate ?? 0))));
     if (rate <= 0 || Math.random() * 100 >= rate) return;
     const arr = DB.state.msgs[conv.id] || [];
-    const cands = arr.slice(-7).filter(m => m.from === 'ai' && m.type !== 'sys');
+    const recent = arr.slice(-REVOKE_WINDOW);
+    const cands = recent.filter(m => m.from === 'ai' && m.type !== 'sys' && (m.text || m.img || m.vid));
     if (!cands.length) return;
     const victim = cands[Math.floor(Math.random() * cands.length)];
+    const isLatest = arr.length && arr[arr.length - 1].id === victim.id;
+    const resend = isLatest && victim.type === 'text' && victim.text && Math.random() < REVOKE_RESEND;
     setTimeout(() => {
       const a2 = DB.state.msgs[conv.id] || [];
       const i2 = a2.findIndex(x => x.id === victim.id);
@@ -9916,6 +9907,10 @@ const Chat = (function () {
         text: (Home.displayName(ct) || '对方') + ' 撤回了一条消息' };
       DB.save();
       if (cur && cur.id === conv.id) rerender();   // 正看着这个会话就当场变灰；不在则下次进入自然看到
+      if (resend) setTimeout(() => {
+        Engine.pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+          from: 'ai', type: 'text', text: victim.text, ts: Date.now(), senderId: ct.id });
+      }, 1500 + Math.floor(Math.random() * 2000));
     }, 1200 + Math.floor(Math.random() * 2300));
   }
 
@@ -10047,6 +10042,10 @@ const Chat = (function () {
     if (site === '哔哩哔哩' && bv) {
       out.vid = bv[0];
       out.embed = 'https://player.bilibili.com/player.html?bvid=' + bv[0] + '&page=1&danmaku=0&high_quality=1';
+    } else if (site === '哔哩哔哩') {
+      /* 她 09:41：B站 App 分享出来多是 b23.tv 短链——发送前必须解析成 BV 直链（转链变直链），
+         拿到才能有封面、才能站内播；解析不到也绝不发纯文字卡 */
+      out.needRes = true;
     }
     const yt = url.match(/(?:v=|youtu\.be\/)([0-9A-Za-z_-]{11})/);
     if (site === 'YouTube' && yt) { out.vid = yt[1]; out.embed = 'https://www.youtube.com/embed/' + yt[1]; }
@@ -10173,6 +10172,25 @@ const Chat = (function () {
     } catch (e) { lkLog('lkMeta:' + (e && e.message)); }
     return null;
   }
+  /* 她 09:41：转链变直链——B站短链（b23.tv/无 BV 长链）经公共代理跟随跳转报文抽 BV；
+     解析到就顺手抓封面标题；抓不到返回 null，调用方照样发大卡（不退化文字卡、不跳浏览器） */
+  async function lkResolve(L) {
+    try {
+      if (!L.needRes || L.vid) return L;
+      const txt = await lkViaProxy(L.url, false);
+      const bv = (txt || '').match(/\bBV[0-9A-Za-z]{10}\b/);
+      if (bv) {
+        L.vid = bv[0];
+        L.embed = 'https://player.bilibili.com/player.html?bvid=' + bv[0] + '&page=1&danmaku=0&high_quality=1';
+      }
+      L.needRes = false;
+      if (L.vid) {
+        const mt = await fetchLinkMeta(L);
+        if (mt) { L.title = L.title || mt.title || ''; L.poster = L.poster || mt.poster || ''; }
+      }
+    } catch (e) { lkLog('lkResolve:' + ((e && e.message) || e)); }
+    return L;
+  }
   const lkCanPlay = L => !!(L && (L.embed || L.vsrc));   /* 嵌播 iframe 或原生 mp4 直链都算可播 */
   const lkIsIdb = v => typeof MediaStore !== 'undefined' && MediaStore.isRef(v);
   /* idb 存的封面：先占位后补水（src 不预设避免空src误触 onerror 提前摘图），拉不到→摘图露 ghost */
@@ -10187,18 +10205,11 @@ const Chat = (function () {
   function linkCardHtml(L, playing) {
     const imgMode = lkImgMode(L);
     const posterSrc = imgMode ? lkImgUrl(L.url, 0) : L.poster;
-    if (!posterSrc && !lkCanPlay(L)) {   /* 无封面且播不了 → 紧凑文字卡（降级态，点卡跳浏览器） */
-      return '<div class="lk-card">' +
-        '<div class="lk-badge">' + esc((L.site || '?').slice(0, 1)) + '</div>' +
-        '<div class="lk-mid">' +
-          '<div class="lk-site">' + esc(L.title || L.site || '链接') + '</div>' +
-          '<div class="lk-line">' + esc(L.title ? (L.site || '') : (L.vid || L.host || '')) + '</div>' +
-        '</div>' +
-      '</div>';
-    }
+    /* 她 09:41：纯文字卡拆了——永远是封面分享卡（她：不要文字卡片）；
+       封面还没到就先画占位底（不跳浏览器、不发文字），到了自动补水 */
     const poster = posterSrc
       ? '<img class="lk-poster"' + (lkIsIdb(posterSrc) ? ' data-iref="1"' : ' src="' + esc(posterSrc) + '"') + ' referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.remove()">'
-      : '';
+      : '<div class="lk-poster-ghost">' + esc((L.site || '?').slice(0, 6)) + '</div>';
     /* 她 10-06 晚口径（推倒 10-04「卡内直播放」）：卡片就是封面+下方标题的小屏卡，
        可播的右下角带 ▶ 角标；点卡/发送都弹悬浮小窗即播，不进卡里、不进全屏、不跳浏览器 */
     return '<div class="lk-card lk-big">' +
@@ -10209,19 +10220,18 @@ const Chat = (function () {
       '</div>' +
     '</div>';
   }
-  /* 她 10-06 晚：点可播卡片＝弹悬浮小窗即播（不进卡里、不开全屏）；播不了的仍走：中转图→看图，其余→浏览器 */
+  /* 她 09:41：视频站永不跳浏览器——B站/YouTube 点卡只进悬浮小窗；直链没解析到就明说，不跳 */
   function tapLinkCard(root, m, e) {
     const L = m.link;
-    if (!lkCanPlay(L)) {
-      if (lkImgMode(L)) { lkOpenGallery(L); return; }
-      if (L.url) window.open(L.url, '_blank', 'noopener');
-      return;
-    }
-    lkOpenMini(L, 0);
+    if (lkCanPlay(L)) { lkOpenMini(L, 0); return; }
+    if (lkImgMode(L)) { lkOpenGallery(L); return; }
+    if (L.site === '哔哩哔哩' || L.site === 'YouTube') { UI.toast('直链没解析到，稍后再点一次'); return; }
+    if (L.url) window.open(L.url, '_blank', 'noopener');
   }
   function openLink(L) {
     if (L && lkImgMode(L)) { lkOpenGallery(L); return; }
     if (L && (L.embed || L.vsrc)) lkOpenMini(L);   /* 她 10-03 二批：小窗播放，不进全屏层 */
+    else if (L && (L.site === '哔哩哔哩' || L.site === 'YouTube')) UI.toast('直链没解析到，稍后再点一次');
     else if (L && L.url) window.open(L.url, '_blank', 'noopener');
   }
   /* 全屏看图（V4.4，她要的是“小屏 + 实际内容”）：图经中转实时回源，不热链不存库；
@@ -10347,6 +10357,19 @@ const Chat = (function () {
       parsed = parseLink(ta.value);
       meta = null;
       if (!parsed) { draw(); return; }
+      /* 她 09:41：B站短链先解析直链再预览（转链变直链）；解析失败也发大卡不发文字卡 */
+      if (parsed.needRes && parsed.site === '哔哩哔哩') {
+        draw('正在解析直链…');
+        const my = ++seq, myUrl = parsed.url;
+        lkResolve(Object.assign({}, parsed)).then(r => {
+          if (my !== seq || !parsed || parsed.url !== myUrl) return;
+          parsed.vid = r.vid || ''; parsed.embed = r.embed || ''; parsed.needRes = false;
+          if (r.title && !parsed.titleGuess) parsed.titleGuess = r.title;
+          meta = (r.title || r.poster) ? { title: r.title || '', poster: r.poster || '' } : null;
+          draw(parsed.vid ? (meta && meta.poster ? '' : '直链已解析，没抓到封面也能播') : '没解析到直链，先发封面卡');
+        });
+        return;
+      }
       const fetchable = (parsed.site === '哔哩哔哩' && parsed.vid) || (parsed.site === 'YouTube' && parsed.vid);   /* V4.4：抖音/小红书不走 fetch（预览域名下 fetch 被 CORS 卡死会白转 20s），图由 img 标签直拉中转，标题从文案就地抠 */
       if (!fetchable) {   /* 抽不到页的站不白转 9s×2：文案抠到标题立即定，抠不到也立即定 */
         meta = parsed.titleGuess ? { title: parsed.titleGuess, poster: '', vsrc: '' } : null;
@@ -10363,12 +10386,14 @@ const Chat = (function () {
         if (!mt && parsed.titleGuess) mt = { title: parsed.titleGuess, up: '', poster: '', vsrc: '' };
         if (mt && !mt.title && parsed.titleGuess) mt.title = parsed.titleGuess;
         meta = mt;
-        draw(mt && mt.poster ? '' : (mt && mt.title ? '没抓到封面图，先发标题卡' : '这站抓不到封面，将发文字卡'));
+        draw(mt && mt.poster ? '' : (mt && mt.title ? '没抓到封面图，先发标题卡' : '这站抓不到封面，将发封面卡'));
       });
     });
     mask.querySelector('.lk-send-card').addEventListener('click', async () => {
       if (!parsed) { UI.toast('没识别到有效链接'); return; }
       mask.remove();
+      /* 她 09:41：短链当场解析成直链再入库（发出去就是能播的卡，不拖到点卡的时候） */
+      if (parsed.needRes && parsed.site === '哔哩哔哩') await lkResolve(parsed);
       const L = Object.assign({}, parsed, meta || {});
       let poster = L.poster || '';
       /* 封面持久化（她 08-27"不能一直保存吗"）：接了中转就把图存进本机 IndexedDB，存档只留 'idb:' 引用，
@@ -11226,9 +11251,6 @@ const Chat = (function () {
       else if (k === 'link') {   /* P36（她 08-27 定）：链接分享，群聊私聊都能发 */
         openLinkSheet();
       }
-      else if (k === 'sched') {  /* 排班表（她 10-03）：链接后面，给联系人排班 */
-        Schedule.open();
-      }
     });
 
     // ＋更多面板：点击面板外自动收起
@@ -11385,9 +11407,12 @@ const Engine = (function () {
   /* 首条与条间隔的等待秒数：minSec~maxSec 整数秒等概率。
      抽延时只这一个口：排程与验收抽样用同一个函数，不存在“测的一套、跑的另一套” */
   function rollDelay(p) {
+    /* 她 09:41 追问「真的等概率吗」——以前按整秒抽只有 max-min+1 档；
+       改成毫秒级均匀分布：[minSec, maxSec] 区间内每个毫秒时刻概率相等 */
     const minS = Math.max(0, +p.minSec || 0);
     const maxS = Math.max(minS, +p.maxSec || minS);
-    return rand(minS, maxS) * 1000;
+    const lo = minS * 1000, span = Math.max(1, (maxS - minS) * 1000);
+    return lo + Math.floor(Math.random() * span);
   }
 
   function pickCount(p, cap) {
@@ -11667,7 +11692,7 @@ const Engine = (function () {
           ? FreeTalk.remake(pick(cards), talkCtx(ct))
           : FreeTalk.compose(talkCtx(ct));
       }
-      t += (i === 0 ? 0 : (freeLine ? FreeTalk.typingDelay(freeLine) : rollDelay(p)));
+      t += (i === 0 ? 0 : rollDelay(p));   /* 她 09:41：自由组话的间隔也吃回复设置的延迟区间，不再按拼音另算一套 */
       /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
          60% 送/40% 不发——旧「回复链 2%」钩子已拆（台账 L12：拢新口必拆旧口） */
       /* 红包（二期P15）：params.giftRedRate 开启后主动发红包，同一钩子链；群聊三模式在 maybeGift 内部分支（L24） */
@@ -11894,185 +11919,227 @@ const Engine = (function () {
 
 /* =====================================================
    LOVE♡X · freetalk.js —— TA 自由组话（她叫「对方自由说话」）
-   她 10-03 23:44 给方向（框架组话+常用字更多+拼音模拟输入），
-   她 10-04 09:34 拍板「做一下完善的试试」。P62 方案落档的实现版。
-
-   三层结构（方案原文）：
-   · 框架：句法骨架写死，产句只往槽里填，不乱序不拼接——保证不是无厘头；
-   · 词典：按词性分本，w=常用度权重，按权重轮盘抽——常用词天然更多；
-     动词带 obj 搭配标签、名词带 tag，「通顺性终检」＝动词的 obj 含名词的 tag；
-   · 拼音手感：按字算拼音按键数的打字延迟（长句更慢、偶尔删了重打），纯内部风味不上 UI。
-
-   防线：搭配终检重抽 2 次不过就放弃这次（调用方回落字卡路）；
-   金额/地址拦截与 engine.learn 同款；只做闲聊句式，不承诺行为不发图。
+   她 10-03 给方向、10-04 拍板试试；09:41/09:45 要「最大程度自由」：
+   不是只加她举的例子，而是按汉语六成分铺满——
+   主语/谓语/宾语/定语/状语/补语，状语再分 时间/地点/程度/方式/语气/否定 多类；
+   句式覆盖 陈述/疑问/反问/感叹/祈使/倒装/省略/判断/被动/口语整句/单词句/长短句；
+   称呼可以现组（小/阿/老＋百家姓/她的名字/爱称叠词＋宝/崽/酱…）；
+   二十六字母层：拼音声母×韵母（含前鼻音 n/后鼻音 ng）拼打字延迟，
+   网络字母词（xswl/yyds…）也能成句。
+   她 09:45：所有成分等概率随机组——不再设常用度权重（旧 wPick 拆）。
+   组不出通顺话就返回 null 回落字卡，不硬凑；金额/地址照旧不碰。
    ===================================================== */
 const FreeTalk = (function () {
 
-  /* ---------- 词典（内置起步表；她的历史消息经 feed() 自动供词加权） ---------- */
+  /* ---------- 词典（按词类分本，全部等概率抽；她的历史消息经 feed() 自动供词） ---------- */
   const DIC = {
-    /* 动词：obj=可搭配的名词标签；w=常用度 */
+    /* 谓语动词：obj=可搭配的名词标签；suffix=有的动词自带补语 */
     verb: [
-      { t: '想吃', w: 10, obj: ['food'] },
-      { t: '刚吃完', w: 6, obj: ['food'] },
-      { t: '想喝', w: 8, obj: ['drink'] },
-      { t: '刚泡了', w: 4, obj: ['drink'] },
-      { t: '在看', w: 8, obj: ['media'] },
-      { t: '刚看完', w: 6, obj: ['media'] },
-      { t: '想追', w: 4, obj: ['media'] },
-      { t: '在整理', w: 5, obj: ['thing'] },
-      { t: '刚收拾完', w: 4, obj: ['thing'] },
-      { t: '买了', w: 6, obj: ['thing'] },
-      { t: '想买', w: 7, obj: ['thing'] },
-      { t: '拆了', w: 3, obj: ['thing'] },
-      { t: '刚从', w: 4, obj: ['place'], suffix: '回来' },
-      { t: '想去', w: 7, obj: ['place'] },
-      { t: '路过', w: 3, obj: ['place'] }
+      { t: '想吃', obj: ['food'] }, { t: '刚吃完', obj: ['food'] }, { t: '想喝', obj: ['drink'] },
+      { t: '刚泡了', obj: ['drink'] }, { t: '点了', obj: ['food'] }, { t: '在啃', obj: ['food'] },
+      { t: '在看', obj: ['media'] }, { t: '刚看完', obj: ['media'] }, { t: '想追', obj: ['media'] },
+      { t: '在听', obj: ['media'] }, { t: '在整理', obj: ['thing'] }, { t: '刚收拾完', obj: ['thing'] },
+      { t: '买了', obj: ['thing'] }, { t: '想买', obj: ['thing'] }, { t: '拆了', obj: ['thing'] },
+      { t: '在洗', obj: ['thing'] }, { t: '找了半天', obj: ['thing'] }, { t: '翻出来', obj: ['thing'] },
+      { t: '刚从', obj: ['place'], suffix: '回来' }, { t: '想去', obj: ['place'] },
+      { t: '路过', obj: ['place'] }, { t: '困在', obj: ['place'], suffix: '了' },
+      { t: '在撸', obj: ['animal'] }, { t: '想养', obj: ['animal'] }, { t: '喂了', obj: ['animal'] }
     ],
-    /* 名词：tag=搭配标签 */
+    /* 名词：tag=搭配标签（食物/饮品/水果/动物/物品/地点/内容/人物） */
     noun: [
-      { t: '火锅', w: 8, tag: 'food' }, { t: '烧烤', w: 5, tag: 'food' },
-      { t: '泡面', w: 6, tag: 'food' }, { t: '饺子', w: 5, tag: 'food' },
-      { t: '外卖', w: 6, tag: 'food' }, { t: '蛋糕', w: 4, tag: 'food' },
-      { t: '奶茶', w: 8, tag: 'drink' }, { t: '咖啡', w: 7, tag: 'drink' },
-      { t: '果汁', w: 4, tag: 'drink' }, { t: '可乐', w: 4, tag: 'drink' },
-      { t: '那本书', w: 5, tag: 'media' }, { t: '那部剧', w: 6, tag: 'media' },
-      { t: '那个电影', w: 4, tag: 'media' }, { t: '新出的综艺', w: 3, tag: 'media' },
-      { t: '房间', w: 6, tag: 'thing' }, { t: '衣柜', w: 4, tag: 'thing' },
-      { t: '快递', w: 7, tag: 'thing' }, { t: '桌子', w: 3, tag: 'thing' },
-      { t: '新手机', w: 3, tag: 'thing' },
-      { t: '超市', w: 6, tag: 'place' }, { t: '公园', w: 5, tag: 'place' },
-      { t: '书店', w: 4, tag: 'place' }, { t: '健身房', w: 5, tag: 'place' },
-      { t: '公司', w: 5, tag: 'place' }, { t: '学校', w: 4, tag: 'place' }
+      { t: '火锅', tag: 'food' }, { t: '烧烤', tag: 'food' }, { t: '泡面', tag: 'food' },
+      { t: '饺子', tag: 'food' }, { t: '外卖', tag: 'food' }, { t: '蛋糕', tag: 'food' },
+      { t: '麻辣烫', tag: 'food' }, { t: '小饼干', tag: 'food' }, { t: '包子', tag: 'food' },
+      { t: '奶茶', tag: 'drink' }, { t: '咖啡', tag: 'drink' }, { t: '果汁', tag: 'drink' },
+      { t: '可乐', tag: 'drink' }, { t: '气泡水', tag: 'drink' }, { t: '热牛奶', tag: 'drink' },
+      { t: '柠檬茶', tag: 'drink' }, { t: '酸奶', tag: 'drink' },
+      { t: '苹果', tag: 'fruit' }, { t: '橘子', tag: 'fruit' }, { t: '香蕉', tag: 'fruit' },
+      { t: '葡萄', tag: 'fruit' }, { t: '西瓜', tag: 'fruit' }, { t: '草莓', tag: 'fruit' },
+      { t: '芒果', tag: 'fruit' }, { t: '樱桃', tag: 'fruit' }, { t: '柚子', tag: 'fruit' },
+      { t: '猫', tag: 'animal' }, { t: '小狗', tag: 'animal' }, { t: '仓鼠', tag: 'animal' },
+      { t: '兔子', tag: 'animal' }, { t: '大鹅', tag: 'animal' }, { t: '金鱼', tag: 'animal' },
+      { t: '房间', tag: 'thing' }, { t: '衣柜', tag: 'thing' }, { t: '快递', tag: 'thing' },
+      { t: '桌子', tag: 'thing' }, { t: '新手机', tag: 'thing' }, { t: '耳机', tag: 'thing' },
+      { t: '充电器', tag: 'thing' }, { t: '被窝', tag: 'thing' }, { t: '枕头', tag: 'thing' },
+      { t: '遥控器', tag: 'thing' }, { t: '台灯', tag: 'thing' }, { t: '抱枕', tag: 'thing' },
+      { t: '超市', tag: 'place' }, { t: '公园', tag: 'place' }, { t: '书店', tag: 'place' },
+      { t: '健身房', tag: 'place' }, { t: '便利店', tag: 'place' }, { t: '菜市场', tag: 'place' },
+      { t: '公司', tag: 'place' }, { t: '学校', tag: 'place' }, { t: '楼下', tag: 'place' },
+      { t: '那本书', tag: 'media' }, { t: '那部剧', tag: 'media' }, { t: '那个电影', tag: 'media' },
+      { t: '新出的综艺', tag: 'media' }, { t: '歌单', tag: 'media' }, { t: '播客', tag: 'media' },
+      { t: '同事', tag: 'person' }, { t: '我妈', tag: 'person' }, { t: '室友', tag: 'person' },
+      { t: '店员', tag: 'person' }, { t: '外卖小哥', tag: 'person' }
     ],
-    /* 形容/副词小槽：直接给池子 */
-    adv:   [{ t: '真', w: 8 }, { t: '好', w: 9 }, { t: '有点', w: 7 }, { t: '超级', w: 4 }],
-    adj:   [{ t: '累', w: 8 }, { t: '热', w: 6 }, { t: '冷', w: 5 }, { t: '无聊', w: 6 }, { t: '充实', w: 4 }, { t: '开心', w: 6 }],
-    adjC:  [{ t: '好看', w: 8 }, { t: '温柔', w: 6 }, { t: '可爱', w: 6 }, { t: '厉害', w: 5 }],
-    weather: [{ t: '下雨了', w: 6 }, { t: '起风了', w: 4 }, { t: '好冷', w: 5 }, { t: '好晒', w: 4 }, { t: '闷得很', w: 3 }],
-    quit:  [{ t: '熬夜', w: 7 }, { t: '生气', w: 5 }, { t: '难过', w: 5 }, { t: '乱想', w: 4 }, { t: '不吃早饭', w: 4 }],
-    /* 她 00:50：转折/连接词也要有——句子的自然焊接点，不是死模板 */
-    conj: [
-      { t: '不过', w: 8 }, { t: '但是', w: 6 }, { t: '可是', w: 5 }, { t: '然后', w: 7 },
-      { t: '对了', w: 7 }, { t: '其实', w: 6 }, { t: '话说', w: 4 }, { t: '突然', w: 5 },
-      { t: '反正', w: 5 }, { t: '就是说', w: 3 }, { t: '结果', w: 4 }, { t: '而且', w: 4 }
+    /* 形容词（表感觉/情绪/评价/天气感） */
+    adj: [
+      '累', '热', '冷', '无聊', '充实', '开心', '困', '饿', '饱', '烦', '爽',
+      '舒服', '难受', '委屈', '激动', '紧张', '放松', '清醒', '迷糊', '馋', '懒', '乖', '香', '吵'
     ],
-    /* 她 00:48：不局限在「今天」——时间词也抽，常用的时间词更常出 */
-    time: [
-      { t: '今天', w: 10 }, { t: '明天', w: 5 }, { t: '后天', w: 3 }, { t: '昨天', w: 5 },
-      { t: '每天', w: 4 }, { t: '晚上', w: 6 }, { t: '刚才', w: 5 }, { t: '等下', w: 4 },
-      { t: '周末', w: 4 }, { t: '半夜', w: 3 }, { t: '一大早', w: 3 }, { t: '放假', w: 3 }
-    ],
-    /* 她 10-06 晚：短词短句/叠词叠句也归这里出——dup=可整句重复，who=可带称呼尾巴；
-       她 00:48：单独一个词也能成一句，继续加 */
+    adjC: ['好看', '温柔', '可爱', '厉害', '贴心', '有趣', '聪明', '暖', '乖'],
+    /* 状语多类（她 09:45：不要只做时间状语） */
+    advC:  ['好', '真', '超', '太', '有点', '特别', '贼', '巨', '超级', '格外'],          // 程度
+    advT:  ['刚', '刚才', '马上', '已经', '还', '又', '才', '一直', '终于', '突然'],      // 时间
+    advP:  ['在家', '在床上', '在公司', '在外面', '在楼下', '在路上', '在厨房', '在被窝里', '在阳台'],  // 地点
+    advM:  ['偷偷', '悄悄', '慢慢', '使劲', '随便', '认真', '乖乖', '瞎'],               // 方式
+    advY:  ['真的', '其实', '反正', '好像', '大概', '应该', '居然', '确定'],             // 语气
+    time:  ['今天', '明天', '后天', '昨天', '每天', '晚上', '半夜', '一大早', '周末', '放假', '刚才', '等下', '下周', '月底'],
+    conj:  ['不过', '但是', '可是', '然后', '对了', '其实', '话说', '突然', '反正', '就是说', '结果', '而且', '后来', '所以'],
+    sigh:  ['哇', '诶', '哎', '嘶', '呜', '噢', '啊这', '好家伙', '救命', '麻了', '绝了', '无语住了', '笑不活了', '绷不住了', '服了', '离谱'],
+    weather: ['下雨了', '起风了', '好冷', '好晒', '闷得很', '降温了', '打雷了', '出太阳了', '月亮好圆'],
+    quit:  ['熬夜', '生气', '难过', '乱想', '不吃早饭', '一直玩手机', '瞎想', '喝冰的'],
+    /* 她 09:45：口语化表达/长短句/单词句/叠词叠句；dup=可整句重复，who=可带称呼尾巴 */
     short: [
-      { t: '困困', w: 6 }, { t: '饿饿', w: 5 }, { t: '好困好困', w: 5 },
-      { t: '嘿嘿', w: 6, dup: true }, { t: '呜呜', w: 4 },
-      { t: '想你了', w: 8, dup: true, who: true }, { t: '抱抱', w: 5 }, { t: '嘻嘻', w: 5 },
-      { t: '累懒了', w: 3 }, { t: '软软的', w: 4 }, { t: '晕晕的', w: 3 },
-      { t: '迷迷糊糊', w: 4 }, { t: '想抱抱', w: 4, who: true }, { t: '今天好乖', w: 3 },
-      { t: '睡了啊', w: 5 }, { t: '吃饭去', w: 5 }, { t: '困死了', w: 5 }, { t: '烦死了', w: 4 },
-      { t: '绝了', w: 4 }, { t: '无语', w: 4 }, { t: '服了', w: 4 }, { t: '真的假的', w: 4 },
-      { t: '算了', w: 4 }, { t: '行吧', w: 4 }, { t: '来了来了', w: 4, dup: true },
-      { t: '睡了睡了', w: 4, dup: true }, { t: '干饭去', w: 3 }, { t: '摸鱼', w: 3 },
-      { t: '躺平', w: 3 }, { t: 'emo了', w: 3 }, { t: '笑死', w: 5 }, { t: '绷不住了', w: 3 },
-      { t: '好耶', w: 3 }, { t: '晚安', w: 4 }, { t: '早安', w: 3 }, { t: '想吃东西', w: 3 }
-    ]
+      { t: '困困' }, { t: '饿饿' }, { t: '好困好困' }, { t: '嘿嘿', dup: true }, { t: '呜呜' },
+      { t: '想你了', dup: true, who: true }, { t: '抱抱' }, { t: '嘻嘻' }, { t: '累懒了' },
+      { t: '软软的' }, { t: '晕晕的' }, { t: '迷迷糊糊' }, { t: '想抱抱', who: true }, { t: '今天好乖' },
+      { t: '睡了啊' }, { t: '吃饭去' }, { t: '困死了' }, { t: '烦死了' }, { t: '绝了' },
+      { t: '无语' }, { t: '服了' }, { t: '真的假的' }, { t: '算了' }, { t: '行吧' },
+      { t: '来了来了', dup: true }, { t: '睡了睡了', dup: true }, { t: '干饭去' }, { t: '摸鱼' },
+      { t: '躺平' }, { t: 'emo了' }, { t: '笑死' }, { t: '绷不住了' }, { t: '好耶' },
+      { t: '晚安' }, { t: '早安' }, { t: '想吃东西' }, { t: '好无聊啊' }, { t: '不想动' },
+      { t: '快来陪我聊天' }, { t: '讲个故事呗' }, { t: '亲亲抱抱举高高', who: true }, { t: '在干嘛' }
+    ],
+    /* 口语整句素材（陈述/抱怨/撒娇），供省略主语与长句用 */
+    collo: [
+      '好想睡觉啊', '不想上班', '想出门玩', '好无聊啊', '不想动', '睡不醒',
+      '想吃点好的', '今天什么都不想干', '只想躺着', '想出去走走', '肚子好饿',
+      '好想喝奶茶', '不想说话', '又emo了', '终于忙完了', '快撑不住了'
+    ],
+    /* 被动式（中文里常见的「被…」口语块） */
+    passive: ['被闹钟吵醒', '被电话吵醒', '被雨淋了', '被快递吵醒', '被老板说了', '被门口的猫拦住了', '被奶茶烫到了', '被蚊子咬了'],
+    /* 判断句素材：…是真的… */
+    judge: ['好看', '好喝', '好吃', '好听', '上头', '离谱', '绝'],
+    /* 疑问词（特指问） */
+    whq: ['啥时候', '去哪', '为什么', '怎么', '跟谁'],
+    /* 她 09:45：二十六字母层——真实网络字母词也能成句 */
+    letterSlang: ['xswl', 'yyds', 'nsdd', 'u1s1', 'awsl', 'zqsg', 'dddd', 'gkd'],
+    /* 声母×韵母（含前鼻音 n / 后鼻音 ng 两套）——拼打字延迟的内部手感，不上屏 */
+    initials: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
+    finals: ['a', 'o', 'e', 'i', 'u', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'ong', 'ia', 'ie', 'iu', 'uan', 'un', 'ing', 'iang', 'iong', 'uang'],
+    /* 称呼组词：她 09:41——名字不只用她的名字，也能百家姓/爱称现组 */
+    namePre: ['小', '阿', '老', '大'],
+    nameSuf: ['宝', '宝儿', '崽', '崽崽', '乖', '乖乖', '酱', '喵', '球', '团子'],
+    surname: ['王', '李', '张', '刘', '陈', '杨', '黄', '赵', '吴', '周', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '苏', '顾', '沈', '许'],
+    redup: ['毛毛', '糖糖', '球球', '豆豆', '圆圆', '胖胖', '墩墩', '布丁', '糯米', '汤圆', '年糕', '麻薯'],
+    /* 语气尾 */
+    tail: ['呀', '啦', '哟', '嘛', '呗', '咯', '哈', '呜', '嘿嘿', '哈哈', '~'],
+    qtail: ['吗', '呢', '啊', '吧', '嘛']
   };
-  const DIC_CAP = 120;          // 每词性条目上限：防历史消息把词典撑成垃圾场
+  const DIC_CAP = 160;          // 每词类条目上限：防历史消息把词典撑成垃圾场
 
-  /* 均等抽一支（框架内语气尾这类小槽用） */
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function pickObj(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  /* 她 09:45：成分一律等概率随机组 */
+  function pickWord(list) { return typeof list[0] === 'string' ? pick(list) : pickObj(list).t; }
 
-  /* 权重轮盘：w 大的常出（她：「肯定是常用字更多」） */
-  function wPick(arr) {
-    if (!arr || !arr.length) return null;
-    let sum = 0;
-    arr.forEach(x => { sum += Math.max(1, +x.w || 1); });
-    let roll = Math.random() * sum;
-    for (let i = 0; i < arr.length; i++) {
-      roll -= Math.max(1, +arr[i].w || 1);
-      if (roll <= 0) return arr[i];
-    }
-    return arr[arr.length - 1];
-  }
-
-  /* 主谓宾核心（供多帧复用；她 00:48：句子成分自由拼接） */
-  function svbCore() {
-    const n = wPick(DIC.noun); if (!n) return null;
+  /* ---------- 搭配检：动词的 obj 要含名词的 tag ---------- */
+  function voPair() {
+    const n = pick(DIC.noun);
     const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
-    const v = wPick(vs); if (!v) return null;
-    return '我' + v.t + n.t;
+    if (!vs.length) return null;
+    const v = pick(vs);
+    return { v: v.t, n: n.t };
+  }
+  function svbCore() {
+    const p = voPair();
+    return p ? '我' + p.v + p.n : null;
   }
 
-  /* ---------- 框架：槽位只从对应词性抽，动词×名词过搭配检 ---------- */
+  /* 称呼现组：小/阿/老＋她的名字字或百家姓，或名字末字/爱称＋宝/崽/酱……全部等概率 */
+  function makeNickname(ctx) {
+    const my = String((ctx && ctx.myName) || '').trim();
+    const pet = String((ctx && ctx.pet) || '').trim();
+    const coreFromName = my ? pick(my.replace(/\s/g, '').split('')) : null;
+    const core = coreFromName && Math.random() < 0.55 ? coreFromName
+      : (pet && Math.random() < 0.5 ? pet : pick(DIC.surname));
+    const style = Math.random();
+    if (style < 0.3) return pick(DIC.namePre) + core;
+    if (style < 0.5) return core + pick(DIC.nameSuf);
+    if (style < 0.7 && core.length >= 2) return core.slice(-1) + core.slice(-1);
+    if (style < 0.85) return pick(DIC.namePre) + core + pick(DIC.nameSuf);
+    return pick(DIC.redup);
+  }
+  function whoOf(ctx) { return ctx && (ctx.pet || ctx.myName) ? (ctx.pet || ctx.myName) : null; }
+
+  /* ---------- 框架：句式结构全覆盖，等概率抽 ----------
+     sv=主谓 vo=动宾 q=疑问 excl=感叹 imp=祈使 ell=省略 inv=倒装 judge=判断 pass=被动
+     long=长短句 collo=口语整句 short=单词句 name=称呼现组 letter=字母词 */
   const FRAMES = [
-    { id: 'svb', make() {                       // 主谓宾：我想吃火锅
-        return svbCore();
-      } },
-    { id: 'svq', make() {                       // 疑问：你看过那部剧吗
-        const n = wPick(DIC.noun); if (!n) return null;
-        const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
-        const v = wPick(vs); if (!v) return null;
-        return '你' + v.t + n.t + '吗';
-      } },
-    { id: 'svp', make() {                       // 主谓补（带去向）：我刚从超市回来
-        const n = wPick(DIC.noun.filter(x => x.tag === 'place')); if (!n) return null;
+    { id: 'svb', make() { return svbCore(); } },                                        // 陈述：我想吃火锅
+    { id: 'svq', make() { const p = voPair(); return p ? '你' + p.v + p.n + pick(DIC.qtail) : null; } },   // 疑问：你看过那部剧吗
+    { id: 'svp', make() {                                                               // 带补语：我刚从超市回来
+        const n = pick(DIC.noun.filter(x => x.tag === 'place'));
+        if (!n) return null;
         const vs = DIC.verb.filter(v => (v.obj || []).indexOf('place') >= 0 && v.suffix);
-        const v = wPick(vs); if (!v) return null;
+        if (!vs.length) return null;
+        const v = pick(vs);
         return '我' + v.t + n.t + v.suffix;
       } },
-    { id: 'adjc', make() {                      // 主谓补（时间词她 00:48 拍板不局限在「今天」）：明天好累
-        const a = wPick(DIC.adv), j = wPick(DIC.adj), tm = wPick(DIC.time);
-        return a && j && tm ? tm.t + a.t + j.t : null;
+    { id: 'negv', make() { const p = voPair(); return p ? '我不想' + p.v.replace(/^想/, '') + p.n : null; } },  // 否定：我不想吃火锅
+    { id: 'ellip', make() { const p = voPair(); return p ? p.v + p.n + (Math.random() < 0.5 ? pick(DIC.tail) : '') : null; } },  // 省略主语：想吃火锅呀
+    { id: 'inv', make() { const p = voPair(); const c = svbCore();                      // 倒装：好困啊我 / 想吃火锅我
+        if (Math.random() < 0.5 && p) return p.v + p.n + '，我';
+        const a = pick(DIC.advC), j = pick(DIC.adj);
+        return a + j + pick(DIC.sigh.slice(0, 2)) + '我'; } },
+    { id: 'adjc', make() { return pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj); } }, // 今天好累 / 明天真饿
+    { id: 'adjP', make() { return pick(DIC.advP) + pick(DIC.advC) + pick(DIC.adj); } }, // 地点状语：在床上好舒服
+    { id: 'adjM', make() { const p = voPair(); return p ? pick(DIC.advM) + p.v + p.n : null; } },  // 方式状语：偷偷想吃火锅→偷偷吃火锅
+    { id: 'adjT', make() { const p = voPair(); return p ? pick(DIC.advT) + p.v + p.n : null; } },  // 时间状语：刚吃完火锅
+    { id: 'adjY', make() { const p = voPair(); return p ? pick(DIC.advY) + '想' + p.v + p.n : null; } }, // 语气状语：其实想吃火锅
+    { id: 'compl', make(ctx) {                                                          // 感叹＋称呼尾巴
+        const j = pick(DIC.adjC);
+        const tm = Math.random() < 0.5 ? '今天' : pick(DIC.time);
+        const who = whoOf(ctx);
+        return (Math.random() < 0.2 && who) ? '你' + tm + '真' + j + '，' + who : '你' + tm + '真' + j;
       } },
-    { id: 'weather', make() {                   // 无槽闲句：外面下雨了
-        const w = wPick(DIC.weather);
-        return w ? '外面' + w.t : null;
+    { id: 'weather', make() { return '外面' + pick(DIC.weather); } },
+    { id: 'quit', make() { return '别' + pick(DIC.quit) + '了'; } },                    // 祈使：别熬夜了
+    { id: 'pass', make() { const t = pick(DIC.passive); return (Math.random() < 0.6 ? '我' : pick(DIC.time)) + t; } },  // 被动：我被闹钟吵醒
+    { id: 'judge', make() {                                                             // 判断：那部剧是真的好看
+        const n = pick(DIC.noun.filter(x => x.tag === 'media'));
+        return n ? n.t + '是真的' + pick(DIC.judge) : pick(DIC.collo);
       } },
-    { id: 'quit', make() {                      // 祈使：别熬夜了
-        const q = wPick(DIC.quit);
-        return q ? '别' + q.t + '了' : null;
-      } },
-    { id: 'compl', make(ctx) {                     // 感叹：你今天真好看（偶尔带称呼尾巴；时间词常换）
-        const j = wPick(DIC.adjC);
-        if (!j) return null;
-        const tm = (Math.random() < 0.5 ? { t: '今天' } : wPick(DIC.time)) || { t: '今天' };
-        const who = ctx && (ctx.pet || ctx.myName);
-        return (Math.random() < 0.2 && who) ? '你' + tm.t + '真' + j.t + '，' + who : '你' + tm.t + '真' + j.t;
-      } },
-    { id: 'short', make(ctx) {                     // 她 10-06 晚：短词短句（可带语气尾）
-        const s = wPick(DIC.short); if (!s) return null;
-        return s.t + (Math.random() < 0.35 ? pick(['呀', '啦', '…']) : '');
-      } },
-    { id: 'dup', make(ctx) {                       // 叠句：整句重复一遍（想你了想你了）
-        const s = wPick(DIC.short.filter(x => x.dup)); return s ? s.t + s.t : null;
-      } },
-    { id: 'tailwho', make(ctx) {                   // 短句带称呼尾巴：想你了，+名字/身份
-        const s = wPick(DIC.short.filter(x => x.who)); if (!s) return null;
-        const who = ctx && (ctx.pet || ctx.myName);
-        return who ? s.t + '，' + who : s.t;
-      } },
-    { id: 'conjq', make() {                        // 她 00:50：转折/连接词开头：不过我想吃火锅
-        const c = wPick(DIC.conj); if (!c) return null;
-        const core = svbCore(); return core ? c.t + core : null;
-      } },
-    { id: 'long2', make(ctx) {                     // 她 00:48：长句带逗号——两小句自然接一起
+    { id: 'rhet', make() { const p = voPair();                                          // 反问：难道我不想吃火锅吗
+        return p ? (Math.random() < 0.5 ? '难道我想' + p.v.replace(/^想/, '') + p.n + '吗' : '不是吧，' + pick(DIC.short).t) : null; } },
+    { id: 'whq', make() { const p = voPair(); return p ? pick(DIC.whq) + p.v.replace(/^想/, '') + p.n : null; } },  // 特指问：啥时候吃火锅
+    { id: 'sighc', make() { const c = Math.random() < 0.5 ? svbCore() : pick(DIC.collo); return c ? pick(DIC.sigh) + '，' + c : null; } },  // 叹词开头：哇，我想吃火锅
+    { id: 'conjq', make() { const c = Math.random() < 0.6 ? svbCore() : pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj); return c ? pick(DIC.conj) + c : null; } },  // 转折开头
+    { id: 'long2', make() {                                                             // 长句两小句（逗号）
         const rolls = [];
         const core = svbCore();
         if (core) {
-          const s = wPick(DIC.short);
-          if (s) rolls.push(core + '，' + s.t);                    // 我想吃火锅，困困
-          const a = wPick(DIC.adv), j = wPick(DIC.adj), tm = wPick(DIC.time);
-          if (a && j && tm) rolls.push(tm.t + a.t + j.t + '，' + core);   // 今天好累，想吃火锅
+          rolls.push(core + '，' + pick(DIC.short).t);
+          rolls.push(pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj) + '，' + core);
         }
-        if (!rolls.length) return null;
-        return rolls[Math.floor(Math.random() * rolls.length)];
+        const c2 = pick(DIC.collo);
+        if (c2) rolls.push(pick(DIC.conj) + '，' + c2);
+        return rolls.length ? pick(rolls) : null;
+      } },
+    { id: 'long3', make() {                                                             // 更长：叹词，小句，小句
+        const core = svbCore();
+        if (!core) return null;
+        const c2 = pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj);
+        return pick(DIC.sigh) + '，' + core + '，' + c2;
+      } },
+    { id: 'collo', make() { return pick(DIC.collo) + (Math.random() < 0.4 ? pick(DIC.tail) : ''); } },  // 口语整句
+    { id: 'short', make() { const s = pick(DIC.short); return s.t + (Math.random() < 0.35 ? pick(DIC.tail) : ''); } },  // 单词句/短句
+    { id: 'dup', make() { const s = pick(DIC.short.filter(x => x.dup)); return s ? s.t + s.t : null; } },              // 叠句
+    { id: 'tailwho', make(ctx) {                                                        // 短句带称呼尾巴
+        const s = pick(DIC.short.filter(x => x.who));
+        const who = whoOf(ctx);
+        return s ? (who ? s.t + '，' + who : s.t) : null;
+      } },
+    { id: 'letter', make() { return pick(DIC.letterSlang) + (Math.random() < 0.4 ? pick(DIC.tail) : ''); } },  // 字母词
+    { id: 'namecall', make(ctx) {                                                       // 称呼现组当一句话
+        const nick = makeNickname(ctx);
+        const s = pick(DIC.short);
+        return Math.random() < 0.5 ? nick : nick + '，' + s.t;
       } }
   ];
 
   /* 产出一句；搭配重抽 2 次不过 = null（调用方回落字卡，不硬凑）。ctx 可带称呼料 */
   function compose(ctx) {
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       const f = FRAMES[Math.floor(Math.random() * FRAMES.length)];
       const line = f.make(ctx);
       if (line) return line;
@@ -12080,7 +12147,7 @@ const FreeTalk = (function () {
     return null;
   }
 
-  /* 她 10-06 晚：对她的固定字卡做改写/加工/删减成新话——只动闲聊句，
+  /* 对她的固定字卡做改写/加工/删减成新话——只动闲聊句，
      金额/地址不碰（同 learn 拦截），组不出新意就返回 null 回落字卡原句 */
   function remake(card, ctx) {
     try {
@@ -12091,31 +12158,37 @@ const FreeTalk = (function () {
       if (parts.length > 1) rolls.push(() => parts[Math.floor(Math.random() * parts.length)]);   // 删减：只留半句
       if (t.length <= 4 && !/[。！？]/.test(t)) rolls.push(() => t + t);                            // 叠句
       rolls.push(() => (Math.random() < 0.5 ? '说真的，' : '真的，') + t);                           // 加头
-      rolls.push(() => wPick(DIC.conj).t + '，' + t);                                                // 她 00:50：转折词开头
-      if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(['呀', '啦', '哟']));                  // 加尾
-      const who = ctx && (ctx.pet || ctx.myName);
-      if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼/名字
+      rolls.push(() => pick(DIC.conj) + '，' + t);                                                  // 转折词开头
+      if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(DIC.tail));                            // 语气尾
+      const who = whoOf(ctx);
+      if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼
+      rolls.push(() => makeNickname(ctx) + '，' + t);                                               // 现组称呼前缀
       if (!rolls.length) return null;
       const out = rolls[Math.floor(Math.random() * rolls.length)]();
-      if (!out || out === t || out.length > 46 || String(out).indexOf('undefined') >= 0) return null;
+      if (!out || out === t || out.length > 50 || String(out).indexOf('undefined') >= 0) return null;
       return out;
     } catch (e) { return null; }
   }
 
-  /* 拼音打字延迟（她要的「二十六字母拼音模拟输入」那层手感，纯内部）：
-     每个字按 1.6~4.2 个按键估（全拼均长≈2.6），加基础起手；
-     15% 概率来一次「打错删掉重打」的回退（+0.5~1.2s）；长句自然更慢 */
+  /* ---------- 拼音手感（二十六字母层，纯内部不上屏）：
+     每个字按「声母位数＋韵母位数」算按键（韵母分前鼻音 n / 后鼻音 ng 两套，
+     ng 比_n 多敲一位），一位~四位字母都能出现；15% 概率打错删掉重打 */
   function typingDelay(text) {
     const n = Math.max(2, String(text || '').length);
     let keys = 0;
-    for (let i = 0; i < n; i++) keys += 1.6 + Math.random() * 2.6;
-    let ms = 500 + keys * (150 + Math.random() * 120);
+    for (let i = 0; i < n; i++) {
+      const ini = Math.random() < 0.82 ? pick(DIC.initials).length : 0;   // 零声母音节（啊/饿）直接打韵母
+      const fin = pick(DIC.finals).length;                                // an=2 位 / ang=3 位…
+      keys += ini + fin;
+    }
+    let ms = 500 + keys * (120 + Math.random() * 100);
     if (Math.random() < 0.15) ms += 500 + Math.random() * 700;   // 删了重打
     return Math.round(ms);
   }
 
   /* 她的历史消息自动供词（轻量版）：只认十来个高频结构，抽名词进词典。
-     现有条目 w+1；新词 w=2 起步；超上限时挤掉权重最低的。金额/地址同 learn 拦截。 */
+     新词等概率进池（她 09:45：成分等概率，不再记权重）；超上限挤掉最旧的临时词。
+     金额/地址同 learn 拦截。 */
   const FEED_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
   const FEED_PATS = [
     { re: /(?:想吃|想喝|在吃|去吃|点了|叫了|买了)([\u4e00-\u9fa5]{1,4})/, tag: 'food' },
@@ -12134,14 +12207,14 @@ const FreeTalk = (function () {
         const w0 = m[1];
         if (w0.length < 2 || /了|的|吗|呢|吧/.test(w0)) return;
         let arr = DIC.noun;
-        const ex = arr.find(x => x.t === w0);
-        if (ex) { ex.w = Math.min(20, (ex.w || 1) + 1); hit = true; return; }
+        if (arr.some(x => x.t === w0)) { hit = true; return; }
+        /* 挤掉同 tag 里最早进的临时词（自带词不挤），词典有界不腐烂 */
         if (arr.length >= DIC_CAP) {
-          let lo = 0;
-          arr.forEach((x, i) => { if (x.w < arr[lo].w) lo = i; });
-          arr.splice(lo, 1);
+          let lo = -1;
+          arr.forEach((x, i) => { if (x.tmp && (lo < 0 || i < lo)) lo = i; });
+          if (lo >= 0) arr.splice(lo, 1); else return;
         }
-        arr.push({ t: w0, w: 2, tag: p.tag });
+        arr.push({ t: w0, tag: p.tag, tmp: true });
         hit = true;
       });
       return hit;
@@ -16138,8 +16211,12 @@ function coverTap(e) {
       due.forEach(pl => {
         const ct = Home.contactById(pl.ct);
         if (!ct) return;                       /* 人没了，这笔互动不补 */
-        /* 她 10-06 晚新模式：TA 发了又删——到点自己把自己的帖子撤下时间线 */
-        if (pl.kind === 'selfdel') { doomed.push(p.id); return; }
+        /* 她 09:41 定：TA 删自己的帖子——执行时从 TA 自己最近五条内等概率抽一条撤下时间线 */
+        if (pl.kind === 'selfdel') {
+          const own = (s.posts || []).filter(x => x.uid === pl.ct).slice(0, 5);
+          if (own.length) doomed.push(own[Math.floor(Math.random() * own.length)].id);
+          return;
+        }
         if (pl.kind === 'react') { reactOnce(p.id, ct, pl.at); return; }
         /* kind==='reply'：TA 回评论（回我，或互评楼中楼回另一位）——
            与 reactOnce 同一个 taBody，以前回评只能有字、不能带图，两处不一致在这抹平 */
@@ -16187,9 +16264,10 @@ function coverTap(e) {
         const post = { id: 'mp' + Date.now().toString(36) + rand(100, 999) + Math.random().toString(36).slice(2, 4) + (n > 1 ? 'w' + n : ''), uid: ct.id, ts: born, at: now, text: b.text, images: b.imgs.slice(), likes: [], comments: [] };
         bornN++;
         s.posts.unshift(post);
-        /* 她 10-06 晚模式（我的页「TA 删朋友圈」开关，1% 我拍）：发帖当下掷，命中就
-           排一坋 20~90 秒后的自删——在时间线上就是「发了没多久自己没了」 */
-        if (s.taDelMode && Math.random() < 0.01) {
+        /* 她 09:41 口径修正：删帖概率在联系人主页（taDelRate，0=不删），不再是我的页全局开关；
+           命中就排一班 20~90 秒后的自删，执行时从 TA 最近五帖内等概率抽一条删 */
+        const delRate = Math.min(100, Math.max(0, Math.round(+Engine.params(ct).taDelRate || 0)));
+        if (delRate > 0 && Math.random() * 100 < delRate) {
           (post.plans = post.plans || []).push({ kind: 'selfdel', ct: ct.id, at: born + rand(20, 90) * 1000 });
         }
         scheduleReactions(post.id, born);
@@ -16738,21 +16816,17 @@ function coverTap(e) {
     migrateStoredVideos();
     backfillMissed();   /* 08-27 晚起我的动态全程零互动，受害动态一次性补排（幂等） */
     /* 切到发现页就重算一次墨点（Router 的页面刷新钩子，渲染幂等） */
-    if (typeof Router !== 'undefined' && Router.register) Router.register('discover', dotDiscover);
+    if (typeof Router !== 'undefined' && Router.register) Router.register('discover', () => {
+      dotDiscover();
+      /* 她 09:41：排班卡内嵌在发现页，进页就重渲（幂等），值班人永远新鲜 */
+      if (typeof Schedule !== 'undefined' && Schedule.render) Schedule.render();
+    });
     dotDiscover();
   }
 
-  /* 她 10-06 晚：我的页「TA 删朋友圈模式」开关 + 行尾实话文案 */
-  function toggleTaDel() {
-    const s = store();
-    s.taDelMode = !s.taDelMode;
-    DB.save();
-    UI.toast(s.taDelMode ? '已开启：TA 每条新朋友圈有 1% 概率发了又删' : '已关闭');
-    return s.taDelMode;
-  }
-  function taDelText() { return store().taDelMode ? '已开启' : '未开启'; }
+  /* 她 09:41：我的页「TA 删朋友圈模式」全局开关拆除——按联系人去主页填 taDelRate（0=不删） */
 
-  return { init, open, openUser, settle, backfillMissed, hasFresh, markSeen, dotDiscover, reschedule, toggleTaDel, taDelText };
+  return { init, open, openUser, settle, backfillMissed, hasFresh, markSeen, dotDiscover, reschedule };
 })();
 
 /* =====================================================
@@ -23661,6 +23735,7 @@ const Profile = (function () {
     el('pf-comax').value = pa.cardComboMax;
     el('pf-readnr').value = pa.readNoReply;
     el('pf-revoke').value = (pa.revokeRate ?? 0);
+    el('pf-tadel').value = (pa.taDelRate ?? 0);
     el('pf-learn').value = pa.learnRate;
   el('pf-free').value = pa.gaFree ?? (Engine.REPLY_DEF ? Engine.REPLY_DEF.gaFree : 30);
     el('pf-mopost').value = pa.moPostRate;
@@ -23879,8 +23954,12 @@ const Profile = (function () {
         p.cardComboMin = Math.max(2, Math.round(+el('pf-comin').value) || 2);
         p.cardComboMax = Math.max(p.cardComboMin, Math.round(+el('pf-comax').value) || p.cardComboMin);
         p.readNoReply = Math.min(100, Math.max(0, Math.round(+el('pf-readnr').value || 0)));
-        /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回 */
+        /* 撤回消息概率（她 20:17 定）：默认 0=从不撤回；
+           她 09:41 改口径：候选＝双方互动最近 15 条里 TA 自己的消息，等概率抽一条，撤最新的可重发 */
         p.revokeRate = Math.min(100, Math.max(0, Math.round(+el('pf-revoke').value || 0)));
+        /* TA 删自己朋友圈概率（她 09:41 定）：联系人主页按人填，0=不删；
+           命中后从 TA 最近五帖内等概率抽一条自删；我的页全局开关已拆 */
+        p.taDelRate = Math.min(100, Math.max(0, Math.round(+el('pf-tadel').value || 0)));
         /* 学我说话·收集概率（她 00:48 改口径）：这档只管收进荟萃/各表情库（默认 5% 她定的）；
        收集到的话混进字卡池等概率用，不单独掷「用」）；0=关。 */
         p.learnRate = Math.min(100, Math.max(0, Math.round(+el('pf-learn').value || 0)));
@@ -23939,6 +24018,7 @@ const Profile = (function () {
         el('pf-comax').value = p.cardComboMax;
         el('pf-readnr').value = p.readNoReply;
         el('pf-revoke').value = p.revokeRate;
+        el('pf-tadel').value = p.taDelRate ?? 0;
         DB.save();
         UI.toast('AI回复设置已保存');
       });
@@ -25594,7 +25674,7 @@ const History = (function () {
 })();
 
 /* =====================================================
-   LOVE♡X · schedule.js —— 排班表（她 10-03 拍板：入口在聊天「＋」面板链接后面）
+   LOVE♡X · schedule.js —— 排班表（她 10-03 拍板；09:41 模块搬到发现页，聊天＋面板入口拆）
    给联系人排班。班种默认「陪睡」，想要别的自己加；
    每个班种每天自动掷值班人：人数上限 = 全部联系人（她 10-05：上限应该是所有联系人，
    只是全部上阵的概率极小；绝大部分 1 人，其次 2 人、3 人……依次递减）。
@@ -25602,6 +25682,7 @@ const History = (function () {
    1 人≈80% / 2 人≈16% / 3 人≈3.2% / 4 人≈0.6%……尾巴极细，
    但人数真的可以一直长到联系人总数（不再硬卡 3 人）。
    人选在全部联系人里等概率抽（等概率随机是铁口径）；她亲手定过的班种当天不再重掷。
+   她 09:41：班种卡点名字＝改名、双击卡片＝删除，文字版按钮和小字标注都拆；
    跨天重掷由心跳（app.js）调 rollDay()。
    ===================================================== */
 const Schedule = (function () {
@@ -25643,11 +25724,7 @@ const Schedule = (function () {
     return true;
   }
 
-  const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
-  function headLabel() {
-    const d = new Date();
-    return (d.getMonth() + 1) + '月' + d.getDate() + '日 · 周' + WEEK[d.getDay()];
-  }
+  /* 值班人小卡：头像+名字（她 09:41：一眼看清是谁，不加小字标注） */
   function personChips(ids) {
     return ids.map(uid =>
       '<span class="sched-person"><span class="sched-ava">' + Home.avaInner(uid) + '</span><b>' + esc(Home.uidName(uid)) + '</b></span>').join('');
@@ -25658,19 +25735,15 @@ const Schedule = (function () {
     const box = document.getElementById('sched-body');
     if (!box) return;
     box.innerHTML =
-      '<div class="card sched-head"><b class="sched-date">' + headLabel() + '</b><span class="sched-sub">每天自动排一班 · 点班种卡片可以亲手定</span></div>' +
       s.kinds.map(k => {
         const ids = s.duty[k.id] || [];
         const manual = s.manual[k.id] === today();
-        return '<div class="card sched-kind">' +
+        return '<div class="card sched-kind" data-k="' + k.id + '">' +
           '<div class="sched-kind-head"><b class="sched-kind-name">' + esc(k.name) + '</b>' +
           (manual ? '<em class="sched-tag">今天你定的</em>' : '') +
-          '<span class="sched-ops"><button class="sched-k-edit" data-k="' + k.id + '">改名</button>' +
-          '<button class="sched-k-del" data-k="' + k.id + '">删除</button></span></div>' +
+          '</div>' +
           '<button class="sched-duty" data-k="' + k.id + '">' +
-          (ids.length
-            ? personChips(ids)
-            : '<span class="sched-none">今天还没排 · 点一下自己定</span>') +
+          (ids.length ? personChips(ids) : '') +
           '</button></div>';
       }).join('') +
       '<button class="card sched-addbtn" id="sched-add">＋ 自定义班种</button>';
@@ -25784,18 +25857,31 @@ const Schedule = (function () {
     if (!box) return;
     box.addEventListener('click', e => {
       if (e.target.closest('#sched-add')) { addKind(); return; }
-      const eb = e.target.closest('.sched-k-edit');
-      if (eb) { renameKind(eb.dataset.k); return; }
-      const db = e.target.closest('.sched-k-del');
-      if (db) { delKind(db.dataset.k); return; }
       const duty = e.target.closest('.sched-duty');
-      if (duty) { pickDuty(duty.dataset.k); return; }
+      const name = e.target.closest('.sched-kind-name');
+      const card = e.target.closest('.sched-kind');
+      if (!card) return;
+      /* 她 09:41：点班种名＝改名，双击卡片＝删除，不再要文字版改名/删除钮。
+         双击判定自做（手机上 dblclick 不可靠）：350ms 内连点两下卡片＝删除；
+         首击的动作延迟到 350ms 没等到第二下才执行，不然改名会先弹出来 */
+      const k = card.dataset.k;
+      const now = Date.now();
+      if (card.__lastTap && now - card.__lastTap < 350) {
+        clearTimeout(card.__tapTimer); card.__lastTap = 0;
+        delKind(k);
+        return;
+      }
+      card.__lastTap = now;
+      clearTimeout(card.__tapTimer);
+      card.__tapTimer = setTimeout(() => {
+        card.__lastTap = 0;
+        if (duty) pickDuty(duty.dataset.k);
+        else if (name) renameKind(name.closest('.sched-kind').dataset.k);
+      }, 350);
     });
   }
 
-  function open() { Router.go('schedule'); }
-
-  return { open, init, render, rollDay, countOf, pickDistinct };
+  return { init, render, rollDay, countOf, pickDistinct };
 })();
 
 /* =====================================================
@@ -25940,7 +26026,7 @@ Router.register('report', () => Report.render());   /* P25 */
     Router.register('game', () => Games.renderHall());   /* P40 游戏大厅 */
     Router.register('room', () => Games.renderRoom());   /* P40 对局页（含存档续局） */
     Router.register('gstats', () => Games.renderStats());/* P40 战绩档案 */
-Router.register('schedule', () => Schedule.render());/* 排班表（她 10-03） */
+    /* 她 09:41：排班表页面拆了，模块内嵌发现页（Router 走 discover 刷新钩子） */
     Home.init();
     Chat.init();
     Profile.init();
@@ -26114,16 +26200,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     });
 
     /* --- P30（清然 12:13）：我的页「我的朋友圈」——只看我发的动态 --- */
-    /* 她 10-06 晚：TA 删朋友圈模式开关（1% 发了又删），行尾同步状态 */
-    document.getElementById('my-tadel-row').addEventListener('click', () => {
-      const on = Moments.toggleTaDel();
-      const ext = document.getElementById('my-tadel-ext');
-      if (ext) ext.textContent = on ? '已开启' : '未开启';
-    });
-    runSafe('moments.tadel.text', () => {
-      const ext = document.getElementById('my-tadel-ext');
-      if (ext) ext.textContent = Moments.taDelText();
-    });
+    /* 她 09:41：TA 删朋友圈全局开关拆除（联系人主页按人填 taDelRate） */
     const myMo = document.getElementById('my-moments-row');
     if (myMo) myMo.addEventListener('click', () => Moments.openUser('me'));
 
