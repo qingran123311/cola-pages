@@ -2,9 +2,34 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261008-123439 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261008-181050 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
+<script>
+/* 启动自检哨兵（她 10-08：网页全浏览器白屏/点不动，APK 正常）。
+   判定：这行内联脚本在文件头部，页面拉全了它一定在；
+   若 5 秒后 __LX_BOOT_DONE 还没立起来，多半是网络把后面的 JS 拉断了
+   （单文件 1.6MB，国内连 GitHub Pages 常断流——拉一半 = DOM 在但没接线 = 点啥都不动，更少 = 白屏）。
+   弹一条自检条给玩家：刷新重试 / 换高速线路，不弹开发者词汇。 */
+(function(){
+  function show(){
+    if (document.getElementById('lx-bootwatch')) return;
+    var d = document.createElement('div');
+    d.id = 'lx-bootwatch';
+    d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:18px;z-index:99999;background:#2B2B31;color:#F5F2EA;'+
+      'border-radius:14px;padding:14px;font-size:14px;line-height:1.6;box-shadow:0 10px 30px rgba(0,0,0,.35);'+
+      'font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+    d.innerHTML = '启动没完成——多半是网络没把页面拉全，刷新一下多半就好。'+
+      '<div style="margin-top:10px;display:flex;gap:8px">'+
+      '<button onclick="location.reload()" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:#F5F2EA;color:#2B2B31;font-size:14px">刷新重试</button>'+
+      '<button onclick="location.href=\'https://cdn.jsdelivr.net/gh/qingran123311/cola-pages@gh-pages/lovex/index.html\'" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:transparent;color:#F5F2EA;font-size:14px;border:1px solid rgba(245,242,234,.4)">高速线路进入</button></div>';
+    (document.body || document.documentElement).appendChild(d);
+  }
+  window.__LX_BOOTWATCH = show;
+  window.addEventListener('error', function(){ if (!window.__LX_BOOT_DONE) setTimeout(show, 400); }, true);
+  setTimeout(function(){ if (!window.__LX_BOOT_DONE) show(); }, 5000);
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-512.svg" type="image/svg+xml">
 <style>
@@ -3321,6 +3346,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   border-radius:12px;color:var(--t2);cursor:pointer}
 .mall-cat.on{border-color:var(--primary);color:var(--t1);background:var(--primary-ultra)}
 .mall-cat span{font-size:var(--fs-small)}
+/* 她 10-08 16:42：类目下的子标签胶囊排（可切换可自加） */
+.mall-subs{display:flex;gap:8px;overflow-x:auto;padding:0 14px 8px;scrollbar-width:none}
+.mall-subs::-webkit-scrollbar{display:none}
+.mall-sub{flex:0 0 auto;padding:5px 12px;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);color:var(--t2);font-size:var(--fs-aux);cursor:pointer;display:inline-flex;align-items:center}
+.mall-sub.on{border-color:var(--primary);color:var(--primary);background:var(--primary-ultra)}
+.mall-sub.add{color:var(--t3);border-style:dashed;padding:5px 10px}
 .mall-list{padding:0 14px 24px;display:flex;flex-direction:column;gap:10px}
 .mall-upload{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 0;
   border:1.5px dashed var(--line);border-radius:var(--r-card);background:transparent;
@@ -3344,9 +3376,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 #mall-cart-btn{right:6px}
 #mall-cart-dot{position:absolute;top:10px;right:4px;min-width:15px;height:15px;border-radius:8px;
   background:var(--ok);color:#fff;font-size:10px;font-style:normal;line-height:15px;text-align:center;padding:0 3px}
-/* 她 11:19：SKU 弹窗里的「编辑商品」入口（内置/自建都能改） */
-.sku-manage{display:block;margin-top:4px;border:none;background:none;color:var(--t3);font-size:var(--fs-small);
-  cursor:pointer;text-decoration:underline;padding:6px 0;width:100%;text-align:center}
+/* 她 10-08 16:42：sku-manage 底部编辑行已删——入口收进 sku-name（点详情里的商品名进编辑页） */
 
 /* ---------- 底部弹层（商城唯一弹层：SKU/购物车/结算/订单/地址/上传） ---------- */
 .mall-mask{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1200;display:flex;
@@ -3366,6 +3396,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .sku-top{display:flex;gap:12px;padding:6px 0 12px}
 .sku-thumb{width:72px;height:72px;border-radius:12px}
 .sku-mid{display:flex;flex-direction:column;gap:4px;justify-content:center}
+/* 她 10-08 16:42：编辑入口收进商品名（点名字进编辑页） */
+.sku-name{display:inline-flex;align-items:center;font-size:var(--fs-body);color:var(--t1);cursor:pointer}
+/* 她 10-08 17:33：画板（＋号面板第二页）：奶白纸底 + 墨线，我能画涂鸦发给 TA */
+.drawpad-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1200;display:flex;align-items:center;justify-content:center;padding:20px}
+.drawpad{background:var(--bg);border-radius:16px;padding:14px;width:min(86vw,360px);display:flex;flex-direction:column;gap:10px}
+.dp-head{display:flex;align-items:center;justify-content:space-between}
+.dp-head b{font-size:var(--fs-body)}
+.dp-canvas{width:100%;aspect-ratio:640/840;border:1px solid var(--line);border-radius:12px;touch-action:none;cursor:crosshair}
+.dp-acts{display:flex;gap:8px}
+.dp-acts .btn{flex:1;padding:8px 0;font-size:var(--fs-aux)}
+.dp-tip{text-align:center;color:var(--t3);font-size:var(--fs-aux)}
 .sku-mid b{font-size:20px;color:var(--t1)}
 .sku-mid small{font-size:var(--fs-small);color:var(--t3)}
 .sku-orig{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;margin-left:6px;font-weight:400}
@@ -3732,6 +3773,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <!-- P36a（她 08-27 定：往右滑第2页，像微信） -->
       <div class="cmp-page">
         <button class="more-tile" data-more="link"><span class="tile-ico"><i data-icon="link" data-size="20"></i></span><span>链接</span></button>
+        <button class="more-tile" data-more="drawpad"><span class="tile-ico"><i data-icon="brush" data-size="20"></i></span><span>画板</span></button>
       </div>
       </div>
       <div class="cmp-dots" id="cmp-dots"><i class="on"></i><i></i></div>
@@ -3993,6 +4035,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       </div>
       <div class="mall-search"><i data-icon="search" data-size="14"></i><input id="mall-search" placeholder="搜商品名或卖点"></div>
       <div class="mall-cats" id="mall-cats"></div>
+      <div class="mall-subs" id="mall-subs" hidden></div>
       <div class="mall-list" id="mall-list"></div>
     </div>
   </section>
@@ -10442,6 +10485,70 @@ const Chat = (function () {
   function sendVoice(dur, audio) { pushMine({ type: 'voice', dur, audio: audio || null }); }
   function sendRawText(text) { if (cur && text) pushMine({ type: 'text', text }); }
 
+  /* ---------------- 画板（她 10-08 17:33：我也能画涂鸦发给 TA） ----------------
+     入口：＋号面板第二页「画板」。奶白纸底 + 墨线（黑白钢笔线稿的审美口径），
+     一支笔、撤销一笔、清空；发送走 sendImage 图片管道，撤回/长按/引用全通用 */
+  function openDrawPad() {
+    const layer = document.getElementById('dialog-layer') || document.body;
+    const old = layer.querySelector('.drawpad-mask'); if (old) old.remove();
+    const W = 640, H = 840;
+    const mask = document.createElement('div');
+    mask.className = 'drawpad-mask ui-modal';
+    mask.innerHTML =
+      '<div class="drawpad">' +
+        '<div class="dp-head"><b>画板</b><button class="ib-btn dp-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
+        '<canvas class="dp-canvas" width="' + W + '" height="' + H + '"></canvas>' +
+        '<div class="dp-acts">' +
+          '<button class="btn btn-secondary" data-dp="undo" type="button">撤销一笔</button>' +
+          '<button class="btn btn-secondary" data-dp="clear" type="button">清空</button>' +
+          '<button class="btn btn-primary" data-dp="send" type="button">发送</button>' +
+        '</div>' +
+        '<small class="dp-tip">手指或鼠标直接画，画好点发送</small>' +
+      '</div>';
+    layer.appendChild(mask);
+    UI.raise(mask);
+    const cv = mask.querySelector('.dp-canvas');
+    const c2 = cv.getContext('2d');
+    const strokes = [];
+    let curStroke = null;
+    const INK = '#3A3A42', PAPER = '#FFFDF6';
+    function repaint() {
+      c2.fillStyle = PAPER; c2.fillRect(0, 0, W, H);
+      c2.strokeStyle = INK; c2.lineWidth = 5; c2.lineCap = 'round'; c2.lineJoin = 'round';
+      strokes.concat(curStroke ? [curStroke] : []).forEach(st => {
+        c2.beginPath();
+        st.forEach((p, i) => { if (i) c2.lineTo(p[0], p[1]); else c2.moveTo(p[0], p[1]); });
+        if (st.length === 1) { c2.arc(st[0][0], st[0][1], 2.5, 0, Math.PI * 2); c2.fillStyle = INK; c2.fill(); }
+        c2.stroke();
+      });
+    }
+    repaint();
+    function pos(e) {
+      const r = cv.getBoundingClientRect();
+      return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
+    }
+    cv.addEventListener('pointerdown', e => {
+      e.preventDefault(); curStroke = [pos(e)]; repaint();
+      try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.push(pos(e)); repaint(); });
+    const endStroke = () => { if (curStroke && curStroke.length) strokes.push(curStroke); curStroke = null; repaint(); };
+    cv.addEventListener('pointerup', endStroke);
+    cv.addEventListener('pointercancel', endStroke);
+    const close = () => mask.remove();
+    mask.querySelector('.dp-x').addEventListener('click', close);
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+    mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaint(); });
+    mask.querySelector('[data-dp="clear"]').addEventListener('click', () => { strokes.length = 0; repaint(); });
+    mask.querySelector('[data-dp="send"]').addEventListener('click', () => {
+      if (!strokes.length) { UI.toast('还没画呢'); return; }
+      close();
+      sendImage(cv.toDataURL('image/png'));
+      UI.toast('已发送');
+    });
+    mountIcons(mask);
+  }
+
   /* ---------------- P36 V2 链接分享（她 08-27 定：分享其他 App 的链接；二轮拍板：删「发纯文本」，
      卡片改小屏预览=B 方案；允许联网抓封面——只走公共 CORS 代理拉平台接口/og 标签，
      抓不到静默降级文字卡，绝不报错绝不拦发送；B站/YouTube 点小屏原地展开播放器，不自动加载） ---------------- */
@@ -11904,6 +12011,7 @@ const Chat = (function () {
       else if (k === 'link') {   /* P36（她 08-27 定）：链接分享，群聊私聊都能发 */
         openLinkSheet();
       }
+      else if (k === 'drawpad') openDrawPad();   /* 她 10-08 17:33：我也能画涂鸦发给 TA */
     });
 
     // ＋更多面板：点击面板外自动收起
@@ -11945,6 +12053,7 @@ const Chat = (function () {
     locateMsg, rerender, maybeRevoke, parseLink, openLink, playMomentLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo, learnFromMe,
      lkResolve, fetchLinkMeta,   /* 她 10-07：朋友圈链接大卡要用（b23 解直链 + 抓封面标题） */
     lkActCfg: LK_ACT,   /* 播放器互动全局概率（不按联系人分）；探针可临时改延时，不改概率值 */
+    openDrawPad,   /* 她 10-08 17:33：画板入口也给探针用 */
     get conv() { return cur; } };
 })();
 
@@ -12055,6 +12164,8 @@ const Engine = (function () {
     doodleRate: 1,
     /* 自由组话（她 10-04 拍板试试）：默认 8% 我拍的，0=关；词典内置起步 + 她的历史消息自动供词 */
     gaFree: 30,
+    /* 她 10-08 17:33：同音字不设概率开关——选词是组话过程本身（freetalk.js 内在机制），
+       挑词时间计入发送间隔；旧的「同音字概率」格与事后换字逻辑一并拆除 */
     readNoReply: 0, moMutual: 0,
     /* 09-04 调缓（她「怎么酷酷发朋友圈」）：发帖每人每天条数 ≈ 24h/区间均值 × 概率，再乘联系人数。
        旧的 1~6 小时 + 60%：6 个人实测 24 小时 20 条（≈每 72 分钟一条，探针 M8b 量的）；
@@ -12426,12 +12537,18 @@ const Engine = (function () {
       /* 自由组话·逐条融入（她 10-06 11:50 定）：本条先独立掷一次概率，掷中且组得出话就是本条内容；
          她 10-06 晚放开手脚：一半现组（短词短句/叠词叠句/带称呼），一半拿她的固定字卡改写加工删减成新话；
          两路都组不出就回落字卡/表情那条老路，不硬凑，也不吃掉气泡位 */
+      /* 她 10-08 17:33 定口径：组话过程里就有同音选词（猫猫/毛毛这类候选要先挑），
+         重调不设次数上限——在她设的时间窗（回复设置秒区间）内一直调，
+         到点组不出才 null 退字卡；挑词+打字的时间真加进这条的间隔（一秒太短） */
+      let freeExtra = 0;
       if (freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
-        freeLine = (cards.length && Math.random() < 0.5)
-          ? FreeTalk.remake(pick(cards), talkCtx(ct))
-          : FreeTalk.compose(talkCtx(ct));
+        const budget = Math.max(800, (+p.maxSec ?? 3) * 1000);
+        const res = (cards.length && Math.random() < 0.5)
+          ? FreeTalk.remakeDetailed(cards.slice(0, 2), talkCtx(ct), budget)
+          : FreeTalk.composeDetailed(talkCtx(ct), budget);
+        if (res) { freeLine = res.text; freeExtra = Math.min(res.extraMs, 6000); }   /* 挑词打字真加进间隔，封顶 6s 防极端 */
       }
-      t += (i === 0 ? 0 : rollDelay(p));   /* 她 09:41：自由组话的间隔也吃回复设置的延迟区间，不再按拼音另算一套 */
+      t += (i === 0 ? 0 : rollDelay(p)) + freeExtra;   /* 她 09:41：间隔吃回复设置的延迟区间；P68 起另加挑词打字时间 */
       /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
          60% 送/40% 不发——旧「回复链 2%」钩子已拆（台账 L12：拢新口必拆旧口） */
       /* 红包（二期P15）：params.giftRedRate 开启后主动发红包，同一钩子链；群聊三模式在 maybeGift 内部分支（L24） */
@@ -13156,6 +13273,8 @@ const Doodle = (function () {
    网络字母词（xswl/yyds…）也能成句。
    她 09:45：所有成分等概率随机组——不再设常用度权重（旧 wPick 拆）。
    组不出通顺话就返回 null 回落字卡，不硬凑；金额/地址照旧不碰。
+   她 10-08 16:42：词典再加宽（复合词/活动类）、百家姓名字调低、
+   同音字层 applyTypo（TA「打字」选词选错的痕迹，命中率联系人独立、0=关）。
    ===================================================== */
 const FreeTalk = (function () {
 
@@ -13171,7 +13290,9 @@ const FreeTalk = (function () {
       { t: '在洗', obj: ['thing'] }, { t: '找了半天', obj: ['thing'] }, { t: '翻出来', obj: ['thing'] },
       { t: '刚从', obj: ['place'], suffix: '回来' }, { t: '想去', obj: ['place'] },
       { t: '路过', obj: ['place'] }, { t: '困在', obj: ['place'], suffix: '了' },
-      { t: '在撸', obj: ['animal'] }, { t: '想养', obj: ['animal'] }, { t: '喂了', obj: ['animal'] }
+      { t: '在撸', obj: ['animal'] }, { t: '想养', obj: ['animal'] }, { t: '喂了', obj: ['animal'] },
+      { t: '约了', obj: ['hobby'] }, { t: '去打', obj: ['hobby'] }, { t: '想玩', obj: ['hobby'] },
+      { t: '刚玩完', obj: ['hobby'] }, { t: '报了', obj: ['hobby'] }, { t: '在追', obj: ['media'] }
     ],
     /* 名词：tag=搭配标签（食物/饮品/水果/动物/物品/地点/内容/人物） */
     noun: [
@@ -13186,6 +13307,21 @@ const FreeTalk = (function () {
       { t: '芒果', tag: 'fruit' }, { t: '樱桃', tag: 'fruit' }, { t: '柚子', tag: 'fruit' },
       { t: '猫', tag: 'animal' }, { t: '小狗', tag: 'animal' }, { t: '仓鼠', tag: 'animal' },
       { t: '兔子', tag: 'animal' }, { t: '大鹅', tag: 'animal' }, { t: '金鱼', tag: 'animal' },
+      { t: '鹦鹉', tag: 'animal' }, { t: '乌龟', tag: 'animal' }, { t: '小猫崽', tag: 'animal' },
+      /* 她 10-08 16:42：复合词/特定词/活动类——类型再加宽 */
+      { t: '螺蛳粉', tag: 'food' }, { t: '烤冷面', tag: 'food' }, { t: '关东煮', tag: 'food' },
+      { t: '淀粉肠', tag: 'food' }, { t: '冰淇淋', tag: 'food' }, { t: '辣条', tag: 'food' },
+      { t: '杨枝甘露', tag: 'drink' }, { t: '生椰拿铁', tag: 'drink' }, { t: '柚子茶', tag: 'drink' },
+      { t: '空气炸锅', tag: 'thing' }, { t: '加湿器', tag: 'thing' }, { t: '暖水袋', tag: 'thing' },
+      { t: '小夜灯', tag: 'thing' }, { t: '数据线', tag: 'thing' }, { t: '香薰蜡烛', tag: 'thing' },
+      { t: '手账本', tag: 'thing' }, { t: '鼠标垫', tag: 'thing' },
+      { t: '漫画', tag: 'media' }, { t: '小说', tag: 'media' }, { t: '直播', tag: 'media' },
+      { t: '球赛', tag: 'media' }, { t: '表情包', tag: 'media' }, { t: '短视频', tag: 'media' },
+      { t: '剧本杀', tag: 'hobby' }, { t: '密室逃脱', tag: 'hobby' }, { t: '桌游', tag: 'hobby' },
+      { t: '羽毛球', tag: 'hobby' }, { t: '露营', tag: 'hobby' }, { t: '爬山', tag: 'hobby' },
+      { t: '游泳', tag: 'hobby' }, { t: '骑行', tag: 'hobby' },
+      { t: '江边', tag: 'place' }, { t: '天台', tag: 'place' }, { t: '自习室', tag: 'place' },
+      { t: '图书馆', tag: 'place' }, { t: '食堂', tag: 'place' },
       { t: '房间', tag: 'thing' }, { t: '衣柜', tag: 'thing' }, { t: '快递', tag: 'thing' },
       { t: '桌子', tag: 'thing' }, { t: '新手机', tag: 'thing' }, { t: '耳机', tag: 'thing' },
       { t: '充电器', tag: 'thing' }, { t: '被窝', tag: 'thing' }, { t: '枕头', tag: 'thing' },
@@ -13196,12 +13332,14 @@ const FreeTalk = (function () {
       { t: '那本书', tag: 'media' }, { t: '那部剧', tag: 'media' }, { t: '那个电影', tag: 'media' },
       { t: '新出的综艺', tag: 'media' }, { t: '歌单', tag: 'media' }, { t: '播客', tag: 'media' },
       { t: '同事', tag: 'person' }, { t: '我妈', tag: 'person' }, { t: '室友', tag: 'person' },
-      { t: '店员', tag: 'person' }, { t: '外卖小哥', tag: 'person' }
+      { t: '店员', tag: 'person' }, { t: '外卖小哥', tag: 'person' }, { t: '食堂阿姨', tag: 'person' },
+      { t: '辅导员', tag: 'person' }, { t: '快递员', tag: 'person' }, { t: '前台小姐姐', tag: 'person' }
     ],
     /* 形容词（表感觉/情绪/评价/天气感） */
     adj: [
       '累', '热', '冷', '无聊', '充实', '开心', '困', '饿', '饱', '烦', '爽',
-      '舒服', '难受', '委屈', '激动', '紧张', '放松', '清醒', '迷糊', '馋', '懒', '乖', '香', '吵'
+      '舒服', '难受', '委屈', '激动', '紧张', '放松', '清醒', '迷糊', '馋', '懒', '乖', '香', '吵',
+      '蔫', '丧', '上头', '破防', '飘'
     ],
     adjC: ['好看', '温柔', '可爱', '厉害', '贴心', '有趣', '聪明', '暖', '乖'],
     /* 状语多类（她 09:45：不要只做时间状语） */
@@ -13225,7 +13363,9 @@ const FreeTalk = (function () {
       { t: '来了来了', dup: true }, { t: '睡了睡了', dup: true }, { t: '干饭去' }, { t: '摸鱼' },
       { t: '躺平' }, { t: 'emo了' }, { t: '笑死' }, { t: '绷不住了' }, { t: '好耶' },
       { t: '晚安' }, { t: '早安' }, { t: '想吃东西' }, { t: '好无聊啊' }, { t: '不想动' },
-      { t: '快来陪我聊天' }, { t: '讲个故事呗' }, { t: '亲亲抱抱举高高', who: true }, { t: '在干嘛' }
+      { t: '快来陪我聊天' }, { t: '讲个故事呗' }, { t: '亲亲抱抱举高高', who: true }, { t: '在干嘛' },
+      { t: '夜猫子实锤' }, { t: '干饭人干饭魂' }, { t: '社恐发作' }, { t: '电量告急' },
+      { t: '求安慰', who: true }, { t: '推荐点好吃的' }, { t: '好想吃夜宵' }, { t: '谁懂啊' }
     ],
     /* 口语整句素材（陈述/抱怨/撒娇），供省略主语与长句用 */
     collo: [
@@ -13244,11 +13384,17 @@ const FreeTalk = (function () {
     /* 声母×韵母（含前鼻音 n / 后鼻音 ng 两套）——拼打字延迟的内部手感，不上屏 */
     initials: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
     finals: ['a', 'o', 'e', 'i', 'u', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'ong', 'ia', 'ie', 'iu', 'uan', 'un', 'ing', 'iang', 'iong', 'uang'],
-    /* 称呼组词：她 09:41——名字不只用她的名字，也能百家姓/爱称现组 */
+    /* 称呼组词：她 09:41——名字不只用她的名字，也能百家姓/爱称现组。
+       她 10-08 16:42：百家姓少出——先她的名字字，再爱称，姓氏垫底（工程值 0.72/0.8） */
     namePre: ['小', '阿', '老', '大'],
     nameSuf: ['宝', '宝儿', '崽', '崽崽', '乖', '乖乖', '酱', '喵', '球', '团子'],
     surname: ['王', '李', '张', '刘', '陈', '杨', '黄', '赵', '吴', '周', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '苏', '顾', '沈', '许'],
     redup: ['毛毛', '糖糖', '球球', '豆豆', '圆圆', '胖胖', '墩墩', '布丁', '糯米', '汤圆', '年糕', '麻薯'],
+    /* 她 10-08 16:42：同音字表——TA“打字”选词选错的痕迹（真机拼音输入法最常见的同音别字）。
+       命中率联系人独立可调（资料卡「同音字概率」，默认 3% 工程值，0=关） */
+    homo: { '在':'再','再':'在','做':'坐','坐':'做','的':'得','得':'的','地':'的',
+            '以':'已','已':'以','像':'象','象':'像','圆':'园','园':'圆',
+            '带':'戴','戴':'带','哪':'那','那':'哪','里':'理','理':'里' },
     /* 语气尾 */
     tail: ['呀', '啦', '哟', '嘛', '呗', '咯', '哈', '呜', '嘿嘿', '哈哈', '~'],
     qtail: ['吗', '呢', '啊', '吧', '嘛']
@@ -13273,13 +13419,14 @@ const FreeTalk = (function () {
     return p ? '我' + p.v + p.n : null;
   }
 
-  /* 称呼现组：小/阿/老＋她的名字字或百家姓，或名字末字/爱称＋宝/崽/酱……全部等概率 */
+  /* 称呼现组：小/阿/老＋她的名字字或百家姓，或名字末字/爱称＋宝/崽/酱……
+     她 10-08 16:42：百家姓名字调低——名字字 0.72、爱称 0.8 优先，姓氏只作垫底 */
   function makeNickname(ctx) {
     const my = String((ctx && ctx.myName) || '').trim();
     const pet = String((ctx && ctx.pet) || '').trim();
     const coreFromName = my ? pick(my.replace(/\s/g, '').split('')) : null;
-    const core = coreFromName && Math.random() < 0.55 ? coreFromName
-      : (pet && Math.random() < 0.5 ? pet : pick(DIC.surname));
+    const core = coreFromName && Math.random() < 0.72 ? coreFromName
+      : (pet && Math.random() < 0.8 ? pet : pick(DIC.surname));
     const style = Math.random();
     if (style < 0.3) return pick(DIC.namePre) + core;
     if (style < 0.5) return core + pick(DIC.nameSuf);
@@ -13365,42 +13512,138 @@ const FreeTalk = (function () {
       } }
   ];
 
-  /* 产出一句；搭配重抽 2 次不过 = null（调用方回落字卡，不硬凑）。ctx 可带称呼料 */
-  function compose(ctx) {
-    for (let i = 0; i < 3; i++) {
+  /* 她 10-08 16:42：同音字层——TA「打字」也有拼音选词的过程，
+     命中率（联系人独立、0=关，engine 聊天路径掷）掷中就换一个同音字，真机打字最常见的痕迹。
+     只处理自由组话产出的句子，她的固定字卡/含数字地址类不进这条路 */
+  function applyTypo(text) {
+    try {
+      const t = String(text || '');
+      if (!t) return t;
+      const idxs = [];
+      for (let i = 0; i < t.length; i++) if (DIC.homo[t[i]]) idxs.push(i);
+      if (!idxs.length) return t;
+      const i = idxs[Math.floor(Math.random() * idxs.length)];
+      return t.slice(0, i) + DIC.homo[t[i]] + t.slice(i + 1);
+    } catch (e) { return text; }
+  }
+
+  /* 她 10-08 17:33：同音字是组话「过程中」的事，不是发出来再换字——
+     猫猫/毛毛、圆圆/园园、豆豆/逗逗这类同音词，组到它要先在候选里挑，
+     可能先拿错再换回对的；错拿只留时间痕迹，发出去的永远是挑好的那个 */
+  const HOMO_WORDS = {
+    '猫猫': ['毛毛'], '毛毛': ['猫猫'], '豆豆': ['逗逗'], '逗逗': ['豆豆'],
+    '圆圆': ['园园'], '园园': ['圆圆'], '球球': ['求求'], '求求': ['球球'],
+    '妹妹': ['美美'], '美美': ['妹妹']
+  };
+  function homoOf(word) { return HOMO_WORDS[word] || null; }
+
+  /* 一个词的选字时间：起手 150~400ms；有同音候选就逐个翻（每个 +250~550ms），
+     25% 概率先拿错再看一眼换回来（+500~1200ms）——这就是「挑选的机会和时间」 */
+  function selectTime(word) {
+    let ms = 150 + Math.random() * 250;
+    const cands = HOMO_WORDS[word];
+    if (cands) {
+      cands.forEach(() => { ms += 250 + Math.random() * 300; });
+      if (Math.random() < 0.25) ms += 500 + Math.random() * 700;
+    }
+    return ms;
+  }
+  function deliberate(text) {
+    let ms = 0;
+    Object.keys(HOMO_WORDS).forEach(w => { if (String(text).indexOf(w) >= 0) ms += selectTime(w); });
+    return ms;
+  }
+  /* 打字本身的时间：按拼音按键数估（沿用二十六字母层手感，含声母/韵母位数） */
+  function strokeTime(text) {
+    const n = Math.max(2, String(text || '').length);
+    let keys = 0;
+    for (let i = 0; i < n; i++) {
+      const ini = Math.random() < 0.82 ? pick(DIC.initials).length : 0;
+      const fin = pick(DIC.finals).length;
+      keys += ini + fin;
+    }
+    return 400 + keys * (110 + Math.random() * 60);
+  }
+
+  /* 详细版组话：{ text, extraMs }。她 10-08 17:33：重调不设次数上限，
+     在调用方给的时间窗（budgetMs，取她回复设置里的秒区间）内一直调，
+     到点还组不出来才 null（调用方退回字卡）；extraMs=挑词+打字的额外时间，调用方真加进间隔 */
+  function composeDetailed(ctx, budgetMs) {
+    const budget = Math.max(0, +budgetMs || 0);
+    let spent = 0;
+    while (spent < budget) {
       const f = FRAMES[Math.floor(Math.random() * FRAMES.length)];
       const line = f.make(ctx);
-      if (line) return line;
+      spent += 180 + Math.random() * 320;   /* 起手想一句的时间 */
+      if (line) {
+        /* 她 10-08 17:33：挑词+打字的时间不算在重调窗内——组好了就打，
+           打字/选词时间真加进发送间隔（打不完不算组词失败） */
+        return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
+      }
     }
     return null;
   }
+  /* 兼容旧调用（日记/朋友圈/测一测）：给个宽限窗，返回纯文本 */
+  function compose(ctx, budgetMs) {
+    const r = composeDetailed(ctx, budgetMs == null ? 6000 : budgetMs);
+    return r ? r.text : null;
+  }
 
-  /* 对她的固定字卡做改写/加工/删减成新话——只动闲聊句，
-     金额/地址不碰（同 learn 拦截），组不出新意就返回 null 回落字卡原句 */
+  /* 她 10-08 17:33：字卡不只是改写一张——有概率两张卡各拆一块拼成新句（拆解/组合/删或加）。
+     金额/地址不碰（同 learn 拦截），组不出新意就 null 回落字卡原句 */
+  function makeRemix(arr, ctx) {
+    const t = arr[0];
+    if (!t || t.length > 40 || FEED_BAD.test(t)) return null;
+    const rolls = [];
+    if (arr.length >= 2) {
+      const cl = s => String(s).split(/[，。！？,!?]/).map(x => x.trim()).filter(Boolean);
+      const a = cl(arr[0]), b = cl(arr[1]);
+      if (a.length && b.length) {
+        rolls.push(() => a[0] + '，' + b[b.length - 1]);                          // 两张卡各拆一块拼
+        if (a.length > 1 && b.length > 1) rolls.push(() => b[0] + '，' + a[a.length - 1]);
+      }
+    }
+    const parts = t.split(/[，。！？,!?]/).map(s => s.trim()).filter(Boolean);
+    if (parts.length > 1) rolls.push(() => parts[Math.floor(Math.random() * parts.length)]);   // 删减：只留半句
+    if (t.length <= 4 && !/[。！？]/.test(t)) rolls.push(() => t + t);                            // 叠句
+    rolls.push(() => (Math.random() < 0.5 ? '说真的，' : '真的，') + t);                           // 加头
+    rolls.push(() => pick(DIC.conj) + '，' + t);                                                  // 转折词开头
+    if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(DIC.tail));                            // 语气尾
+    const who = whoOf(ctx);
+    if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼
+    rolls.push(() => makeNickname(ctx) + '，' + t);                                               // 现组称呼前缀
+    if (!rolls.length) return null;
+    const out = rolls[Math.floor(Math.random() * rolls.length)]();
+    if (!out || out.length > 50 || String(out).indexOf('undefined') >= 0) return null;
+    return out;
+  }
+  /* 详细版：{ text, extraMs }，同样走时间窗，窗内不限次重调，到点 null 退字卡。
+     src 给数组时（引擎传字卡池前两张）就有机会拆两张卡拼新句 */
+  function remakeDetailed(src, ctx, budgetMs) {
+    const budget = Math.max(0, +budgetMs || 0);
+    const arr = (Array.isArray(src) ? src : [src]).map(s => String(s || '').trim()).filter(Boolean);
+    if (!arr.length) return null;
+    let spent = 0;
+    while (spent < budget) {
+      let line = null;
+      try { line = makeRemix(arr, ctx); } catch (e) { line = null; }
+      spent += 200 + Math.random() * 350;
+      if (line) {
+        return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
+      }
+    }
+    return null;
+  }
+  /* 兼容旧调用（日记/朋友圈）：返回纯文本 */
   function remake(card, ctx) {
-    try {
-      const t = String(card || '').trim();
-      if (!t || t.length > 40 || FEED_BAD.test(t)) return null;
-      const rolls = [];
-      const parts = t.split(/[，。！？,!?]/).map(s => s.trim()).filter(Boolean);
-      if (parts.length > 1) rolls.push(() => parts[Math.floor(Math.random() * parts.length)]);   // 删减：只留半句
-      if (t.length <= 4 && !/[。！？]/.test(t)) rolls.push(() => t + t);                            // 叠句
-      rolls.push(() => (Math.random() < 0.5 ? '说真的，' : '真的，') + t);                           // 加头
-      rolls.push(() => pick(DIC.conj) + '，' + t);                                                  // 转折词开头
-      if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(DIC.tail));                            // 语气尾
-      const who = whoOf(ctx);
-      if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼
-      rolls.push(() => makeNickname(ctx) + '，' + t);                                               // 现组称呼前缀
-      if (!rolls.length) return null;
-      const out = rolls[Math.floor(Math.random() * rolls.length)]();
-      if (!out || out === t || out.length > 50 || String(out).indexOf('undefined') >= 0) return null;
-      return out;
-    } catch (e) { return null; }
+    const r = remakeDetailed(card, ctx, 5000);
+    return r ? r.text : null;
   }
 
   /* ---------- 拼音手感（二十六字母层，纯内部不上屏）：
      每个字按「声母位数＋韵母位数」算按键（韵母分前鼻音 n / 后鼻音 ng 两套，
      ng 比_n 多敲一位），一位~四位字母都能出现；15% 概率打错删掉重打 */
+  /* 旧版拼音手感保留给 typingDelay 外部引用；组话走 strokeTime（同手感） */
   function typingDelay(text) {
     const n = Math.max(2, String(text || '').length);
     let keys = 0;
@@ -13449,7 +13692,7 @@ const FreeTalk = (function () {
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed };
+  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗 */
 })();
 
 /* =====================================================
@@ -16375,8 +16618,38 @@ const Mall = (function () {
     { key: 'toy',     name: '玩具', icon: 'bear' },
     { key: 'digital', name: '数码', icon: 'headset' },
     { key: 'flower',  name: '鲜花', icon: 'flower' },
-    { key: 'cake',    name: '蛋糕', icon: 'cake',    takeout: true }
+    { key: 'cake',    name: '蛋糕', icon: 'cake',    takeout: true },
+    { key: 'daily',   name: '日用', icon: 'box' },
+    { key: 'book',    name: '图书', icon: 'book' }
   ];
+  /* 她 10-08 16:42：类目下再挂子标签（美食→米饭面食/麻辣烫…），金刚区下面一排胶囊可切换、可自加。
+     老 22 件商品的子标签走独立映射（原行一个字不动），新商品直接带 sub 字段；她自加的存在 customSubs */
+  const SUBS = {
+    food:    ['米饭面食', '麻辣烫', '粉面', '小吃', '汉堡炸鸡', '西餐简餐'],
+    tea:     ['奶茶', '果茶', '咖啡', '柠檬茶'],
+    fruit:   ['鲜果', '果切'],
+    snack:   ['饼干', '坚果', '速食', '糖果'],
+    cloth:   ['上衣', '裤装', '外穿'],
+    acc:     ['项链手链', '耳饰', '发饰'],
+    toy:     ['玩偶', '拼装', '灯具'],
+    digital: ['耳机音箱', '键盘外设', '配件'],
+    flower:  ['花束', '单支'],
+    cake:    ['蛋糕', '甜品'],
+    daily:   ['香薰', '小家电', '纸品日用'],
+    book:    ['漫画小说', '文具手账']
+  };
+  const BUILTIN_SUB = {
+    bp01: '米饭面食', bp02: '麻辣烫', bp03: '粉面',
+    bp04: '奶茶', bp05: '柠檬茶',
+    bp06: '鲜果', bp07: '鲜果',
+    bp08: '饼干', bp09: '坚果',
+    bp10: '上衣', bp11: '外穿',
+    bp12: '项链手链', bp13: '项链手链',
+    bp14: '玩偶', bp15: '灯具', bp16: '拼装',
+    bp17: '耳机音箱', bp18: '配件',
+    bp19: '花束', bp20: '单支',
+    bp21: '蛋糕', bp22: '甜品'
+  };
   const BUILTIN = [
     { id: 'bp01', cat: 'food',    name: '秘制排骨饭',   desc: '排骨给得多，酱汁拌饭一绝', fen: 3000,  origFen: 5000, icon: 'bowl',    takeout: true,  specs: [{ name: '口味', opts: ['不辣', '微辣', '中辣'] }] },
     { id: 'bp02', cat: 'food',    name: '麻辣烫',       desc: '自己挑的菜，烫出来最香',   fen: 2200,  icon: 'bowl',  takeout: true,  specs: [{ name: '辣度', opts: ['微微辣', '中辣', '特辣'] }] },
@@ -16399,7 +16672,39 @@ const Mall = (function () {
     { id: 'bp19', cat: 'flower',  name: '玫瑰花束',     desc: '包好送到手上的一束',       fen: 6600,  icon: 'flower' },
     { id: 'bp20', cat: 'flower',  name: '向日葵',       desc: '看着就精神的那种花',       fen: 5200,  icon: 'flower', specs: [{ name: '规格', opts: ['单支', '三支'] }] },
     { id: 'bp21', cat: 'cake',    name: '六寸奶油蛋糕', desc: '动物奶油，不甜腻',         fen: 12800, icon: 'cake',  takeout: true,  specs: [{ name: '口味', opts: ['原味', '巧克力', '抹茶'] }] },
-    { id: 'bp22', cat: 'cake',    name: '提拉米苏盒装', desc: '一勺到底，可可粉厚厚的',   fen: 3200,  icon: 'cake',  takeout: true }
+    { id: 'bp22', cat: 'cake',    name: '提拉米苏盒装', desc: '一勺到底，可可粉厚厚的',   fen: 3200,  icon: 'cake',  takeout: true },
+    /* 她 10-08 16:42：内设商品再铺一批，覆盖面加宽（新商品直接带 sub；价格为示例她可改） */
+    { id: 'bp23', cat: 'food',    name: '黑椒牛柳意面', desc: '面条裹满酱，牛柳给得实在', fen: 3200,  icon: 'bowl',  takeout: true, sub: '西餐简餐' },
+    { id: 'bp24', cat: 'food',    name: '台式卤肉饭',   desc: '卤汁渗进米饭，肥而不腻',   fen: 2600,  icon: 'bowl',  takeout: true, sub: '米饭面食' },
+    { id: 'bp25', cat: 'food',    name: '酸辣粉',       desc: '粉条爽滑，酸辣开胃',       fen: 1800,  icon: 'bowl',  takeout: true, sub: '粉面', specs: [{ name: '辣度', opts: ['不辣', '微辣', '特辣'] }] },
+    { id: 'bp26', cat: 'food',    name: '黄金鸡块',     desc: '外酥里嫩，趁热吃最香',     fen: 2400,  icon: 'bowl',  takeout: true, sub: '汉堡炸鸡' },
+    { id: 'bp27', cat: 'food',    name: '鲜肉小宠包',   desc: '现包现蒸，汤汁足',         fen: 1600,  icon: 'bowl',  takeout: true, sub: '小吃' },
+    { id: 'bp28', cat: 'tea',     name: '生椰拿铁',     desc: '椰香撞咖啡，顺口不苦',     fen: 2800,  icon: 'cup',   takeout: true, sub: '咖啡' },
+    { id: 'bp29', cat: 'tea',     name: '杨枝甘露',     desc: '芒果西柚西米，一口三重口感', fen: 2200, icon: 'cup',   takeout: true, sub: '果茶' },
+    { id: 'bp30', cat: 'tea',     name: '满杯红柚',     desc: '真果粒看得见，微苦回甘',   fen: 2400,  icon: 'cup',   takeout: true, sub: '果茶' },
+    { id: 'bp31', cat: 'fruit',   name: '果切拼盘',     desc: '哈密瓜西瓜火龙果，开盒即食', fen: 3600, icon: 'fruit', takeout: true, sub: '果切' },
+    { id: 'bp32', cat: 'fruit',   name: '软籽石榴',     desc: '籽软可直接嗍，甜过多汁',   fen: 3900,  icon: 'fruit', sub: '鲜果' },
+    { id: 'bp33', cat: 'snack',   name: '海盐苏打',     desc: '淡淡咸味，酥而不硬',       fen: 890,   icon: 'cookie', sub: '饼干' },
+    { id: 'bp34', cat: 'snack',   name: '螺蛳粉',       desc: '闻着上头吃着真香',         fen: 1500,  icon: 'cookie', sub: '速食', specs: [{ name: '辣度', opts: ['不辣', '中辣', '加辣'] }] },
+    { id: 'bp35', cat: 'snack',   name: '话梅糖',       desc: '含一颗，嘴里不寡淡',       fen: 1200,  icon: 'cookie', sub: '糖果' },
+    { id: 'bp36', cat: 'cloth',   name: '连帽卫衣',     desc: '内里抓绒，薄绒不闷',       fen: 12900, icon: 'shirt', sub: '上衣', specs: [{ name: '颜色', opts: ['燕麦', '炭灰', '奶白'] }, { name: '尺码', opts: ['M', 'L', 'XL'] }] },
+    { id: 'bp37', cat: 'cloth',   name: '直筒牛仔裤',   desc: '不紧不松，遮肉显瘦',       fen: 15900, icon: 'shirt', sub: '裤装', specs: [{ name: '尺码', opts: ['26', '27', '28', '29'] }] },
+    { id: 'bp38', cat: 'acc',     name: '银色小耳钉',   desc: '日常素颜也压得住',         fen: 4900,  icon: 'gem',   sub: '耳饰' },
+    { id: 'bp39', cat: 'acc',     name: '珍珠发夹',     desc: '别上去一点点温柔',         fen: 3600,  icon: 'gem',   sub: '发饰' },
+    { id: 'bp40', cat: 'toy',     name: '拼装小屋',     desc: '带灯串，拼完摆桌上',       fen: 9900,  icon: 'bear',  sub: '拼装' },
+    { id: 'bp41', cat: 'toy',     name: '云朵小夜灯',   desc: '拍一拍变色，睡觉不刺眼',   fen: 6900,  icon: 'bear',  sub: '灯具' },
+    { id: 'bp42', cat: 'digital', name: '三合一数据线', desc: '一线走天下，抽屉不再打结', fen: 3900,  icon: 'headset', sub: '配件' },
+    { id: 'bp43', cat: 'digital', name: '桌面小音箱',   desc: '体积小，低音意外地足',     fen: 15900, icon: 'headset', sub: '耳机音箱' },
+    { id: 'bp44', cat: 'flower',  name: '郁金香单支',   desc: '斜剪根醒来得快，好养',     fen: 2900,  icon: 'flower', sub: '单支' },
+    { id: 'bp45', cat: 'cake',    name: '巴斯克芝士块', desc: '焦香外壳，内里半熟',       fen: 3600,  icon: 'cake',  takeout: true, sub: '甜品' },
+    { id: 'bp46', cat: 'cake',    name: '泡芙六连装',   desc: '现挤奶油，冰过更好吃',     fen: 4200,  icon: 'cake',  takeout: true, sub: '甜品' },
+    { id: 'bp47', cat: 'daily',   name: '香薰蜡烛',     desc: '点半小时，屋里就是另一个味', fen: 6600, icon: 'box',   sub: '香薰' },
+    { id: 'bp48', cat: 'daily',   name: '迷你加湿器',   desc: '静音大容量，开着像有小雾', fen: 5900,  icon: 'box',   sub: '小家电' },
+    { id: 'bp49', cat: 'daily',   name: '洗脸巾大包',   desc: '厚实不掉屑，囤货装',       fen: 2900,  icon: 'box',   sub: '纸品日用' },
+    { id: 'bp50', cat: 'daily',   name: '注水暖水袋',   desc: '冬天被窝里的小太阳',       fen: 3500,  icon: 'box',   sub: '小家电' },
+    { id: 'bp51', cat: 'book',    name: '人气漫画单行本', desc: '一口气读完那本，续集等着你', fen: 4500, icon: 'book', sub: '漫画小说' },
+    { id: 'bp52', cat: 'book',    name: '手账本胶带套装', desc: '本子加四卷胶带，开箱就能写', fen: 5200, icon: 'book', sub: '文具手账' },
+    { id: 'bp53', cat: 'book',    name: '钢笔字帖',     desc: '描着描着字就变好看了',     fen: 2800,  icon: 'book',  sub: '文具手账' }
   ];
   /* 快捷地址标签（对标外卖软件；她 11:56 点名删掉「TA的房间」这种别扭文案） */
   const MY_TAGS = ['家', '公司', '学校'];
@@ -16423,7 +16728,7 @@ const Mall = (function () {
 
   function st() {
     const s = DB.state;
-    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {}, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {} };
+    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {}, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {}, customSubs: {} };
     if (!s.mall.custom) s.mall.custom = [];
     if (!s.mall.orders) s.mall.orders = [];
     if (!s.mall.cart) s.mall.cart = [];
@@ -16435,6 +16740,7 @@ const Mall = (function () {
     if (!s.mall.sales) s.mall.sales = {};       /* P67：销量，成交就累计 */
     if (!s.mall.customCats) s.mall.customCats = []; /* P67 她：类目可自定义添加 */
     if (!s.mall.income) s.mall.income = {};     /* P67 她：TA 钱包定期自动入账 */
+    if (!s.mall.customSubs) s.mall.customSubs = {}; /* P68 她 10-08 16:42：子标签可自加，按类目分桶 */
     return s.mall;
   }
   /* 自定义类目（P67 她 11:56：美食等标签还能自己加）与内置类目合并使用；金刚区/表单/外卖判定全走这里 */
@@ -16447,7 +16753,11 @@ const Mall = (function () {
   }
   function products() {
     const s = st();
-    return BUILTIN.filter(p => s.hidden.indexOf(p.id) < 0).map(applyOverride).concat(s.custom);
+    /* 她 10-08 16:42：老商品补子标签走映射（override 里有她的定制时照旧优先） */
+    return BUILTIN.filter(p => s.hidden.indexOf(p.id) < 0)
+      .map(p => (BUILTIN_SUB[p.id] ? Object.assign({}, p, { sub: BUILTIN_SUB[p.id] }) : p))
+      .map(applyOverride)
+      .concat(s.custom);
   }
   function productById(id) { return products().find(p => p.id === id) || null; }
   function catName(key) { const c = catsAll().find(x => x.key === key); return c ? c.name : '商品'; }
@@ -16604,10 +16914,11 @@ const Mall = (function () {
   }
 
   /* ---------- 商品图渲染（自建商品 img=dataURL，落盘自动进 IDB；破了画占位不画破图） ---------- */
-  function renderPage() { renderBanner(); renderCats(); renderList(); updateCartDot(); }
+  function renderPage() { renderBanner(); renderCats(); renderSubs(); renderList(); updateCartDot(); }
 
   let tab = 'shop';      // shop | takeout
   let cat = 'all';
+  let sub = 'all';       // 她 10-08 16:42：类目下子标签，类目切换时重置
 
   function renderCats() {
     const box = document.getElementById('mall-cats');
@@ -16617,9 +16928,48 @@ const Mall = (function () {
       '<button class="mall-cat' + (cat === c.key || (cat === 'all' && c.key === 'all') ? ' on' : '') + '" data-cat="' + c.key + '">' +
       '<i data-icon="' + c.icon + '" data-size="20"></i><span>' + c.name + '</span></button>').join('');
     box.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
-      cat = b.dataset.cat; renderCats(); renderList();
+      cat = b.dataset.cat; sub = 'all'; renderCats(); renderSubs(); renderList();
     }));
     mountIcons(box);
+  }
+
+  /* 她 10-08 16:42：类目下的子标签胶囊（全部+预设+自加+「＋」加标签）；没子标签的类目整排隐藏 */
+  function subsOf(key) {
+    const s = st().customSubs || {};
+    const out = (SUBS[key] || []).concat(s[key] || []);
+    products().forEach(p => { if (p.cat === key && p.sub && out.indexOf(p.sub) < 0) out.push(p.sub); });
+    return out;
+  }
+  function renderSubs() {
+    const box = document.getElementById('mall-subs');
+    if (!box) return;
+    const tags = (cat !== 'all') ? subsOf(cat) : [];
+    if (!tags.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = '<button type="button" class="mall-sub' + (sub === 'all' ? ' on' : '') + '" data-sub="all">全部</button>' +
+      tags.map(t => '<button type="button" class="mall-sub' + (sub === t ? ' on' : '') + '" data-sub="' + esc(t) + '">' + esc(t) + '</button>').join('') +
+      '<button type="button" class="mall-sub add" data-sub="+" aria-label="添加标签"><i data-icon="plus" data-size="12"></i></button>';
+    box.querySelectorAll('[data-sub]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.sub === '+') return openAddSub();
+      sub = b.dataset.sub; renderSubs(); renderList();
+    }));
+    mountIcons(box);
+  }
+  function openAddSub() {
+    if (cat === 'all') return;
+    const sh = sheet('新子标签（' + catName(cat) + '）', {});
+    sh.body.innerHTML = '<div class="addr-input"><input id="sub-name" maxlength="8" placeholder="标签名，如 轻食"></div>' +
+      '<button class="btn btn-primary" data-act="ok" style="width:100%">添加</button>';
+    sh.body.querySelector('[data-act="ok"]').addEventListener('click', () => {
+      const n = (sh.body.querySelector('#sub-name').value || '').trim();
+      if (!n) { UI.toast('标签得有个名字'); return; }
+      const s = st();
+      if (!s.customSubs[cat]) s.customSubs[cat] = [];
+      if (s.customSubs[cat].indexOf(n) < 0 && (SUBS[cat] || []).indexOf(n) < 0) s.customSubs[cat].push(n);
+      sub = n; DB.save(); sh.close(); renderSubs(); renderList();
+      UI.toast('已添加标签：' + n);
+    });
+    setTimeout(() => { const i = sh.body.querySelector('#sub-name'); if (i) i.focus(); }, 60);
   }
 
   function renderList() {
@@ -16628,6 +16978,7 @@ const Mall = (function () {
     const q = ((document.getElementById('mall-search') || {}).value || '').trim();  /* P67 她：搜索框 */
     let list = products().filter(p => tab === 'shop' ? true : !!p.takeout);
     if (cat !== 'all') list = list.filter(p => p.cat === cat);
+    if (cat !== 'all' && sub !== 'all') list = list.filter(p => p.sub === sub);   /* 她 10-08 16:42：子标签筛选 */
     if (q) list = list.filter(p => (p.name + ' ' + (p.desc || '')).indexOf(q) >= 0);
     if (!list.length) {
       box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="shop" data-size="40"></i></div><div class="empty-text">这个类目还没有商品</div></div>';
@@ -16760,7 +17111,9 @@ const Mall = (function () {
     function render() {
       sh.body.innerHTML =
         '<div class="sku-top">' + thumbHtml(p, 'sku-thumb') +
-        '<div class="sku-mid"><b>¥' + Wallet.yuan(p.fen) + (p.origFen ? '<em class="sku-orig">¥' + Wallet.yuan(p.origFen) + '</em>' : '') + '</b>' +
+        '<div class="sku-mid"><div class="sku-name" data-act="nameedit" role="button">' + esc(p.name) +
+        '</div>' +
+        '<b>¥' + Wallet.yuan(p.fen) + (p.origFen ? '<em class="sku-orig">¥' + Wallet.yuan(p.origFen) + '</em>' : '') + '</b>' +
         '<small>' + esc(p.desc || '') + '</small>' +
         ((st().sales || {})[p.id] ? '<small class="sku-sold">已售 ' + st().sales[p.id] + '</small>' : '') + '</div></div>' +
         (p.specs || []).map(sp =>
@@ -16770,8 +17123,8 @@ const Mall = (function () {
         '<div class="sku-row"><span class="sku-row-name">数量</span><span class="sku-qty">' +
         '<button type="button" data-q="-1">−</button><b>' + qty + '</b><button type="button" data-q="1">＋</button></span></div>' +
         '<div class="sku-acts"><button class="btn btn-secondary" data-act="cart">加入购物车</button>' +
-        '<button class="btn btn-primary" data-act="buy">立即购买</button></div>' +
-        '<button class="sku-manage" data-act="edit">编辑商品（图片/描述/价格）</button>';
+        '<button class="btn btn-primary" data-act="buy">立即购买</button></div>';
+      /* 她 10-08 16:42：编辑入口收进商品名（点名字进编辑页），底部那行字删掉 */
       sh.body.querySelectorAll('.sku-opt').forEach(b => b.addEventListener('click', () => {
         sel[b.dataset.spec] = b.dataset.opt; render();
       }));
@@ -16786,8 +17139,15 @@ const Mall = (function () {
         UI.toast('已加入购物车');
       });
       if (buy) buy.addEventListener('click', () => { sh.close(); openCheckout([{ pid: p.id, qty, spec: Object.assign({}, sel) }]); });
-      const ed = sh.body.querySelector('[data-act="edit"]');
-      if (ed) ed.addEventListener('click', () => { sh.close(); openForm(p); });
+      /* 她 10-08 17:33：不要箭头不要任何提示，双击名字直接进编辑页（单击不做事） */
+      let lastTap = 0;
+      const ne = sh.body.querySelector('[data-act="nameedit"]');
+      if (ne) ne.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastTap < 320) { lastTap = 0; sh.close(); openForm(p); }
+        else lastTap = now;
+      });
+      mountIcons(sh.body);
     }
     render();
   }
@@ -17342,6 +17702,7 @@ const Mall = (function () {
         ICON_CHOICES.map(k => '<button type="button" class="sku-opt' + (k === icon && !img ? ' on' : '') + '" data-icon-k="' + k + '"><i data-icon="' + k + '" data-size="16"></i></button>').join('') + '</span></div>' +
         '<div class="addr-input"><span class="sku-row-name">名称</span><input id="up-name" maxlength="20" placeholder="商品名称" value="' + esc(src ? src.name : '') + '"></div>' +
         '<div class="addr-input"><span class="sku-row-name">类目</span><select id="up-cat">' + catsAll().map(c => '<option value="' + c.key + '"' + (src && c.key === src.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select><button type="button" class="up-newcat" id="up-newcat">＋新类目</button></div>' +
+        '<div class="addr-input"><span class="sku-row-name">子标签</span><input id="up-sub" maxlength="8" placeholder="可选，如 ' + esc((subsOf(src ? src.cat : (cat !== 'all' ? cat : 'food'))[0] || '米饭面食')) + '" value="' + esc(src ? (src.sub || '') : '') + '"></div>' +
         '<div class="sku-row"><span class="sku-row-name">规格</span><span class="sku-opts" id="up-specs">' +
         specs.map((sp, i) =>
           '<div class="up-spec"><input class="sp-n" maxlength="6" placeholder="规格名，如 辣度" value="' + esc(sp.name) + '" data-i="' + i + '">' +
@@ -17390,6 +17751,7 @@ const Mall = (function () {
         }
         const c = sh.body.querySelector('#up-cat').value;
         const desc = (sh.body.querySelector('#up-desc').value || '').trim();
+        const subV = (sh.body.querySelector('#up-sub').value || '').trim();
         const takeout = !!(catsAll().find(x => x.key === c) || {}).takeout;
         /* 规格：名称和选项都非空才算一组（P67 她 11:56 自定义规格） */
         const specsOut = [];
@@ -17400,7 +17762,7 @@ const Mall = (function () {
           const opts = ((oInp ? oInp.value : '') || '').split(/[，,]/).map(s => s.trim()).filter(Boolean);
           if (n && opts.length) specsOut.push({ name: n, opts });
         });
-        const patch = { cat: c, name, desc, fen: chk.fen, origFen: origFen > chk.fen ? origFen : 0,
+        const patch = { cat: c, name, desc, sub: subV, fen: chk.fen, origFen: origFen > chk.fen ? origFen : 0,
           icon: img ? null : icon, img: img || null, takeout, specs: specsOut };
         if (src) {
           /* 编辑：自建改本体；内置落 overrides（products() 合并时优先） */
@@ -17507,7 +17869,7 @@ const Mall = (function () {
     if (ordersBtn) ordersBtn.addEventListener('click', openOrders);
     const tabs = document.getElementById('mall-tabs');
     if (tabs) tabs.querySelectorAll('[data-mtab]').forEach(b => b.addEventListener('click', () => {
-      tab = b.dataset.mtab; cat = 'all';
+      tab = b.dataset.mtab; cat = 'all'; sub = 'all';   /* 她 10-08 16:42：子标签随类目一起重置 */
       tabs.querySelectorAll('[data-mtab]').forEach(x => x.classList.toggle('on', x === b));
       renderPage();
     }));
@@ -17518,7 +17880,8 @@ const Mall = (function () {
   }
 
   return { init, open, renderPage, maybeGift, orderById, cardHtml, settleAll, openOrders, products, productById,
-    openProduct, openCart, openCheckout, openOrderDetail, openAddr, openForm, openCoupons, tickIncome };
+    openProduct, openCart, openCheckout, openOrderDetail, openAddr, openForm, openCoupons, tickIncome,
+    openAddSub, subsOf };   /* P68 她 10-08 16:42：子标签自加入口/清单，探针与资料卡共用 */
 })();
 
 /* =====================================================
@@ -26575,7 +26938,7 @@ const Profile = (function () {
         p.imgProb = Math.min(100, Math.max(0, Math.round(+el('pf-imgprob').value || 0)));
         p.emotionRate = Math.min(100, Math.max(0, Math.round(+el('pf-emotionrate').value || 0)));
     p.doodleRate = Math.min(100, Math.max(0, Math.round(+el('pf-doodlerate').value || 0)));
-        p.letterRate = Math.min(100, Math.max(0, Math.round(+el('pf-letterrate').value || 0)));
+    p.letterRate = Math.min(100, Math.max(0, Math.round(+el('pf-letterrate').value || 0)));
         /* 拼字卡（二期P9）：概率%+条数区间（最少≥2） */
         p.cardComboProb = Math.min(100, Math.max(0, Math.round(+el('pf-comboprob').value || 0)));
         p.cardComboMin = Math.max(2, Math.round(+el('pf-comin').value) || 2);
@@ -28871,6 +29234,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     /* 接线真正跑完的旗子：模块早就定义了，监听器却是现在才挂——
        验收探针拿“全局存在”当就绪会抢跑（09-03 问卷套件就是这么误判成“钮没反”），改看这里 */
     document.documentElement.dataset.lxBooted = '1';
+    window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
   }
 
   /* ---------------- 底部页签 ---------------- */
