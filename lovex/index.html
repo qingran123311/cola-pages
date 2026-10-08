@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261008-011129 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261008-123439 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -3269,6 +3269,47 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    ===================================================== */
 
 /* ---------- 页面骨架：双 Tab + 类目金刚区 + 商品列表 ---------- */
+/* P67 她 11:56：顶部轮播（推荐商品+领券卡），横向滑动手动看，不自动播不发光 */
+.mall-banner{display:flex;gap:8px;overflow-x:auto;padding:10px 14px 2px;scrollbar-width:none}
+.mall-banner::-webkit-scrollbar{display:none}
+.mall-bn{flex:0 0 auto;min-width:150px;display:flex;align-items:center;gap:8px;text-align:left;
+  padding:10px 12px;border:1px solid var(--line);background:var(--card);border-radius:var(--r-card);cursor:pointer}
+.mall-bn b{display:block;font-size:var(--fs-aux);color:var(--t1)}
+.mall-bn small{display:block;font-size:var(--fs-small);color:var(--t3)}
+.mall-bn.cpn{border-style:dashed}
+.mall-bn-thumb{width:38px;height:38px;border-radius:10px;flex:none}
+/* P67：搜索框（商品名/卖点过滤） */
+.mall-search{display:flex;align-items:center;gap:6px;margin:8px 14px 0;padding:7px 10px;
+  border:1px solid var(--line);border-radius:var(--r-btn);background:var(--card);color:var(--t3)}
+.mall-search input{flex:1;border:none;outline:none;background:none;font-size:var(--fs-small);color:var(--t1)}
+/* 销量小字 */
+.mall-p-sold,.sku-sold{font-style:normal;font-size:var(--fs-small);color:var(--t3);font-weight:400;margin-left:2px}
+/* 领券中心行 */
+.cpn-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.cpn-row .cpn-mid{flex:1;display:flex;flex-direction:column;gap:2px}
+.cpn-row .cpn-mid b{font-size:var(--fs-aux);color:var(--t1)}
+.cpn-row .cpn-mid small{font-size:var(--fs-small);color:var(--t3)}
+/* 结算费用明细/券选择 */
+.ck-fee{margin:8px 0 2px;padding:8px 0;border-top:1px dashed var(--line);font-size:var(--fs-small);color:var(--t2)}
+.ck-fee>div{display:flex;justify-content:space-between;padding:4px 0}
+.ck-fee .off{color:var(--ok)}
+.ck-total b{font-size:19px;font-weight:700}
+.ck-cpns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.ck-go{width:100%;margin-top:8px}
+/* 商品表单：规格组编辑 */
+.up-spec{display:flex;gap:6px;margin-bottom:6px}
+.up-spec .sp-n{flex:0 0 96px}
+.up-spec .sp-o{flex:1}
+.up-spec input{border:1px solid var(--line);border-radius:var(--r-btn);padding:6px 8px;font-size:var(--fs-aux);background:var(--card);color:var(--t1);outline:none;min-width:0}
+.up-spec-rm{border:none;background:none;color:var(--t3);cursor:pointer;padding:0 4px}
+.up-addspec{border:none;background:none;color:var(--t2);font-size:var(--fs-small);cursor:pointer;text-decoration:underline;padding:2px 0}
+.up-newcat{flex:none;border:none;background:none;color:var(--t2);font-size:var(--fs-aux);cursor:pointer;text-decoration:underline}
+/* 订单：等待代付提示 / 点评星 */
+.od-wait{font-size:var(--fs-small);color:var(--t3);padding:8px 0;width:100%;text-align:center}
+.rv-stars{display:flex;gap:10px;justify-content:center;padding:10px 0}
+.rv-star{border:none;background:none;font-size:26px;color:var(--line);cursor:pointer;line-height:1}
+.rv-star.on{color:var(--t1)}
+.od-review.after p{color:var(--ok)}
 .mall-tabs{display:flex;gap:6px;padding:10px 14px 4px}
 .mall-tabs button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--t2);
   border-radius:var(--r-btn);padding:8px 0;font-size:var(--fs-body);cursor:pointer}
@@ -3294,11 +3335,18 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mall-p-mid small{font-size:var(--fs-small);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mall-p-price{font-size:var(--fs-body);color:var(--t1);font-weight:600;display:flex;align-items:center;gap:6px}
 .mall-p-price em{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;font-weight:400}
-.mall-p-mine{font-style:normal;font-size:11px;color:var(--t2);border:1px solid var(--line);
-  border-radius:var(--r-tag);padding:0 4px;font-weight:400}
 .mall-p-go{color:var(--t3)}
-#mall-cart-dot{position:absolute;top:-4px;right:-6px;min-width:15px;height:15px;border-radius:8px;
+/* 她 11:19：商城顶栏订单/购物车原来错用 nav-act（朋友圈深底白图标那套）——浅色导航栏上图标隐形、
+   两个 margin-left:auto 还把标题挤歪。换成自己的钮：定位照 .nav-back 规范（绝对定位不被标题层盖），颜色随主题 */
+.mall-navact{position:absolute;top:0;bottom:0;width:42px;border:none;background:none;
+  color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center}
+#mall-orders-btn{right:44px}
+#mall-cart-btn{right:6px}
+#mall-cart-dot{position:absolute;top:10px;right:4px;min-width:15px;height:15px;border-radius:8px;
   background:var(--ok);color:#fff;font-size:10px;font-style:normal;line-height:15px;text-align:center;padding:0 3px}
+/* 她 11:19：SKU 弹窗里的「编辑商品」入口（内置/自建都能改） */
+.sku-manage{display:block;margin-top:4px;border:none;background:none;color:var(--t3);font-size:var(--fs-small);
+  cursor:pointer;text-decoration:underline;padding:6px 0;width:100%;text-align:center}
 
 /* ---------- 底部弹层（商城唯一弹层：SKU/购物车/结算/订单/地址/上传） ---------- */
 .mall-mask{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1200;display:flex;
@@ -3934,14 +3982,16 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <header class="navbar">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
       <div class="navbar-title">商城</div>
-      <button class="nav-act" id="mall-orders-btn" title="我的订单"><i data-icon="box" data-size="18"></i></button>
-      <button class="nav-act" id="mall-cart-btn" title="购物车"><i data-icon="cart" data-size="18"></i><i class="mall-cart-dot" id="mall-cart-dot" hidden></i></button>
+      <button class="mall-navact" id="mall-orders-btn" title="我的订单"><i data-icon="box" data-size="18"></i></button>
+      <button class="mall-navact" id="mall-cart-btn" title="购物车"><i data-icon="cart" data-size="18"></i><i class="mall-cart-dot" id="mall-cart-dot" hidden></i></button>
     </header>
     <div class="page-body page-body-flush">
+      <div class="mall-banner" id="mall-banner"></div>
       <div class="mall-tabs" id="mall-tabs">
         <button class="on" data-mtab="shop">商城</button>
         <button data-mtab="takeout">外卖</button>
       </div>
+      <div class="mall-search"><i data-icon="search" data-size="14"></i><input id="mall-search" placeholder="搜商品名或卖点"></div>
       <div class="mall-cats" id="mall-cats"></div>
       <div class="mall-list" id="mall-list"></div>
     </div>
@@ -15372,11 +15422,12 @@ const Wallet = (function () {
   const TYPES = [
     ['recharge', '充值'], ['redpacket', '红包'], ['transfer', '转账'],
     ['groupcollect', '群收款'], ['consume', '用户消费'], ['refund', '有退款'],
-    ['mall', '商城']   /* P64：商城/外卖消费（她 10-07 拍板）；走 Pay 唯一口，只是账单上看得懂 */
+    ['mall', '商城'],   /* P64：商城/外卖消费（她 10-07 拍板）；走 Pay 唯一口，只是账单上看得懂 */
+    ['income', '入账']  /* P67 她 11:56：TA 钱包定期自动入账，模拟正常收入 */
   ];
   const TICON = {
     recharge: 'download', redpacket: 'heart', transfer: 'chat',
-    groupcollect: 'chat-group', consume: 'tag', refund: 'check', mall: 'shop'
+    groupcollect: 'chat-group', consume: 'tag', refund: 'check', mall: 'shop', income: 'download'
   };
 
   function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
@@ -16350,9 +16401,9 @@ const Mall = (function () {
     { id: 'bp21', cat: 'cake',    name: '六寸奶油蛋糕', desc: '动物奶油，不甜腻',         fen: 12800, icon: 'cake',  takeout: true,  specs: [{ name: '口味', opts: ['原味', '巧克力', '抹茶'] }] },
     { id: 'bp22', cat: 'cake',    name: '提拉米苏盒装', desc: '一勺到底，可可粉厚厚的',   fen: 3200,  icon: 'cake',  takeout: true }
   ];
-  /* 快捷地址标签（乙游式；文本她填，没填过就没有，不造默认地址） */
+  /* 快捷地址标签（对标外卖软件；她 11:56 点名删掉「TA的房间」这种别扭文案） */
   const MY_TAGS = ['家', '公司', '学校'];
-  const TA_TAGS = ['TA的房间', 'TA的公司', 'TA的学校', '宿舍'];
+  const TA_TAGS = ['家', '公司', '学校', '宿舍'];
 
   /* ---------- 物流节奏（她 23:06②③拍「随机时间/分段」；区间为工程值，对标真实节奏，她可改） ---------- */
   const TAKEOUT_NODES = [
@@ -16372,17 +16423,34 @@ const Mall = (function () {
 
   function st() {
     const s = DB.state;
-    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {} };
+    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {}, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {} };
     if (!s.mall.custom) s.mall.custom = [];
     if (!s.mall.orders) s.mall.orders = [];
     if (!s.mall.cart) s.mall.cart = [];
     if (!s.mall.addr) s.mall.addr = { me: [], byContact: {} };
     if (!s.mall.lastGiftAt) s.mall.lastGiftAt = {};
+    if (!s.mall.hidden) s.mall.hidden = [];
+    if (!s.mall.overrides) s.mall.overrides = {};
+    if (!s.mall.coupons) s.mall.coupons = [];   /* P67 她 11:56：满减券，结算抵扣、退款返还 */
+    if (!s.mall.sales) s.mall.sales = {};       /* P67：销量，成交就累计 */
+    if (!s.mall.customCats) s.mall.customCats = []; /* P67 她：类目可自定义添加 */
+    if (!s.mall.income) s.mall.income = {};     /* P67 她：TA 钱包定期自动入账 */
     return s.mall;
   }
-  function products() { return BUILTIN.concat(st().custom); }
+  /* 自定义类目（P67 她 11:56：美食等标签还能自己加）与内置类目合并使用；金刚区/表单/外卖判定全走这里 */
+  function catsAll() { return CATS.concat(st().customCats || []); }
+  /* 她 11:19：内置商品也能改/删——改的落 overrides（BUILTIN 常量不动，升级改价不冲掉她的定制）、
+     删的记 hidden；自建商品直接改/删 custom 本体 */
+  function applyOverride(p) {
+    const ov = st().overrides[p.id];
+    return ov ? Object.assign({}, p, ov) : p;
+  }
+  function products() {
+    const s = st();
+    return BUILTIN.filter(p => s.hidden.indexOf(p.id) < 0).map(applyOverride).concat(s.custom);
+  }
   function productById(id) { return products().find(p => p.id === id) || null; }
-  function catName(key) { const c = CATS.find(x => x.key === key); return c ? c.name : '商品'; }
+  function catName(key) { const c = catsAll().find(x => x.key === key); return c ? c.name : '商品'; }
   function esc(s) { return UI.escapeHtml(s); }
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function pick(arr) { return arr[rand(0, arr.length - 1)]; }
@@ -16491,10 +16559,20 @@ const Mall = (function () {
   function cardHtml(m, o) {
     if (!o) return '<div class="moc gone">这笔订单已删除</div>';
     const kindName = o.kind === 'takeout' ? '外卖' : '商城';
-    const gift = o.buyerUid !== 'me' || m.paidBy;
-    const head = kindName + (gift ? ' · 已代付' : '');
     const it = itemMain(o);
     const p = productById(it.pid);
+    /* P67 她 11:56：代付邀请卡（对标她发的麦当劳代付卡：商品/金额/点开处理） */
+    if (o.payReq && !o.pay && o.payReq.state === 'waiting') {
+      const mine = o.payReq.to === 'me';
+      return '<div class="moc payreq" data-order="' + o.id + '">' +
+        '<div class="moc-head"><i data-icon="shop" data-size="14"></i><span>代付邀请 · ' + (mine ? '邀请你代付' : '等待 TA 代付') + '</span><b>¥' + Wallet.yuan(o.totalFen) + '</b></div>' +
+        '<div class="moc-item">' + thumbHtml(p, 'moc-thumb') +
+        '<div class="moc-mid"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b><small>' + esc(specText(it)) + '</small></div></div>' +
+        '<div class="moc-eta">' + (mine ? '点开看看：帮他付 or 婉拒' : 'TA 会尽快处理，结果在这条卡上更新') + '</div></div>';
+    }
+    if (o.payReq && !o.pay && o.payReq.state === 'declined') return '<div class="moc gone">这次代付被婉拒了，订单已取消</div>';
+    const gift = o.buyerUid !== 'me' || m.paidBy;
+    const head = kindName + (o.payReq && o.pay ? ' · ' + (payLabel(o) || '已代付') : (gift ? ' · 已代付' : ''));
     return '<div class="moc" data-order="' + o.id + '">' +
       '<div class="moc-head"><i data-icon="' + (o.kind === 'takeout' ? 'takeout' : 'shop') + '" data-size="14"></i>' +
       '<span>' + head + '</span><b>¥' + Wallet.yuan(o.totalFen) + '</b></div>' +
@@ -16526,7 +16604,7 @@ const Mall = (function () {
   }
 
   /* ---------- 商品图渲染（自建商品 img=dataURL，落盘自动进 IDB；破了画占位不画破图） ---------- */
-  function renderPage() { renderCats(); renderList(); updateCartDot(); }
+  function renderPage() { renderBanner(); renderCats(); renderList(); updateCartDot(); }
 
   let tab = 'shop';      // shop | takeout
   let cat = 'all';
@@ -16534,7 +16612,7 @@ const Mall = (function () {
   function renderCats() {
     const box = document.getElementById('mall-cats');
     if (!box) return;
-    const cats = CATS.filter(c => tab === 'shop' ? true : !!c.takeout);
+    const cats = catsAll().filter(c => tab === 'shop' ? true : !!c.takeout);
     box.innerHTML = [{ key: 'all', name: '全部', icon: 'shop' }].concat(cats).map(c =>
       '<button class="mall-cat' + (cat === c.key || (cat === 'all' && c.key === 'all') ? ' on' : '') + '" data-cat="' + c.key + '">' +
       '<i data-icon="' + c.icon + '" data-size="20"></i><span>' + c.name + '</span></button>').join('');
@@ -16547,8 +16625,10 @@ const Mall = (function () {
   function renderList() {
     const box = document.getElementById('mall-list');
     if (!box) return;
+    const q = ((document.getElementById('mall-search') || {}).value || '').trim();  /* P67 她：搜索框 */
     let list = products().filter(p => tab === 'shop' ? true : !!p.takeout);
     if (cat !== 'all') list = list.filter(p => p.cat === cat);
+    if (q) list = list.filter(p => (p.name + ' ' + (p.desc || '')).indexOf(q) >= 0);
     if (!list.length) {
       box.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-icon="shop" data-size="40"></i></div><div class="empty-text">这个类目还没有商品</div></div>';
       mountIcons(box); return;
@@ -16560,18 +16640,66 @@ const Mall = (function () {
       (p.desc ? '<small>' + esc(p.desc) + '</small>' : '') +
       '<span class="mall-p-price">¥' + Wallet.yuan(p.fen) +
       (p.origFen ? '<em>¥' + Wallet.yuan(p.origFen) + '</em>' : '') +
-      ((st().custom || []).some(c => c.id === p.id) ? '<i class="mall-p-mine">我的商品</i>' : '') +
+      ((st().sales || {})[p.id] ? '<i class="mall-p-sold">已售' + st().sales[p.id] + '</i>' : '') +
       '</span></span>' +
       '<span class="mall-p-go"><i data-icon="chevron-right" data-size="14"></i></span></button>').join('');
     /* 她 23:06⑤：自建商品的入口放列表顶上一张虚线卡，商城只有一个上传入口 */
     const upload = '<button class="mall-upload" id="mall-upload-btn"><i data-icon="plus" data-size="16"></i>上传我的商品</button>';
     box.innerHTML = (tab === 'shop' ? upload : '') + rows;
-    box.querySelectorAll('[data-pid]').forEach(b => b.addEventListener('click', () => {
-      const p = productById(b.dataset.pid); if (p) openProduct(p);
-    }));
+    /* 她 11:19：商品卡手势统一走 bindCard（单击开详情、双击/长按删除） */
+    box.querySelectorAll('[data-pid]').forEach(b => bindCard(b, b.dataset.pid));
     const up = document.getElementById('mall-upload-btn');
-    if (up) up.addEventListener('click', openUpload);
+    if (up) up.addEventListener('click', () => openForm(null));
     mountIcons(box);
+  }
+
+  /* P67 她 11:56：商城顶部轮播（推荐商品 + 领券卡），横向滑动手动看，不自动播 */
+  function renderBanner() {
+    const box = document.getElementById('mall-banner');
+    if (!box) return;
+    const picks = products().filter(p => p.img).concat(products().slice(0, 3));
+    const uniq = picks.filter((p, i) => picks.findIndex(x => x.id === p.id) === i).slice(0, 3);
+    box.innerHTML =
+      '<button class="mall-bn cpn" data-bn="coupon"><b>领券中心</b><small>满减券先到先得</small><i data-icon="tag" data-size="20"></i></button>' +
+      uniq.map(p => '<button class="mall-bn" data-bn="' + p.id + '">' + thumbHtml(p, 'mall-bn-thumb') +
+        '<span><b>' + esc(p.name) + '</b><small>¥' + Wallet.yuan(p.fen) + '</small></span></button>').join('');
+    box.querySelectorAll('[data-bn]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.bn === 'coupon') return openCoupons();
+      const p = productById(b.dataset.bn); if (p) openProduct(p);
+    }));
+    mountIcons(box);
+  }
+
+  /* ---------- 优惠券（P67 她 11:56：满减券；结算抵商品、退款返还） ----------
+     领券池固定；领进 s.mall.coupons 才能用；当日领的当日有效（ts 超 24h 不可选） */
+  const COUPON_POOL = [
+    { id: 'cpn0',   name: '无门槛减3',  offFen: 300,  minFen: 0 },
+    { id: 'cpn30',  name: '满30减5',   offFen: 500,  minFen: 3000 },
+    { id: 'cpn50',  name: '满50减8',   offFen: 800,  minFen: 5000 },
+    { id: 'cpn100', name: '满100减15', offFen: 1500, minFen: 10000 }
+  ];
+  function openCoupons() {
+    const sh = sheet('领券中心', {});
+    function render() {
+      const mine = st().coupons || [];
+      sh.body.innerHTML = COUPON_POOL.map(c => {
+        const got = mine.some(x => x.id === c.id && !x.used);
+        return '<div class="cpn-row"><div class="cpn-mid"><b>' + esc(c.name) + '</b><small>领取后当天有效</small></div>' +
+          '<button type="button" class="btn ' + (got ? 'btn-secondary' : 'btn-primary') + '" data-cpn="' + c.id + '"' + (got ? ' disabled' : '') + '>' + (got ? '已领' : '领取') + '</button></div>';
+      }).join('');
+      sh.body.querySelectorAll('[data-cpn]').forEach(b => b.addEventListener('click', () => {
+        const c = COUPON_POOL.find(x => x.id === b.dataset.cpn);
+        if (!c) return;
+        st().coupons.push({ id: c.id, name: c.name, offFen: c.offFen, minFen: c.minFen, used: false, ts: Date.now() });
+        DB.save(); render(); UI.toast('已领取：' + c.name);
+      }));
+    }
+    render();
+  }
+  /* 结算可选的券：没用过、没过期、满够门槛；一单用一张，只抵商品部分 */
+  function usableCoupons(goodsFen) {
+    const now = Date.now();
+    return (st().coupons || []).filter(c => !c.used && c.ts > now - 24 * 3600 * 1000 && goodsFen >= c.minFen);
   }
 
   function updateCartDot() {
@@ -16580,6 +16708,47 @@ const Mall = (function () {
     const n = st().cart.reduce((s, c) => s + c.qty, 0);
     dot.hidden = !n;
     dot.textContent = n > 99 ? '99+' : n;
+  }
+
+  /* ---------- 商品卡手势（她 11:19：单击开详情；双击/长按删除商品） ----------
+     双击 = 两击 320ms 内；长按 = 按住 600ms（触屏）。单击要等 340ms 才放行——
+     这是双击判定的代价，开详情多等一瞬，换两个删除手势都灵。 */
+  function bindCard(el, pid) {
+    let lastTap = 0, holdT = null;
+    const cancelHold = () => { if (holdT) { clearTimeout(holdT); holdT = null; } };
+    el.addEventListener('touchstart', () => { if (!holdT) holdT = setTimeout(() => { holdT = null; lastTap = 0; confirmDelete(pid); }, 600); }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(ev => el.addEventListener(ev, cancelHold, { passive: true }));
+    el.addEventListener('contextmenu', e => e.preventDefault());   /* 长按别弹系统菜单 */
+    el.addEventListener('click', () => {
+      const now = Date.now();
+      cancelHold();
+      if (now - lastTap < 320) { lastTap = 0; confirmDelete(pid); return; }
+      lastTap = now;
+      setTimeout(() => {
+        if (lastTap && Date.now() - lastTap >= 300) { lastTap = 0; const p = productById(pid); if (p) openProduct(p); }
+      }, 340);
+    });
+  }
+  function confirmDelete(pid) {
+    const p = productById(pid);
+    if (!p) return;
+    const isCustom = st().custom.some(c => c.id === pid);
+    UI.confirmBox({
+      title: '删除「' + p.name + '」？',
+      text: isCustom ? '自建商品删除后不可恢复，购物车里这件也会一并清掉。' : '内置商品删除后商城不再显示（已加进购物车的照常结算）。',
+      okText: '删除', danger: true
+    }).then(ok => {
+      if (!ok) return;
+      const s = st();
+      if (isCustom) {
+        s.custom = s.custom.filter(c => c.id !== pid);
+        s.cart = (s.cart || []).filter(c => c.pid !== pid);
+      } else if (s.hidden.indexOf(pid) < 0) {
+        s.hidden.push(pid);
+      }
+      DB.save(); renderPage(); updateCartDot();
+      UI.toast('已删除：' + p.name);
+    });
   }
 
   /* ---------- SKU 弹窗（拼多多式：规格胶囊 + 数量；食物有口味，衣物有尺码，没有的只有数量） ---------- */
@@ -16592,7 +16761,8 @@ const Mall = (function () {
       sh.body.innerHTML =
         '<div class="sku-top">' + thumbHtml(p, 'sku-thumb') +
         '<div class="sku-mid"><b>¥' + Wallet.yuan(p.fen) + (p.origFen ? '<em class="sku-orig">¥' + Wallet.yuan(p.origFen) + '</em>' : '') + '</b>' +
-        '<small>' + esc(p.desc || '') + '</small></div></div>' +
+        '<small>' + esc(p.desc || '') + '</small>' +
+        ((st().sales || {})[p.id] ? '<small class="sku-sold">已售 ' + st().sales[p.id] + '</small>' : '') + '</div></div>' +
         (p.specs || []).map(sp =>
           '<div class="sku-row"><span class="sku-row-name">' + esc(sp.name) + '</span><span class="sku-opts">' +
           sp.opts.map(o => '<button type="button" class="sku-opt' + (sel[sp.name] === o ? ' on' : '') + '" data-spec="' + esc(sp.name) + '" data-opt="' + esc(o) + '">' + esc(o) + '</button>').join('') +
@@ -16600,7 +16770,8 @@ const Mall = (function () {
         '<div class="sku-row"><span class="sku-row-name">数量</span><span class="sku-qty">' +
         '<button type="button" data-q="-1">−</button><b>' + qty + '</b><button type="button" data-q="1">＋</button></span></div>' +
         '<div class="sku-acts"><button class="btn btn-secondary" data-act="cart">加入购物车</button>' +
-        '<button class="btn btn-primary" data-act="buy">立即购买</button></div>';
+        '<button class="btn btn-primary" data-act="buy">立即购买</button></div>' +
+        '<button class="sku-manage" data-act="edit">编辑商品（图片/描述/价格）</button>';
       sh.body.querySelectorAll('.sku-opt').forEach(b => b.addEventListener('click', () => {
         sel[b.dataset.spec] = b.dataset.opt; render();
       }));
@@ -16615,6 +16786,8 @@ const Mall = (function () {
         UI.toast('已加入购物车');
       });
       if (buy) buy.addEventListener('click', () => { sh.close(); openCheckout([{ pid: p.id, qty, spec: Object.assign({}, sel) }]); });
+      const ed = sh.body.querySelector('[data-act="edit"]');
+      if (ed) ed.addEventListener('click', () => { sh.close(); openForm(p); });
     }
     render();
   }
@@ -16662,26 +16835,35 @@ const Mall = (function () {
     render();
   }
 
-  /* ---------- 结算（收货人 → 地址 → 支付方式 → 提交；全走 Pay 唯一口） ---------- */
+  /* ---------- 结算（收货人 → 地址 → 费用明细/券 → 支付方式 → 提交；全走 Pay 唯一口）
+     P67 她 11:56：外卖加打包费/跑腿费、券抵商品部分、可邀请 TA 代付 ---------- */
   function openCheckout(lines) {
     const items = lines.map(l => ({ l, p: productById(l.pid) })).filter(x => x.p);
     if (!items.length) { UI.toast('商品都不在了'); return; }
     const sh = sheet('确认订单', { tall: true });
     let toUid = 'me';
     let addrId = '';
-    let payBox = null;
-    const totalFen = items.reduce((s, x) => s + x.p.fen * x.l.qty, 0);
+    let couponId = '';
+    /* 外卖才收打包费/跑腿费（对标真实外卖；金额是工程值她可改） */
+    const anyTakeout = items.some(x => x.p.takeout);
+    const packFen = anyTakeout ? items.reduce((s, x) => s + x.l.qty, 0) * rand(100, 200) : 0;
+    const errandFen = anyTakeout ? rand(200, 600) : 0;
+    const goodsFen = items.reduce((s, x) => s + x.p.fen * x.l.qty, 0);
 
     function addrList(uid) { return uid === 'me' ? st().addr.me : (st().addr.byContact[uid] || []); }
     function curAddr() {
       const list = addrList(toUid);
       return list.find(a => a.id === addrId) || null;
     }
+    function curCpn() { return usableCoupons(goodsFen).find(c => c.id === couponId) || null; }
+    function amountFen() { const c = curCpn(); return goodsFen - (c ? c.offFen : 0) + packFen + errandFen; }
 
     function render() {
       const contacts = (DB.state.contacts || []).filter(c => !c.isGroup);
       const list = addrList(toUid);
       const a = curAddr();
+      const cps = usableCoupons(goodsFen);
+      if (couponId && !cps.some(c => c.id === couponId)) couponId = '';
       sh.body.innerHTML =
         '<div class="ck-row"><span class="ck-row-name">送给</span><span class="ck-people">' +
         '<button type="button" class="ck-person' + (toUid === 'me' ? ' on' : '') + '" data-uid="me">我自己</button>' +
@@ -16694,57 +16876,176 @@ const Mall = (function () {
           '<div class="cart-mid"><b>' + esc(x.p.name) + '</b><small>' + esc(specText(x.l)) + '</small></div>' +
           '<span class="cart-price">¥' + Wallet.yuan(x.p.fen * x.l.qty) + '</span></div>').join('') + '</div>' +
         /* Pay 老规矩：一张亲属卡都没有时支付行不出现（零钱直接结算）——空标题也不留 */
-        ((typeof Pay !== 'undefined' && Pay.options(totalFen).cards) ? '<div class="ck-pay"><div class="ck-row-name">付款方式</div><div id="mall-pay-box"></div></div>' : '<div id="mall-pay-box"></div>') +
-        '<div class="ck-total">合计 <b>¥' + Wallet.yuan(totalFen) + '</b></div>' +
-        '<button class="btn btn-primary ck-go" data-act="submit">提交订单</button>';
+        ((typeof Pay !== 'undefined' && Pay.options(amountFen()).cards) ? '<div class="ck-pay"><div class="ck-row-name">付款方式</div><div id="mall-pay-box"></div></div>' : '<div id="mall-pay-box"></div>') +
+        (cps.length ? '<div class="ck-row"><span class="ck-row-name">优惠券</span><span class="ck-cpns">' +
+          cps.map(c => '<button type="button" class="sku-opt' + (couponId === c.id ? ' on' : '') + '" data-cpn="' + c.id + '">' + esc(c.name) + '</button>').join('') +
+          '</span></div>' : '') +
+        (anyTakeout ? '<div class="ck-fee"><div><span>商品小计</span>¥' + Wallet.yuan(goodsFen) + '</div>' +
+          '<div><span>打包费</span>¥' + Wallet.yuan(packFen) + '</div>' +
+          '<div><span>跑腿费</span>¥' + Wallet.yuan(errandFen) + '</div>' +
+          (curCpn() ? '<div class="off"><span>优惠券</span>-¥' + Wallet.yuan(curCpn().offFen) + '</div>' : '') + '</div>' : '') +
+        /* Pay 老规矩：一张亲属卡都没有时支付行不出现（零钱直接结算）——空标题也不留 */
+        ((typeof Pay !== 'undefined' && Pay.options(amountFen()).cards) ? '<div class="ck-pay"><div class="ck-row-name">付款方式</div><div id="mall-pay-box"></div></div>' : '<div id="mall-pay-box"></div>') +
+        '<div class="ck-total">合计 <b>¥' + Wallet.yuan(amountFen()) + '</b></div>' +
+        '<button class="btn btn-primary ck-go" data-act="submit">提交订单</button>' +
+        '<button class="btn btn-secondary ck-go" data-act="payreq">邀请 TA 代付</button>';
       sh.body.querySelectorAll('[data-uid]').forEach(b => b.addEventListener('click', () => {
         toUid = b.dataset.uid; addrId = ''; render();
       }));
       sh.body.querySelector('[data-act="addr"]').addEventListener('click', () => openAddr(toUid, addrId, id => { addrId = id; render(); }));
-      payBox = sh.body.querySelector('#mall-pay-box');
-      if (typeof Pay !== 'undefined') Pay.attach(payBox, { getAmt: () => totalFen });
+      sh.body.querySelectorAll('[data-cpn]').forEach(b => b.addEventListener('click', () => {
+        couponId = couponId === b.dataset.cpn ? '' : b.dataset.cpn; render();
+      }));
+      const payBox = sh.body.querySelector('#mall-pay-box');
+      if (typeof Pay !== 'undefined') Pay.attach(payBox, { getAmt: () => amountFen() });
       sh.body.querySelector('[data-act="submit"]').addEventListener('click', submit);
+      sh.body.querySelector('[data-act="payreq"]').addEventListener('click', pickPayer);
     }
 
     function submit() {
-      /* 先验钱再下单：一笔都扣不了就别开单（余额不被扣成负数是老规矩） */
+      /* 先验钱再下单：一笔都扣不了就别开单（余额不被扣成负数是老规矩）
+         扣款口径：每单实付 = 商品 + 分摊到首单的打包/跑腿费 - 券；展示与实付同源，不两张皮 */
       if (typeof Pay === 'undefined') return;
-      const o = Pay.options(totalFen);
+      const amt = amountFen();
+      const o = Pay.options(amt);
       if (!o.list.some(x => !x.why)) { UI.toast('余额不够，先去充值吧'); return; }
       const a = curAddr();
+      const cpn = curCpn();
       const made = [];
-      for (const x of items) {
-        const r = Pay.settle(x.p.fen * x.l.qty, {
+      for (let idx = 0; idx < items.length; idx++) {
+        const x = items[idx];
+        const fee = idx === 0 ? { packFen, errandFen, coupon: cpn } : { packFen: 0, errandFen: 0, coupon: null };
+        const pay = x.p.fen * x.l.qty + fee.packFen + fee.errandFen - (fee.coupon ? fee.coupon.offFen : 0);
+        const r = Pay.settle(pay, {
           type: 'mall',
           note: (x.p.takeout ? '外卖-' : '商城-') + x.p.name,
           peer: toUid !== 'me' ? toUid : null
         });
-        if (r.err) {
-          /* 中途不够：已下的单原路退掉，这笔订单整批不算发生 */
-          made.forEach(ord => Pay.refundFor({ fromUid: 'me', pay: ord.pay }, ord.totalFen, '订单退回', ord.toUid !== 'me' ? ord.toUid : null));
-          made.forEach(ord => { const m = st(); m.orders = m.orders.filter(z => z.id !== ord.id); });
-          DB.save();
-          UI.toast(r.err);
-          return;
-        }
+        if (r.err) { rollback(made); UI.toast(r.err); return; }
         const order = createOrder({
           kind: x.p.takeout ? 'takeout' : 'shop',
           items: [{ pid: x.p.id, name: x.p.name, icon: x.p.icon, img: x.p.img || null, fen: x.p.fen, qty: x.l.qty, spec: x.l.spec || {} }],
-          totalFen: x.p.fen * x.l.qty,
+          totalFen: pay,
           buyerUid: 'me', toUid, pay: r,
           addr: a ? { tag: a.tag, text: a.text } : null
         });
+        order.summary = {
+          goodsFen: x.p.fen * x.l.qty, packFen: fee.packFen, errandFen: fee.errandFen,
+          coupon: fee.coupon ? { id: fee.coupon.id, name: fee.coupon.name, offFen: fee.coupon.offFen } : null
+        };
         made.push(order);
       }
-      /* 购物车里勾选的清掉 */
+      const m = st();
+      if (cpn) cpn.used = true;
+      items.forEach(x => { m.sales[x.p.id] = (m.sales[x.p.id] || 0) + x.l.qty; });
       const ids = items.map(x => x.l.cartId).filter(Boolean);
-      if (ids.length) { const m = st(); m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0); }
+      if (ids.length) m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0);
       DB.save(); updateCartDot();
       /* 送给 TA 的：聊天里落订单卡（对标「找人代付」卡） */
       made.forEach(order => { if (order.toUid !== 'me') pushOrderCard(order, 'me', null); });
       showSuccess(made);
     }
+
+    /* 中途不够：已下的单原路退掉，这笔订单整批不算发生（老逻辑提出来共用） */
+    function rollback(made) {
+      made.forEach(ord => Pay.refundFor({ fromUid: 'me', pay: ord.pay }, ord.totalFen, '订单退回', ord.toUid !== 'me' ? ord.toUid : null));
+      const m = st();
+      made.forEach(ord => { m.orders = m.orders.filter(z => z.id !== ord.id); });
+      DB.save();
+    }
+
+    /* 费用/销中/购物车清理的公共收尾（仅代付路径用：TA 按订单实付总额付，费用落在首单 summary） */
+    function finishOrder(orders, fee) {
+      const m = st();
+      orders.forEach((ord, i) => {
+        const f = i === 0 ? fee : { packFen: 0, errandFen: 0, coupon: null };
+        ord.summary = {
+          goodsFen: ord.totalFen, packFen: f.packFen, errandFen: f.errandFen,
+          coupon: f.coupon ? { id: f.coupon.id, name: f.coupon.name, offFen: f.coupon.offFen } : null
+        };
+        ord.totalFen = ord.totalFen + f.packFen + f.errandFen - (f.coupon ? f.coupon.offFen : 0);
+      });
+      if (fee.coupon) fee.coupon.used = true;
+      items.forEach(x => { m.sales[x.p.id] = (m.sales[x.p.id] || 0) + x.l.qty; });
+      const ids = items.map(x => x.l.cartId).filter(Boolean);
+      if (ids.length) m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0);
+      DB.save(); updateCartDot();
+      orders.forEach(order => { if (order.toUid !== 'me') pushOrderCard(order, 'me', null); });
+    }
+
+    /* ---------- 邀请 TA 代付（她 11:56：发给对方邀请对方帮我支付，TA 的卡是麦当劳那张） ---------- */
+    function pickPayer() {
+      const contacts = (DB.state.contacts || []).filter(c => !c.isGroup);
+      if (!contacts.length) { UI.toast('还没有联系人'); return; }
+      const pick = sheet('请谁代付', {});
+      pick.body.innerHTML = contacts.map(c =>
+        '<button class="mo-row" data-uid="' + c.id + '"><span class="mo-row-mid"><b>' + esc(Home.displayName(c)) + '</b></span><span class="mall-p-go"><i data-icon="chevron-right" data-size="14"></i></span></button>').join('');
+      pick.body.querySelectorAll('[data-uid]').forEach(b => b.addEventListener('click', () => {
+        pick.close(); makePayReq(b.dataset.uid);
+      }));
+      mountIcons(pick.body);
+    }
+
+    function makePayReq(uid) {
+      const a = curAddr();
+      const made = items.map(x => createOrder({
+        kind: x.p.takeout ? 'takeout' : 'shop',
+        items: [{ pid: x.p.id, name: x.p.name, icon: x.p.icon, img: x.p.img || null, fen: x.p.fen, qty: x.l.qty, spec: x.l.spec || {} }],
+        totalFen: x.p.fen * x.l.qty,
+        buyerUid: 'me', toUid, pay: null,
+        addr: a ? { tag: a.tag, text: a.text } : null
+      }));
+      finishOrder(made, { packFen, errandFen, coupon: null });   /* 代付不动我的券 */
+      made.forEach(ord => { ord.payReq = { to: uid, state: 'waiting', ts: Date.now() }; });
+      DB.save();
+      made.forEach(ord => pushOrderCard(ord, 'me', null));
+      sh.close();
+      UI.toast('代付邀请已发给 TA');
+      /* TA 的反应是模拟的：随机几秒后接受；TA 付款走 settlePeer（亲密付优先，不够落 TA 零钱，都不够=没付成） */
+      made.forEach(ord => setTimeout(() => runSafe('mall.payreq', () => taAcceptPayReq(ord)), rand(5000, 18000)));
+    }
+
     render();
+  }
+
+  /* 代付单：TA 到点接受。金额 TA 出（亲密付/TA 零钱）；付不起=单取消、卡上写清 */
+  function taAcceptPayReq(order) {
+    if (!orderById(order.id) || order.pay) return;
+    const uid = order.payReq.to;
+    const r = Pay.settlePeer(uid, order.totalFen, {
+      type: 'mall',
+      note: '代付-' + itemMain(order).name,
+      peer: order.buyerUid === 'me' ? 'me' : order.toUid
+    });
+    if (r.err) {
+      order.payReq.state = 'failed';
+      const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
+      DB.save();
+      return;
+    }
+    order.pay = r; order.payReq.state = 'ok'; order.buyerUid = uid;
+    DB.save();
+    pushThanks(order);
+  }
+
+  /* 代付成交后对方的一句感谢（真实感来自 TA 真的花了钱/我真的花了钱） */
+  const THANKS = ['谢谢你帮我买单，下次我请你！', '收到啦，你最好了！', '哇，说帮就帮，感动！', '这单人情报你记上了，回头补给你。'];
+  function pushThanks(order) {
+    const peerUid = order.toUid !== 'me' ? order.toUid : order.buyerUid;
+    if (!peerUid || peerUid === 'me' || typeof Engine === 'undefined') return;
+    const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === peerUid);
+    if (!conv) return;
+    Engine.pushRaw(conv, {
+      id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      from: 'ai', type: 'text', text: pick(THANKS), ts: Date.now()
+    });
+  }
+
+  /* 支付方式展示名（她 11:56：对方支付除了钱包还有亲密付——亲密付=亲属卡体系，这里只换牌子） */
+  function payLabel(o) {
+    if (!o || !o.pay) return '';
+    if (typeof Pay === 'undefined') return '';
+    return (o.pay.via && o.pay.via !== Pay.BALANCE) ? '亲密付 · ' + Wallet.userName(o.pay.ownerUid) : '钱包零钱';
   }
 
   /* 订单卡进聊天：from=下单人一侧；paidBy=下单人≠收货人时为真 */
@@ -16779,28 +17080,29 @@ const Mall = (function () {
   /* ---------- 订单列表 / 详情 ---------- */
   function openOrders() {
     const sh = sheet('我的订单', { tall: true });
-    let f = 'all';   // all | going | signed | done
+    let f = 'all';   // all | going | review | done | after
     function filtered() {
       return st().orders.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => {
         const s = statusOf(o);
         if (f === 'going') return !s.done;
-        if (f === 'signed') return s.done && !o.signed;
-        if (f === 'done') return o.signed;
+        if (f === 'review') return o.signed && o.toUid === 'me' && !o.myReview && !(o.after);
+        if (f === 'done') return o.signed && !o.after;
+        if (f === 'after') return !!o.after;
         return true;
       });
     }
     function render() {
       const list = filtered();
-      const tabs = [['all', '全部'], ['going', '配送中'], ['signed', '待签收'], ['done', '已完成']];
+      const tabs = [['all', '全部'], ['going', '待收货'], ['review', '待评价'], ['done', '已完成'], ['after', '售后']];
       sh.body.innerHTML = '<div class="mo-tabs">' + tabs.map(t =>
         '<button class="' + (f === t[0] ? 'on' : '') + '" data-f="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
         (list.length ? list.map(o => {
           const it = itemMain(o);
           const p = productById(it.pid);
           const s = statusOf(o);
-          const state = !s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? '已完成' : '待签收');
+          const state = o.after ? (o.after.type === 'refund' ? '已退款' : '已婉拒') : (!s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? (o.myReview ? '已完成' : '待评价') : '待签收'));
           return '<button class="mo-row" data-oid="' + o.id + '">' +
-            '<span class="mo-row-state ' + (s.done ? 'ok' : '') + '">' + state + '</span>' +
+            '<span class="mo-row-state ' + (s.done || o.after ? 'ok' : '') + '">' + state + '</span>' +
             thumbHtml(p, 'cart-thumb') +
             '<span class="mo-row-mid"><b>' + esc(it.name) + (o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</b>' +
             '<small>' + esc(cardStateHtml(o)) + '</small></span>' +
@@ -16822,6 +17124,7 @@ const Mall = (function () {
       const nodes = order.kind === 'takeout' ? TAKEOUT_NODES : SHOP_NODES;
       const buyerName = order.buyerUid === 'me' ? '我' : Home.displayName(Home.contactById(order.buyerUid));
       const toName = order.toUid === 'me' ? '我' : Home.displayName(Home.contactById(order.toUid));
+      const sum = order.summary || null;
       sh.body.innerHTML =
         '<div class="od-state"><b>' + cardStateHtml(order) + '</b></div>' +
         '<div class="od-line">' + order.items.map(it => {
@@ -16830,7 +17133,13 @@ const Mall = (function () {
             '<div class="cart-mid"><b>' + esc(it.name) + ' ×' + it.qty + '</b><small>' + esc(specText(it)) + '</small></div>' +
             '<span class="cart-price">¥' + Wallet.yuan(it.fen * it.qty) + '</span></div>';
         }).join('') +
-        '<div class="od-amount"><span>实付</span><b>¥' + Wallet.yuan(order.totalFen) + '</b></div></div>' +
+        (sum ? '<div class="ck-fee">' +
+          '<div><span>商品小计</span>¥' + Wallet.yuan(sum.goodsFen) + '</div>' +
+          (sum.packFen ? '<div><span>打包费</span>¥' + Wallet.yuan(sum.packFen) + '</div>' : '') +
+          (sum.errandFen ? '<div><span>跑腿费</span>¥' + Wallet.yuan(sum.errandFen) + '</div>' : '') +
+          (sum.coupon ? '<div class="off"><span>优惠券 · ' + esc(sum.coupon.name) + '</span>-¥' + Wallet.yuan(sum.coupon.offFen) + '</div>' : '') +
+          '</div>' : '') +
+        '<div class="od-amount"><span>实付' + (payLabel(order) ? '（' + payLabel(order) + '）' : '') + '</span><b>¥' + Wallet.yuan(order.totalFen) + '</b></div></div>' +
         '<div class="od-timeline">' + order.timeline.map((n, i) =>
           '<div class="od-node' + (i <= s.idx ? ' on' : '') + (i === s.idx && !s.done ? ' now' : '') + '">' +
           '<i></i><span>' + esc(n.label) + '</span><small>' + (i <= s.idx ? fmtMDHM(n.ts) : '预计 ' + fmtMDHM(n.ts)) + '</small></div>').join('') + '</div>' +
@@ -16839,11 +17148,39 @@ const Mall = (function () {
         (order.addr ? '<div><span>地址</span><b>' + esc(order.addr.tag) + '</b> ' + esc(order.addr.text) + '</div>' : '') +
         '<div><span>订单号</span>' + order.id + '</div></div>' +
         (order.review ? '<div class="od-review"><span class="od-review-name">收货感言</span><p>' + esc(order.review.text) + '</p></div>' : '') +
+        (order.myReview ? '<div class="od-review"><span class="od-review-name">我的点评 · ' + '★'.repeat(order.myReview.stars) + '</span><p>' + esc(order.myReview.text) + '</p></div>' : '') +
+        (order.after && order.after.type === 'refund' ? '<div class="od-review after"><span class="od-review-name">售后</span><p>已退款，钱按原路退回了（' + fmtMDHM(order.after.ts) + '）</p></div>' : '') +
         '<div class="od-acts">' +
+        (order.payReq && order.payReq.state === 'waiting' && order.payReq.to === 'me' ? '<button class="btn btn-primary" data-act="payok">帮他付 ¥' + Wallet.yuan(order.totalFen) + '</button>' +
+          '<button class="btn btn-secondary" data-act="payno">婉拒</button>' : '') +
+        (order.payReq && order.payReq.state === 'waiting' && order.payReq.to !== 'me' ? '<div class="od-wait">等 TA 处理中，结果在这条订单上更新</div>' : '') +
         (s.done && !order.signed && order.toUid === 'me' ? '<button class="btn btn-primary" data-act="sign">确认签收</button>' : '') +
-        (s.idx === 0 && !s.done ? '<button class="btn btn-secondary" data-act="cancel">取消订单</button>' : '') +
+        (s.idx === 0 && !s.done && !order.payReq ? '<button class="btn btn-secondary" data-act="cancel">取消订单</button>' : '') +
+        (order.signed && !order.after && order.toUid === 'me' && !order.myReview ? '<button class="btn btn-secondary" data-act="review">写评价</button>' : '') +
+        (order.signed && !order.after && order.pay ? '<button class="btn btn-secondary" data-act="refund">申请退款</button>' : '') +
         (order.signed ? '<button class="btn btn-secondary" data-act="del">删除订单</button>' : '') +
         '</div>';
+      const okPay = sh.body.querySelector('[data-act="payok"]');
+      if (okPay) okPay.addEventListener('click', () => {
+        if (typeof Pay === 'undefined') return;
+        const peer = order.toUid !== 'me' ? order.toUid : order.buyerUid;
+        const r = Pay.settle(order.totalFen, { type: 'mall', note: '代付-' + itemMain(order).name, peer });
+        if (r.err) { UI.toast(r.err); return; }
+        order.pay = r; order.payReq.state = 'ok';
+        DB.save();
+        pushThanks(order);
+        render();
+        UI.toast('已帮 TA 付好啦');
+      });
+      const noPay = sh.body.querySelector('[data-act="payno"]');
+      if (noPay) noPay.addEventListener('click', async () => {
+        if (!(await UI.confirmBox({ title: '婉拒代付', text: '婉拒后这笔订单会取消，不再提醒。', okText: '婉拒', danger: true }))) return;
+        order.payReq.state = 'declined';
+        const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
+        DB.save(); sh.close();
+      });
+      const rvw = sh.body.querySelector('[data-act="review"]');
+      if (rvw) rvw.addEventListener('click', () => openReview(order));
       const sign = sh.body.querySelector('[data-act="sign"]');
       if (sign) sign.addEventListener('click', () => {
         order.signed = true; DB.save(); render(); UI.toast('已签收');
@@ -16861,7 +17198,39 @@ const Mall = (function () {
         const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
         DB.save(); sh.close();
       });
+      const refund = sh.body.querySelector('[data-act="refund"]');
+      if (refund) refund.addEventListener('click', async () => {
+        if (!(await UI.confirmBox({ title: '申请退款', text: 'TA 会秒同意（模拟），钱按当初的支付方式原路退回，券也会还给你。', okText: '申请退款', danger: true }))) return;
+        Pay.refundFor({ fromUid: order.buyerUid, pay: order.pay }, order.totalFen, '商城退款', order.toUid !== 'me' ? order.toUid : null);
+        const sum = order.summary || {};
+        if (sum.coupon) {
+          const cpn = (st().coupons || []).find(c => c.id === sum.coupon.id && c.used);
+          if (cpn) cpn.used = false;
+        }
+        order.after = { type: 'refund', state: 'ok', ts: Date.now() };
+        DB.save(); render(); UI.toast('退款成功，钱原路退回');
+      });
       mountIcons(sh.body);
+    }
+    render();
+  }
+
+  /* 我的点评（她 11:56：评价/点评）：星级 + 一句话，落订单自己身上 */
+  function openReview(order) {
+    const sh = sheet('写评价', {});
+    let stars = 5;
+    function render() {
+      sh.body.innerHTML =
+        '<div class="rv-stars">' + [1, 2, 3, 4, 5].map(n =>
+          '<button type="button" class="rv-star' + (n <= stars ? ' on' : '') + '" data-star="' + n + '">★</button>').join('') + '</div>' +
+        '<div class="addr-input"><input id="rv-text" maxlength="40" placeholder="一句话点评（可选）"></div>' +
+        '<button class="btn btn-primary" data-act="save" style="width:100%">发布评价</button>';
+      sh.body.querySelectorAll('[data-star]').forEach(b => b.addEventListener('click', () => { stars = +b.dataset.star; render(); }));
+      sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
+        order.myReview = { stars, text: (sh.body.querySelector('#rv-text').value || '').trim() };
+        DB.save(); sh.close();
+        UI.toast('评价发布成功');
+      });
     }
     render();
   }
@@ -16905,7 +17274,8 @@ const Mall = (function () {
     sh.body.innerHTML =
       '<div class="sku-row"><span class="sku-row-name">标签</span><span class="sku-opts" id="addr-tags">' +
       tags.map(t => '<button type="button" class="sku-opt' + (t === tag ? ' on' : '') + '" data-tag="' + esc(t) + '">' + esc(t) + '</button>').join('') + '</span></div>' +
-      '<div class="addr-input"><span class="sku-row-name">地址</span><input id="addr-text" placeholder="' + (isMe ? '如：幸福小区 3 栋 502' : 'TA 住的地方，写不写都行') + '"></div>' +
+      '<div class="addr-input"><span class="sku-row-name">自定义</span><input id="addr-custom" maxlength="6" placeholder="自定义标签（可选）"></div>' +
+      '<div class="addr-input"><span class="sku-row-name">地址</span><input id="addr-text" placeholder="如：阳光花园 5 栋 2 单元 601"></div>' +
       '<button class="btn btn-primary" data-act="save" style="width:100%">保存</button>';
     sh.body.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
       tag = b.dataset.tag;
@@ -16914,8 +17284,9 @@ const Mall = (function () {
     sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
       const text = (sh.body.querySelector('#addr-text').value || '').trim();
       if (!text) { UI.toast('写一句地址吧'); return; }
+      const custom = (sh.body.querySelector('#addr-custom').value || '').trim();
       const m = st();
-      const a = { id: 'ad' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), tag, text };
+      const a = { id: 'ad' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), tag: custom || tag, text };
       if (isMe) m.addr.me.push(a);
       else { if (!m.addr.byContact[uid]) m.addr.byContact[uid] = []; m.addr.byContact[uid].push(a); }
       DB.save(); sh.close(); onDone && onDone();
@@ -16923,10 +17294,44 @@ const Mall = (function () {
   }
 
   /* ---------- 自建商品（对标上传商品弹窗：图/名/类目/卖点/价格/原价） ---------- */
-  function openUpload() {
-    const sh = sheet('上传我的商品', { tall: true });
-    let img = null;         // dataURL（Media.compressImage 压缩）
-    let icon = 'tag';       // 没传图就用线性图标
+  /* 自定义类目（P67 她 11:56：美食等标签还能自己加；可归入外卖 Tab） */
+  function openNewCat(onAdd) {
+    const sh = sheet('新增类目', {});
+    let takeout = false;
+    function render() {
+      sh.body.innerHTML =
+        '<div class="addr-input"><span class="sku-row-name">类目名</span><input id="nc-name" maxlength="4" placeholder="如：潮玩"></div>' +
+        '<div class="sku-row"><span class="sku-row-name">算外卖？</span><span class="sku-opts"><button type="button" class="sku-opt' + (takeout ? ' on' : '') + '" id="nc-takeout">' + (takeout ? '算' : '不算') + '</button></span></div>' +
+        '<button class="btn btn-primary" data-act="save" style="width:100%">保存</button>';
+      sh.body.querySelector('#nc-takeout').addEventListener('click', () => {
+        takeout = !takeout;
+        /* 就地切文案不重渲——重渲会把已填的类目名洗掉 */
+        const b = sh.body.querySelector('#nc-takeout');
+        b.textContent = takeout ? '算' : '不算';
+        b.classList.toggle('on', takeout);
+      });
+      sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
+        const name = (sh.body.querySelector('#nc-name').value || '').trim();
+        if (!name) { UI.toast('类目得有个名字'); return; }
+        if (catsAll().some(c => c.name === name)) { UI.toast('已经有这个类目了'); return; }
+        const key = 'cc' + Date.now().toString(36);
+        st().customCats.push({ key, name, icon: 'tag', takeout });
+        DB.save(); sh.close();
+        UI.toast('已添加类目：' + name);
+        onAdd && onAdd(key);
+      });
+    }
+    render();
+  }
+
+  /* ---------- 商品表单（她 11:19：上传/编辑共用一张——预填现值，改完保存；内置的改动落 overrides） ---------- */
+  function openForm(editP) {
+    const src = editP || null;
+    const sh = sheet(src ? '编辑商品' : '上传我的商品', { tall: true });
+    let img = src && src.img ? src.img : null;         // dataURL（Media.compressImage 压缩）
+    let icon = src && src.icon ? src.icon : 'tag';     // 没传图就用线性图标
+    /* P67 她 11:56：规格可自定义（如 辣度：微辣,爆辣），编辑时预填现值；选项逗号/逗号分隔 */
+    let specs = (src && src.specs && src.specs.length) ? JSON.parse(JSON.stringify(src.specs)) : [{ name: '', opts: [] }];
     const ICON_CHOICES = ['tag', 'bowl', 'cup', 'fruit', 'cookie', 'shirt', 'gem', 'bear', 'headset', 'flower', 'cake', 'heart'];
     function render() {
       sh.body.innerHTML =
@@ -16935,12 +17340,18 @@ const Mall = (function () {
         '<small>不传图就用下面的默认图标</small></div></div>' +
         '<div class="sku-row"><span class="sku-row-name">默认图标</span><span class="sku-opts" id="up-icons">' +
         ICON_CHOICES.map(k => '<button type="button" class="sku-opt' + (k === icon && !img ? ' on' : '') + '" data-icon-k="' + k + '"><i data-icon="' + k + '" data-size="16"></i></button>').join('') + '</span></div>' +
-        '<div class="addr-input"><span class="sku-row-name">名称</span><input id="up-name" maxlength="20" placeholder="商品名称"></div>' +
-        '<div class="addr-input"><span class="sku-row-name">类目</span><select id="up-cat">' + CATS.map(c => '<option value="' + c.key + '">' + c.name + '</option>').join('') + '</select></div>' +
-        '<div class="addr-input"><span class="sku-row-name">卖点</span><input id="up-desc" maxlength="30" placeholder="一句话卖点（可选）"></div>' +
-        '<div class="addr-input"><span class="sku-row-name">价格（元）</span><input id="up-price" type="number" min="0.01" placeholder="0.00"></div>' +
-        '<div class="addr-input"><span class="sku-row-name">原价（元，可选）</span><input id="up-orig" type="number" min="0" placeholder="划线价"></div>' +
-        '<button class="btn btn-primary" data-act="save" style="width:100%">上架</button>';
+        '<div class="addr-input"><span class="sku-row-name">名称</span><input id="up-name" maxlength="20" placeholder="商品名称" value="' + esc(src ? src.name : '') + '"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">类目</span><select id="up-cat">' + catsAll().map(c => '<option value="' + c.key + '"' + (src && c.key === src.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') + '</select><button type="button" class="up-newcat" id="up-newcat">＋新类目</button></div>' +
+        '<div class="sku-row"><span class="sku-row-name">规格</span><span class="sku-opts" id="up-specs">' +
+        specs.map((sp, i) =>
+          '<div class="up-spec"><input class="sp-n" maxlength="6" placeholder="规格名，如 辣度" value="' + esc(sp.name) + '" data-i="' + i + '">' +
+          '<input class="sp-o" placeholder="选项逗号分隔，如 微辣,爆辣" value="' + esc((sp.opts || []).join(',')) + '" data-i="' + i + '">' +
+          '<button type="button" class="up-spec-rm" data-rm-spec="' + i + '">✕</button></div>').join('') +
+        (specs.length < 3 ? '<button type="button" class="up-addspec" data-act="addspec">＋ 再加一组规格</button>' : '') + '</span></div>' +
+        '<div class="addr-input"><span class="sku-row-name">卖点</span><input id="up-desc" maxlength="30" placeholder="一句话卖点（可选）" value="' + esc(src ? (src.desc || '') : '') + '"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">价格（元）</span><input id="up-price" type="number" min="0.01" step="0.01" placeholder="0.00" value="' + (src ? Wallet.yuan(src.fen) : '') + '"></div>' +
+        '<div class="addr-input"><span class="sku-row-name">原价（元，可选）</span><input id="up-orig" type="number" min="0" step="0.01" placeholder="划线价" value="' + (src && src.origFen ? Wallet.yuan(src.origFen) : '') + '"></div>' +
+        '<button class="btn btn-primary" data-act="save" style="width:100%">' + (src ? '保存修改' : '上架') + '</button>';
       sh.body.querySelector('#up-file').addEventListener('change', async e => {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
@@ -16950,6 +17361,21 @@ const Mall = (function () {
       sh.body.querySelectorAll('[data-icon-k]').forEach(b => b.addEventListener('click', () => {
         icon = b.dataset.iconK; img = null; render();
       }));
+      sh.body.querySelectorAll('[data-rm-spec]').forEach(b => b.addEventListener('click', () => {
+        specs.splice(+b.dataset.rmSpec, 1); if (!specs.length) specs = [{ name: '', opts: [] }]; render();
+      }));
+      const addSpec = sh.body.querySelector('[data-act="addspec"]');
+      if (addSpec) addSpec.addEventListener('click', () => { specs.push({ name: '', opts: [] }); render(); });
+      sh.body.querySelector('#up-newcat').addEventListener('click', () => {
+        openNewCat(key => {
+          const sel = sh.body.querySelector('#up-cat');
+          const c = catsAll().find(x => x.key === key);
+          if (!c || !sel) return;
+          const opt = document.createElement('option');
+          opt.value = key; opt.textContent = c.name; opt.selected = true;
+          sel.appendChild(opt);   /* 不重渲整张表单，她已填的字一个不丢 */
+        });
+      });
       sh.body.querySelector('[data-act="save"]').addEventListener('click', () => {
         const name = (sh.body.querySelector('#up-name').value || '').trim();
         const chk = Wallet.toFen(sh.body.querySelector('#up-price').value);
@@ -16963,14 +17389,31 @@ const Mall = (function () {
           origFen = o2.fen;
         }
         const c = sh.body.querySelector('#up-cat').value;
-        st().custom.push({
-          id: 'cm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-          cat: c, name, desc: (sh.body.querySelector('#up-desc').value || '').trim(),
-          fen: chk.fen, origFen: origFen > chk.fen ? origFen : 0,
-          icon: img ? null : icon, img, takeout: !!(CATS.find(x => x.key === c) || {}).takeout
+        const desc = (sh.body.querySelector('#up-desc').value || '').trim();
+        const takeout = !!(catsAll().find(x => x.key === c) || {}).takeout;
+        /* 规格：名称和选项都非空才算一组（P67 她 11:56 自定义规格） */
+        const specsOut = [];
+        sh.body.querySelectorAll('.sp-n').forEach(inp => {
+          const i = +inp.dataset.i;
+          const n = (inp.value || '').trim();
+          const oInp = sh.body.querySelector('.sp-o[data-i="' + i + '"]');
+          const opts = ((oInp ? oInp.value : '') || '').split(/[，,]/).map(s => s.trim()).filter(Boolean);
+          if (n && opts.length) specsOut.push({ name: n, opts });
         });
-        DB.save(); sh.close(); renderList();
-        UI.toast('已上架：' + name);
+        const patch = { cat: c, name, desc, fen: chk.fen, origFen: origFen > chk.fen ? origFen : 0,
+          icon: img ? null : icon, img: img || null, takeout, specs: specsOut };
+        if (src) {
+          /* 编辑：自建改本体；内置落 overrides（products() 合并时优先） */
+          const mine = st().custom.find(x => x.id === src.id);
+          if (mine) Object.assign(mine, patch);
+          else st().overrides[src.id] = Object.assign({}, st().overrides[src.id] || {}, patch);
+          DB.save(); sh.close(); renderPage();
+          UI.toast('已保存：' + name);
+        } else {
+          st().custom.push(Object.assign({ id: 'cm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4) }, patch));
+          DB.save(); sh.close(); renderPage();
+          UI.toast('已上架：' + name);
+        }
       });
       mountIcons(sh.body);
     }
@@ -16991,13 +17434,26 @@ const Mall = (function () {
     const pool = products();
     if (!pool.length) return false;
     const p = pick(pool);
+    st().lastGiftAt[ct.id] = Date.now();
+    /* 她 11:56：TA 也有概率邀请我帮他付——40% 走代付邀请（工程值），其余 TA 自己掏（亲密付优先，settlePeer 定） */
+    if (Math.random() < 0.4) {
+      const req = createOrder({
+        kind: p.takeout ? 'takeout' : 'shop',
+        items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
+        totalFen: p.fen, buyerUid: 'me', toUid: ct.id, pay: null, addr: null
+      });
+      req.payReq = { to: 'me', state: 'waiting', ts: Date.now() };
+      DB.save();
+      pushOrderCard(req, ct.id, null);
+      return true;
+    }
     const r = Pay.settlePeer(ct.id, p.fen, {
       type: 'mall',
       note: (p.takeout ? '外卖-' : '商城-') + p.name + ' · 替你买',
       peer: 'me'
     });
     if (r.err) return false;   // 钱 不够就当这笔没发生，余额不准被掏成负数
-    st().lastGiftAt[ct.id] = Date.now();
+    st().sales[p.id] = (st().sales[p.id] || 0) + 1;
     const order = createOrder({
       kind: p.takeout ? 'takeout' : 'shop',
       items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
@@ -17007,9 +17463,28 @@ const Mall = (function () {
     return true;
   }
 
+  /* ---------- TA 钱包自动入账（她 11:56：模拟正常收入，金额随机、位数随机、最高到亿） ----------
+     间隔 4~12 小时随机（工程值）；位数随机 1~9 位、首位非零；文案随机；只进 TA 流水，不弹不打扰 */
+  const INCOME_NOTES = ['工资到账', '发工资了', '稿费到账', '兼职结算', '报销下来啦', '基金赎回', '退款到账', '年终奖到账'];
+  function tickIncome() {
+    const now = Date.now();
+    (DB.state.contacts || []).forEach(ct => {
+      if (ct.isGroup) return;
+      const rec = st().income[ct.id];
+      if (!rec) { st().income[ct.id] = { next: now + rand(2, 8) * 3600 * 1000 }; return; }
+      if (now < rec.next) return;
+      const digits = rand(1, 9);                            /* 位数随机，最高到亿 */
+      const yuanAmt = rand(Math.pow(10, digits - 1), Math.pow(10, digits) - 1);
+      Wallet.addBill(ct.id, 'income', 1, yuanAmt * 100, pick(INCOME_NOTES));
+      st().income[ct.id] = { next: now + rand(4, 12) * 3600 * 1000, last: now };
+      DB.save();
+    });
+  }
+
   /* ---------- 心跳：到点的节点推进 + 可见卡片 ETA 刷新（20s，轻量） ---------- */
   function tick() {
     runSafe('mall.tick.settle', () => settleAll());
+    runSafe('mall.tick.income', tickIncome);
     runSafe('mall.tick.paint', () => {
       if (document.getElementById('page-mall').classList.contains('active')) { renderCats(); renderList(); }
       document.querySelectorAll('#page-chat .moc[data-order]').forEach(card => {
@@ -17036,11 +17511,14 @@ const Mall = (function () {
       tabs.querySelectorAll('[data-mtab]').forEach(x => x.classList.toggle('on', x === b));
       renderPage();
     }));
+    /* P67 她 11:56：搜索框（商品名/卖点过滤，输入即刷） */
+    const search = document.getElementById('mall-search');
+    if (search) search.addEventListener('input', () => renderList());
     setInterval(tick, 20000);
   }
 
   return { init, open, renderPage, maybeGift, orderById, cardHtml, settleAll, openOrders, products, productById,
-    openProduct, openCart, openCheckout, openOrderDetail, openAddr, openUpload };
+    openProduct, openCart, openCheckout, openOrderDetail, openAddr, openForm, openCoupons, tickIncome };
 })();
 
 /* =====================================================
@@ -28364,16 +28842,18 @@ Router.register('report', () => Report.render());   /* P25 */
     Profile.init();
     Group.init();
     Call.init();
-  Letter.init();   /* P8 写信慢消息：启动补跑到期回信+心跳 */
-  History.init();  /* 查找聊天内容：分类宫格+搜索 */
-  Wallet.init();   /* 钱包：零钱/充值/查看人/账单/收支统计（二期P14） */
-  Kinship.init();  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
-  Redpacket.init();/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
-  Moments.init();  /* P36d：朋友圈存量视频 dataURL→IndexedDB 幂等迁移（她 08-27 拆雷） */
-  Library.init();    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
-  Games.init();    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
-  Schedule.init(); /* 排班表（她 10-03）：页面事件绑定 */
-  Mall.init();     /* P64 商城与外卖：页面事件绑定 + 20s 心跳（节点推进/ETA 刷新） */
+  /* P24 后的启动加固（她 10-08 线上反馈「卡死主界面、点不开消息」）：每个模块 init 各自包
+     runSafe——一个模块炸了不再拖死整条启动链，症状从「全站死」降级成「单功能坏」 */
+  runSafe('init.letter', () => Letter.init());   /* P8 写信慢消息：启动补跑到期回信+心跳 */
+  runSafe('init.history', () => History.init());  /* 查找聊天内容：分类宫格+搜索 */
+  runSafe('init.wallet', () => Wallet.init());   /* 钱包：零钱/充值/查看人/账单/收支统计（二期P14） */
+  runSafe('init.kinship', () => Kinship.init());  /* 亲属卡：赠送/领取/过期补跑（二期P14.5） */
+  runSafe('init.redpacket', () => Redpacket.init());/* 红包：发/开/AI三态/过期退回补跑（二期P15） */
+  runSafe('init.moments', () => Moments.init());  /* P36d：朋友圈存量视频 dataURL→IndexedDB 幂等迁移（她 08-27 拆雷） */
+  runSafe('init.library', () => Library.init());    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
+  runSafe('init.games', () => Games.init());    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
+  runSafe('init.schedule', () => Schedule.init()); /* 排班表（她 10-03）：页面事件绑定 */
+  runSafe('init.mall', () => Mall.init());     /* P64 商城与外卖：页面事件绑定 + 20s 心跳（节点推进/ETA 刷新） */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
   /* 她 10-06：主题美化（全局 CSS / 气泡样式 / 头像框）开机就套上 */
   runSafe('theme.deco', () => applyDeco());
