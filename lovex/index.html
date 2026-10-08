@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261008-212227 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261008-232820 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -304,7 +304,6 @@ button{-webkit-tap-highlight-color:transparent}
 .gm-row .li-ava{width:34px;height:34px;border-radius:8px;overflow:hidden;background:#cfd8e3;
   color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
 .gm-row .li-ava img{width:100%;height:100%;object-fit:cover}
-.li-img{display:block;width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none}
 .gm-role-txt{font-size:12.5px;color:#9a9a9a}
 .adm-tag,.own-tag{font-style:normal;font-size:10px;color:var(--primary);
   border:1px solid currentColor;border-radius:4px;padding:0 3px;margin-left:5px;vertical-align:1px}
@@ -1032,10 +1031,6 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .lk-card{width:240px;max-width:100%;display:flex;align-items:center;gap:9px;
   padding:10px 11px;border-radius:9px;background:var(--card);border:1px solid var(--line);cursor:pointer}
 .lk-card:active{opacity:.75}
-.lk-badge{flex:none;width:30px;height:30px;border-radius:8px;background:var(--t1);color:var(--card);
-  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
-.lk-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.lk-site{font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lk-line{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lk-sheet-body{padding:12px 14px 4px}
 .lk-sheet-body .lk-paste{width:100%;resize:none;font-size:13px;line-height:1.5}
@@ -1047,27 +1042,19 @@ html.dark .hist-type.on .ht-ico{background:#E8E8E8;color:#111}
 .lk-mini{position:relative;width:100%;aspect-ratio:16/9;background:var(--line);overflow:hidden;flex:none}
 .lk-poster-ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:12px;letter-spacing:3px}
 .lk-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.lk-tri{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none;border-left:15px solid rgba(255,255,255,.95);border-top:10px solid transparent;border-bottom:10px solid transparent;filter:drop-shadow(0 1px 5px rgba(0,0,0,.55))}
-.lk-go{position:absolute;right:8px;bottom:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.5);padding:3px 9px;border-radius:99px}
 .lk-mini iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 .lk-mini video{position:absolute;inset:0;width:100%;height:100%;display:block;background:#000;object-fit:contain}
 /* 她 10-04：卡内直播放态，poster 垫底，播放器自己接管 */
-.lk-mini.lk-live .lk-poster{opacity:.92}
-.lk-on .lk-poster,.lk-on .lk-poster-ghost,.lk-on .lk-tri{display:none}
+.lk-on .lk-poster,.lk-on .lk-poster-ghost{display:none}
 .lk-cap{padding:9px 11px 10px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .lk-title{font-size:13px;line-height:1.4;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lk-sheet-btns{display:flex;gap:10px;padding:12px 14px 4px}
 .lk-sheet-btns .btn{flex:1}
 /* 站内播放层：img-viewer 同族黑底全屏 */
-.lk-player{position:fixed;inset:0;z-index:1260;background:rgba(0,0,0,.92);color:#fff;
-  display:flex;flex-direction:column;opacity:0;transition:opacity .18s}
-.lk-player.show{opacity:1}
 .lkp-nav{flex:none;display:flex;align-items:center;gap:10px;height:46px;padding:0 12px}
 .lkp-nav button{border:none;background:none;color:#fff;cursor:pointer;font-family:inherit;display:flex;align-items:center}
 .lkp-nav .lkp-ext{font-size:12px;opacity:.85;padding:6px 2px}
 .lkp-t{flex:1;text-align:center;font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lkp-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:0 max(0px,calc(50vw - 430px))}
-.lkp-stage iframe{width:100%;aspect-ratio:16/9;max-height:78vh;border:0;border-radius:8px;background:#000}
 .lkp-tip{flex:none;text-align:center;font-size:11px;opacity:.55;padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 /* V4.4 全屏看图（抖音/小红书实际内容，img 直挂中转，不走 fetch 所以不吃 CORS） */
 .lk-gal{position:fixed;inset:0;z-index:1260;background:rgba(0,0,0,.92);color:#fff;display:flex;flex-direction:column;opacity:0;transition:opacity .2s}
@@ -1309,7 +1296,7 @@ body.call-picking .sheet-mask,body.call-picking .sheet{z-index:1170!important}
 .call-grid.pin .call-cell.pinned{grid-row:span 2}
 .cell-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .call-cell.dc{opacity:.35}
-.cell-name em.dct{font-style:normal;font-size:10px;color:#c98a8a;display:block;margin-top:2px}
+.cell-name
 .cell-name{position:absolute;left:0;right:0;bottom:7px;text-align:center;
   font-size:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.55);padding:0 6px}
 /* 未接通成员：灰暗呼吸 + “等待中”小字（#39x） */
@@ -2640,13 +2627,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   border-radius:10px;padding:8px 12px;width:100%;text-align:center;line-height:1.5}
 /* ---------- 战绩档案 ---------- */
 /* UNO 累计记分牌（战绩页顶部）：黑白线稿，分数用等宽数字，不用色块区分 */
-.gm-uno-board{background:var(--card);border:1.5px solid var(--t2);border-radius:14px;padding:12px 14px;margin-bottom:12px}
-.gm-ub-t{font-size:12px;color:var(--t3);margin-bottom:6px}
-.gm-ubrow{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--t1);padding:3px 0;
-  border-top:1px dashed var(--line)}
-.gm-ubrow:first-of-type{border-top:none}
-.gm-ubrow b{flex:1;font-weight:600}
-.gm-ubrow span{font-variant-numeric:tabular-nums}
 .gm-stcard{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 /* 她 10-04：筛选条 + 展开详情（战绩页重写） */
 .gm-stfl{margin-bottom:12px}
@@ -2663,8 +2643,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-stdfeed{display:flex;flex-direction:column;gap:2px;color:var(--t3);font-size:11.5px;
   background:var(--fill);border-radius:8px;padding:8px;margin-top:6px}
 .gm-stbig{font-size:14px;font-weight:700;color:var(--t1)}
-.gm-ststreak{font-size:11px;color:var(--primary)}
-.gm-strows{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 .gm-strow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--t1)}
 .gm-strow small{color:var(--t3);margin-left:auto}
 .gm-stres{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
@@ -2717,6 +2695,21 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mn-cell.mn-last{box-shadow:inset 0 0 0 2px var(--primary);animation:mn-flash 1.1s}
 @keyframes mn-flash{0%{background:color-mix(in srgb,var(--primary) 30%,var(--card))}100%{}}
 .mn-cell.mn-flag{display:flex;align-items:center;justify-content:center;font-size:12px}
+/* 她 10-08 改版：限时点击制三件套——图标状态条/头像落点/全雷亮出 */
+.mn-stat{display:flex;align-items:center;justify-content:center;gap:12px;max-width:470px;margin:0 auto 4px;
+  font-size:11.5px;color:var(--t2);flex-wrap:wrap}
+.mn-stat .mn-st{display:flex;align-items:center;gap:3px}
+.mn-stat .mn-st i{width:14px;height:14px;color:var(--t2)}
+.mn-stat .mn-st b{font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums}
+.mn-stat .mn-st em{font-style:normal;color:var(--t3);font-size:10px}
+.mn-stat .mn-pts b{margin:0 1px}
+.mn-pin{position:absolute;right:1px;top:1px;z-index:3;width:14px;height:14px;border-radius:50%;
+  overflow:hidden;pointer-events:none;box-shadow:0 0 0 1.5px var(--card),0 1px 3px rgba(0,0,0,.25)}
+.mn-pin.by-me{box-shadow:0 0 0 1.5px var(--primary),0 1px 3px rgba(0,0,0,.25)}
+.mn-pin svg,.mn-pin img{width:100%;height:100%;display:block}
+.mn-pin span{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px}
+.mn-cell.mn-reveal{display:flex;align-items:center;justify-content:center;font-size:12px;
+  background:var(--card);box-shadow:inset 0 0 0 1px var(--line);opacity:.75;cursor:default}
 /* 踩雷爆炸：💥 在格子处炸开（她点名 EMOJI+特效） */
 .gm-boomfx{position:fixed;z-index:1200;font-size:46px;pointer-events:none;line-height:1;
   animation:gm-pop .9s forwards;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
@@ -2978,6 +2971,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .ld-od b{font-size:26px;line-height:1;font-weight:400;color:var(--t1)}
 .ld-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:9px;font-size:11.5px;color:var(--t2)}
 .ld-lg{display:inline-flex;align-items:center;gap:5px}
+/* 她 10-08：图例一人一颗小头像（所有游戏都要注意头像位置） */
+.ld-lg .gm-mini-ava{width:16px;height:16px;flex:none}
 .ld-lg b{font-weight:700}
 .ld-lg i{font-style:normal;color:var(--t1)}
 .ld-lg-n{padding:0 6px;font-size:10.5px;color:var(--t1);border:1px solid var(--line);border-radius:999px}
@@ -3085,17 +3080,25 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-mini{width:calc(34px * var(--dq,1));height:calc(46px * var(--dq,1));cursor:default;border-width:1.2px;box-shadow:none}
 .dz-mini .dz-cr{font-size:calc(11px * var(--dq,1))}
 .dz-mini .dz-cs{font-size:calc(8px * var(--dq,1));left:2px;top:1px}
-.dz-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px auto 0;max-width:470px}
+/* 图例 .dz-legend/.dz-lg 已随斗地主改版拆除（10-08）：信息座位上都有了，同一信息不出现两遍 */
+/* 她 10-08：对手剩牌画一小叠牌背（张数压角标），不再干巴巴一个数字——斗地主/UNO 同一套 */
+.dz-backs{position:relative;display:inline-block;width:38px;height:30px;margin-top:3px}
+.dz-backs i{position:absolute;top:0;width:17px;height:23px;border-radius:3px;
+  background:var(--card);border:1.5px solid var(--t2);
+  box-shadow:inset 0 0 0 2px var(--card),inset 0 0 0 3.5px var(--t3)}
+.dz-backs b{position:absolute;right:-8px;bottom:-7px;z-index:2;
+  background:var(--t1);color:var(--card);border-radius:9px;
+  font-size:10px;line-height:16px;padding:0 5px;font-weight:700;font-style:normal}
+/* UNO 座位是绝对定位的椭圆环，牌背叠紧贴座位别擑太开 */
+.un-backs{margin-top:1px;height:26px}
+.un-backs i{width:15px;height:20px}
+/* 她 10-08：斗地主的底部聊天框收成窄框（里面滚），不抻大；出牌记录/发言都归这里 */
+.gm-feed.gm-feed-dz{flex:0 0 auto;max-height:92px;min-height:52px;margin:4px 14px;padding:4px 9px}
+.gm-feed.gm-feed-dz .gm-fline{font-size:11px;padding:1.5px 0}
 /* 我自己在牌桌上那颗是横着的小牌（手牌已经在下面摆开了，不再叠一层卡面） */
 /* 我自己在牌桌上那颗：整幅占一行、居中，不让它跟底牌挤在同一行（中央是个 wrap 容器） */
 .dz-seat.dz-me{flex-direction:row;gap:5px;padding:3px 8px;min-width:0;flex:0 0 100%;justify-content:center}
 .dz-seat.dz-me .dz-av{width:20px;height:20px;font-size:11px}
-.dz-lg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--t3);
-  padding:3px 7px;border:1px solid var(--line);border-radius:999px}
-.dz-lg b{font-weight:700;color:var(--t2)}
-.dz-lg.land b,.dz-lg.me{color:var(--t1)}
-.dz-lg.me{border-color:var(--t1)}
-.dz-lg i{font-style:normal;color:var(--t3)}
 /* 飞牌与「不要」气泡：挂 body + fixed，定时器自收（不挂 onfinish，headless 与切后台都验过它不放） */
 .dz-ghost{position:fixed;z-index:980;pointer-events:none}
 .dz-fly{--dq:.8}
@@ -3121,6 +3124,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-bank{display:flex;flex-wrap:nowrap;gap:6px;padding:0 2px 2px;justify-content:flex-start;
   overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
 .mc-bank::-webkit-scrollbar{display:none}
+/* 她 10-08：头像分立上下两簇盘绕棋盘，不再一行排排坐；簇内均匀散开 */
+.mc-bank-top{justify-content:space-evenly;padding-bottom:4px}
+.mc-bank-bot{justify-content:space-evenly;padding:4px 2px 2px}
 .mc-pk{width:auto;flex:none;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
   border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:none}
 .mc-pk.on{opacity:1;border-color:var(--t1)}
@@ -13328,7 +13334,7 @@ const Doodle = (function () {
    她 09:45：所有成分等概率随机组——不再设常用度权重（旧 wPick 拆）。
    组不出通顺话就返回 null 回落字卡，不硬凑；金额/地址照旧不碰。
    她 10-08 16:42：词典再加宽（复合词/活动类）、百家姓名字调低、
-   同音字层 applyTypo（TA「打字」选词选错的痕迹，命中率联系人独立、0=关）。
+   同音字层 applyTypo 已随 17:33 口径退役（23:02 死代码清扫拆除），组话选词过程内建在 composeDetailed 里。
    ===================================================== */
 const FreeTalk = (function () {
 
@@ -13458,7 +13464,6 @@ const FreeTalk = (function () {
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function pickObj(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   /* 她 09:45：成分一律等概率随机组 */
-  function pickWord(list) { return typeof list[0] === 'string' ? pick(list) : pickObj(list).t; }
 
   /* ---------- 搭配检：动词的 obj 要含名词的 tag ---------- */
   function voPair() {
@@ -13569,17 +13574,6 @@ const FreeTalk = (function () {
   /* 她 10-08 16:42：同音字层——TA「打字」也有拼音选词的过程，
      命中率（联系人独立、0=关，engine 聊天路径掷）掷中就换一个同音字，真机打字最常见的痕迹。
      只处理自由组话产出的句子，她的固定字卡/含数字地址类不进这条路 */
-  function applyTypo(text) {
-    try {
-      const t = String(text || '');
-      if (!t) return t;
-      const idxs = [];
-      for (let i = 0; i < t.length; i++) if (DIC.homo[t[i]]) idxs.push(i);
-      if (!idxs.length) return t;
-      const i = idxs[Math.floor(Math.random() * idxs.length)];
-      return t.slice(0, i) + DIC.homo[t[i]] + t.slice(i + 1);
-    } catch (e) { return text; }
-  }
 
   /* 她 10-08 17:33：同音字是组话「过程中」的事，不是发出来再换字——
      猫猫/毛毛、圆圆/园园、豆豆/逗逗这类同音词，组到它要先在候选里挑，
@@ -20065,8 +20059,15 @@ const Gomoku = (function () {
      · 翻开格按“谁翻的”分颜（我=白底，TA=淡墨底），盘下图例说清；旗子也记标的人
      · TA 的推理补真：旗子当已知雷参算，数字减旗=还藏几颗；以前那个 safe 数组永远为空，
        “优先翻推理出的安全格”根本跑不到
+   10-08 改版定稿（她 23:02 纠偏）：轮替制保留——他点一下我点一下算一轮，
+     每一轮最多 30 秒（壳子那口她定的回合钟 MOVE_SEC，到点 TA 替走）；
+     整局收场只有两种：被炸死（累计 5 雷）或安全格下完。
+     保留的改版件：头像落点（最近一手浮头像）、首雷炸开一片白（全雷亮出后盘上继续）、
+     雷数/得分图标条；标雷计分用旧闸门（轮到这位 + 本回合第一次，09-02 她拍的口径）。
    ===================================================== */
 const Mine = (function () {
+
+  function esc(s) { return UI.escapeHtml(String(s == null ? '' : s)); }   // 全站唯一口径在 UI（各模块同款局部壳）
 
   function cfgOf() {
     const g = DB.state.games = DB.state.games || {};
@@ -20141,6 +20142,9 @@ const Mine = (function () {
       flip(m, x, y, uid);
       m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
       m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
+      /* 她 10-08：踩到雷就炸开一片白——全场雷一次亮出，盘上继续，剩时间接着拼安全格 */
+      m.revealed = true;
+      room.lastPos = room.lastPos || {}; room.lastPos[uid] = { x: x, y: y };
       room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
       room.lastMv = { uid, cells: [key(x, y)], mine: true, ts: Date.now() };
       m.firstDone = true;
@@ -20149,6 +20153,7 @@ const Mine = (function () {
     }
     const opened = flip(m, x, y, uid).filter(k => !m.mineSet.includes(k));
     m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) + (firstStep ? 0 : opened.length * 3);
+    room.lastPos = room.lastPos || {}; room.lastPos[uid] = { x: x, y: y };
     room.moves.push({ uid, x, y, ts: Date.now() });
     room.lastMv = { uid, cells: opened, mine: false, ts: Date.now() };
     m.firstDone = true;
@@ -20170,6 +20175,8 @@ const Mine = (function () {
      炸弹/旗子用 EMOJI 是她点名要的（游戏内容物例外）。
      09-02 补两道闸门：计分只认“轮到这位”+“本回合第一次标”——以前 TA 想棋那几秒
      我可以把整盘雷挨个标完白捠 +3，那叫刷分不叫推理；标不标本身不拦，只是不作数 */
+  /* 标雷计分（她 09-02 拍的两道闸门，23:02 定稿后继续用）：只认「轮到这位 + 本回合第一次」。
+     标不标本身不拦，只是不作数——限时制那套“每格一次”闸随回滚拆除 */
   function flag(room, uid, x, y) {
     const m = room.mine;
     const k = key(x, y);
@@ -20177,9 +20184,9 @@ const Mine = (function () {
     m.flags = m.flags || {}; m.flagScored = m.flagScored || {}; m.flagBy = m.flagBy || {};
     if (m.flags[k]) { delete m.flags[k]; delete m.flagBy[k]; return { toggled: 'off' }; }
     m.flags[k] = true; m.flagBy[k] = uid;
+    room.lastPos = room.lastPos || {}; room.lastPos[uid] = { x: x, y: y };
     if (m.mineSet == null) return { toggled: 'on' };        // 首翻前还没有答案（导入的存档可能是 undefined），不判分
     if (m.flagScored[k]) return { toggled: 'on' };
-    /* 她 10-04 的「第一步不计分」只限首翻那下（连开多少不可控）；标雷是 ±3/-5 的确定动作，照旧计分 */
     const n = (room.moves || []).length;
     if (turnOf(room) !== uid) return { toggled: 'on', skipped: 'turn' };
     if (m.flagClock === n) return { toggled: 'on', skipped: 'once' };
@@ -20243,7 +20250,15 @@ const Mine = (function () {
     const m = room.mine || { size: cfgOf().size, open: {} };
     m.flags = m.flags || {}; m.flagBy = m.flagBy || {};
     const last = room.lastMv;
-    let h = '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr);grid-template-rows:repeat(' + m.size + ',1fr)">';
+    /* 她 10-08：雷数/得分图标条（图标放开）；这一手的 30s 倒计时在顶条 room-timer（壳子那口钟） */
+    const p0 = (room.players || [])[0] || 'me', p1 = (room.players || [])[1] || otherUid(room, p0);
+    const sc = m.scores || {};
+    const flagged = Object.keys(m.flags).length;
+    let h = '<div class="mn-stat">' +
+      '<span class="mn-st"><i data-icon="mine-bomb"></i><b>' + (m.mines || 0) + '</b><em>已标 ' + flagged + '</em></span>' +
+      '<span class="mn-st mn-pts">' + esc(nm2(p0)) + ' <b>' + (sc[p0] || 0) + '</b> ： <b>' + (sc[p1] || 0) + '</b> ' + esc(nm2(p1)) + '</span>' +
+      '</div>';
+    h += '<div class="mn-board" style="grid-template-columns:repeat(' + m.size + ',1fr);grid-template-rows:repeat(' + m.size + ',1fr)">';
     for (let x = 0; x < m.size; x++) for (let y = 0; y < m.size; y++) {
       const k = key(x, y);
       const o = m.open[k];
@@ -20253,6 +20268,9 @@ const Mine = (function () {
         h += '<div class="mn-cell mn-open mn-boom' + own + (isLast ? ' mn-last' : '') + '">💣</div>';
       } else if (o) {
         h += '<div class="mn-cell mn-open mn-n' + own + (isLast ? ' mn-last' : '') + '" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
+      } else if (m.revealed && m.mineSet && m.mineSet.includes(k)) {
+        /* 她 10-08：踩到第一个雷炸开一片白——其余雷全亮出来（白底，不再藏） */
+        h += '<div class="mn-cell mn-reveal">💣</div>';
       } else if (m.flags[k]) {
         h += '<div class="mn-cell mn-flag' + (m.flagBy[k] === 'me' || !m.flagBy[k] ? ' by-me' : ' by-ta') +
           (isLast ? ' mn-last' : '') + '" data-x="' + x + '" data-y="' + y + '">🚩</div>';
@@ -20261,9 +20279,21 @@ const Mine = (function () {
       }
     }
     h += '</div>';
-    /* 图例只说“谁翻的”，不报名字也不上新颜色（名字上面玩家条已有，同一条信息不许页上出现两次） */
+    /* 图例只说“谁翻的”，不报名字也不上新颜色（名字状态条已有，同一条信息不许页上出现两次） */
     h += '<div class="mn-legend"><span class="mn-lg by-me"></span>你翻的<span class="mn-lg by-ta"></span>对方翻的</div>';
     el.innerHTML = h;
+    /* 她 10-08：头像代表下在这里——两人最近一手的位置各浮一颗小头像（要在 innerHTML 之后找格子） */
+    const pos = room.lastPos || {};
+    [p0, p1].forEach(u => {
+      const pp = pos[u]; if (!pp) return;
+      const cell = el.querySelector('.mn-cell[data-x="' + pp.x + '"][data-y="' + pp.y + '"]');
+      if (!cell) return;
+      const mark = document.createElement('span');
+      mark.className = 'mn-pin' + (u === 'me' ? ' by-me' : ' by-ta');
+      mark.innerHTML = (typeof Home !== 'undefined' && Home.avaInner) ? Home.avaInner(u) : '';
+      cell.appendChild(mark);
+    });
+    if (typeof mountIcons === 'function') mountIcons(el);
     /* 长按标雷/取消，轻点翻开——事件统一走 UI.longPress（08-30 根治：旧写法把
        pointerleave 也当“松手”清计时器，手指微抖就前功尽弃；移动端没 touch-action 又被当滚动） */
     el.querySelectorAll('.mn-cell:not(.mn-open)').forEach(cell => {
@@ -20274,9 +20304,16 @@ const Mine = (function () {
     });
   }
 
+  /* 名字：优先壳子口径（Home.name），够不着再退 profile 名——扫雷模块不拄第三份名字逻辑 */
+  function nm2(uid) {
+    try { return (typeof Home !== 'undefined' && Home.uidName) ? Home.uidName(uid) : (uid === 'me' ? '我' : '对方'); }
+    catch (e) { return uid === 'me' ? '我' : '对方'; }
+  }
+
   function def() {
     return {
       id: 'mine', name: '扫雷', icon: 'mine-bomb', playersTxt: '双人',
+      /* 她 23:02 定稿：轮替制保留（他点一下我点一下算一轮，每轮最多 30s 走壳子那口钟），freePlay 退役 */
       newRoom(room) {
         const c = cfgOf();
         room.mine = { size: c.size, mines: c.mines, mineSet: null, open: {}, nums: {}, hits: {}, scores: {}, flags: {}, flagScored: {} };
@@ -21055,6 +21092,13 @@ const Uno = (function () {
       const cnt = (u.hands[id] || []).length;
       const isCur = room.phase === 'playing' && curUid(room) === id;
       const victim = u.pending && nextUid(room, 1) === id;
+      /* 她 10-08（UNO 参考图）：对手剩牌画一小叠牌背（张数压气泡角标），不再光秃秃一个数字；
+         我自己不画（手牌就在底下），与斗地主同一套写法 */
+      const backs = (id !== 'me' && room.phase !== 'over' && cnt > 0)
+        ? '<span class="dz-backs un-backs">' +
+          Array.from({ length: Math.min(cnt, 8) }, (_, k) => '<i style="left:' + (k * 2.6).toFixed(1) + 'px"></i>').join('') +
+          '<b>' + cnt + '</b></span>'
+        : '';
       /* 轮到这位且手里挂着一手未落的 unoTurn → 把“在想”标在牌桌上，
          不然手机上只看到牌一张接一张飞，根本不知道轮到谁 */
       const think = isCur && id !== 'me' && (room.plans || []).some(p => !p.done && p.kind === 'unoTurn');
@@ -21062,7 +21106,7 @@ const Uno = (function () {
         ' style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%">' +
         '<span class="un-seat-av">' + ava(id) + '</span>' +
         '<span class="un-seat-nm">' + esc(nameOf(id)) + '<em>' + seatLabel(n, i) + '</em></span>' +
-        '<span class="un-seat-cnt">' + cnt + '</span>' +
+        (backs || (id === 'me' ? '<span class="un-seat-cnt">' + cnt + '</span>' : '')) +
         (think ? '<i class="un-seat-think">…</i>' : '') +
         (u.called[id] && cnt === 1 ? '<i class="un-seat-uno">UNO</i>' : '') +
         (victim ? '<i class="un-seat-pen">-' + u.pending.n + '</i>' : '') +
@@ -21470,7 +21514,6 @@ const Ludo = (function () {
   /* 坐色按序号不变：她 10-04 说的「双人一行/三人分立/各占一角」是座位条的布置（壳层 gm-players 管），
      不是棋盘角位——在途对局的颜色不能被重构掉，老存档照玩 */
   function colOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? null : COLORS[i % 4]; }
-  function siOf(r, uid) { const i = (r.players || []).indexOf(uid); return i < 0 ? -1 : i % 4; }
   function toks(r, c) { const L = st(r); return c && L.toks[c] ? L.toks[c] : null; }
   function curUid(r) { const L = st(r); return (L.order || [])[L.oi] || null; }
   /* 基地停机位的绝对格（渲染与动画都读这里，不各算一份） */
@@ -21772,7 +21815,9 @@ const Ludo = (function () {
     h += '<div class="ld-legend">' + (r.players || []).map(u => {
       const cc = colOf(r, u);
       if (!cc) return '';
-      return '<span class="ld-lg' + (u === 'me' ? ' me' : '') + '" style="color:' + CHEX[cc] + '"><b>' + CNAME[cc] + '</b><i></i>' +
+      /* 她 10-08：所有游戏都要注意头像位置——图例一人一颗头像，不再只有名字 */
+      return '<span class="ld-lg' + (u === 'me' ? ' me' : '') + '" style="color:' + CHEX[cc] + '">' +
+        '<span class="gm-mini-ava">' + Home.avaInner(u) + '</span><b>' + CNAME[cc] + '</b><i></i>' +
         (u === 'me' ? '<em class="ld-lg-me">我</em>' : '') +
         '<span class="ld-lg-n">' + homeCnt(r, cc) + '/4</span></span>';
     }).join('') + '</div>';
@@ -22765,17 +22810,25 @@ const Doudizhu = (function () {
   }
   function seatHtml(r, D, uid, cls) {
     const cnt = (D.hands[uid] || []).length;
+    const isMe = uid === 'me';
     const isCur = r.phase === 'playing' && D.phase !== 'over' && curUid(r) === uid;
-    const think = isCur && uid !== 'me' && (r.plans || []).some(p => !p.done && (p.kind === 'dzPlay' || p.kind === 'dzCall' || p.kind === 'dzDouble'));
+    const think = isCur && !isMe && (r.plans || []).some(p => !p.done && (p.kind === 'dzPlay' || p.kind === 'dzCall' || p.kind === 'dzDouble'));
     const bid = D.bids[uid];
     const grab = D.grabs[uid];
     const dbl = D.dbl[uid];
-    return '<div class="gm-player dz-seat' + (isCur ? ' on' : '') + (uid === 'me' ? ' me' : '') + (cls ? ' ' + cls : '') + '" data-uid="' + uid + '">' +
+    /* 她 10-08：对手剩牌不许再用干巴巴的数字顶着——画一小叠牌背（张数最多摸 8 张，
+       超出的张数压在角标上），我方不画（手牌就在底下，画了是重复信息） */
+    const backs = (!isMe && D.phase !== 'over' && cnt > 0)
+      ? '<span class="dz-backs">' +
+        Array.from({ length: Math.min(cnt, 8) }, (_, i) => '<i style="left:' + (i * 2.6).toFixed(1) + 'px"></i>').join('') +
+        '<b>' + cnt + '</b></span>'
+      : '';
+    return '<div class="gm-player dz-seat' + (isCur ? ' on' : '') + (isMe ? ' me' : '') + (cls ? ' ' + cls : '') + '" data-uid="' + uid + '">' +
       '<span class="dz-av">' + ava(uid) + '</span>' +
       '<span class="dz-nm">' + esc(nm(uid)) +
       (D.landlord === uid ? '<em class="dz-crown">地主</em>' : (D.order.length ? '<em class="dz-farm">农民</em>' : '')) +
       '</span>' +
-      '<span class="dz-cnt">' + cnt + '</span>' +
+      (backs || (isMe ? '<span class="dz-cnt">' + cnt + '</span>' : '')) +
       (D.mode === 'grab'
         ? (grab != null ? '<i class="dz-bid">' + (grab ? '抢了' : '没抢') + '</i>' : '')
         : (bid != null ? '<i class="dz-bid">' + (bid ? BID_NAME[bid] : '不叫') + '</i>' : '')) +
@@ -22865,11 +22918,8 @@ const Doudizhu = (function () {
       hand.map(c => '<div class="dz-slot' + (D.sel.indexOf(c.id) >= 0 ? ' sel' : '') + '">' +
         cardFace(c, '', ' data-id="' + c.id + '"') + '</div>').join('') +
       '</div>';
-    /* 图例：谁地主谁农民一目了然（她要点的是“区分我们二者”） */
-    h += '<div class="dz-legend">' + D.order.map(u =>
-      '<span class="dz-lg' + (u === 'me' ? ' me' : '') + (D.landlord === u ? ' land' : '') + '"><b>' +
-      (D.landlord ? (D.landlord === u ? '地主' : '农民') : '未定') + '</b>' + esc(nm(u)) +
-      '<i>' + (D.played[u] ? D.played[u].cards : 0) + ' 张已出</i></span>').join('') + '</div>';
+    /* 图例块整块拆了（她 10-08：同一信息不许在页上出现两遍——地主/农民/剩张数
+       座位上都有了，又拉一排“已出几张”是堆砌）；出牌记录归底部窄框 */
     el.innerHTML = h;
 
     /* 绑定 */
@@ -24122,7 +24172,12 @@ const Mono = (function () {
     clearClock(r);
     const g = (DB.state.games = DB.state.games || {});
     const t = g.monoScore = g.monoScore || {};
-    Object.keys(sc).forEach(u => { t[u] = (t[u] || 0) + sc[u]; });
+    /* 她 10-08：分数太膨胀——累计记分牌不再累资产差额（一场能坌几千），
+       改按这局名次给小分：第1名+3、第2名+2、第3名+1，其余 0，出局 0；
+       名次先后按金币资产排（rankRows 已按 assets 降序，这就是“按金币数排先后”）。
+       3/2/1 是工程值，她拍板后可调 */
+    const RANK_PTS = [3, 2, 1];
+    rows.forEach((x, i) => { const pts = x.out ? 0 : (RANK_PTS[i] != null ? RANK_PTS[i] : 1); t[x.u] = (t[x.u] || 0) + pts; });
     feed(r, 'sys', esc(nm(r.winner)) + ' 拿下这局（资产 ' + assets(r, r.winner) + '）');
     Games.say(r, r.winner, '胜负感言');      // 赢了的那位夸口一句（TA 赢才说，我赢了没谁接话）
     if (typeof Games !== 'undefined' && Games.finish) Games.finish(r, { win: r.winner, line: [] });
@@ -24429,7 +24484,10 @@ const Mono = (function () {
        09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
        以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；
        现在不分档：信息全在一颗上，窄了可划，与结算表同一个“左右划”口径（.gm-swipe 同一家） */
-    h += '<div class="gm-players mc-bank">' + M.order.map(u =>
+    /* 她 10-08：头像分立——不再一行排排坐。拆成上下两簇盘绕着棋盘各站一边，
+       一簇内均匀散开（space-evenly），人数多也只多占半行 */
+    const half = Math.ceil(M.order.length / 2);
+    const pkRow = (arr, cls) => '<div class="gm-players mc-bank ' + cls + '">' + arr.map(u =>
       '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
       '" data-uid="' + u + '"><span class="gm-mini-ava">' + Home.avaInner(u) + '</span>' +
       '<i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
@@ -24440,6 +24498,7 @@ const Mono = (function () {
       (u === 'me' ? '<em class="mc-me">我</em>' : '') +
       (M.jail[u] ? '<em class="mc-jbadge">狱</em>' : '') +
       (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
+    h += pkRow(M.order.slice(0, half), 'mc-bank-top');
     h += '<div class="mc-board" id="mc-board">' + cells.join('') +
       '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
       '<div class="mc-dice' + (spinning ? ' spin' : M.dice ? ' land' : '') + '">' + (spinning
@@ -24459,7 +24518,8 @@ const Mono = (function () {
         (itOn(r) && M.items['me'] ? ((upOn(r) ? ' · ' : '') + '手里：' + esc(IT_NAME[M.items['me']])) : '') + '</div>' : '') +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
-      '</div></div>';
+      '</div></div>' +
+    pkRow(M.order.slice(half), 'mc-bank-bot');
     /* 操作条 */
     h += '<div class="mc-bar">';
     if (M.phase === 'begin') h += '<span class="mc-hint">马上开跑…</span>';
@@ -25001,7 +25061,7 @@ const Games = (function () {
   function taUid(room) { return (room.players || []).find(u => u !== 'me') || null; }
   function chatProb() { const v = S().chatProb; return Math.max(0, Math.min(100, (v == null ? CHAT_PROB : +v) || 0)); }
   /* 轮到谁：游戏模块自己有口径（UNO 多人是沿座位环走，不是奇偶交替）就问它；
-     五子棋/扫雷这种两人交替才吃 moves 奇偶 */
+     五子棋/扫雷这种两人交替才吃 moves 奇偶（她 23:02 定稿：扫雷轮替制保留，每轮 30s 走壳子那口钟） */
   function currentTurn(room) {
     const d = defOf(room);
     if (d && d.turnOf) return d.turnOf(room);
@@ -25532,7 +25592,8 @@ const Games = (function () {
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 950);
   }
-  /* 扫雷长按标注（她 08-29：标对了 +3、标错了 -5，格子只判一次分；由 mine.render 长按触发） */
+  /* 扫雷长按标注（她 08-29：标对了 +3、标错了 -5；她 10-08 改限时制后每格只判一次，
+     不再分“轮不轮到你”，播报把加减分说清真话） */
   function onFlag(x, y) {
     const r = curRoom(); if (!r || r.phase !== 'playing' || r.game !== 'mine') return;
     const d = defOf(r);
@@ -25826,7 +25887,10 @@ const Games = (function () {
     } else if (r.phase === 'playing' && turn !== 'me') {
       /* TA 落子中：玩家条上已有「正在想…」，不再叠横幅（她 08-29：别堆说明文字） */
     }
-    h += '<div class="gm-feed" id="room-feed">' + (r.feed || []).map(f =>
+    /* 她 10-08：卡牌桌（斗地主/UNO）的底部日志收成窄框（里面滚）——棋盘类不动现行口径 */
+    const dg = defOf(r).id;
+    const feedDz = (dg === 'doudizhu' || dg === 'uno') ? ' gm-feed-dz' : '';
+    h += '<div class="gm-feed' + feedDz + '" id="room-feed">' + (r.feed || []).map(f =>
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
     h += '<div class="gm-ipt">' +
       '<button class="gm-chip-btn" id="room-quick">短语</button>' +
