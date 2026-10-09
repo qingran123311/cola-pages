@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-095712 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-131409 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -3160,30 +3160,28 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
 .dz-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
 
-/* ---------- 台球（P70，她 10-09 00:43）：竖桌居中，左力度右微调，两侧玩家面板 ---------- */
-.bt-wrap{display:flex;flex-direction:column;gap:8px;padding:6px 2px 4px}
-.bt-sliders{display:grid;grid-template-columns:34px 1fr 34px;gap:8px;align-items:stretch}
-.bt-slider{position:relative;width:20px;height:100%;min-height:260px;justify-self:center;
-  border:1.5px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;touch-action:none;overflow:visible}
-.bt-slider .bt-fill{position:absolute;left:3px;right:3px;bottom:6px;height:0;border-radius:999px;background:var(--t1);opacity:.16}
-.bt-slider .bt-knob{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(0% - 8px);
-  width:16px;height:16px;border-radius:50%;background:var(--card);border:1.6px solid var(--t1)}
-.bt-board{position:relative;border:1.5px solid var(--t1);border-radius:12px;overflow:hidden;background:var(--card)}
+/* ---------- 台球（8 球重做，她 10-09 13:02 解除配色限制）：绿呢桌+木框居中，左右玩家面板（头像+分组+收纳槽） ---------- */
+.bt-wrap{display:flex;flex-direction:column;gap:6px;padding:4px 2px 2px}
+.bt-mid{display:grid;grid-template-columns:58px minmax(0,1fr) 58px;gap:7px;align-items:stretch}
+.bt-mid > *{min-width:0}
+.bt-plaque{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 3px;
+  border:1.5px solid var(--line);border-radius:14px;background:var(--card);opacity:.62}
+.bt-plaque.on{opacity:1;border-color:var(--t1);box-shadow:0 3px 12px rgba(46,139,87,.28)}
+.bt-plaque b{font-weight:600;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt-plaque .gm-ava{width:30px;height:30px}
+.bt-g{font-size:9.5px;color:#2e8b57;font-weight:600}
+.bt-slots{display:flex;flex-direction:column;gap:3px;align-items:center}
+.bt-slot{width:13px;height:13px;border-radius:50%;border:1px dashed var(--t3);
+  display:flex;align-items:center;justify-content:center;font-size:7.5px;color:var(--t3)}
+.bt-slot.on{border:none;color:transparent;box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
+.bt-board{position:relative;border-radius:12px;overflow:hidden;
+  border:3px solid #7a4a21;box-shadow:0 4px 14px rgba(0,0,0,.22);background:#2e8b57}
 .bt-board canvas{display:block;width:100%;height:auto;touch-action:none}
 .bt-notice{position:absolute;left:50%;top:8px;transform:translateX(-50%);max-width:86%;
-  padding:4px 12px;border-radius:999px;background:var(--card);border:1.5px solid #c9a86a;
-  color:#a07f2e;font-size:11px;opacity:0;pointer-events:none;transition:opacity .2s}
+  padding:4px 12px;border-radius:999px;background:rgba(0,0,0,.62);color:#ffe9a8;
+  font-size:11px;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
 .bt-notice.show{opacity:1}
-.bt-foot{display:flex;gap:8px}
-.bt-plaque{flex:1;display:flex;align-items:center;gap:6px;padding:5px 8px;
-  border:1.5px solid var(--line);border-radius:12px;background:var(--card);opacity:.62;flex-wrap:wrap}
-.bt-plaque.on{opacity:1;border-color:var(--t1)}
-.bt-plaque b{font-weight:600;font-size:12px}
-.bt-plaque small{color:var(--t3);font-size:10px;margin-left:auto}
-.bt-pots{display:flex;gap:3px;flex-basis:100%}
-.bt-pot{width:14px;height:14px;border-radius:50%;border:1px solid var(--t2);
-  display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--t3)}
-.bt-pot.on{border-color:var(--t1);color:var(--t1);font-weight:700}
+.bt-tip{text-align:center;font-size:10.5px;color:var(--t3)}
 
 /* ---------- 大富翁（P51）：方环 20 城 + 中间一块调度区 ---------- */
 .mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px;position:relative}
@@ -25135,53 +25133,58 @@ const Mono = (function () {
 })();
 
 /* =====================================================
-   LOVE♡X · billiards.js —— 台球（双人，P70，她 10-09 00:43/00:45 口述 + 16 张参考图）
-   9 球制：先击最小号码球；合法接触打进 9 号=赢；白球落袋/空杆/首触非最小号=犯规；
-   犯规对方自由球（白球随手摆），犯规 3 次判负（参考图口径「超 3 次自动认输」）。
-   操作口径（她 00:45 定，照参考图）：
-     · 左侧竖条=力度（拖动，松手出杆）；
-     · 右侧竖条=微调方向；
-     · 球桌上拖动=球杆绕白球 360°旋转，白球引出虚线（幽灵球+反弹短线）；
-     · 首触不是最小号 → 线端红禁止符（能出杆，照 9 球算犯规）；
-     · 轮到我时我的目标球（最小号）虚线环高亮呼吸。
-   布局照参考图：竖向球桌居中，左右两侧玩家面板（头像+进球槽），顶部倒计时走壳子 urge 钟。
-   物理：rAF 自跑等质量弹性碰撞+库边反弹+摩擦；落库只在停球结算时（DB 防抖不背高频）。
-   AI：挑「白球→目标球→袋口」可打角（切角<75°），按 stateRoll 加误差；没直路就安全球轻推。
+   LOVE♡X · billiards.js —— 台球（双人，8 球制重做）
+   她 10-09 13:02 口述：台球一塌糊涂点不动杆；解除游戏图标/配色限制，按参考文档
+   （待完善的游戏整改问题\台球\和豆包的对话_1009.txt）调整布局与玩法。口径演进：
+   · 规则 9 球 → **8 球**：三角摆球黑 8 居中，开球/开放桌进球分**实色(1-7)/花色(9-15)**；
+     打进己方球续杆；犯规（白球落袋/空杆/先触非己方/未清台先打 8）→ 对方**自由球**；
+     清台后打进黑 8 = 赢；未清台进黑 8 / 开球进黑 8 = 直接输（参考文档 §6）。
+   · 操作 → **TT 式拖拽**：按住桌上任意处拖动 = 瞄准（白球背向手指发射），拖距=力度，
+     松手出杆；瞄准线只在拖拽时显示的**原生短线**（参考文档 §5/§12 明令禁长瞄准线）。
+     旧的双滑条取消（她 00:45 口径被 13:02 参考口径推翻）。
+   · 布局：左右玩家面板（头像+分组徽标+7 格收纳槽），桌居中；顶部倒计时走壳子
+     urge 钟（全站口径 30s 只催不判负，不用参考文档的 8s 强切——她拍过全站同一口）。
+   · 配色：游戏区放开（她 13:02 解除限制）——台球厅绿呢桌+木框+标准彩球，
+     不再走全站墨线稿。
+   物理：rAF 自跑等质量弹性碰撞+库边反弹+摩擦（参数对齐参考文档：弹力≈0.85）。
+   落库只在停球结算时；AI 挑「白球→己方球→袋口」可打角（切角<75°），stateRoll 加误差。
    ===================================================== */
 const Billiards = (function () {
 
-  const W = 250, H = 400;            // 球桌逻辑尺寸（竖向，照参考图）
+  const W = 240, H = 380;            // 球桌逻辑尺寸（竖向）
   const BR = 7;                      // 球半径
-  const PAD = 14;                    // 库边内沿
-  const PR = 12.5;                   // 袋口半径
-  const POCKETS = [                  // 6 袋：四角 + 两条长边中点（角袋往内收，不然球心最远点够不到袋口）
-    { x: PAD + 1, y: PAD + 1 }, { x: W - PAD - 1, y: PAD + 1 },
-    { x: PAD + 1, y: H - PAD - 1 }, { x: W - PAD - 1, y: H - PAD - 1 },
+  const PAD = 13;                    // 呢面内沿
+  const PR = 11.5;                   // 袋口半径
+  const POCKETS = [                  // 6 袋：四角 + 两条长边中点（角袋往内收，球心最远点够得到）
+    { x: PAD + 1.5, y: PAD + 1.5 }, { x: W - PAD - 1.5, y: PAD + 1.5 },
+    { x: PAD + 1.5, y: H - PAD - 1.5 }, { x: W - PAD - 1.5, y: H - PAD - 1.5 },
     { x: PAD - 2, y: H / 2 }, { x: W - PAD + 2, y: H / 2 }
   ];
-  const FRICTION = 0.988;            // 每帧速度衰减
-  const STOP_V = 0.02;               // 停球阈值
-  const WALL_BOUNCE = 0.78;          // 库边吃库损耗
-  const TA_SEC = [2.6, 5.2];         // TA 一杆想多久（跟 UNO/飞行棋同一档，工程值）
-  const FOUL_MAX = 3;                // 她 00:45 没给数，参考图口径 3 次判负（工程值）
+  const FRICTION = 0.9915;           // 每帧速度衰减（≈ frictionAir 0.008 的手感档）
+  const STOP_V = 0.02;
+  const WALL_BOUNCE = 0.85;          // 库边吃库损耗（参考文档 restitution 0.85）
+  const TA_SEC = [2.6, 5.2];
+  /* 标准彩球配色：1黄 2蓝 3红 4紫 5橙 6绿 7绛红 8黑；9-15 同色花色 */
+  const BALL_C = { 1: '#f5c518', 2: '#1a56b8', 3: '#d23a2a', 4: '#6a2c8f', 5: '#ef7f1a', 6: '#1a7a3c', 7: '#7b2b1e', 8: '#1b1b1b' };
+  const FELT = '#2e8b57', FELT_D = '#24714a', RAIL = '#7a4a21', RAIL_D = '#5d3717';
+  const GROUP_NAME = { solid: '实色', stripe: '花色' };
 
-  /* ---------- 摆球 ---------- */
-  /* 菱形摆位：五排 1-2-3-2-1，1 号顶点朝白球（下方），9 号正中 */
+  function ballGroup(n) { return n >= 1 && n <= 7 ? 'solid' : (n >= 9 ? 'stripe' : null); }
+  function ballColor(n) { return n === 0 ? '#fdfdf8' : BALL_C[n > 8 ? n - 8 : n]; }
+
+  /* ---------- 摆球（8 球：三角五排，黑 8 居中，1 号位朝白球在下方） ---------- */
   function rackBalls() {
-    const balls = [{ n: 0, x: W / 2, y: H * 0.76, vx: 0, vy: 0, on: true }];
-    const others = [2, 3, 4, 5, 6, 7, 8];
-    for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = others[i]; others[i] = others[j]; others[j] = t; }
-    /* 座位序：row0[1], row1[a,b], row2[c,9,d], row3[e,f], row4[g] */
-    const fill = [others[0], others[1], others[2], others[3], others[4], others[5], others[6]];
-    const rowXs = [[0], [-0.5, 0.5], [-1, 0, 1], [-0.5, 0.5], [0]];
-    const dy = BR * 2.12;
-    for (let r2 = 0; r2 < 5; r2++) {
-      for (const off of rowXs[r2]) {
+    const balls = [{ n: 0, x: W / 2, y: H * 0.82, vx: 0, vy: 0, on: true }];
+    const pool = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15];
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+    const dy = BR * 2.12, footY = H * 0.30;
+    for (let row = 0; row < 5; row++) {
+      for (let c = 0; c <= row; c++) {
         let n;
-        if (r2 === 4) n = 1;                     // 顶点排最靠白球（r2=4 的 y 最大、离白球最近）
-        else if (r2 === 2 && off === 0) n = 9;
-        else n = fill.shift();
-        balls.push({ n: n, x: W / 2 + off * 2 * BR * 2.12, y: H * 0.30 - (2 - r2) * dy, vx: 0, vy: 0, on: true });
+        if (row === 2 && c === 1) n = 8;                        // 第三排正中=黑 8（规矩）
+        else n = pool.pop();
+        const off = c - row / 2;
+        balls.push({ n: n, x: W / 2 + off * BR * 2.12, y: footY - row * dy, vx: 0, vy: 0, on: true });
       }
     }
     return balls;
@@ -25193,16 +25196,17 @@ const Billiards = (function () {
     room.bill = {
       balls: rackBalls(),
       turn: taFirst ? (room.players.find(u => u !== 'me') || 'ta') : 'me',
-      phase: taFirst ? 'taThink' : 'aim',      // aim | taThink | moving | place | over
-      aim: -Math.PI / 2, fine: 0, power: 0,
-      first: null, potted: [],            // 这一杆：首触 / 本杆落袋
-      pots: { me: [], ta: [] },           // 各自落袋的球号
+      phase: taFirst ? 'taThink' : 'aim',   // aim | taThink | moving | place | over
+      group: { me: null, ta: null },        // null=开放桌（分球未定）
+      aimA: -Math.PI / 2, drag: null, power: 0,
+      first: null, potted: [],
+      pots: { me: [], ta: [] },
       fouls: { me: 0, ta: 0 },
-      notice: '', msgAt: 0
+      notice: '', cueStrike: 0
     };
     const b = room.bill;
-    feed(room, 'sys', '台球开局：9 球制，先击最小号，打进 9 号赢');
-    feed(room, 'sys', taFirst ? esc(name(room.players.find(u => u !== 'me'))) + ' 先开球' : '你先开球');
+    feed(room, 'sys', '台球开局：8 球制，开球分实色花色，清台后打进黑 8 赢');
+    feed(room, 'sys', taFirst ? esc(name(room.players.find(u => u !== 'me'))) + ' 先开球' : '你先开球：按住桌面拖动瞄准，松手出杆');
     if (b.turn !== 'me') armTa(room);
     else Games.armUrge(room);
     DB.save();
@@ -25212,8 +25216,8 @@ const Billiards = (function () {
   function name(u) { return u === 'me' ? '我' : ((DB.state.contacts || []).find(c => c.id === u) || { name: 'TA' }).name || 'TA'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
-  function onTable(bills, n) { const b = bills.find(x => x.n === n); return b && b.on; }
-  function lowest(r) { const bs = B(r).balls.filter(x => x.on && x.n > 0); return bs.length ? bs.reduce((m, x) => x.n < m.n ? x : m) : null; }
+  function myGroupOf(r, uid) { return B(r).group[uid === 'me' ? 'me' : 'ta']; }
+  function groupLeft(r, g) { return B(r).balls.filter(x => x.on && ballGroup(x.n) === g).length; }
 
   /* ---------- 物理 ---------- */
   function step(r) {
@@ -25225,7 +25229,6 @@ const Billiards = (function () {
       moving = true;
       ball.x += ball.vx; ball.y += ball.vy;
       ball.vx *= FRICTION; ball.vy *= FRICTION;
-      /* 袋口 */
       for (const p of POCKETS) {
         if (Math.hypot(ball.x - p.x, ball.y - p.y) < PR + 1.5) {
           ball.on = false; ball.vx = 0; ball.vy = 0; ball.pocketed = true;
@@ -25234,13 +25237,11 @@ const Billiards = (function () {
         }
       }
       if (!ball.on) continue;
-      /* 库边 */
       if (ball.x < PAD + BR) { ball.x = PAD + BR; ball.vx = Math.abs(ball.vx) * WALL_BOUNCE; }
       if (ball.x > W - PAD - BR) { ball.x = W - PAD - BR; ball.vx = -Math.abs(ball.vx) * WALL_BOUNCE; }
       if (ball.y < PAD + BR) { ball.y = PAD + BR; ball.vy = Math.abs(ball.vy) * WALL_BOUNCE; }
       if (ball.y > H - PAD - BR) { ball.y = H - PAD - BR; ball.vy = -Math.abs(ball.vy) * WALL_BOUNCE; }
     }
-    /* 球球等质量弹性碰撞 */
     for (let i = 0; i < bs.length; i++) {
       const a = bs[i]; if (!a.on) continue;
       for (let j = i + 1; j < bs.length; j++) {
@@ -25261,51 +25262,78 @@ const Billiards = (function () {
     return moving;
   }
 
-  /* ---------- 出杆与结算 ---------- */
+  /* ---------- 出杆与结算（8 球规矩，参考文档 §6） ---------- */
   function shoot(r, angle, power) {
     const b = B(r);
     if (b.phase !== 'aim' && b.phase !== 'place') return;
     const cue = b.balls.find(x => x.n === 0);
-    const sp = 2.4 + power * 13.5;
+    const sp = 2.2 + power * 14;
     cue.vx = Math.cos(angle) * sp; cue.vy = Math.sin(angle) * sp;
     b.first = null; b.potted = []; b.phase = 'moving';
-    b.notice = ''; b.aimA = angle;
+    b.notice = ''; b.aimA = angle; b.drag = null;
+    b.cueStrike = Date.now();              // 球杆击打动画那一拍
     feed(r, b.turn === 'me' ? 'me' : b.turn, b.turn === 'me' ? '你出杆了' : esc(name(b.turn)) + ' 出杆');
     DB.save();
   }
+  function collectPots(r, shooter) {
+    const b = B(r);
+    b.potted.forEach(n => {
+      if (n === 0 || n === 8) return;
+      const g = ballGroup(n);
+      const owner = b.group.me === g ? 'me' : 'ta';   // 分组已定时按组归属
+      b.pots[owner].push(n);
+    });
+    const got = b.potted.filter(n => n > 0 && n !== 8);
+    if (got.length) feed(r, 'sys', (shooter === 'me' ? '你' : esc(name(shooter))) + ' 打进了 ' + got.sort((a, z) => a - z).join('、') + ' 号');
+  }
   function resolve(r) {
     const b = B(r);
-    const low = lowest(r);
+    const shooter = b.turn, opp = shooter === 'me' ? taUid(r) : 'me';
     const cuePot = b.potted.indexOf(0) >= 0;
-    const legalHit = b.first != null && low != null && b.first === low.n;
-    const isFoul = cuePot || b.first == null || !legalHit;
-    const shooter = b.turn;
-    const nine = b.potted.indexOf(9) >= 0;
-    /* 落袋归属（白球不算） */
-    b.potted.forEach(n => { if (n > 0) b.pots[shooter === 'me' ? 'me' : 'ta'].push(n); });
-    if (b.potted.filter(n => n > 0).length) {
-      feed(r, 'sys', (shooter === 'me' ? '你' : esc(name(shooter))) + ' 打进了 ' +
-        b.potted.filter(n => n > 0).sort().join('、') + ' 号');
+    const eight = b.potted.indexOf(8) >= 0;
+    /* 开放桌分球：进球定实色/花色（都进按多者，工程值，文档记待拍） */
+    if (b.group.me == null) {
+      const solids = b.potted.filter(n => n >= 1 && n <= 7).length;
+      const stripes = b.potted.filter(n => n >= 9).length;
+      if (solids || stripes) {
+        const g = (solids && stripes) ? (solids >= stripes ? 'solid' : 'stripe') : (solids ? 'solid' : 'stripe');
+        b.group[shooter === 'me' ? 'me' : 'ta'] = g;
+        b.group[shooter === 'me' ? 'ta' : 'me'] = g === 'solid' ? 'stripe' : 'solid';
+        feed(r, 'sys', (shooter === 'me' ? '你' : esc(name(shooter))) + ' 分到' + GROUP_NAME[g] +
+          '，' + (shooter === 'me' ? esc(name(opp)) : '你') + ' 打' + GROUP_NAME[g === 'solid' ? 'stripe' : 'solid']);
+      }
     }
-    /* 白球落袋：重摆到开球点（随手摆交给对手的话下面 place 接） */
-    const cue = b.balls.find(x => x.n === 0);
-    if (cuePot) { cue.on = true; cue.x = W / 2; cue.y = H * 0.76; cue.vx = 0; cue.vy = 0; }
-    if (isFoul) {
+    const myG = myGroupOf(r, shooter);
+    const cleared = myG ? groupLeft(r, myG) === 0 : false;
+    /* 黑 8 先裁胜负（不管这杆犯不犯规） */
+    if (eight) {
+      const win = !cuePot && myG && cleared;
+      return finish(r, win ? shooter : opp,
+        win ? '清台打进黑 8' : (myG ? '未清台进黑 8' : '开球进了黑 8'));
+    }
+    /* 犯规判定 */
+    let foul = false, why = '';
+    if (cuePot) { foul = true; why = '白球落袋'; }
+    else if (b.first == null) { foul = true; why = '空杆'; }
+    else if (myG) {
+      const mustEight = groupLeft(r, myG) === 0;
+      const okFirst = mustEight ? b.first === 8 : (ballGroup(b.first) === myG);
+      if (!okFirst) { foul = true; why = '先碰了 ' + b.first + ' 号（要打' + (mustEight ? '黑 8' : '自己的' + GROUP_NAME[myG]) + '）'; }
+    }
+    collectPots(r, shooter);
+    if (foul) {
       b.fouls[shooter === 'me' ? 'me' : 'ta']++;
-      const why = cuePot ? '白球落袋' : (b.first == null ? '空杆' : '先碰了 ' + b.first + ' 号（要打最小号）');
-      feed(r, 'sys', '犯规：' + why + '（第 ' + b.fouls[shooter === 'me' ? 'me' : 'ta'] + ' 次）');
+      feed(r, 'sys', '犯规：' + why);
       b.notice = '犯规 · ' + why;
-      if (b.fouls[shooter === 'me' ? 'me' : 'ta'] >= FOUL_MAX) { return finish(r, shooter === 'me' ? taUid(r) : 'me', '犯规满 ' + FOUL_MAX + ' 次'); }
-      /* 9 号犯规落袋 → 重摆脚点（9 球规矩） */
-      if (nine) respotNine(r);
       handOver(r, true);
       return;
     }
-    if (nine) { return finish(r, shooter, '打进 9 号'); }
-    if (b.potted.filter(n => n > 0).length) {   // 有进还不犯规 → 继续打
+    /* 打进己方球（或开放桌有进）→ 续杆 */
+    const ownPot = b.potted.some(n => n > 0 && (!myG || ballGroup(n) === myG));
+    if (ownPot) {
       b.phase = shooter === 'me' ? 'aim' : 'taThink';
-      b.fine = 0; b.power = 0;
-      if (b.turn === 'me') { Games.armUrge(r); } else { armTa(r); }
+      b.power = 0;
+      if (shooter === 'me') Games.armUrge(r); else armTa(r);
       DB.save(); touch(r);
       return;
     }
@@ -25314,26 +25342,18 @@ const Billiards = (function () {
   function handOver(r, foul) {
     const b = B(r);
     b.turn = b.turn === 'me' ? taUid(r) : 'me';
-    b.fine = 0; b.power = 0; b.first = null;
+    b.power = 0; b.first = null;
     if (b.turn === 'me') {
       b.phase = foul ? 'place' : 'aim';
       if (foul) b.notice = (b.notice ? b.notice + ' · ' : '') + '自由球：点桌上摆白球';
       feed(r, 'sys', '轮到你了');
       Games.armUrge(r);
     } else {
-      b.phase = foul ? 'place' : 'taThink';   // TA 犯规也先摆自由球（计划环里 taPlace 接）
+      b.phase = foul ? 'place' : 'taThink';
       feed(r, 'sys', esc(name(taUid(r))) + ' 在打');
       armTa(r);
     }
     touch(r);
-  }
-  function respotNine(r) {
-    const b = B(r), nine = b.balls.find(x => x.n === 9);
-    nine.on = true; nine.pocketed = false;
-    nine.x = W / 2; nine.y = H * 0.30; nine.vx = 0; nine.vy = 0;
-    /* 脚点被占就往下挪 */
-    while (b.balls.some(x => x.on && x !== nine && Math.hypot(x.x - nine.x, x.y - nine.y) < BR * 2.2) && nine.y < H - PAD - BR * 2) nine.y += BR;
-    feed(r, 'sys', '9 号重摆回脚点');
   }
   function finish(r, winUid, why) {
     const b = B(r);
@@ -25349,7 +25369,6 @@ const Billiards = (function () {
     r.plans.push({ kind: 'btTa', at: Date.now() + rand(TA_SEC[0], TA_SEC[1]) * 1000, done: false });
   }
   function rand(a, z) { return a + Math.random() * (z - a); }
-  /* 线段到圆最近距离（AI 判路是否被挡） */
   function segCircle(ax, ay, bx, by, cx, cy, rad) {
     const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
     let t = ((cx - ax) * dx + (cy - ay) * dy) / L2; t = Math.max(0, Math.min(1, t));
@@ -25358,34 +25377,41 @@ const Billiards = (function () {
   function taShot(r) {
     const b = B(r);
     const cue = b.balls.find(x => x.n === 0);
-    const low = lowest(r);
-    if (!low) { return; }
+    const myG = myGroupOf(r, 'ta');
+    let targets;
+    if (myG && groupLeft(r, myG) === 0) targets = b.balls.filter(x => x.on && x.n === 8);
+    else if (myG) targets = b.balls.filter(x => x.on && ballGroup(x.n) === myG);
+    else targets = b.balls.filter(x => x.on && x.n !== 0);          // 开放桌：随便挑最好打的
+    if (!targets.length) return;
     const roll = (r.stateRoll | 0) || 50;
-    const others = b.balls.filter(x => x.on && x.n !== 0 && x.n !== low.n);
+    const others = b.balls.filter(x => x.on && x.n !== 0);
     let best = null;
-    for (const p of POCKETS) {
-      const lx = low.x - p.x, ly = low.y - p.y, L = Math.hypot(lx, ly) || 1;
-      const ghost = { x: low.x + lx / L * BR * 2, y: low.y + ly / L * BR * 2 };
-      const ax = ghost.x - cue.x, ay = ghost.y - cue.y, A = Math.hypot(ax, ay) || 1;
-      const cut = Math.acos(Math.max(-1, Math.min(1, (ax * lx + ay * ly) / (A * L))));
-      if (cut > 75 * Math.PI / 180) continue;
-      /* 白球→幽灵位 别被挡（low 自己在幽灵位附近不算挡） */
-      let blocked = false;
-      for (const o of others) if (segCircle(cue.x, cue.y, ghost.x, ghost.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; }
-      if (!blocked) for (const o of b.balls) { if (!o.on || o.n === 0 || o === low) continue; if (segCircle(low.x, low.y, p.x, p.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; } }
-      if (blocked) continue;
-      const score = cut * 2 + A / W + L / H;
-      if (!best || score < best.score) best = { angle: Math.atan2(ay, ax), score: score, dist: A };
+    for (const t of targets) {
+      for (const p of POCKETS) {
+        const lx = t.x - p.x, ly = t.y - p.y, L = Math.hypot(lx, ly) || 1;
+        const ghost = { x: t.x + lx / L * BR * 2, y: t.y + ly / L * BR * 2 };
+        const ax = ghost.x - cue.x, ay = ghost.y - cue.y, A = Math.hypot(ax, ay) || 1;
+        const cut = Math.acos(Math.max(-1, Math.min(1, (ax * lx + ay * ly) / (A * L))));
+        if (cut > 75 * Math.PI / 180) continue;
+        let blocked = false;
+        for (const o of others) { if (o === t) continue; if (segCircle(cue.x, cue.y, ghost.x, ghost.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; } }
+        if (!blocked) for (const o of b.balls) { if (!o.on || o === t) continue; if (segCircle(t.x, t.y, p.x, p.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; } }
+        if (blocked) continue;
+        const score = cut * 2 + A / W + L / H;
+        if (!best || score < best.score) best = { angle: Math.atan2(ay, ax), score: score, dist: A };
+      }
     }
     let angle, power;
     if (best) {
       angle = best.angle;
-      const err = (1 - roll / 100) * 0.06 + 0.01;       // 状态差失误大，状态好基本指哪打哪
+      const err = (1 - roll / 100) * 0.06 + 0.01;
       angle += (Math.random() - 0.5) * 2 * err;
       power = Math.max(0.3, Math.min(0.92, 0.34 + best.dist / W * 0.55 + Math.random() * 0.12));
     } else {
-      /* 安全球：轻推最小号，保证首触合法 */
-      angle = Math.atan2(low.y - cue.y, low.x - cue.x) + (Math.random() - 0.5) * 0.08;
+      /* 安全球：轻推最近的目标球，保证首触合法 */
+      let near = targets[0], nd = Infinity;
+      for (const t of targets) { const d = Math.hypot(t.x - cue.x, t.y - cue.y); if (d < nd) { nd = d; near = t; } }
+      angle = Math.atan2(near.y - cue.y, near.x - cue.x) + (Math.random() - 0.5) * 0.08;
       power = 0.32;
     }
     shoot(r, angle, power);
@@ -25393,7 +25419,6 @@ const Billiards = (function () {
 
   /* ---------- 计划环 ---------- */
   function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); else DB.save(); }
-  /* 30s 到点 TA 催一句不判负（全站同一口），催完重挂这口钟 */
   function onTimeout(r) {
     const b = B(r); if (!b || b.phase === 'over' || b.turn !== 'me') return false;
     Games.say(r, taUid(r), '快捷短语');
@@ -25412,20 +25437,17 @@ const Billiards = (function () {
   }
   function taPlace(r) {
     const b = B(r), cue = b.balls.find(x => x.n === 0);
-    let x = W / 2, y = H * 0.76;
-    let tries = 0;
+    let x = W / 2, y = H * 0.82, tries = 0;
     while (b.balls.some(o => o.on && o.n !== 0 && Math.hypot(o.x - x, o.y - y) < BR * 2.3) && tries++ < 40) {
       x = PAD + BR + Math.random() * (W - 2 * (PAD + BR));
-      y = H * 0.6 + Math.random() * (H * 0.3);
+      y = H * 0.62 + Math.random() * (H * 0.28);
     }
-    cue.on = true; cue.x = x; cue.y = y;
+    cue.on = true; cue.x = x; cue.y = y; cue.vx = 0; cue.vy = 0;
     b.phase = 'taThink';
     feed(r, 'sys', esc(name(taUid(r))) + ' 摆好白球继续');
     DB.save();
     armTa(r);
   }
-
-  /* ---------- 认输 ---------- */
   function onResign(r) {
     const b = B(r); if (!b || b.phase === 'over') return false;
     finish(r, taUid(r), '你认输');
@@ -25434,75 +25456,44 @@ const Billiards = (function () {
 
   /* ---------- 渲染 ---------- */
   let raf = 0, lastTs = 0;
-  function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); else DB.save(); }
-  function theme() {
-    const cs = getComputedStyle(document.body);
-    const v = k => (cs.getPropertyValue(k) || '').trim();
-    return { ink: v('--t1') || '#3a3a42', line: v('--line') || '#ddd', card: v('--card') || '#fff', t3: v('--t3') || '#999', bad: '#c97070' };
-  }
   function render(r, el) {
     const b = B(r);
     const ta = taUid(r);
-    const potsRow = who => {
-      const mine = (b.pots[who] || []).slice().sort((a, z) => a - z);
-      let h = '<div class="bt-pots">';
-      for (let n = 1; n <= 9; n++) h += '<span class="bt-pot' + (mine.indexOf(n) >= 0 ? ' on' : '') + '">' + (mine.indexOf(n) >= 0 ? n : '') + '</span>';
-      return h + '</div>';
+    const panel = uid => {
+      const g = myGroupOf(r, uid);
+      const mine = (b.pots[uid === 'me' ? 'me' : 'ta'] || []);
+      let slots = '';
+      const nums = g === 'solid' ? [1, 2, 3, 4, 5, 6, 7] : (g === 'stripe' ? [9, 10, 11, 12, 13, 14, 15] : []);
+      if (nums.length) {
+        for (const n of nums) {
+          const got = mine.indexOf(n) >= 0;
+          slots += '<span class="bt-slot' + (got ? ' on' : '') + '" style="' + (got ? 'background:' + ballColor(n) : '') + '">' + (got ? '' : n) + '</span>';
+        }
+      } else {
+        for (let i = 0; i < 7; i++) slots += '<span class="bt-slot"></span>';
+      }
+      return '<div class="bt-plaque' + (b.turn === uid && b.phase !== 'over' ? ' on' : '') + '" data-uid="' + uid + '">' +
+        '<span class="gm-ava">' + (uid ? Home.avaInner(uid) : '?') + '</span>' +
+        '<b>' + esc(uid === 'me' ? '我' : name(uid)) + '</b>' +
+        (g ? '<small class="bt-g">' + GROUP_NAME[g] + '</small>' : '<small class="bt-g">待分球</small>') +
+        '<span class="bt-slots">' + slots + '</span>' +
+        '</div>';
     };
-    const chip = (uid, side) => '<div class="bt-plaque' + (b.turn === uid && b.phase !== 'over' ? ' on' : '') + '" data-uid="' + uid + '">' +
-      '<span class="gm-ava">' + (uid ? Home.avaInner(uid) : '?') + '</span>' +
-      '<b>' + esc(uid === 'me' ? '我' : name(uid)) + '</b>' +
-      '<small>犯规 ' + (b.fouls[uid === 'me' ? 'me' : 'ta'] | 0) + '/' + FOUL_MAX + '</small>' +
-      potsRow(uid === 'me' ? 'me' : 'ta') + '</div>';
     el.innerHTML =
       '<div class="bt-wrap">' +
-        '<div class="bt-sliders">' +
-          '<div class="bt-slider" id="bt-pow" title="力度"><i class="bt-fill" id="bt-pow-fill"></i><i class="bt-knob" id="bt-pow-knob"></i></div>' +
+        '<div class="bt-mid">' +
+          panel('me') +
           '<div class="bt-board"><canvas id="bt-cv" width="' + W * 2 + '" height="' + H * 2 + '"></canvas>' +
             '<div class="bt-notice' + (b.notice ? ' show' : '') + '" id="bt-notice">' + esc(b.notice) + '</div></div>' +
-          '<div class="bt-slider" id="bt-fine" title="微调方向"><i class="bt-fill" id="bt-fine-fill"></i><i class="bt-knob" id="bt-fine-knob"></i></div>' +
+          panel(ta) +
         '</div>' +
-        '<div class="bt-foot">' + chip('me') + chip(ta) + '</div>' +
+        '<div class="bt-tip">' + (b.phase === 'aim' && b.turn === 'me' ? '按住桌面拖动瞄准 · 松手出杆' :
+          b.phase === 'place' && b.turn === 'me' ? '自由球：点桌上摆白球' : '&nbsp;') + '</div>' +
       '</div>';
     const cv = el.querySelector('#bt-cv');
     bindCanvas(r, cv);
-    bindSlider(r, el.querySelector('#bt-pow'), v => { B(r).power = v; if (v <= 0.02) setKnobs(r); });
-    bindSlider(r, el.querySelector('#bt-fine'), v => { B(r).fine = (v - 0.5) * 0.14; setKnobs(r); });
-    setKnobs(r);
     loop(r);
   }
-  function setKnobs(r) {
-    const el = document.getElementById('bt-cv'); if (!el) return;
-    const wrap = el.closest('.bt-wrap');
-    const pow = wrap.querySelector('#bt-pow-knob'), powF = wrap.querySelector('#bt-pow-fill');
-    const fin = wrap.querySelector('#bt-fine-knob'), finF = wrap.querySelector('#bt-fine-fill');
-    const b = B(r);
-    const pv = Math.max(0, Math.min(1, b.power));
-    pow.style.bottom = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.height = (pv * 100).toFixed(1) + '%';
-    const fv = b.fine / 0.14 + 0.5;
-    fin.style.bottom = 'calc(' + (fv * 100).toFixed(1) + '% - 8px)'; finF.style.height = (fv * 100).toFixed(1) + '%';
-  }
-  function bindSlider(r, el, onMove) {
-    if (!el) return;
-    const move = e => {
-      const rc = el.getBoundingClientRect();
-      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rc.top) / rc.height));
-      onMove(v); DB.save();
-    };
-    el.addEventListener('pointerdown', e => {
-      if (B(r).turn !== 'me' || (B(r).phase !== 'aim')) return;
-      el.setPointerCapture(e.pointerId); move(e);
-      const up = ev => {
-        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
-        const b = B(r);
-        if (el.id === 'bt-pow' && b.power > 0.04) shoot(r, effAngle(r), b.power);
-        else setKnobs(r);
-      };
-      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-      e.preventDefault();
-    });
-  }
-  function effAngle(r) { const b = B(r); return b.aim + (b.fine || 0); }
   function bindCanvas(r, cv) {
     cv.addEventListener('pointerdown', e => {
       const b = B(r);
@@ -25518,41 +25509,25 @@ const Billiards = (function () {
       }
       if (b.phase !== 'aim' || b.turn !== 'me') return;
       const cue = b.balls.find(x => x.n === 0);
-      const setAim = ev => {
+      const setDrag = ev => {
         const rc2 = cv.getBoundingClientRect();
         const mx = (ev.clientX - rc2.left) / rc2.width * W, my = (ev.clientY - rc2.top) / rc2.height * H;
-        b.aim = Math.atan2(my - cue.y, mx - cue.x);
-        DB.save();
+        const dx = cue.x - mx, dy = cue.y - my;                 // 弹弓：白球背向手指发射
+        b.aimA = Math.atan2(dy, dx);
+        b.power = Math.max(0, Math.min(1, Math.hypot(dx, dy) / (H * 0.5)));
+        b.drag = { x: mx, y: my };
       };
-      setAim(e);
-      cv.setPointerCapture(e.pointerId);
-      const up = () => { cv.removeEventListener('pointermove', setAim); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up); };
-      cv.addEventListener('pointermove', setAim); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      setDrag(e);
+      UI.grab(cv, e);
+      const up = () => {
+        cv.removeEventListener('pointermove', setDrag); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
+        const b2 = B(r);
+        if (b2.power > 0.05) shoot(r, b2.aimA, b2.power);
+        else { b2.drag = null; b2.power = 0; }
+      };
+      cv.addEventListener('pointermove', setDrag); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       e.preventDefault();
     });
-  }
-  /* 射线找第一接触球（瞄准线用） */
-  function rayFirst(b, angle) {
-    const cue = b.balls.find(x => x.n === 0);
-    const dx = Math.cos(angle), dy = Math.sin(angle);
-    let bestT = Infinity, hit = null;
-    for (const o of b.balls) {
-      if (!o.on || o.n === 0) continue;
-      const ox = o.x - cue.x, oy = o.y - cue.y;
-      const t = ox * dx + oy * dy;
-      if (t <= 0) continue;
-      const perp = Math.abs(ox * dy - oy * dx);
-      if (perp > BR * 2) continue;
-      const tHit = t - Math.sqrt(BR * BR * 4 - perp * perp);
-      if (tHit < bestT) { bestT = tHit; hit = o; }
-    }
-    /* 库边距离 */
-    let wall = Infinity;
-    if (dx > 0) wall = Math.min(wall, (W - PAD - BR - cue.x) / dx);
-    if (dx < 0) wall = Math.min(wall, (PAD + BR - cue.x) / dx);
-    if (dy > 0) wall = Math.min(wall, (H - PAD - BR - cue.y) / dy);
-    if (dy < 0) wall = Math.min(wall, (PAD + BR - cue.y) / dy);
-    return { t: Math.min(bestT, wall), hit: hit, isWall: bestT > wall, dx: dx, dy: dy };
   }
   function loop(r) {
     if (raf) cancelAnimationFrame(raf);
@@ -25560,7 +25535,6 @@ const Billiards = (function () {
     if (!cv) { raf = 0; return; }
     const b = B(r); if (!b) { raf = 0; return; }
     if (b.phase === 'moving') {
-      /* 高刷屏（120Hz）rAF 快一倍，按真实间隔折算步数，物理速度不随屏幕变 */
       const now = performance.now();
       const dt = lastTs ? Math.max(1, now - lastTs) : 16.7;
       lastTs = now;
@@ -25574,81 +25548,96 @@ const Billiards = (function () {
     raf = requestAnimationFrame(() => loop(r));
   }
   function draw(r, cv) {
-    const b = B(r), ctx = cv.getContext('2d'), T = theme();
-    ctx.setTransform(2, 0, 0, 2, 0, 0);   // canvas 内部尺寸 2x，画到逻辑 250x400
+    const b = B(r), ctx = cv.getContext('2d');
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    /* 台呢 + 木框 */
-    ctx.fillStyle = T.card; ctx.strokeStyle = T.ink; ctx.lineWidth = 2.5;
-    roundRect(ctx, 1.5, 1.5, W - 3, H - 3, 10); ctx.fill(); ctx.stroke();
-    ctx.lineWidth = 1;
-    roundRect(ctx, PAD - 4, PAD - 4, W - 2 * (PAD - 4), H - 2 * (PAD - 4), 6); ctx.stroke();
+    /* 木框 */
+    ctx.fillStyle = RAIL_D; roundRect(ctx, 0, 0, W, H, 12); ctx.fill();
+    ctx.fillStyle = RAIL; roundRect(ctx, 1.5, 1.5, W - 3, H - 3, 11); ctx.fill();
+    /* 绿呢 */
+    ctx.fillStyle = FELT; roundRect(ctx, PAD - 4, PAD - 4, W - 2 * (PAD - 4), H - 2 * (PAD - 4), 6); ctx.fill();
+    /* 呢面暗纹（进位线 + 点位） */
+    ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, H * 0.30); ctx.lineTo(W - PAD, H * 0.30); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W / 2, H * 0.30, 2.2, 0, 7); ctx.stroke();
     /* 袋口 */
     for (const p of POCKETS) {
       ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7);
-      ctx.fillStyle = T.ink; ctx.fill();
+      ctx.fillStyle = '#111'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.2; ctx.stroke();
     }
-    /* 脚点 */
-    ctx.strokeStyle = T.t3; ctx.setLineDash([2, 3]); ctx.beginPath();
-    ctx.arc(W / 2, H * 0.30, 3, 0, 7); ctx.stroke(); ctx.setLineDash([]);
-    /* 轮到我：目标球虚线呼吸环 */
-    const low = lowest(r);
     const myAim = b.phase === 'aim' && b.turn === 'me';
-    if (myAim && low) {
-      const a = 0.45 + 0.4 * Math.sin(Date.now() / 260);
-      ctx.strokeStyle = T.ink; ctx.globalAlpha = a; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.arc(low.x, low.y, BR + 4.5, 0, 7); ctx.stroke();
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
-    }
-    /* 瞄准线：白球 → 第一接触（虚线 + 幽灵球 + 反弹短线；非法目标红禁止符） */
+    /* 己方目标球高亮（我的回合且已分球） */
     if (myAim) {
+      const g = myGroupOf(r, 'me');
+      const must8 = g && groupLeft(r, g) === 0;
+      for (const ball of b.balls) {
+        if (!ball.on) continue;
+        const hit = g ? (must8 ? ball.n === 8 : ballGroup(ball.n) === g) : false;
+        if (!hit) continue;
+        const a = 0.45 + 0.4 * Math.sin(Date.now() / 260);
+        ctx.strokeStyle = 'rgba(255,255,255,' + a.toFixed(2) + ')';
+        ctx.setLineDash([3, 3]); ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, BR + 4.5, 0, 7); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    /* 瞄准线：只在拖拽时显示，白球 → 指向方向的短线（参考文档：禁长瞄准线） */
+    if (myAim && b.drag) {
       const cue = b.balls.find(x => x.n === 0);
-      const ang = effAngle(r);
-      const ray = rayFirst(b, ang);
-      const ex = cue.x + ray.dx * ray.t, ey = cue.y + ray.dy * ray.t;
-      const illegal = ray.hit && low && ray.hit.n !== low.n;
-      ctx.strokeStyle = illegal ? T.bad : T.t3;
-      ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(cue.x, cue.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
-      /* 幽灵球 */
-      ctx.beginPath(); ctx.arc(ex, ey, BR, 0, 7); ctx.stroke();
-      /* 反弹短线（撞库）或目标球去向（撞球） */
-      ctx.strokeStyle = T.t3;
-      if (ray.isWall) {
-        let nx = 0, ny = 0;
-        if (ex <= PAD + BR + 0.6 || ex >= W - PAD - BR - 0.6) nx = -ray.dx; else ny = -ray.dy;
-        ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + nx * 26, ey + ny * 26); ctx.stroke();
-      } else if (ray.hit) {
-        const nx = ray.hit.x - ex, ny = ray.hit.y - ey, NL = Math.hypot(nx, ny) || 1;
-        ctx.beginPath(); ctx.moveTo(ray.hit.x, ray.hit.y);
-        ctx.lineTo(ray.hit.x + nx / NL * 30, ray.hit.y + ny / NL * 30); ctx.stroke();
-      }
-      if (illegal) {   // 红禁止符（她参考图口径）
-        ctx.strokeStyle = T.bad; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(ex, ey, 8.5, 0, 7); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(ex - 6, ey - 6); ctx.lineTo(ex + 6, ey + 6); ctx.stroke();
-      }
-      /* 球杆：白球反方向，拉杆距离随力度 */
-      const pull = 12 + (b.power || 0) * 34;
-      ctx.strokeStyle = T.ink; ctx.lineWidth = 2.2;
+      const ang = b.aimA, L = 20 + b.power * 34;
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(cue.x - Math.cos(ang) * (BR + pull), cue.y - Math.sin(ang) * (BR + pull));
-      ctx.lineTo(cue.x - Math.cos(ang) * (BR + pull + 96), cue.y - Math.sin(ang) * (BR + pull + 96));
+      ctx.moveTo(cue.x + Math.cos(ang) * (BR + 2), cue.y + Math.sin(ang) * (BR + 2));
+      ctx.lineTo(cue.x + Math.cos(ang) * (BR + 2 + L), cue.y + Math.sin(ang) * (BR + 2 + L));
       ctx.stroke();
     }
-    /* 球 */
+    /* 球杆：瞄准时搭在白球后；击球瞬间前推一拍 */
+    const cue = b.balls.find(x => x.n === 0);
+    const showCue = (myAim || b.phase === 'moving');
+    if (showCue && cue.on) {
+      const ang = b.aimA;
+      let pull = myAim ? 10 + (b.power || 0) * 30 : 0;
+      if (b.phase === 'moving' && b.cueStrike) {
+        const t = Date.now() - b.cueStrike;
+        pull = t < 130 ? Math.max(0, 10 + (b.lastPow || 0.5) * 30 - t / 130 * (10 + (b.lastPow || 0.5) * 30 + 14)) : -100;
+      }
+      if (pull > -50) {
+        const bx = cue.x - Math.cos(ang) * (BR + 2 + pull), by = cue.y - Math.sin(ang) * (BR + 2 + pull);
+        const tx = cue.x - Math.cos(ang) * (BR + 2 + pull + 88), ty = cue.y - Math.sin(ang) * (BR + 2 + pull + 88);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = RAIL_D; ctx.lineWidth = 3.4;
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+        ctx.strokeStyle = '#d9b98c'; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo((bx + tx) / 2, (by + ty) / 2); ctx.stroke();
+        ctx.strokeStyle = '#3b6ea5'; ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx - Math.cos(ang) * 2.5, by - Math.sin(ang) * 2.5); ctx.stroke();
+        ctx.lineCap = 'butt';
+      }
+    }
+    /* 球（标准彩色：实色 1-7 / 花色 9-15 / 黑 8 / 白球） */
     for (const ball of b.balls) {
       if (!ball.on) continue;
       ctx.beginPath(); ctx.arc(ball.x, ball.y, BR, 0, 7);
-      ctx.fillStyle = ball.n === 0 ? T.card : T.card; ctx.fill();
-      ctx.strokeStyle = T.ink; ctx.lineWidth = ball.n === 9 ? 2.4 : 1.5; ctx.stroke();
-      if (ball.n === 9) {   // 9 号：条纹画两道弧（墨线）
-        ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(ball.x, ball.y, BR - 2.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, BR - 2.6, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke();
+      const col = ballColor(ball.n);
+      if (ball.n === 0) { ctx.fillStyle = col; ctx.fill(); }
+      else if (ball.n <= 8) { ctx.fillStyle = col; ctx.fill(); }
+      else {
+        /* 花色：白底 + 横向色带 */
+        ctx.fillStyle = '#f6f4ee'; ctx.fill();
+        ctx.save(); ctx.beginPath(); ctx.arc(ball.x, ball.y, BR, 0, 7); ctx.clip();
+        ctx.fillStyle = col; ctx.fillRect(ball.x - BR, ball.y - BR * 0.52, BR * 2, BR * 1.04); ctx.restore();
       }
+      ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 0.8; ctx.stroke();
       if (ball.n > 0) {
-        ctx.fillStyle = T.ink; ctx.font = 'bold 7.5px sans-serif';
+        /* 号码小盘 */
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, BR * 0.52, 0, 7);
+        ctx.fillStyle = '#f6f4ee'; ctx.fill();
+        ctx.fillStyle = '#222'; ctx.font = 'bold 6px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(String(ball.n), ball.x, ball.y + 0.5);
+        ctx.fillText(String(ball.n), ball.x, ball.y + 0.4);
       }
     }
   }
@@ -25670,7 +25659,7 @@ const Billiards = (function () {
       render: render
     };
   }
-  return { def, FOUL_MAX, TA_SEC, rackBalls, step, taShot, rayFirst, resolve, shoot, W: W, H: H, BR: BR };
+  return { def, TA_SEC, rackBalls, step, taShot, resolve, shoot, W: W, H: H, BR: BR, ballGroup: ballGroup, ballColor: ballColor };
 })();
 
 /* =====================================================
