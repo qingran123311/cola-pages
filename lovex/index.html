@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-172752 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-174800 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -3557,6 +3557,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dp-acts{display:flex;gap:8px}
 .dp-acts .btn{flex:1;padding:8px 0;font-size:var(--fs-aux)}
 .dp-tip{text-align:center;color:var(--t3);font-size:var(--fs-aux)}
+/* 画板彩色（她 10-09 17:45）：模板色板一排圆点 + 调色盘自选；色点是内容色，不算界面第四色 */
+.dp-colors{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dp-sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0;cursor:pointer;flex:0 0 auto}
+.dp-sw.on{border-color:var(--t1);box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--t1)}
+.dp-custom{background:conic-gradient(#D96A5B,#E5C95C,#7FA86B,#5E8FB8,#8F7BB8,#D96A5B);position:relative;overflow:hidden}
+.dp-picker{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 .sku-mid b{font-size:20px;color:var(--t1)}
 .sku-mid small{font-size:var(--fs-small);color:var(--t3)}
 .sku-orig{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;margin-left:6px;font-weight:400}
@@ -3923,7 +3929,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <!-- P36a（她 08-27 定：往右滑第2页，像微信） -->
       <div class="cmp-page">
         <button class="more-tile" data-more="link"><span class="tile-ico"><i data-icon="link" data-size="20"></i></span><span>链接</span></button>
-        <button class="more-tile" data-more="drawpad"><span class="tile-ico"><i data-icon="brush" data-size="20"></i></span><span>发涂鸦</span></button>
+        <button class="more-tile" data-more="drawpad"><span class="tile-ico"><i data-icon="brush" data-size="20"></i></span><span>画板</span></button>
       </div>
       </div>
       <div class="cmp-dots" id="cmp-dots"><i class="on"></i><i></i></div>
@@ -10682,9 +10688,12 @@ const Chat = (function () {
   function sendVoice(dur, audio) { pushMine({ type: 'voice', dur, audio: audio || null }); }
   function sendRawText(text) { if (cur && text) pushMine({ type: 'text', text }); }
 
-  /* ---------------- 画板（她 10-08 17:33：我也能画涂鸦发给 TA） ----------------
-     入口：＋号面板第二页「画板」。奶白纸底 + 墨线（黑白钢笔线稿的审美口径），
-     一支笔、撤销一笔、清空；发送走 sendImage 图片管道，撤回/长按/引用全通用 */
+  /* ---------------- 画板（她 10-08 17:33：我也能画涂鸦发给 TA；10-09 17:45 加彩色） ----------------
+     入口：＋号面板第二页「画板」。奶白纸底，墨黑打底 + 内置模板色板 + 调色盘自选
+     （她 10-09：黑色当然要有，另多出彩色可能；内容色不套 UI 四色禁令，同 doodle.js 口径）。
+     每笔带自己的颜色，撤销/清空照旧；发送走 sendImage 图片管道，撤回/长按/引用全通用 */
+  const DP_PAL = ['#3A3A42', '#6B6B74', '#D96A5B', '#E8732E', '#E5C95C', '#7FA86B', '#3F7A5A',
+    '#5FA8A0', '#5E8FB8', '#3D5A8F', '#8F7BB8', '#D886AE', '#8A6F5C', '#F2C9A0'];
   function openDrawPad() {
     const layer = document.getElementById('dialog-layer') || document.body;
     const old = layer.querySelector('.drawpad-mask'); if (old) old.remove();
@@ -10695,6 +10704,10 @@ const Chat = (function () {
       '<div class="drawpad">' +
         '<div class="dp-head"><b>画板</b><button class="ib-btn dp-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
         '<canvas class="dp-canvas" width="' + W + '" height="' + H + '"></canvas>' +
+        '<div class="dp-colors" id="dp-colors">' +
+          DP_PAL.map(c => '<button class="dp-sw" data-c="' + c + '" type="button" style="background:' + c + '" aria-label="选颜色"></button>').join('') +
+          '<button class="dp-sw dp-custom" type="button" aria-label="调色盘自选"><input class="dp-picker" type="color" value="#3A3A42"></button>' +
+        '</div>' +
         '<div class="dp-acts">' +
           '<button class="btn btn-secondary" data-dp="undo" type="button">撤销一笔</button>' +
           '<button class="btn btn-secondary" data-dp="clear" type="button">清空</button>' +
@@ -10708,14 +10721,16 @@ const Chat = (function () {
     const c2 = cv.getContext('2d');
     const strokes = [];
     let curStroke = null;
-    const INK = '#3A3A42', PAPER = '#FFFDF6';
+    let curColor = '#3A3A42';
+    const PAPER = '#FFFDF6';
     function repaint() {
       c2.fillStyle = PAPER; c2.fillRect(0, 0, W, H);
-      c2.strokeStyle = INK; c2.lineWidth = 5; c2.lineCap = 'round'; c2.lineJoin = 'round';
+      c2.lineWidth = 5; c2.lineCap = 'round'; c2.lineJoin = 'round';
       strokes.concat(curStroke ? [curStroke] : []).forEach(st => {
+        c2.strokeStyle = st.c; c2.fillStyle = st.c;
         c2.beginPath();
-        st.forEach((p, i) => { if (i) c2.lineTo(p[0], p[1]); else c2.moveTo(p[0], p[1]); });
-        if (st.length === 1) { c2.arc(st[0][0], st[0][1], 2.5, 0, Math.PI * 2); c2.fillStyle = INK; c2.fill(); }
+        st.pts.forEach((p, i) => { if (i) c2.lineTo(p[0], p[1]); else c2.moveTo(p[0], p[1]); });
+        if (st.pts.length === 1) { c2.arc(st.pts[0][0], st.pts[0][1], 2.5, 0, Math.PI * 2); c2.fill(); }
         c2.stroke();
       });
     }
@@ -10725,14 +10740,28 @@ const Chat = (function () {
       return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
     }
     cv.addEventListener('pointerdown', e => {
-      e.preventDefault(); curStroke = [pos(e)]; repaint();
+      e.preventDefault(); curStroke = { pts: [pos(e)], c: curColor }; repaint();
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     });
-    cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.push(pos(e)); repaint(); });
-    const endStroke = () => { if (curStroke && curStroke.length) strokes.push(curStroke); curStroke = null; repaint(); };
+    cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.pts.push(pos(e)); repaint(); });
+    const endStroke = () => { if (curStroke && curStroke.pts.length) strokes.push(curStroke); curStroke = null; repaint(); };
     cv.addEventListener('pointerup', endStroke);
     cv.addEventListener('pointercancel', endStroke);
     const close = () => mask.remove();
+    /* 选色：点模板色即换笔色；调色盘 input[type=color] 自选，选中色回填到调色盘铉上 */
+    const swBox = mask.querySelector('#dp-colors');
+    const customSw = mask.querySelector('.dp-custom');
+    function markOn(sw) { swBox.querySelectorAll('.dp-sw.on').forEach(x => x.classList.remove('on')); sw.classList.add('on'); }
+    markOn(swBox.querySelector('.dp-sw'));
+    swBox.addEventListener('click', e => {
+      const sw = e.target.closest('.dp-sw');
+      if (!sw || sw === customSw) return;
+      curColor = sw.dataset.c; markOn(sw);
+    });
+    customSw.addEventListener('click', () => mask.querySelector('.dp-picker').click());
+    mask.querySelector('.dp-picker').addEventListener('input', e => {
+      curColor = e.target.value; customSw.style.background = curColor; markOn(customSw);
+    });
     mask.querySelector('.dp-x').addEventListener('click', close);
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
     mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaint(); });
