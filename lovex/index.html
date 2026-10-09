@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-131409 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-141722 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -2596,17 +2596,30 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-fab.fz2{width:70px;height:70px}
 .gm-fab.dragging{opacity:.92;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .gm-fab:active{opacity:.82}
-.gm-quick-t{font-size:11px;color:var(--t3);padding:6px 2px 4px}
 .gm-chips-row{display:flex;flex-wrap:wrap;gap:6px}
 .gm-chips-row .gm-chip{white-space:nowrap}
 .gm-femo{padding:3px!important}
 .gm-femo img{width:30px;height:30px;display:block;object-fit:contain}
+/* 悬浮球弹出面板（她 10-09 13:53：飘在悬浮球上方，短语/表情左右两标签切换，点开收回） */
+.gm-quick-pop{position:fixed;z-index:1190;min-width:230px;max-width:320px;max-height:46vh;overflow:auto;
+  padding:8px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);
+  box-shadow:0 6px 22px rgba(0,0,0,.2)}
+.gm-quick-pop.hidden{display:none}
+.gm-qtabs{display:flex;gap:6px;margin-bottom:8px}
+.gm-qtab{flex:1;padding:6px 0;border-radius:999px;border:1.5px solid var(--line);
+  background:transparent;color:var(--t3);font-size:12px;font-weight:600}
+.gm-qtab.on{border-color:var(--t1);color:var(--t1);background:var(--card)}
+/* 道具环（她 10-09 13:53：环绕对方头像一圈小图标，点即用，不再开下方一行） */
+#gm-prop-ring{position:fixed;z-index:1200;width:0;height:0}
+#gm-prop-ring .gm-ring-prop{position:absolute;transform:translate(-50%,-50%);width:36px;height:36px;
+  border-radius:50%;background:var(--card);border:1.5px solid var(--line);
+  box-shadow:0 2px 8px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;padding:0}
+#gm-prop-ring .gm-ring-prop:active{transform:translate(-50%,-50%) scale(.9)}
 .gm-feed-emo{width:44px;height:44px;display:inline-block;object-fit:contain;vertical-align:middle}
 .gm-propicon{justify-content:center}
 
 .gm-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 8px}
-.gm-chips.hidden{display:none}
-.gm-chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--card);
+.gm-chips.hidden{display:none}.gm-chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--card);
   color:var(--t2);border-radius:14px;font-size:11.5px;padding:5px 10px}
 /* ---------- 悬浮聊天窗（层级 1161，对齐通话小窗） ---------- */
 #room-float{position:fixed;right:12px;bottom:86px;z-index:1161}
@@ -2698,7 +2711,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-nav2{position:absolute;right:64px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t1);padding:6px;display:flex}
 /* ---------- P40 补丁（她 08-29 夜） ---------- */
 .gm-ava img{width:100%;height:100%;object-fit:cover}
-.gm-propbig{padding:8px 12px;font-size:12.5px;gap:6px}
 .gm-fimg{max-width:150px;max-height:120px;border-radius:8px;display:block}
 .gm-fsmile{border:none;background:none;color:var(--t2);padding:4px;display:flex}
 .gm-fstg{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-top:1px solid var(--line);max-height:132px;overflow-y:auto;
@@ -2727,13 +2739,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   width:40px;height:40px;opacity:1;pointer-events:none;will-change:transform,opacity;
   filter:drop-shadow(0 3px 5px rgba(0,0,0,.28))}
 .gm-prop-fly .gm-ico{font-size:38px}
-.gm-propbig .gm-ico{font-size:22px;margin-right:2px}
 /* 面板里那颗蛋：与飞行体同一个形体，只是小一号 */
 .gm-ico.gm-ico-egg{width:.72em;height:1em;background:#FDF9EE;border:1.4px solid var(--t1);
   border-radius:50% 50% 48% 48% / 62% 62% 38% 38%}
 /* “扔给谁”：多人桌双击哪个座位就写谁 */
-.gm-prop-to{font-size:11px;color:var(--t3);align-self:center;padding:0 2px}
-.gm-proprow{flex-wrap:wrap}
 .gm-prop-bit{position:fixed;z-index:1201;pointer-events:none}
 /* 扫雷：刚翻开的格子高亮（对方翻哪/谁踩雷看得见）；旗=EMOJI（她点名） */
 .mn-cell.mn-last{box-shadow:inset 0 0 0 2px var(--primary);animation:mn-flash 1.1s}
@@ -2766,9 +2775,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-pts{font-size:10px;color:var(--t3);max-width:80px;text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 道具面板强制单行三个大按钮（她：挤成两排） */
-.gm-chips.gm-proprow{display:flex;flex-wrap:nowrap}
-.gm-chips.gm-proprow.hidden{display:none}
-.gm-chips.gm-proprow .gm-propbig{flex:1;justify-content:center}
 /* ---------- P41 扔鸡蛋重做（她 08-30：“壳碎之后里面啥样你自己不知道吗？”） ----------
    规矩：黑白线稿 + 主题色点缀，不许再出现第三个色族（以前是三个黄阶）。
    碎态=壳裂三片（带白内侧）+ 蛋液摊开（透明液体靠描边不涂白）+ 一颗完整蛋黄滑定 + 小墨点飞溅。 */
@@ -3162,18 +3168,24 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 
 /* ---------- 台球（8 球重做，她 10-09 13:02 解除配色限制）：绿呢桌+木框居中，左右玩家面板（头像+分组+收纳槽） ---------- */
 .bt-wrap{display:flex;flex-direction:column;gap:6px;padding:4px 2px 2px}
-.bt-mid{display:grid;grid-template-columns:58px minmax(0,1fr) 58px;gap:7px;align-items:stretch}
-.bt-mid > *{min-width:0}
-.bt-plaque{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 3px;
-  border:1.5px solid var(--line);border-radius:14px;background:var(--card);opacity:.62}
+.bt-top{display:flex;justify-content:space-between;gap:8px}
+.bt-plaque{display:flex;flex-direction:row;align-items:center;gap:6px;padding:5px 8px;min-width:0;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--card);opacity:.62}
 .bt-plaque.on{opacity:1;border-color:var(--t1);box-shadow:0 3px 12px rgba(46,139,87,.28)}
-.bt-plaque b{font-weight:600;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bt-plaque .gm-ava{width:30px;height:30px}
-.bt-g{font-size:9.5px;color:#2e8b57;font-weight:600}
-.bt-slots{display:flex;flex-direction:column;gap:3px;align-items:center}
-.bt-slot{width:13px;height:13px;border-radius:50%;border:1px dashed var(--t3);
+.bt-plaque b{font-weight:600;font-size:11.5px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt-plaque .gm-ava{width:26px;height:26px;flex:none}
+.bt-g{font-size:9.5px;color:#2e8b57;font-weight:600;white-space:nowrap}
+.bt-slots{display:flex;flex-direction:row;gap:3px;align-items:center}
+.bt-slot{width:13px;height:13px;border-radius:50%;border:1px dashed var(--t3);flex:none;
   display:flex;align-items:center;justify-content:center;font-size:7.5px;color:var(--t3)}
 .bt-slot.on{border:none;color:transparent;box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
+/* 双滑条（她 10-09 13:53 拍板恢复：左力度右微调，旧交互旧口径；配色跟新绿呢走） */
+.bt-sliders{display:grid;grid-template-columns:24px minmax(0,1fr) 24px;gap:7px;align-items:stretch}
+.bt-sliders > *{min-width:0}
+.bt-slider{position:relative;border-radius:999px;background:#5d3717;touch-action:none;cursor:pointer}
+.bt-slider .bt-fill{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:5px;height:0;border-radius:3px;background:#d9b98c}
+.bt-slider .bt-knob{position:absolute;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;
+  background:#f6f4ee;border:2px solid #5d3717;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .bt-board{position:relative;border-radius:12px;overflow:hidden;
   border:3px solid #7a4a21;box-shadow:0 4px 14px rgba(0,0,0,.22);background:#2e8b57}
 .bt-board canvas{display:block;width:100%;height:auto;touch-action:none}
@@ -25198,11 +25210,12 @@ const Billiards = (function () {
       turn: taFirst ? (room.players.find(u => u !== 'me') || 'ta') : 'me',
       phase: taFirst ? 'taThink' : 'aim',   // aim | taThink | moving | place | over
       group: { me: null, ta: null },        // null=开放桌（分球未定）
-      aimA: -Math.PI / 2, drag: null, power: 0,
+      aimA: -Math.PI / 2, fine: 0, power: 0,   // 13:53 拍板：双滑条回来（左力度右微调），拖拽只定方向
       first: null, potted: [],
       pots: { me: [], ta: [] },
       fouls: { me: 0, ta: 0 },
-      notice: '', cueStrike: 0
+      notice: '', cueStrike: 0,
+      v: 2                                  // 数据形状版本：旧 9 球房没有这个标，摸到就重摆（ensure）
     };
     const b = room.bill;
     feed(room, 'sys', '台球开局：8 球制，开球分实色花色，清台后打进黑 8 赢');
@@ -25212,6 +25225,18 @@ const Billiards = (function () {
     DB.save();
   }
   function B(r) { return r.bill; }
+  /* ---------- 旧房数据迁移（唯一漏斗，10-09 13:39 白屏根因）----------
+     旧 9 球房存量数据没有 group/aimA/cueStrike：新 render 在拼 innerHTML 时读
+     b.group 直接 TypeError——房间框架画完了、后面绑定全跳过，她看到的
+     「有显示、没球杆、啥也点不了」就是这条。规矩：入口摸到旧形状不硬扛、
+     不各处打补丁，整局按 8 球重摆并播报一句。 */
+  function ensure(r) {
+    const b = B(r);
+    if (b && b.v === 2) return b;
+    newRoom(r);
+    feed(r, 'sys', '台球升级 8 球制，这一局重摆');
+    return B(r);
+  }
   function taUid(r) { return (r.players || []).find(u => u !== 'me') || 'ta'; }
   function name(u) { return u === 'me' ? '我' : ((DB.state.contacts || []).find(c => c.id === u) || { name: 'TA' }).name || 'TA'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -25270,7 +25295,7 @@ const Billiards = (function () {
     const sp = 2.2 + power * 14;
     cue.vx = Math.cos(angle) * sp; cue.vy = Math.sin(angle) * sp;
     b.first = null; b.potted = []; b.phase = 'moving';
-    b.notice = ''; b.aimA = angle; b.drag = null;
+    b.notice = ''; b.aimA = angle; b.lastPow = power;
     b.cueStrike = Date.now();              // 球杆击打动画那一拍
     feed(r, b.turn === 'me' ? 'me' : b.turn, b.turn === 'me' ? '你出杆了' : esc(name(b.turn)) + ' 出杆');
     DB.save();
@@ -25420,13 +25445,13 @@ const Billiards = (function () {
   /* ---------- 计划环 ---------- */
   function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); else DB.save(); }
   function onTimeout(r) {
-    const b = B(r); if (!b || b.phase === 'over' || b.turn !== 'me') return false;
+    const b = ensure(r); if (b.phase === 'over' || b.turn !== 'me') return false;
     Games.say(r, taUid(r), '快捷短语');
     Games.armUrge(r);
     return true;
   }
   function onPlan(r, p) {
-    const b = B(r); if (!b) return false;
+    const b = ensure(r);
     if (p.kind === 'btTa') {
       if (b.turn === 'me' || b.phase === 'over' || b.phase === 'moving') return true;
       if (b.phase === 'place') { taPlace(r); return true; }
@@ -25449,7 +25474,7 @@ const Billiards = (function () {
     armTa(r);
   }
   function onResign(r) {
-    const b = B(r); if (!b || b.phase === 'over') return false;
+    const b = ensure(r); if (b.phase === 'over') return false;
     finish(r, taUid(r), '你认输');
     return true;
   }
@@ -25457,7 +25482,7 @@ const Billiards = (function () {
   /* ---------- 渲染 ---------- */
   let raf = 0, lastTs = 0;
   function render(r, el) {
-    const b = B(r);
+    const b = ensure(r);
     const ta = taUid(r);
     const panel = uid => {
       const g = myGroupOf(r, uid);
@@ -25481,18 +25506,79 @@ const Billiards = (function () {
     };
     el.innerHTML =
       '<div class="bt-wrap">' +
-        '<div class="bt-mid">' +
-          panel('me') +
+        '<div class="bt-top">' + panel('me') + panel(ta) + '</div>' +
+        '<div class="bt-sliders">' +
+          '<div class="bt-slider" id="bt-pow" title="力度"><i class="bt-fill" id="bt-pow-fill"></i><i class="bt-knob" id="bt-pow-knob"></i></div>' +
           '<div class="bt-board"><canvas id="bt-cv" width="' + W * 2 + '" height="' + H * 2 + '"></canvas>' +
             '<div class="bt-notice' + (b.notice ? ' show' : '') + '" id="bt-notice">' + esc(b.notice) + '</div></div>' +
-          panel(ta) +
+          '<div class="bt-slider" id="bt-fine" title="微调方向"><i class="bt-fill" id="bt-fine-fill"></i><i class="bt-knob" id="bt-fine-knob"></i></div>' +
         '</div>' +
-        '<div class="bt-tip">' + (b.phase === 'aim' && b.turn === 'me' ? '按住桌面拖动瞄准 · 松手出杆' :
+        '<div class="bt-tip">' + (b.phase === 'aim' && b.turn === 'me' ? '桌上拖动定方向 · 右条微调 · 左条拉力度松手出杆' :
           b.phase === 'place' && b.turn === 'me' ? '自由球：点桌上摆白球' : '&nbsp;') + '</div>' +
       '</div>';
     const cv = el.querySelector('#bt-cv');
     bindCanvas(r, cv);
+    bindSlider(r, el.querySelector('#bt-pow'), v => { B(r).power = v; });
+    bindSlider(r, el.querySelector('#bt-fine'), v => { B(r).fine = (v - 0.5) * 0.14; });
+    setKnobs(r);
     loop(r);
+  }
+  /* ---------- 双滑条 + 瞄准射线（她 10-09 13:53 拍板恢复旧交互，配色跟新绿呢走） ----------
+     左条=力度（拉到顶松手出杆），右条=角度微调（±4°）；桌上拖动=出杆方向（手指即方向）。 */
+  function effAngle(r) { const b = B(r); return b.aimA + (b.fine || 0); }
+  function setKnobs(r) {
+    const el = document.getElementById('bt-cv'); if (!el) return;
+    const wrap = el.closest('.bt-wrap');
+    const pow = wrap.querySelector('#bt-pow-knob'), powF = wrap.querySelector('#bt-pow-fill');
+    const fin = wrap.querySelector('#bt-fine-knob'), finF = wrap.querySelector('#bt-fine-fill');
+    const b = B(r);
+    const pv = Math.max(0, Math.min(1, b.power));
+    pow.style.bottom = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.height = (pv * 100).toFixed(1) + '%';
+    const fv = (b.fine || 0) / 0.14 + 0.5;
+    fin.style.bottom = 'calc(' + (fv * 100).toFixed(1) + '% - 8px)'; finF.style.height = (fv * 100).toFixed(1) + '%';
+  }
+  function bindSlider(r, el, onMove) {
+    if (!el) return;
+    const move = e => {
+      const rc = el.getBoundingClientRect();
+      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rc.top) / rc.height));
+      onMove(v); setKnobs(r); DB.save();
+    };
+    el.addEventListener('pointerdown', e => {
+      const b = B(r);
+      if (b.turn !== 'me' || b.phase !== 'aim') return;
+      UI.grab(el, e); move(e);
+      const up = () => {
+        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        const b2 = B(r);
+        if (el.id === 'bt-pow' && b2.power > 0.04) shoot(r, effAngle(r), b2.power);
+        else setKnobs(r);
+      };
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      e.preventDefault();
+    });
+  }
+  /* 射线找第一接触球 + 库边距离（瞄准线用，从旧 9 球版移植） */
+  function rayFirst(b, angle) {
+    const cue = b.balls.find(x => x.n === 0);
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    let bestT = Infinity, hit = null;
+    for (const o of b.balls) {
+      if (!o.on || o.n === 0) continue;
+      const ox = o.x - cue.x, oy = o.y - cue.y;
+      const t = ox * dx + oy * dy;
+      if (t <= 0) continue;
+      const perp = Math.abs(ox * dy - oy * dx);
+      if (perp > BR * 2) continue;
+      const tHit = t - Math.sqrt(BR * BR * 4 - perp * perp);
+      if (tHit < bestT) { bestT = tHit; hit = o; }
+    }
+    let wall = Infinity;
+    if (dx > 0) wall = Math.min(wall, (W - PAD - BR - cue.x) / dx);
+    if (dx < 0) wall = Math.min(wall, (PAD + BR - cue.x) / dx);
+    if (dy > 0) wall = Math.min(wall, (H - PAD - BR - cue.y) / dy);
+    if (dy < 0) wall = Math.min(wall, (PAD + BR - cue.y) / dy);
+    return { t: Math.min(bestT, wall), hit: hit, isWall: bestT > wall, dx: dx, dy: dy };
   }
   function bindCanvas(r, cv) {
     cv.addEventListener('pointerdown', e => {
@@ -25509,23 +25595,19 @@ const Billiards = (function () {
       }
       if (b.phase !== 'aim' || b.turn !== 'me') return;
       const cue = b.balls.find(x => x.n === 0);
-      const setDrag = ev => {
+      const setAim = ev => {
         const rc2 = cv.getBoundingClientRect();
         const mx = (ev.clientX - rc2.left) / rc2.width * W, my = (ev.clientY - rc2.top) / rc2.height * H;
-        const dx = cue.x - mx, dy = cue.y - my;                 // 弹弓：白球背向手指发射
-        b.aimA = Math.atan2(dy, dx);
-        b.power = Math.max(0, Math.min(1, Math.hypot(dx, dy) / (H * 0.5)));
-        b.drag = { x: mx, y: my };
+        b.aimA = Math.atan2(my - cue.y, mx - cue.x);   // 手指即出杆方向（旧版口径）
+        DB.save();
       };
-      setDrag(e);
+      setAim(e);
       UI.grab(cv, e);
       const up = () => {
-        cv.removeEventListener('pointermove', setDrag); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
-        const b2 = B(r);
-        if (b2.power > 0.05) shoot(r, b2.aimA, b2.power);
-        else { b2.drag = null; b2.power = 0; }
+        cv.removeEventListener('pointermove', setAim); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
+        setKnobs(r);
       };
-      cv.addEventListener('pointermove', setDrag); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      cv.addEventListener('pointermove', setAim); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       e.preventDefault();
     });
   }
@@ -25567,6 +25649,7 @@ const Billiards = (function () {
       ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.2; ctx.stroke();
     }
     const myAim = b.phase === 'aim' && b.turn === 'me';
+    const cue = b.balls.find(x => x.n === 0);
     /* 己方目标球高亮（我的回合且已分球） */
     if (myAim) {
       const g = myGroupOf(r, 'me');
@@ -25582,18 +25665,35 @@ const Billiards = (function () {
         ctx.setLineDash([]);
       }
     }
-    /* 瞄准线：只在拖拽时显示，白球 → 指向方向的短线（参考文档：禁长瞄准线） */
-    if (myAim && b.drag) {
-      const cue = b.balls.find(x => x.n === 0);
-      const ang = b.aimA, L = 20 + b.power * 34;
-      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cue.x + Math.cos(ang) * (BR + 2), cue.y + Math.sin(ang) * (BR + 2));
-      ctx.lineTo(cue.x + Math.cos(ang) * (BR + 2 + L), cue.y + Math.sin(ang) * (BR + 2 + L));
-      ctx.stroke();
+    /* 瞄准射线：白球 → 第一接触（虚线 + 幽灵球 + 反弹短线；非法目标红禁止符，旧版口径） */
+    if (myAim) {
+      const ang = effAngle(r);
+      const ray = rayFirst(b, ang);
+      const ex = cue.x + ray.dx * ray.t, ey = cue.y + ray.dy * ray.t;
+      const g = myGroupOf(r, 'me');
+      const must8 = g && groupLeft(r, g) === 0;
+      const illegal = ray.hit && g ? (must8 ? ray.hit.n !== 8 : ballGroup(ray.hit.n) !== g) : false;
+      ctx.strokeStyle = illegal ? '#ff8a80' : 'rgba(255,255,255,.72)';
+      ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(cue.x, cue.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(ex, ey, BR, 0, 7); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.55)';
+      if (ray.isWall) {
+        let nx = 0, ny = 0;
+        if (ex <= PAD + BR + 0.6 || ex >= W - PAD - BR - 0.6) nx = -ray.dx; else ny = -ray.dy;
+        ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + nx * 26, ey + ny * 26); ctx.stroke();
+      } else if (ray.hit) {
+        const nx = ray.hit.x - ex, ny = ray.hit.y - ey, NL = Math.hypot(nx, ny) || 1;
+        ctx.beginPath(); ctx.moveTo(ray.hit.x, ray.hit.y);
+        ctx.lineTo(ray.hit.x + nx / NL * 30, ray.hit.y + ny / NL * 30); ctx.stroke();
+      }
+      if (illegal) {
+        ctx.strokeStyle = '#ff8a80'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ex, ey, 8.5, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex - 6, ey - 6); ctx.lineTo(ex + 6, ey + 6); ctx.stroke();
+      }
     }
-    /* 球杆：瞄准时搭在白球后；击球瞬间前推一拍 */
-    const cue = b.balls.find(x => x.n === 0);
+    /* 球杆：瞄准时搭在白球后（拉杆随力度）；击球瞬间前推一拍 */
     const showCue = (myAim || b.phase === 'moving');
     if (showCue && cue.on) {
       const ang = b.aimA;
@@ -25652,7 +25752,7 @@ const Billiards = (function () {
     return {
       id: 'billiards', name: '台球', icon: 'billiard', playersTxt: '双人',
       newRoom: newRoom,
-      turnOf: r => B(r).turn,
+      turnOf: r => ensure(r).turn,
       onPlan: onPlan,
       onTimeout: onTimeout,
       onResign: onResign,
@@ -26516,9 +26616,9 @@ const Games = (function () {
       }
     }
     h += '<div class="gm-board-wrap"><div class="gm-timer" id="room-timer"></div><div id="room-board"></div></div>';
-    /* 短语/道具面板开在玩家条正下方（她 08-29：双击头像却要划到最底下才看得到，来回划） */
-    h += '<div class="gm-chips hidden" id="room-chips"></div>' +
-         '<div class="gm-chips gm-proprow hidden" id="room-props"></div>';
+    /* 悬浮球弹出面板（短语/表情左右两标签，她 10-09 13:53：跟悬浮球飘上方，点开收回）；
+       旧「短语行+道具行」两行都删了：道具改环绕头像，不再占下方一行 */
+    h += '<div class="gm-quick-pop hidden" id="gm-quick-pop"></div>';
     /* 阶段提示：她 08-29 定——别写机制说明（"80%会来""商定先手"那类删掉），只留必要状态 */
     if (r.waitMe) {
       /* TA 邀的这局在等我一句话：牌桌页也得能回，不能逼她非得从聊天卡片上点 */
@@ -26594,10 +26694,11 @@ const Games = (function () {
       let lastTap = 0;
       chip.addEventListener('click', () => {
         const now = Date.now();
-        if (now - lastTap < 450) { lastTap = 0; propTarget = chip.dataset.uid; toggleRow('room-props', buildPropsHtml); }
+        if (now - lastTap < 450) { lastTap = 0; propTarget = chip.dataset.uid; openPropRing(chip.dataset.uid); }
         else lastTap = now;
       });
     });
+    closePropRing();   // 整页重绘后旧环指向的座位已死，直接收掉
     /* 装回去放在最后：页内输入框可能是上面 defOf(r).render() 里游戏自己画的，
        在 innerHTML 那一秒它还根本不存在——第一轮就是这么没装上的 */
     keep.forEach(k => {
@@ -26632,17 +26733,68 @@ const Games = (function () {
       gcol + pts + '</span>';
   }
   /* 两个面板共用一套开合：开一个关另一个（她 08-29：道具要一眼找得到，独立成「道具」钮） */
-  function toggleRow(rowId, buildHtml) {
-    const row = document.getElementById(rowId);
-    if (!row) return;
-    const other = rowId === 'room-chips' ? 'room-props' : 'room-chips';
-    const otherRow = document.getElementById(other);
-    if (otherRow && !otherRow.classList.contains('hidden')) otherRow.classList.add('hidden');
-    if (row.classList.contains('hidden')) {
-      if (!row.dataset.built) { row.innerHTML = buildHtml(); bindRow(row); row.dataset.built = '1'; }
-      row.classList.remove('hidden');
-      syncPropLabel();
-    } else row.classList.add('hidden');
+  /* 她 10-09 13:53：道具改成环绕对方头像一圈小图标（纯图标、点即用），不再开下方一行。
+     双击头像（08-29 口径不变）→ 图标绕座位上半圈展开，点空处收，扔完即收。 */
+  function openPropRing(uid) {
+    closePropRing();
+    const host = document.querySelector('.gm-players');
+    const chip = host && host.querySelector('.gm-player[data-uid="' + uid + '"]');
+    if (!chip || !PROPS.length) return;
+    const ring = document.createElement('div');
+    ring.id = 'gm-prop-ring';
+    const rc = chip.getBoundingClientRect();
+    ring.style.left = Math.round(rc.left + rc.width / 2) + 'px';
+    ring.style.top = Math.round(rc.top + rc.height / 2) + 'px';
+    const R = 56;
+    PROPS.forEach((p, i) => {
+      const a = -Math.PI / 2 + (i - (PROPS.length - 1) / 2) * (Math.PI / (PROPS.length + 1));
+      const b = document.createElement('button');
+      b.className = 'gm-ring-prop';
+      b.title = p.name;
+      b.dataset.prop = p.id;   // 探针与语义都需要：这个环钮是哪个道具
+      b.innerHTML = p.id === 'egg' ? '<span class="gm-ico gm-ico-egg"></span>' : '<span class="gm-ico ' + p.ico + '"></span>';
+      b.style.left = Math.round(Math.cos(a) * R) + 'px';
+      b.style.top = Math.round(Math.sin(a) * R) + 'px';
+      b.addEventListener('click', ev => { ev.stopPropagation(); throwProp(p.id, uid); closePropRing(); });
+      ring.appendChild(b);
+    });
+    document.body.appendChild(ring);
+    setTimeout(() => document.addEventListener('pointerdown', ringOutside, true), 0);
+  }
+  function ringOutside(e) {
+    const ring = document.getElementById('gm-prop-ring');
+    if (ring && !ring.contains(e.target)) closePropRing();
+  }
+  function closePropRing() {
+    const ring = document.getElementById('gm-prop-ring');
+    if (ring) ring.remove();
+    document.removeEventListener('pointerdown', ringOutside, true);
+  }
+  /* 她 10-09 13:53：悬浮球弹出面板=短语/表情左右两标签切换（照参考图 316 那种），
+     飘在悬浮球正上方，轻点悬浮球展开/收回；点条目发了就收。 */
+  function toggleQuickPop() {
+    const pop = document.getElementById('gm-quick-pop');
+    const qb = document.getElementById('room-quick');
+    if (!pop || !qb) return;
+    if (!pop.classList.contains('hidden')) { pop.classList.add('hidden'); return; }
+    pop.innerHTML = buildQuickHtml();
+    bindQuickPop(pop);
+    pop.classList.remove('hidden');
+    const r = qb.getBoundingClientRect();
+    const pw = pop.offsetWidth || 260, ph = pop.offsetHeight || 180;
+    let x = Math.min(Math.max(r.left + r.width / 2 - pw / 2, 8), innerWidth - pw - 8);
+    let y = r.top - ph - 10;
+    if (y < 8) y = Math.min(r.bottom + 10, innerHeight - ph - 8);
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+  }
+  function bindQuickPop(pop) {
+    pop.querySelectorAll('[data-qt]').forEach(t => t.addEventListener('click', () => {
+      pop.querySelectorAll('[data-qt]').forEach(x => x.classList.toggle('on', x === t));
+      const k = t.dataset.qt;
+      pop.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== k));
+    }));
+    pop.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); pop.classList.add('hidden'); }));
+    pop.querySelectorAll('[data-emo]').forEach(b => b.addEventListener('click', () => { roomSticker(b.dataset.emo); pop.classList.add('hidden'); }));
   }
   /* 她 10-09：悬浮球交互唯一入口——轻点=短语+表情；拖动=移位置；长按 550ms=三档缩放。
      位置（视口百分比）和档位存在 settings.gmFab，重绘/重开都记得住。 */
@@ -26701,7 +26853,7 @@ const Games = (function () {
         st.y = Math.round((r.top + r.height / 2) / innerHeight * 1000) / 10;
         DB.save();
       } else if (!resized) {
-        toggleRow('room-chips', buildQuickHtml);   // 轻点=开短语+表情
+        toggleQuickPop();   // 轻点=悬浮球上方弹面板（点开收回）
       }
     };
     qb.addEventListener('pointerup', up);
@@ -26711,35 +26863,18 @@ const Games = (function () {
       qb.classList.remove('dragging');
     });
   }
-  /* 她 10-09：悬浮球面板=短语+表情两段（照参考图模式）；道具仍是双击头像那一口，不在这面板里 */
+  /* 她 10-09 13:53：面板改左右两标签（data-qt 切换，照参考图 316 的标签式） */
   function buildQuickHtml() {
     const quick = pickAll('快捷短语', DEF_QUICK);
     const pool = myStickerPool();
-    return '<div class="gm-quick-t">快捷短语</div><div class="gm-chips-row">' +
+    return '<div class="gm-qtabs"><button class="gm-qtab on" data-qt="say">快捷短语</button>' +
+      (pool.length ? '<button class="gm-qtab" data-qt="emo">表情</button>' : '') + '</div>' +
+      '<div class="gm-chips-row" data-pane="say">' +
       quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('') +
       '</div>' +
-      (pool.length ? '<div class="gm-quick-t">表情</div><div class="gm-chips-row gm-femos">' +
+      (pool.length ? '<div class="gm-chips-row gm-femos hidden" data-pane="emo">' +
         pool.slice(0, 30).map(src => '<button class="gm-chip gm-femo" data-emo="' + esc(src) + '"><img src="' + esc(src) + '"></button>').join('') +
         '</div>' : '');
-  }
-  function buildPropsHtml() {
-    /* 她 10-09：道具只显示图标，不再带「扔鸡蛋」这类字样（扔给谁的面板标题还在） */
-    return '<span class="gm-prop-to" id="gm-prop-to"></span>' + PROPS.map(p => '<button class="gm-chip gm-propbig gm-propicon" data-prop="' + p.id + '" title="' + esc(p.name) + '">' +
-      (p.id === 'egg' ? '<span class="gm-ico gm-ico-egg"></span>' : '<span class="gm-ico ' + p.ico + '"></span>') +
-      '</button>').join('');
-  }
-  /* 面板标题写清“扔给谁”：多人桌双击的是哪个座位就是谁（她 08-30：要能自己选对象） */
-  function syncPropLabel() {
-    const lab = document.getElementById('gm-prop-to');
-    if (!lab) return;
-    const r = curRoom();
-    const t = [propTarget, r && taUid(r)].find(u => u && r && (r.players || []).indexOf(u) >= 0);
-    lab.textContent = t ? '→ ' + name(t) : '还没选对象';
-  }
-  function bindRow(row) {
-    row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
-    row.querySelectorAll('[data-emo]').forEach(b => b.addEventListener('click', () => { roomSticker(b.dataset.emo); row.classList.add('hidden'); }));
-    row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.add('hidden'); }));
   }
   /* 她 10-09：悬浮球面板里的表情——发进游戏播报里（真图），TA 照常接一句话 */
   function roomSticker(src) {
@@ -27445,8 +27580,13 @@ const Games = (function () {
     register(Ludo.def());    // 大厅第四张：飞行棋（P46，她 09-01 22:13 点名要的游戏）
     register(Doudizhu.def()); // 大厅第五张：斗地主（P50，她 09-02 17:10：“去做斗地主吧”）
   register(Mono.def());     // 大厅第六张：大富翁（P51，她 09-03 08:30 拍了三件事后开工）
-  register(Billiards.def()); // 大厅第七张：台球（P70，她 10-09 00:43 点名，双人 9 球制）
+  register(Billiards.def()); // 大厅第七张：台球（P70，她 10-09 00:43 点名；13:02 重做 8 球制）
     ensureSeed();
+    /* 她 10-09 13:53：9 球制退场，存量 9 球房（无 v=2 标）直接清掉、不迁移不归档——
+       「继续对局」里不再出现；这批旧数据也正是 13:39 白屏的根源（旧房撞新 render），
+       这里开扫 + billiards.render 的 ensure 兑底，双保险。废房不进薄档案（那是对归档的污染）。 */
+    Object.values(S().rooms).filter(r => r.game === 'billiards' && !(r.bill && r.bill.v === 2))
+      .forEach(r => { delete S().rooms[r.id]; });
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
     const gt = document.getElementById('gm-gear-top');
