@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-200400 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-202258 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -13476,8 +13476,9 @@ const Doodle = (function () {
     });
   }
   function make() {
-    /* 复合涂鸦（她 10-09 19:49 补充）：约 1/3 的画是 2~3 个主题同框，允许重复组合，更丰富 */
-    const comboN = Math.random() < 0.34 ? 2 + (Math.random() < 0.45 ? 1 : 0) : 1;
+    /* 复合涂鸦（她 10-09 20:08 拍板）：画几幅纯随机等概率（1/2/3 幅各 1/3），不调权重；
+       主题全库等概率抓，直线曲线、规则不规则自然相遇，允许重复，画画随心 */
+    const comboN = 1 + Math.floor(Math.random() * 3);
     /* 每张抽 2~3 支马克笔 */
     const pool = PAL.slice();
     const a = [];
@@ -28723,6 +28724,7 @@ const Call = (function () {
 
   function endBy(reason) {
     if (!st) return;
+    if (st.phase === 'ended') return;   /* 已结束态重入闸：结束页再点挂断不重复落记录 */
     clearAiTimers();
     clearGrpTimers();
     stopCam();
@@ -28752,19 +28754,17 @@ const Call = (function () {
     st.phase = 'ended';
     st.endReason = reason;
     st.endLine = line;
-    /* 小窗形态下结束：旧写法直接 teardown——画面“啪”地没了，她会以为这场通话被吞了
-       （她红线：不许无声消失）。现在小窗里先把“已结束 + 时长”写明，1.8 秒后再收 */
-    if (st.view === 'mini' || st.view === 'pip') {
-      render();
-      if (st.endLine) UI.toast(st.endLine, 2600);   // 小窗里也得说清是谁挂的、多久
-      setTimeout(() => {
-        if (st) { teardown(); }
-        if (typeof Home !== 'undefined') Home.render();
-      }, 1800);
-      return;
-    }
-    st.view = 'full';   /* 全屏中结束才展示结束页 */
+    /* 收口统一（10-09 根治「接过一次视频就再也接不到 TA 的主动来电」）：
+       旧写法只有小窗态会 1.8s 后收，全屏挂断停在结束页且永不 teardown——
+       st 残留 → Call.busy() 永真 → engine 的 3% 主动视频掷点从此被短路，
+       她的观感就是“全屏接过一次电话之后就再也没接到过”。
+       现在不管什么形态：先写明是谁挂的、多久（toast+结束态），1.8 秒后统一收口。 */
     render();
+    if (st.endLine) UI.toast(st.endLine, 2600);
+    setTimeout(() => {
+      if (st) teardown();
+      if (typeof Home !== 'undefined') Home.render();
+    }, 1800);
   }
 
   function teardown() {
