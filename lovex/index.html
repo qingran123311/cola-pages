@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261008-232820 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-095712 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -80,6 +80,23 @@
     (document.body || document.documentElement).appendChild(d);
   }
   window.__LX_BOOTWATCH = show;
+  /* 10-09 二段哨兵（她报：数据管理点开就卡死，选不了导入导出）：页面开了、但设置页没接上线
+     （init 中途抛错/时序问题）时，桌面 headless 全绿、只有真机看得见——不再猜，直接给她一键重绑。 */
+  setTimeout(function(){
+    if (!window.__LX_BOOT_DONE) return;                       /* boot 没完：上面 5s 哨兵已管 */
+    if (!document.getElementById('cell-data')) return;
+    if (window.__LX_BIND_DONE || !window.__LX_REBIND) return;
+    if (document.getElementById('lx-bootwatch')) return;
+    var d = document.createElement('div');
+    d.id = 'lx-bootwatch';
+    d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:18px;z-index:99999;background:#2B2B31;color:#F5F2EA;'+
+      'border-radius:14px;padding:14px;font-size:14px;line-height:1.6;box-shadow:0 10px 30px rgba(0,0,0,.35);'+
+      'font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+    d.innerHTML = '页面开了，但有些按钮没接上线（点不动就是这种）。'+
+      '<div style="margin-top:10px">'+
+      '<button onclick="window.__LX_REBIND();this.closest(\'#lx-bootwatch\').remove()" style="width:100%;padding:9px 0;border:none;border-radius:10px;background:#F5F2EA;color:#2B2B31;font-size:14px">一键修复</button></div>';
+    (document.body || document.documentElement).appendChild(d);
+  }, 8000);
   window.addEventListener('error', function(){ if (!window.__LX_BOOT_DONE) setTimeout(show, 400); }, true);
   setTimeout(function(){ if (!window.__LX_BOOT_DONE) show(); }, 5000);
 })();
@@ -438,6 +455,13 @@ button{-webkit-tap-highlight-color:transparent}
   font-size:13px;max-width:80vw;text-align:center;
   opacity:0;transform:translateY(-10px);transition:.25s}
 .toast.show{opacity:1;transform:none}
+
+/* 她 10-09：导出打包期间的忙碌条（顶上常驻，完了才收）——没有它，打包那十几秒整页像死机 */
+.ui-busy{position:fixed;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) translateY(-8px);
+  z-index:2200;max-width:86vw;padding:9px 16px;border-radius:12px;background:var(--card);
+  border:1.5px solid var(--t1);box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:12.5px;color:var(--t1);
+  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.ui-busy.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ---------- 空状态 ---------- */
 .empty-state{margin:auto;text-align:center;color:var(--t3);padding:40px 0}
@@ -2560,6 +2584,26 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .gm-send{color:var(--primary);border-color:var(--primary)}
 .gm-resign{color:var(--t3)}
 .gm-ipt input{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:9px;padding:8px 10px;font-size:13px;color:var(--t1)}
+
+/* 她 10-09 00:43：悬浮球（短语+表情入口）+ 新面板两段式 + 表情真图；道具只显图标 */
+/* 她 10-09：悬浮球——真悬浮（fixed 悬在牌桌上层），中心定位（translate -50%,-50%），
+   touch-action:none 让拖动不被页面滚动抢走；fz1/fz2 = 长按缩放的中/大两档 */
+.gm-fab{position:fixed;z-index:1185;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);
+  color:var(--t1);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.10);transform:translate(-50%,-50%);touch-action:none;
+  transition:opacity .15s,box-shadow .15s}
+.gm-fab.fz1{width:54px;height:54px}
+.gm-fab.fz2{width:70px;height:70px}
+.gm-fab.dragging{opacity:.92;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.gm-fab:active{opacity:.82}
+.gm-quick-t{font-size:11px;color:var(--t3);padding:6px 2px 4px}
+.gm-chips-row{display:flex;flex-wrap:wrap;gap:6px}
+.gm-chips-row .gm-chip{white-space:nowrap}
+.gm-femo{padding:3px!important}
+.gm-femo img{width:30px;height:30px;display:block;object-fit:contain}
+.gm-feed-emo{width:44px;height:44px;display:inline-block;object-fit:contain;vertical-align:middle}
+.gm-propicon{justify-content:center}
+
 .gm-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 8px}
 .gm-chips.hidden{display:none}
 .gm-chip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:var(--card);
@@ -2961,7 +3005,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .ld-dice{flex:none;width:34px;height:34px;display:grid;place-items:center;font-size:26px;line-height:1;
   border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--t1)}
 .ld-dice.spin{animation:ld-spin .3s linear 3}
-@keyframes ld-spin{from{transform:rotate(0)}50%{transform:rotate(180deg) scale(1.14)}to{transform:rotate(360deg)}}
+/* 她 10-09：掷骰加弹跳晃动，不只是平面转圈 */
+@keyframes ld-spin{0%{transform:rotate(0) translateY(0)}25%{transform:rotate(95deg) translateY(-16%) scale(1.06)}50%{transform:rotate(185deg) translateY(0)}75%{transform:rotate(278deg) translateY(-10%) scale(1.05)}to{transform:rotate(360deg) translateY(0)}}
 .ld-hint{flex:1;min-width:0;font-size:12.5px;color:var(--t2)}
 .ld-order{margin-top:10px;padding:11px 11px 12px;border:1.5px solid var(--line);
   border-radius:12px 3px 12px 3px;text-align:center;background:var(--card)}
@@ -3115,18 +3160,41 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dz-scr-row.win{box-shadow:inset 2px 0 0 var(--t1)}
 .dz-scr-f{margin-top:5px;padding-top:4px;border-top:1px dashed var(--line);font-size:10.5px;color:var(--t3)}
 
+/* ---------- 台球（P70，她 10-09 00:43）：竖桌居中，左力度右微调，两侧玩家面板 ---------- */
+.bt-wrap{display:flex;flex-direction:column;gap:8px;padding:6px 2px 4px}
+.bt-sliders{display:grid;grid-template-columns:34px 1fr 34px;gap:8px;align-items:stretch}
+.bt-slider{position:relative;width:20px;height:100%;min-height:260px;justify-self:center;
+  border:1.5px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;touch-action:none;overflow:visible}
+.bt-slider .bt-fill{position:absolute;left:3px;right:3px;bottom:6px;height:0;border-radius:999px;background:var(--t1);opacity:.16}
+.bt-slider .bt-knob{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(0% - 8px);
+  width:16px;height:16px;border-radius:50%;background:var(--card);border:1.6px solid var(--t1)}
+.bt-board{position:relative;border:1.5px solid var(--t1);border-radius:12px;overflow:hidden;background:var(--card)}
+.bt-board canvas{display:block;width:100%;height:auto;touch-action:none}
+.bt-notice{position:absolute;left:50%;top:8px;transform:translateX(-50%);max-width:86%;
+  padding:4px 12px;border-radius:999px;background:var(--card);border:1.5px solid #c9a86a;
+  color:#a07f2e;font-size:11px;opacity:0;pointer-events:none;transition:opacity .2s}
+.bt-notice.show{opacity:1}
+.bt-foot{display:flex;gap:8px}
+.bt-plaque{flex:1;display:flex;align-items:center;gap:6px;padding:5px 8px;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--card);opacity:.62;flex-wrap:wrap}
+.bt-plaque.on{opacity:1;border-color:var(--t1)}
+.bt-plaque b{font-weight:600;font-size:12px}
+.bt-plaque small{color:var(--t3);font-size:10px;margin-left:auto}
+.bt-pots{display:flex;gap:3px;flex-basis:100%}
+.bt-pot{width:14px;height:14px;border-radius:50%;border:1px solid var(--t2);
+  display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--t3)}
+.bt-pot.on{border-color:var(--t1);color:var(--t1);font-weight:700}
+
 /* ---------- 大富翁（P51）：方环 20 城 + 中间一块调度区 ---------- */
-.mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px}
+.mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px;position:relative}
 .mc-empty{padding:26px 12px;text-align:center;color:var(--t3);font-size:12px}
-/* 盘外这一行：一人一颗（头像/颜色/名字/资产/现金与地产），一排画不下就左右划。
-   09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
-   以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；现在不分档 */
-.mc-bank{display:flex;flex-wrap:nowrap;gap:6px;padding:0 2px 2px;justify-content:flex-start;
-  overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
-.mc-bank::-webkit-scrollbar{display:none}
-/* 她 10-08：头像分立上下两簇盘绕棋盘，不再一行排排坐；簇内均匀散开 */
-.mc-bank-top{justify-content:space-evenly;padding-bottom:4px}
-.mc-bank-bot{justify-content:space-evenly;padding:4px 2px 2px}
+/* 她 10-09 00:43：座位正 N 边形贴盘周界——上下横带（按角度比例定位）+ 左右立柱，取代 10-08 两簇 */
+.mc-band{position:relative;height:36px;min-height:36px}
+.mc-band .mc-pk{position:absolute;top:0}
+.mc-midrow{display:grid;grid-template-columns:auto 1fr auto;gap:4px;align-items:stretch}
+.mc-side{position:relative;width:86px;min-width:86px}
+.mc-side .mc-pk{position:absolute;left:0;right:0;flex-wrap:wrap;justify-content:center}
+.mc-side-empty{width:0;min-width:0}
 .mc-pk{width:auto;flex:none;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
   border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:none}
 .mc-pk.on{opacity:1;border-color:var(--t1)}
@@ -3206,10 +3274,13 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   font-size:11px;font-weight:700;color:var(--t1);white-space:nowrap}
 /* 五拍（09-14 P56-A）：摇骰转面 → 落定弹一下 → 逐格跳 → 事件翻牌 → 换手
    时长全在 mono.js 的 BEAT 表里（三档可调），CSS 只管“怎么动”，不管“动多久” */
+.mc-dice.spin{animation:mc-dice-shake .34s ease-in-out infinite}
 .mc-dice.spin .mc-dice-b{display:inline-block;width:.78em;height:.78em;border:1.6px solid var(--t2);
   border-radius:15%;background:var(--card);animation:mc-tumble .22s linear infinite}
 .mc-dice.spin .mc-dice-b:last-child{animation-delay:-.11s}
 @keyframes mc-tumble{50%{transform:rotate(180deg) translateY(-14%)}}
+/* 她 10-09：摇骰那拍整颗在手里晃（不是只有面子转） */
+@keyframes mc-dice-shake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-6%,2%) rotate(-8deg)}55%{transform:translate(5%,-3%) rotate(7deg)}80%{transform:translate(-3%,1%) rotate(-4deg)}}}
 .mc-dice.land span{animation:mc-die-in .3s cubic-bezier(.2,.9,.3,1.4)}
 @keyframes mc-die-in{0%{transform:scale(.42) rotate(-26deg);opacity:.15}70%{transform:scale(1.14) rotate(5deg);opacity:1}}
 /* 事件翻牌：居中、大字号（她 09-14：“只写一行 10px 小字，我都没反应过来”） */
@@ -4860,22 +4931,31 @@ const DB = (function () {
     });
   }
   async function exportBundle(root, kind) {
+    /* 她 10-09 06:15：导出期间手机整页冻住（主线程被大对象序列化喋死）。
+       三处让步：①先让屏一层（忙碌条先画出来再开吃）；②媒体逐个取本就带 await，
+       每 6 个再让一拍；③末尾一次 stringify 改紧凑格式（去掉 null,2 的缩进白垩，
+       手机上序列化耗时近乎减半），吃之前再让一拍让提示先画出来。 */
+    const tick = () => new Promise(r => setTimeout(r, 0));
+    await tick();
     const doc = JSON.parse(JSON.stringify(root));   // 先拷贝，导出途中 state 再变也不影响这份
     const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
     const media = [];
     if (MS) {
       const keys = idbRefsIn(doc);
-      for (const k of keys) {
-        try {
-          const b = await MS.get(k);
-          if (b == null) continue;                              // 本体本来就没：引用照旧带走，导入后走「待修」
-          if (typeof b === 'string') { media.push({ k, v: b }); continue; }
-          media.push({ k, v: await blobToDataUrl(b), b: 1 });   // 视频/封面是 Blob，转 dataURL 存 JSON
-        } catch (e) { /* 单个失败不拦整份 */ }
+    let taken = 0, missed = 0;
+    for (const k of keys) {
+      try {
+        const b = await MS.get(k);
+        if (b == null) continue;                              // 本体本来就没：引用照旧带走，导入后走「待修」
+        if (typeof b === 'string') { media.push({ k, v: b }); continue; }
+        media.push({ k, v: await blobToDataUrl(b), b: 1 });   // 视频/封面是 Blob，转 dataURL 存 JSON
+      } catch (e) { missed++; }                               // 单个失败不拦整份，计个数（可查）
+      if (++taken % 6 === 0) await tick();                    // 每 6 个媒体让一拍，UI 不僵
       }
     }
+    await tick();
     return JSON.stringify({ app: 'LOVEX-BUNDLE', version: 2, kind: kind || 'all',
-      exportedAt: new Date().toISOString(), data: doc, media }, null, 2);
+      exportedAt: new Date().toISOString(), data: doc, media });
   }
   /* 解析导入文件 + 把媒体本体放回 IDB（不动 state，合并由调用方按 kind 做）。
      返回 {kind, data, media}；kind: 'all' | 'contact' | 'msgs'。 */
@@ -7120,6 +7200,8 @@ const UI = (function () {
      ③ pointerleave 不取消（手指还在屏上就算按着）；④ 右键等价于长按（PC 习慣）；
      ⑤ 长按后的那一下 click 在捕获阶段吃掉，不会又触发轻点。
      需要禁掉滚动干扰的容器自己加 CSS `touch-action:none`（扫雷格已加）。 */
+  /* 指针捕获唯一实现（10-09 收拢：长按与游戏悬浮球两处同写法，按她规矩合到一个函数） */
+  function grab(el, e) { try { el.setPointerCapture(e.pointerId); } catch (err) {} }
   function longPress(el, opts) {
     if (!el) return el;
     const o = opts || {};
@@ -7129,7 +7211,7 @@ const UI = (function () {
     el.addEventListener('pointerdown', e => {
       if (e.button != null && e.button !== 0) return;
       fired = false; sx = e.clientX; sy = e.clientY;
-      try { el.setPointerCapture(e.pointerId); } catch (err) {}   // 没捕获就拿不到后续 up
+      grab(el, e);   // 没捕获就拿不到后续 up
       cancel();
       timer = setTimeout(() => { timer = null; fired = true; if (o.onLong) o.onLong(e); }, ms);
     });
@@ -7184,6 +7266,28 @@ const UI = (function () {
     } catch (e) { logErr('导出：下载失败 ' + (e && e.message || e)); }
     toast(base);
     return false;
+  }
+
+  /* 她 10-09 06:15 报「数据管理点不动直接卡住」：导出打包大对象（媒体全转 base64，最后一步
+     一次性 stringify）会把主线程冻住几十秒，期间整页真就啥也点不到；且全程无一字提示。
+     根治两件：①这里加一根忙碌条，打包期间顶上常驻，完了才收；②db.js 那头让出主线程+紧凑序列化。 */
+  let busyEl = null;
+  function busy(text) {
+    if (!busyEl) {
+      busyEl = document.createElement('div');
+      busyEl.className = 'ui-busy';
+      document.body.appendChild(busyEl);
+    }
+    busyEl.textContent = text || '正在打包…';
+    /* 同步加 show：不赌 rAF/定时器什么时候跳（headless 里 rAF 不跳、兜底也见过不跳的），
+       代价只是没了淡入动画——忙碌条要的是「一定亮」，不是「优雅地亮」 */
+    busyEl.classList.add('show');
+  }
+  function busyDone() {
+    if (!busyEl) return;
+    const el = busyEl; busyEl = null;
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 400);
   }
 
   function toast(msg, ms = 2000) {
@@ -7578,7 +7682,7 @@ const UI = (function () {
     });
   }
 
-  return { toast, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, cssResolve, cssRemoteUrls, textFromFile, framePrep };
+  return { toast, busy, busyDone, grab, confirmBox, escapeHtml, actionSheet, raise, longPress, saveFile, cssVerdict, bubbleSample: BUBBLE_SAMPLE, bubbleClass, localizeCss, cssResolve, cssRemoteUrls, textFromFile, framePrep };
 })();
 
 /* =====================================================
@@ -7673,7 +7777,8 @@ const ICONS = {
   'box':           '<rect x="4" y="7.5" width="16" height="12" rx="1.5"/><path d="M4 11.5h16M12 7.5v12M4 7.5l2-3.5h12l2 3.5"/>',
   /* 大富翁：一张方环棋盘（外圈画格、中间一颗骰子），线稿风 */
   'star':          '<path d="M12 4l2.4 5 5.4.7-4 3.8 1 5.5-4.8-2.7L7.2 19l1-5.5-4-3.8L9.6 9z"/>',
-  'map-mono':    '<rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.4"/><rect x="7.4" y="7.4" width="9.2" height="9.2" rx="1.6"/><path d="M3.2 7.4h4.2M16.6 7.4h4.2M3.2 16.6h4.2M16.6 16.6h4.2M7.4 3.2v4.2M7.4 16.6v4.2M16.6 3.2v4.2M16.6 16.6v4.2"/><circle cx="10.4" cy="10.4" r=".8"/><circle cx="13.6" cy="13.6" r=".8"/>'
+  'map-mono':    '<rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.4"/><rect x="7.4" y="7.4" width="9.2" height="9.2" rx="1.6"/><path d="M3.2 7.4h4.2M16.6 7.4h4.2M3.2 16.6h4.2M16.6 16.6h4.2M7.4 3.2v4.2M7.4 16.6v4.2M16.6 3.2v4.2M16.6 16.6v4.2"/><circle cx="10.4" cy="10.4" r=".8"/><circle cx="13.6" cy="13.6" r=".8"/>',
+  'billiard':    '<circle cx="9.4" cy="14" r="6.2"/><circle cx="9.4" cy="12" r="2"/><path d="M13.6 9.4l6-6.2"/><circle cx="20" cy="3.4" r=".6" fill="currentColor" stroke="none"/>'
 };
 
 function I(name, size = 18) {
@@ -10066,7 +10171,9 @@ const Chat = (function () {
       const en = bub.querySelector('[data-enter]');
       if (en) en.addEventListener('click', e => { e.stopPropagation(); Games.answerTaInvite(m.roomId, true); });
     } else if (m.type === 'redpacket') {
-      /* 红包卡片消息（二期P15）：主题化卡片，点击开红包；底部品牌行照微信（清然 22:07 参考图） */
+      /* 红包卡片消息（二期P15）：主题化卡片，点击开红包；底部品牌行照微信（清然 22:07 参考图）
+         她 10-09 00:43：自定义封面也上气泡封皮（不止点开红包那屏）——按 coverId 找图，
+         自己发的没存 id 就退用我的最新封面，跟开红包屏同一套 fallback */
       bub.classList.add('bubble-rp');
       const rp = (DB.state.redpackets || {})[m.rpId];
       const isMine = m.from === 'me';
@@ -10081,6 +10188,13 @@ const Chat = (function () {
           '<span class="rp-mid"><b class="rp-note-txt"></b><small>' + esc(st) + '</small></span>' +
         '</div>';
       bub.querySelector('.rp-note-txt').textContent = rp ? rp.note : '红包';
+      const cvData = rp ? (Redpacket.coverDataById(rp.coverId) || (isMine ? Redpacket.myCoverFor() : null)) : null;
+      if (cvData) {
+        const ico = bub.querySelector('.rp-ico');
+        ico.style.background = '#000 url(' + cvData + ') center/cover no-repeat';
+        ico.style.color = 'transparent';
+        ico.style.borderRadius = '10px';
+      }
       bub.addEventListener('click', () => { if (typeof Redpacket !== 'undefined') Redpacket.openOpen(m.rpId); });
     } else if (m.type === 'checkin') {
       /* P25 查岗卡片：TA 来查岗，点开应答；已答后翻灰 */
@@ -18436,6 +18550,7 @@ const Redpacket = (function () {
     const hit = all.find(x => x.id === id);
     return hit ? hit.data : null;
   }
+  /* 她 10-09：气泡封皮复用 myCoverFor（同一件事一个函数，不重复造口） */
 
   /* ---------- 红包封面管理 ---------- */
   let coversShell = null;   // 独立于发红包 sheet（修复：从封面管理返回后 sheet 被误关）
@@ -18584,7 +18699,8 @@ const Redpacket = (function () {
     scanExpiry();
   }
 
-  return { init, openSend, openOpen, maybeGift, doClaim, giftDirect };
+  return { init, openSend, openOpen, maybeGift, doClaim, giftDirect,
+    coverDataById, myCoverFor };   /* 她 10-09：聊天气泡封皮要用（chat.js） */
 })();
 
 /* =====================================================
@@ -24484,22 +24600,40 @@ const Mono = (function () {
        09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
        以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；
        现在不分档：信息全在一颗上，窄了可划，与结算表同一个“左右划”口径（.gm-swipe 同一家） */
-    /* 她 10-08：头像分立——不再一行排排坐。拆成上下两簇盘绕着棋盘各站一边，
-       一簇内均匀散开（space-evenly），人数多也只多占半行 */
-    const half = Math.ceil(M.order.length / 2);
-    const pkRow = (arr, cls) => '<div class="gm-players mc-bank ' + cls + '">' + arr.map(u =>
-      '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
-      '" data-uid="' + u + '"><span class="gm-mini-ava">' + Home.avaInner(u) + '</span>' +
-      '<i class="mc-dot" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '"></i>' +
-      '<b>' + esc(nm(u)) + '</b>' +
-      '<small class="mc-cash">' + assets(r, u) + '</small>' +
-      '<small>现' + (M.cash[u] || 0) + ' · ' + ownedProps(r, u).length + ' 块' + houseTxt(r, u) + '</small>' +
-      (M.items[u] ? '<em class="mc-itbadge">' + esc(IT_NAME[M.items[u]]) + '</em>' : '') +
-      (u === 'me' ? '<em class="mc-me">我</em>' : '') +
-      (M.jail[u] ? '<em class="mc-jbadge">狱</em>' : '') +
-      (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>').join('') + '</div>';
-    h += pkRow(M.order.slice(0, half), 'mc-bank-top');
-    h += '<div class="mc-board" id="mc-board">' + cells.join('') +
+    /* 她 10-09 00:43：头像按人数分立——正 N 边形贴到棋盘周界（我=6 点钟位，其余按座位序等分），
+       五人五角、六人六角…以此类推；10-08「上下两簇」口径被本条演进 */
+    const NN = M.order.length;
+    const myIdx = Math.max(0, M.order.indexOf('me'));
+    const bandOf = th => (th >= 45 && th < 135) ? 'bot' : (th >= 135 && th < 225) ? 'left' : (th >= 225 && th < 315) ? 'top' : 'right';
+    const seats = M.order.map((u, i) => {
+      let th = (90 + 360 * ((((i - myIdx) % NN) + NN) % NN) / NN) % 360;   // 屏幕角：0°=右 90°=下
+      const band = bandOf(th);
+      let f;                                                               // 沿边 0~1
+      if (band === 'bot') f = (135 - th) / 90;                             // 左→右
+      else if (band === 'left') f = (225 - th) / 90;                       // 上→下
+      else if (band === 'top') f = (th - 225) / 90;                        // 左→右
+      else f = ((th < 45 ? th + 360 : th) - 315) / 90;                     // 上→下
+      return { u: u, band: band, f: f };
+    });
+    const pkOne = s => '<span class="gm-player mc-pk' + (curUid(r) === s.u && M.phase !== 'over' ? ' on' : '') + (s.u === 'me' ? ' me' : '') +
+      '" data-uid="' + s.u + '" style="' + (s.band === 'top' || s.band === 'bot'
+        ? 'left:' + (s.f * 100).toFixed(1) + '%;transform:translateX(-50%)'
+        : 'top:' + (s.f * 100).toFixed(1) + '%;transform:translateY(-50%)') + '">' +
+      '<span class="gm-mini-ava">' + Home.avaInner(s.u) + '</span>' +
+      '<i class="mc-dot" style="--tc:' + (colOf(r, s.u) || 'var(--t1)') + '"></i>' +
+      '<b>' + esc(nm(s.u)) + '</b>' +
+      '<small class="mc-cash">' + assets(r, s.u) + '</small>' +
+      '<small>现' + (M.cash[s.u] || 0) + ' · ' + ownedProps(r, s.u).length + ' 块' + houseTxt(r, s.u) + '</small>' +
+      (M.items[s.u] ? '<em class="mc-itbadge">' + esc(IT_NAME[M.items[s.u]]) + '</em>' : '') +
+      (s.u === 'me' ? '<em class="mc-me">我</em>' : '') +
+      (M.jail[s.u] ? '<em class="mc-jbadge">狱</em>' : '') +
+      (M.out[s.u] ? '<em class="mc-out">出局</em>' : '') + '</span>';
+    const bandHtml = bd => { const arr = seats.filter(s => s.band === bd).sort((a, b) => a.f - b.f);
+      return arr.length ? '<div class="mc-band mc-band-' + bd + '">' + arr.map(pkOne).join('') + '</div>' : ''; };
+    const sideHtml = bd => { const arr = seats.filter(s => s.band === bd).sort((a, b) => a.f - b.f);
+      return '<div class="mc-side mc-side-' + bd + (arr.length ? '' : ' mc-side-empty') + '">' + arr.map(pkOne).join('') + '</div>'; };
+    h += bandHtml('top');
+    h += '<div class="mc-midrow">' + sideHtml('left') + '<div class="mc-board" id="mc-board">' + cells.join('') +
       '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
       '<div class="mc-dice' + (spinning ? ' spin' : M.dice ? ' land' : '') + '">' + (spinning
         ? '<b class="mc-dice-b"></b><b class="mc-dice-b"></b>'
@@ -24518,8 +24652,8 @@ const Mono = (function () {
         (itOn(r) && M.items['me'] ? ((upOn(r) ? ' · ' : '') + '手里：' + esc(IT_NAME[M.items['me']])) : '') + '</div>' : '') +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
-      '</div></div>' +
-    pkRow(M.order.slice(half), 'mc-bank-bot');
+      '</div></div>' + sideHtml('right') + '</div>' +
+    bandHtml('bot');
     /* 操作条 */
     h += '<div class="mc-bar">';
     if (M.phase === 'begin') h += '<span class="mc-hint">马上开跑…</span>';
@@ -24998,6 +25132,545 @@ const Mono = (function () {
     };
   }
   return { def };
+})();
+
+/* =====================================================
+   LOVE♡X · billiards.js —— 台球（双人，P70，她 10-09 00:43/00:45 口述 + 16 张参考图）
+   9 球制：先击最小号码球；合法接触打进 9 号=赢；白球落袋/空杆/首触非最小号=犯规；
+   犯规对方自由球（白球随手摆），犯规 3 次判负（参考图口径「超 3 次自动认输」）。
+   操作口径（她 00:45 定，照参考图）：
+     · 左侧竖条=力度（拖动，松手出杆）；
+     · 右侧竖条=微调方向；
+     · 球桌上拖动=球杆绕白球 360°旋转，白球引出虚线（幽灵球+反弹短线）；
+     · 首触不是最小号 → 线端红禁止符（能出杆，照 9 球算犯规）；
+     · 轮到我时我的目标球（最小号）虚线环高亮呼吸。
+   布局照参考图：竖向球桌居中，左右两侧玩家面板（头像+进球槽），顶部倒计时走壳子 urge 钟。
+   物理：rAF 自跑等质量弹性碰撞+库边反弹+摩擦；落库只在停球结算时（DB 防抖不背高频）。
+   AI：挑「白球→目标球→袋口」可打角（切角<75°），按 stateRoll 加误差；没直路就安全球轻推。
+   ===================================================== */
+const Billiards = (function () {
+
+  const W = 250, H = 400;            // 球桌逻辑尺寸（竖向，照参考图）
+  const BR = 7;                      // 球半径
+  const PAD = 14;                    // 库边内沿
+  const PR = 12.5;                   // 袋口半径
+  const POCKETS = [                  // 6 袋：四角 + 两条长边中点（角袋往内收，不然球心最远点够不到袋口）
+    { x: PAD + 1, y: PAD + 1 }, { x: W - PAD - 1, y: PAD + 1 },
+    { x: PAD + 1, y: H - PAD - 1 }, { x: W - PAD - 1, y: H - PAD - 1 },
+    { x: PAD - 2, y: H / 2 }, { x: W - PAD + 2, y: H / 2 }
+  ];
+  const FRICTION = 0.988;            // 每帧速度衰减
+  const STOP_V = 0.02;               // 停球阈值
+  const WALL_BOUNCE = 0.78;          // 库边吃库损耗
+  const TA_SEC = [2.6, 5.2];         // TA 一杆想多久（跟 UNO/飞行棋同一档，工程值）
+  const FOUL_MAX = 3;                // 她 00:45 没给数，参考图口径 3 次判负（工程值）
+
+  /* ---------- 摆球 ---------- */
+  /* 菱形摆位：五排 1-2-3-2-1，1 号顶点朝白球（下方），9 号正中 */
+  function rackBalls() {
+    const balls = [{ n: 0, x: W / 2, y: H * 0.76, vx: 0, vy: 0, on: true }];
+    const others = [2, 3, 4, 5, 6, 7, 8];
+    for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = others[i]; others[i] = others[j]; others[j] = t; }
+    /* 座位序：row0[1], row1[a,b], row2[c,9,d], row3[e,f], row4[g] */
+    const fill = [others[0], others[1], others[2], others[3], others[4], others[5], others[6]];
+    const rowXs = [[0], [-0.5, 0.5], [-1, 0, 1], [-0.5, 0.5], [0]];
+    const dy = BR * 2.12;
+    for (let r2 = 0; r2 < 5; r2++) {
+      for (const off of rowXs[r2]) {
+        let n;
+        if (r2 === 4) n = 1;                     // 顶点排最靠白球（r2=4 的 y 最大、离白球最近）
+        else if (r2 === 2 && off === 0) n = 9;
+        else n = fill.shift();
+        balls.push({ n: n, x: W / 2 + off * 2 * BR * 2.12, y: H * 0.30 - (2 - r2) * dy, vx: 0, vy: 0, on: true });
+      }
+    }
+    return balls;
+  }
+
+  /* ---------- 状态 ---------- */
+  function newRoom(room) {
+    const taFirst = (room.stateRoll | 0) % 2 === 1;
+    room.bill = {
+      balls: rackBalls(),
+      turn: taFirst ? (room.players.find(u => u !== 'me') || 'ta') : 'me',
+      phase: taFirst ? 'taThink' : 'aim',      // aim | taThink | moving | place | over
+      aim: -Math.PI / 2, fine: 0, power: 0,
+      first: null, potted: [],            // 这一杆：首触 / 本杆落袋
+      pots: { me: [], ta: [] },           // 各自落袋的球号
+      fouls: { me: 0, ta: 0 },
+      notice: '', msgAt: 0
+    };
+    const b = room.bill;
+    feed(room, 'sys', '台球开局：9 球制，先击最小号，打进 9 号赢');
+    feed(room, 'sys', taFirst ? esc(name(room.players.find(u => u !== 'me'))) + ' 先开球' : '你先开球');
+    if (b.turn !== 'me') armTa(room);
+    else Games.armUrge(room);
+    DB.save();
+  }
+  function B(r) { return r.bill; }
+  function taUid(r) { return (r.players || []).find(u => u !== 'me') || 'ta'; }
+  function name(u) { return u === 'me' ? '我' : ((DB.state.contacts || []).find(c => c.id === u) || { name: 'TA' }).name || 'TA'; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
+  function onTable(bills, n) { const b = bills.find(x => x.n === n); return b && b.on; }
+  function lowest(r) { const bs = B(r).balls.filter(x => x.on && x.n > 0); return bs.length ? bs.reduce((m, x) => x.n < m.n ? x : m) : null; }
+
+  /* ---------- 物理 ---------- */
+  function step(r) {
+    const b = B(r), bs = b.balls;
+    let moving = false;
+    for (const ball of bs) {
+      if (!ball.on) continue;
+      if (Math.abs(ball.vx) < STOP_V && Math.abs(ball.vy) < STOP_V) { ball.vx = 0; ball.vy = 0; continue; }
+      moving = true;
+      ball.x += ball.vx; ball.y += ball.vy;
+      ball.vx *= FRICTION; ball.vy *= FRICTION;
+      /* 袋口 */
+      for (const p of POCKETS) {
+        if (Math.hypot(ball.x - p.x, ball.y - p.y) < PR + 1.5) {
+          ball.on = false; ball.vx = 0; ball.vy = 0; ball.pocketed = true;
+          b.potted.push(ball.n);
+          break;
+        }
+      }
+      if (!ball.on) continue;
+      /* 库边 */
+      if (ball.x < PAD + BR) { ball.x = PAD + BR; ball.vx = Math.abs(ball.vx) * WALL_BOUNCE; }
+      if (ball.x > W - PAD - BR) { ball.x = W - PAD - BR; ball.vx = -Math.abs(ball.vx) * WALL_BOUNCE; }
+      if (ball.y < PAD + BR) { ball.y = PAD + BR; ball.vy = Math.abs(ball.vy) * WALL_BOUNCE; }
+      if (ball.y > H - PAD - BR) { ball.y = H - PAD - BR; ball.vy = -Math.abs(ball.vy) * WALL_BOUNCE; }
+    }
+    /* 球球等质量弹性碰撞 */
+    for (let i = 0; i < bs.length; i++) {
+      const a = bs[i]; if (!a.on) continue;
+      for (let j = i + 1; j < bs.length; j++) {
+        const c = bs[j]; if (!c.on) continue;
+        const dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy);
+        if (d >= BR * 2 || d === 0) continue;
+        const nx = dx / d, ny = dy / d;
+        const push = (BR * 2 - d) / 2;
+        a.x -= nx * push; a.y -= ny * push; c.x += nx * push; c.y += ny * push;
+        const rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
+        if (rel > 0) {
+          a.vx -= rel * nx; a.vy -= rel * ny; c.vx += rel * nx; c.vy += rel * ny;
+          if (a.n === 0 && b.first == null) b.first = c.n;
+          else if (c.n === 0 && b.first == null) b.first = a.n;
+        }
+      }
+    }
+    return moving;
+  }
+
+  /* ---------- 出杆与结算 ---------- */
+  function shoot(r, angle, power) {
+    const b = B(r);
+    if (b.phase !== 'aim' && b.phase !== 'place') return;
+    const cue = b.balls.find(x => x.n === 0);
+    const sp = 2.4 + power * 13.5;
+    cue.vx = Math.cos(angle) * sp; cue.vy = Math.sin(angle) * sp;
+    b.first = null; b.potted = []; b.phase = 'moving';
+    b.notice = ''; b.aimA = angle;
+    feed(r, b.turn === 'me' ? 'me' : b.turn, b.turn === 'me' ? '你出杆了' : esc(name(b.turn)) + ' 出杆');
+    DB.save();
+  }
+  function resolve(r) {
+    const b = B(r);
+    const low = lowest(r);
+    const cuePot = b.potted.indexOf(0) >= 0;
+    const legalHit = b.first != null && low != null && b.first === low.n;
+    const isFoul = cuePot || b.first == null || !legalHit;
+    const shooter = b.turn;
+    const nine = b.potted.indexOf(9) >= 0;
+    /* 落袋归属（白球不算） */
+    b.potted.forEach(n => { if (n > 0) b.pots[shooter === 'me' ? 'me' : 'ta'].push(n); });
+    if (b.potted.filter(n => n > 0).length) {
+      feed(r, 'sys', (shooter === 'me' ? '你' : esc(name(shooter))) + ' 打进了 ' +
+        b.potted.filter(n => n > 0).sort().join('、') + ' 号');
+    }
+    /* 白球落袋：重摆到开球点（随手摆交给对手的话下面 place 接） */
+    const cue = b.balls.find(x => x.n === 0);
+    if (cuePot) { cue.on = true; cue.x = W / 2; cue.y = H * 0.76; cue.vx = 0; cue.vy = 0; }
+    if (isFoul) {
+      b.fouls[shooter === 'me' ? 'me' : 'ta']++;
+      const why = cuePot ? '白球落袋' : (b.first == null ? '空杆' : '先碰了 ' + b.first + ' 号（要打最小号）');
+      feed(r, 'sys', '犯规：' + why + '（第 ' + b.fouls[shooter === 'me' ? 'me' : 'ta'] + ' 次）');
+      b.notice = '犯规 · ' + why;
+      if (b.fouls[shooter === 'me' ? 'me' : 'ta'] >= FOUL_MAX) { return finish(r, shooter === 'me' ? taUid(r) : 'me', '犯规满 ' + FOUL_MAX + ' 次'); }
+      /* 9 号犯规落袋 → 重摆脚点（9 球规矩） */
+      if (nine) respotNine(r);
+      handOver(r, true);
+      return;
+    }
+    if (nine) { return finish(r, shooter, '打进 9 号'); }
+    if (b.potted.filter(n => n > 0).length) {   // 有进还不犯规 → 继续打
+      b.phase = shooter === 'me' ? 'aim' : 'taThink';
+      b.fine = 0; b.power = 0;
+      if (b.turn === 'me') { Games.armUrge(r); } else { armTa(r); }
+      DB.save(); touch(r);
+      return;
+    }
+    handOver(r, false);
+  }
+  function handOver(r, foul) {
+    const b = B(r);
+    b.turn = b.turn === 'me' ? taUid(r) : 'me';
+    b.fine = 0; b.power = 0; b.first = null;
+    if (b.turn === 'me') {
+      b.phase = foul ? 'place' : 'aim';
+      if (foul) b.notice = (b.notice ? b.notice + ' · ' : '') + '自由球：点桌上摆白球';
+      feed(r, 'sys', '轮到你了');
+      Games.armUrge(r);
+    } else {
+      b.phase = foul ? 'place' : 'taThink';   // TA 犯规也先摆自由球（计划环里 taPlace 接）
+      feed(r, 'sys', esc(name(taUid(r))) + ' 在打');
+      armTa(r);
+    }
+    touch(r);
+  }
+  function respotNine(r) {
+    const b = B(r), nine = b.balls.find(x => x.n === 9);
+    nine.on = true; nine.pocketed = false;
+    nine.x = W / 2; nine.y = H * 0.30; nine.vx = 0; nine.vy = 0;
+    /* 脚点被占就往下挪 */
+    while (b.balls.some(x => x.on && x !== nine && Math.hypot(x.x - nine.x, x.y - nine.y) < BR * 2.2) && nine.y < H - PAD - BR * 2) nine.y += BR;
+    feed(r, 'sys', '9 号重摆回脚点');
+  }
+  function finish(r, winUid, why) {
+    const b = B(r);
+    b.phase = 'over'; b.notice = '';
+    feed(r, 'sys', (winUid === 'me' ? '你' : esc(name(winUid))) + ' 赢了（' + why + '）');
+    if (winUid !== 'me') Games.say(r, winUid, '胜负感言');
+    if (typeof Games !== 'undefined' && Games.finish) Games.finish(r, { win: winUid, line: [] });
+    touch(r);
+  }
+
+  /* ---------- TA ---------- */
+  function armTa(r) {
+    r.plans.push({ kind: 'btTa', at: Date.now() + rand(TA_SEC[0], TA_SEC[1]) * 1000, done: false });
+  }
+  function rand(a, z) { return a + Math.random() * (z - a); }
+  /* 线段到圆最近距离（AI 判路是否被挡） */
+  function segCircle(ax, ay, bx, by, cx, cy, rad) {
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
+    let t = ((cx - ax) * dx + (cy - ay) * dy) / L2; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(ax + dx * t - cx, ay + dy * t - cy) - rad;
+  }
+  function taShot(r) {
+    const b = B(r);
+    const cue = b.balls.find(x => x.n === 0);
+    const low = lowest(r);
+    if (!low) { return; }
+    const roll = (r.stateRoll | 0) || 50;
+    const others = b.balls.filter(x => x.on && x.n !== 0 && x.n !== low.n);
+    let best = null;
+    for (const p of POCKETS) {
+      const lx = low.x - p.x, ly = low.y - p.y, L = Math.hypot(lx, ly) || 1;
+      const ghost = { x: low.x + lx / L * BR * 2, y: low.y + ly / L * BR * 2 };
+      const ax = ghost.x - cue.x, ay = ghost.y - cue.y, A = Math.hypot(ax, ay) || 1;
+      const cut = Math.acos(Math.max(-1, Math.min(1, (ax * lx + ay * ly) / (A * L))));
+      if (cut > 75 * Math.PI / 180) continue;
+      /* 白球→幽灵位 别被挡（low 自己在幽灵位附近不算挡） */
+      let blocked = false;
+      for (const o of others) if (segCircle(cue.x, cue.y, ghost.x, ghost.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; }
+      if (!blocked) for (const o of b.balls) { if (!o.on || o.n === 0 || o === low) continue; if (segCircle(low.x, low.y, p.x, p.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; } }
+      if (blocked) continue;
+      const score = cut * 2 + A / W + L / H;
+      if (!best || score < best.score) best = { angle: Math.atan2(ay, ax), score: score, dist: A };
+    }
+    let angle, power;
+    if (best) {
+      angle = best.angle;
+      const err = (1 - roll / 100) * 0.06 + 0.01;       // 状态差失误大，状态好基本指哪打哪
+      angle += (Math.random() - 0.5) * 2 * err;
+      power = Math.max(0.3, Math.min(0.92, 0.34 + best.dist / W * 0.55 + Math.random() * 0.12));
+    } else {
+      /* 安全球：轻推最小号，保证首触合法 */
+      angle = Math.atan2(low.y - cue.y, low.x - cue.x) + (Math.random() - 0.5) * 0.08;
+      power = 0.32;
+    }
+    shoot(r, angle, power);
+  }
+
+  /* ---------- 计划环 ---------- */
+  function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); else DB.save(); }
+  /* 30s 到点 TA 催一句不判负（全站同一口），催完重挂这口钟 */
+  function onTimeout(r) {
+    const b = B(r); if (!b || b.phase === 'over' || b.turn !== 'me') return false;
+    Games.say(r, taUid(r), '快捷短语');
+    Games.armUrge(r);
+    return true;
+  }
+  function onPlan(r, p) {
+    const b = B(r); if (!b) return false;
+    if (p.kind === 'btTa') {
+      if (b.turn === 'me' || b.phase === 'over' || b.phase === 'moving') return true;
+      if (b.phase === 'place') { taPlace(r); return true; }
+      taShot(r);
+      return true;
+    }
+    return false;
+  }
+  function taPlace(r) {
+    const b = B(r), cue = b.balls.find(x => x.n === 0);
+    let x = W / 2, y = H * 0.76;
+    let tries = 0;
+    while (b.balls.some(o => o.on && o.n !== 0 && Math.hypot(o.x - x, o.y - y) < BR * 2.3) && tries++ < 40) {
+      x = PAD + BR + Math.random() * (W - 2 * (PAD + BR));
+      y = H * 0.6 + Math.random() * (H * 0.3);
+    }
+    cue.on = true; cue.x = x; cue.y = y;
+    b.phase = 'taThink';
+    feed(r, 'sys', esc(name(taUid(r))) + ' 摆好白球继续');
+    DB.save();
+    armTa(r);
+  }
+
+  /* ---------- 认输 ---------- */
+  function onResign(r) {
+    const b = B(r); if (!b || b.phase === 'over') return false;
+    finish(r, taUid(r), '你认输');
+    return true;
+  }
+
+  /* ---------- 渲染 ---------- */
+  let raf = 0, lastTs = 0;
+  function touch(r) { if (typeof Games !== 'undefined' && Games.touch) Games.touch(r); else DB.save(); }
+  function theme() {
+    const cs = getComputedStyle(document.body);
+    const v = k => (cs.getPropertyValue(k) || '').trim();
+    return { ink: v('--t1') || '#3a3a42', line: v('--line') || '#ddd', card: v('--card') || '#fff', t3: v('--t3') || '#999', bad: '#c97070' };
+  }
+  function render(r, el) {
+    const b = B(r);
+    const ta = taUid(r);
+    const potsRow = who => {
+      const mine = (b.pots[who] || []).slice().sort((a, z) => a - z);
+      let h = '<div class="bt-pots">';
+      for (let n = 1; n <= 9; n++) h += '<span class="bt-pot' + (mine.indexOf(n) >= 0 ? ' on' : '') + '">' + (mine.indexOf(n) >= 0 ? n : '') + '</span>';
+      return h + '</div>';
+    };
+    const chip = (uid, side) => '<div class="bt-plaque' + (b.turn === uid && b.phase !== 'over' ? ' on' : '') + '" data-uid="' + uid + '">' +
+      '<span class="gm-ava">' + (uid ? Home.avaInner(uid) : '?') + '</span>' +
+      '<b>' + esc(uid === 'me' ? '我' : name(uid)) + '</b>' +
+      '<small>犯规 ' + (b.fouls[uid === 'me' ? 'me' : 'ta'] | 0) + '/' + FOUL_MAX + '</small>' +
+      potsRow(uid === 'me' ? 'me' : 'ta') + '</div>';
+    el.innerHTML =
+      '<div class="bt-wrap">' +
+        '<div class="bt-sliders">' +
+          '<div class="bt-slider" id="bt-pow" title="力度"><i class="bt-fill" id="bt-pow-fill"></i><i class="bt-knob" id="bt-pow-knob"></i></div>' +
+          '<div class="bt-board"><canvas id="bt-cv" width="' + W * 2 + '" height="' + H * 2 + '"></canvas>' +
+            '<div class="bt-notice' + (b.notice ? ' show' : '') + '" id="bt-notice">' + esc(b.notice) + '</div></div>' +
+          '<div class="bt-slider" id="bt-fine" title="微调方向"><i class="bt-fill" id="bt-fine-fill"></i><i class="bt-knob" id="bt-fine-knob"></i></div>' +
+        '</div>' +
+        '<div class="bt-foot">' + chip('me') + chip(ta) + '</div>' +
+      '</div>';
+    const cv = el.querySelector('#bt-cv');
+    bindCanvas(r, cv);
+    bindSlider(r, el.querySelector('#bt-pow'), v => { B(r).power = v; if (v <= 0.02) setKnobs(r); });
+    bindSlider(r, el.querySelector('#bt-fine'), v => { B(r).fine = (v - 0.5) * 0.14; setKnobs(r); });
+    setKnobs(r);
+    loop(r);
+  }
+  function setKnobs(r) {
+    const el = document.getElementById('bt-cv'); if (!el) return;
+    const wrap = el.closest('.bt-wrap');
+    const pow = wrap.querySelector('#bt-pow-knob'), powF = wrap.querySelector('#bt-pow-fill');
+    const fin = wrap.querySelector('#bt-fine-knob'), finF = wrap.querySelector('#bt-fine-fill');
+    const b = B(r);
+    const pv = Math.max(0, Math.min(1, b.power));
+    pow.style.bottom = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.height = (pv * 100).toFixed(1) + '%';
+    const fv = b.fine / 0.14 + 0.5;
+    fin.style.bottom = 'calc(' + (fv * 100).toFixed(1) + '% - 8px)'; finF.style.height = (fv * 100).toFixed(1) + '%';
+  }
+  function bindSlider(r, el, onMove) {
+    if (!el) return;
+    const move = e => {
+      const rc = el.getBoundingClientRect();
+      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rc.top) / rc.height));
+      onMove(v); DB.save();
+    };
+    el.addEventListener('pointerdown', e => {
+      if (B(r).turn !== 'me' || (B(r).phase !== 'aim')) return;
+      el.setPointerCapture(e.pointerId); move(e);
+      const up = ev => {
+        el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+        const b = B(r);
+        if (el.id === 'bt-pow' && b.power > 0.04) shoot(r, effAngle(r), b.power);
+        else setKnobs(r);
+      };
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      e.preventDefault();
+    });
+  }
+  function effAngle(r) { const b = B(r); return b.aim + (b.fine || 0); }
+  function bindCanvas(r, cv) {
+    cv.addEventListener('pointerdown', e => {
+      const b = B(r);
+      const rc = cv.getBoundingClientRect();
+      const px = (e.clientX - rc.left) / rc.width * W, py = (e.clientY - rc.top) / rc.height * H;
+      if (b.phase === 'place' && b.turn === 'me') {
+        const cue = b.balls.find(x => x.n === 0);
+        const x = Math.max(PAD + BR, Math.min(W - PAD - BR, px)), y = Math.max(PAD + BR, Math.min(H - PAD - BR, py));
+        if (b.balls.some(o => o.on && o.n !== 0 && Math.hypot(o.x - x, o.y - y) < BR * 2.2)) { return; }
+        cue.on = true; cue.x = x; cue.y = y; cue.vx = 0; cue.vy = 0;
+        b.phase = 'aim'; b.notice = ''; Games.armUrge(r); DB.save(); render(r, cv.closest('#room-board'));
+        return;
+      }
+      if (b.phase !== 'aim' || b.turn !== 'me') return;
+      const cue = b.balls.find(x => x.n === 0);
+      const setAim = ev => {
+        const rc2 = cv.getBoundingClientRect();
+        const mx = (ev.clientX - rc2.left) / rc2.width * W, my = (ev.clientY - rc2.top) / rc2.height * H;
+        b.aim = Math.atan2(my - cue.y, mx - cue.x);
+        DB.save();
+      };
+      setAim(e);
+      cv.setPointerCapture(e.pointerId);
+      const up = () => { cv.removeEventListener('pointermove', setAim); cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up); };
+      cv.addEventListener('pointermove', setAim); cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      e.preventDefault();
+    });
+  }
+  /* 射线找第一接触球（瞄准线用） */
+  function rayFirst(b, angle) {
+    const cue = b.balls.find(x => x.n === 0);
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    let bestT = Infinity, hit = null;
+    for (const o of b.balls) {
+      if (!o.on || o.n === 0) continue;
+      const ox = o.x - cue.x, oy = o.y - cue.y;
+      const t = ox * dx + oy * dy;
+      if (t <= 0) continue;
+      const perp = Math.abs(ox * dy - oy * dx);
+      if (perp > BR * 2) continue;
+      const tHit = t - Math.sqrt(BR * BR * 4 - perp * perp);
+      if (tHit < bestT) { bestT = tHit; hit = o; }
+    }
+    /* 库边距离 */
+    let wall = Infinity;
+    if (dx > 0) wall = Math.min(wall, (W - PAD - BR - cue.x) / dx);
+    if (dx < 0) wall = Math.min(wall, (PAD + BR - cue.x) / dx);
+    if (dy > 0) wall = Math.min(wall, (H - PAD - BR - cue.y) / dy);
+    if (dy < 0) wall = Math.min(wall, (PAD + BR - cue.y) / dy);
+    return { t: Math.min(bestT, wall), hit: hit, isWall: bestT > wall, dx: dx, dy: dy };
+  }
+  function loop(r) {
+    if (raf) cancelAnimationFrame(raf);
+    const cv = document.getElementById('bt-cv');
+    if (!cv) { raf = 0; return; }
+    const b = B(r); if (!b) { raf = 0; return; }
+    if (b.phase === 'moving') {
+      /* 高刷屏（120Hz）rAF 快一倍，按真实间隔折算步数，物理速度不随屏幕变 */
+      const now = performance.now();
+      const dt = lastTs ? Math.max(1, now - lastTs) : 16.7;
+      lastTs = now;
+      let n = Math.max(1, Math.min(3, Math.round(dt / 16.7)));
+      let moved = false;
+      while (n-- > 0) moved = step(r) || moved;
+      if (!moved) { lastTs = 0; resolve(r); }
+    } else lastTs = 0;
+    draw(r, cv);
+    if (!document.getElementById('bt-cv')) { raf = 0; return; }
+    raf = requestAnimationFrame(() => loop(r));
+  }
+  function draw(r, cv) {
+    const b = B(r), ctx = cv.getContext('2d'), T = theme();
+    ctx.setTransform(2, 0, 0, 2, 0, 0);   // canvas 内部尺寸 2x，画到逻辑 250x400
+    ctx.clearRect(0, 0, W, H);
+    /* 台呢 + 木框 */
+    ctx.fillStyle = T.card; ctx.strokeStyle = T.ink; ctx.lineWidth = 2.5;
+    roundRect(ctx, 1.5, 1.5, W - 3, H - 3, 10); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1;
+    roundRect(ctx, PAD - 4, PAD - 4, W - 2 * (PAD - 4), H - 2 * (PAD - 4), 6); ctx.stroke();
+    /* 袋口 */
+    for (const p of POCKETS) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7);
+      ctx.fillStyle = T.ink; ctx.fill();
+    }
+    /* 脚点 */
+    ctx.strokeStyle = T.t3; ctx.setLineDash([2, 3]); ctx.beginPath();
+    ctx.arc(W / 2, H * 0.30, 3, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    /* 轮到我：目标球虚线呼吸环 */
+    const low = lowest(r);
+    const myAim = b.phase === 'aim' && b.turn === 'me';
+    if (myAim && low) {
+      const a = 0.45 + 0.4 * Math.sin(Date.now() / 260);
+      ctx.strokeStyle = T.ink; ctx.globalAlpha = a; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(low.x, low.y, BR + 4.5, 0, 7); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    /* 瞄准线：白球 → 第一接触（虚线 + 幽灵球 + 反弹短线；非法目标红禁止符） */
+    if (myAim) {
+      const cue = b.balls.find(x => x.n === 0);
+      const ang = effAngle(r);
+      const ray = rayFirst(b, ang);
+      const ex = cue.x + ray.dx * ray.t, ey = cue.y + ray.dy * ray.t;
+      const illegal = ray.hit && low && ray.hit.n !== low.n;
+      ctx.strokeStyle = illegal ? T.bad : T.t3;
+      ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(cue.x, cue.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      /* 幽灵球 */
+      ctx.beginPath(); ctx.arc(ex, ey, BR, 0, 7); ctx.stroke();
+      /* 反弹短线（撞库）或目标球去向（撞球） */
+      ctx.strokeStyle = T.t3;
+      if (ray.isWall) {
+        let nx = 0, ny = 0;
+        if (ex <= PAD + BR + 0.6 || ex >= W - PAD - BR - 0.6) nx = -ray.dx; else ny = -ray.dy;
+        ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + nx * 26, ey + ny * 26); ctx.stroke();
+      } else if (ray.hit) {
+        const nx = ray.hit.x - ex, ny = ray.hit.y - ey, NL = Math.hypot(nx, ny) || 1;
+        ctx.beginPath(); ctx.moveTo(ray.hit.x, ray.hit.y);
+        ctx.lineTo(ray.hit.x + nx / NL * 30, ray.hit.y + ny / NL * 30); ctx.stroke();
+      }
+      if (illegal) {   // 红禁止符（她参考图口径）
+        ctx.strokeStyle = T.bad; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ex, ey, 8.5, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex - 6, ey - 6); ctx.lineTo(ex + 6, ey + 6); ctx.stroke();
+      }
+      /* 球杆：白球反方向，拉杆距离随力度 */
+      const pull = 12 + (b.power || 0) * 34;
+      ctx.strokeStyle = T.ink; ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(cue.x - Math.cos(ang) * (BR + pull), cue.y - Math.sin(ang) * (BR + pull));
+      ctx.lineTo(cue.x - Math.cos(ang) * (BR + pull + 96), cue.y - Math.sin(ang) * (BR + pull + 96));
+      ctx.stroke();
+    }
+    /* 球 */
+    for (const ball of b.balls) {
+      if (!ball.on) continue;
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, BR, 0, 7);
+      ctx.fillStyle = ball.n === 0 ? T.card : T.card; ctx.fill();
+      ctx.strokeStyle = T.ink; ctx.lineWidth = ball.n === 9 ? 2.4 : 1.5; ctx.stroke();
+      if (ball.n === 9) {   // 9 号：条纹画两道弧（墨线）
+        ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(ball.x, ball.y, BR - 2.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, BR - 2.6, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke();
+      }
+      if (ball.n > 0) {
+        ctx.fillStyle = T.ink; ctx.font = 'bold 7.5px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(ball.n), ball.x, ball.y + 0.5);
+      }
+    }
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  /* ---------- 对 game.js 的注册定义 ---------- */
+  function def() {
+    return {
+      id: 'billiards', name: '台球', icon: 'billiard', playersTxt: '双人',
+      newRoom: newRoom,
+      turnOf: r => B(r).turn,
+      onPlan: onPlan,
+      onTimeout: onTimeout,
+      onResign: onResign,
+      render: render
+    };
+  }
+  return { def, FOUL_MAX, TA_SEC, rackBalls, step, taShot, rayFirst, resolve, shoot, W: W, H: H, BR: BR };
 })();
 
 /* =====================================================
@@ -25887,17 +26560,18 @@ const Games = (function () {
     } else if (r.phase === 'playing' && turn !== 'me') {
       /* TA 落子中：玩家条上已有「正在想…」，不再叠横幅（她 08-29：别堆说明文字） */
     }
-    /* 她 10-08：卡牌桌（斗地主/UNO）的底部日志收成窄框（里面滚）——棋盘类不动现行口径 */
-    const dg = defOf(r).id;
-    const feedDz = (dg === 'doudizhu' || dg === 'uno') ? ' gm-feed-dz' : '';
+    /* 她 10-09 00:43：窄聊天框适用全部游戏（推翻 10-08「棋盘类不动」口径）——全桌都挂 gm-feed-dz */
+    const feedDz = ' gm-feed-dz';
     h += '<div class="gm-feed' + feedDz + '" id="room-feed">' + (r.feed || []).map(f =>
       '<div class="gm-fline ' + f.uid + '">' + f.text + '</div>').join('') + '</div>';
     h += '<div class="gm-ipt">' +
-      '<button class="gm-chip-btn" id="room-quick">短语</button>' +
+      /* 她 10-09：短语钮升级成真悬浮球（fixed 悬在牌桌右上，可拖动/长按缩放/位置记住），
+         不再占输入行——同一件事只留这一个入口 */
       '<input id="room-ipt" placeholder="游戏里也能聊…" maxlength="60">' +
       '<button class="gm-send" id="room-send">发</button>' +
       (r.phase === 'playing' ? '<button class="gm-resign" id="room-resign">认输</button>' : '') +
-      '</div>';
+      '</div>' +
+      '<button class="gm-fab" id="room-quick" title="快捷短语和表情：轻点打开 · 拖动移动 · 长按缩放"><i data-icon="smile" data-size="20"></i></button>';
     /* 重绘前把“已经有字的输入框”接住，重绘后按 id 装回去：TA 那句迟到（答话、催棋）会引发整块重绘，
        以前她打到一半的字直接被抹。不靠焦点判断（她可能已经点了其他地方），也不让各游戏自己拄一份 */
     const act = document.activeElement;
@@ -25924,7 +26598,7 @@ const Games = (function () {
     if (send) send.addEventListener('click', () => { roomSay(ipt.value); ipt.value = ''; });
     if (ipt) ipt.addEventListener('keydown', e => { if (e.key === 'Enter') { roomSay(ipt.value); ipt.value = ''; } });
     const rs = document.getElementById('room-resign'); if (rs) rs.addEventListener('click', resign);
-    const qb = document.getElementById('room-quick'); if (qb) qb.addEventListener('click', () => toggleRow('room-chips', buildQuickHtml));
+    const qb = document.getElementById('room-quick'); if (qb) bindFab(qb);
     /* 她 08-29 定：道具入口=双击对方头像（双击 450ms 内两下；手机点两下同效）
        08-30 纠察二：八人桌要每一格都点得动（以前只绑了第一个），并且记住双击的是谁 */
     body.querySelectorAll('.gm-player[data-uid]:not([data-uid="me"])').forEach(chip => {
@@ -25981,14 +26655,89 @@ const Games = (function () {
       syncPropLabel();
     } else row.classList.add('hidden');
   }
+  /* 她 10-09：悬浮球交互唯一入口——轻点=短语+表情；拖动=移位置；长按 550ms=三档缩放。
+     位置（视口百分比）和档位存在 settings.gmFab，重绘/重开都记得住。 */
+  function bindFab(qb) {
+    const st = DB.state.settings.gmFab = DB.state.settings.gmFab || {};
+    if (!st.s) st.s = 0;
+    const SIZE_NAME = ['小', '中', '大'];
+    const apply = () => {
+      qb.classList.remove('fz1', 'fz2');
+      if (st.s) qb.classList.add('fz' + st.s);
+      if (st.x == null) {
+        /* 默认落点：右下角、输入行上方 */
+        const w = qb.offsetWidth || 40;
+        qb.style.right = 'auto'; qb.style.bottom = 'auto';
+        qb.style.left = (innerWidth - w / 2 - 16) + 'px';
+        qb.style.top = (innerHeight - w / 2 - 92) + 'px';
+      } else {
+        qb.style.left = st.x + '%'; qb.style.top = st.y + '%';
+      }
+    };
+    apply();
+    let pid = null, timer = null, moved = false, resized = false, sx = 0, sy = 0, sl = 0, stp = 0;
+    qb.addEventListener('pointerdown', e => {
+      if (e.button != null && e.button !== 0) return;
+      pid = e.pointerId; UI.grab(qb, e);
+      moved = false; resized = false; sx = e.clientX; sy = e.clientY;
+      const r = qb.getBoundingClientRect(); sl = r.left; stp = r.top;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null; resized = true;
+        st.s = ((st.s || 0) + 1) % 3;
+        apply(); DB.save();
+        UI.toast('悬浮球·' + SIZE_NAME[st.s]);
+      }, 550);
+    });
+    qb.addEventListener('pointermove', e => {
+      if (pid == null || e.pointerId !== pid) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+      if (timer) { clearTimeout(timer); timer = null; }   // 动了就是拖，不算长按
+      moved = true;
+      qb.classList.add('dragging');
+      const w = qb.offsetWidth, h2 = qb.offsetHeight;
+      const cx = Math.min(Math.max(sl + dx, w / 2 + 4), innerWidth - w / 2 - 4);
+      const cy = Math.min(Math.max(stp + dy, h2 / 2 + 6), innerHeight - h2 / 2 - 6);
+      qb.style.left = cx + 'px'; qb.style.top = cy + 'px';
+    });
+    const up = e => {
+      if (pid == null || (e.pointerId != null && e.pointerId !== pid)) return;
+      pid = null;
+      if (timer) { clearTimeout(timer); timer = null; }
+      qb.classList.remove('dragging');
+      if (moved) {
+        const r = qb.getBoundingClientRect();
+        st.x = Math.round((r.left + r.width / 2) / innerWidth * 1000) / 10;
+        st.y = Math.round((r.top + r.height / 2) / innerHeight * 1000) / 10;
+        DB.save();
+      } else if (!resized) {
+        toggleRow('room-chips', buildQuickHtml);   // 轻点=开短语+表情
+      }
+    };
+    qb.addEventListener('pointerup', up);
+    qb.addEventListener('pointercancel', () => {
+      pid = null;
+      if (timer) { clearTimeout(timer); timer = null; }
+      qb.classList.remove('dragging');
+    });
+  }
+  /* 她 10-09：悬浮球面板=短语+表情两段（照参考图模式）；道具仍是双击头像那一口，不在这面板里 */
   function buildQuickHtml() {
     const quick = pickAll('快捷短语', DEF_QUICK);
-    return quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('');
+    const pool = myStickerPool();
+    return '<div class="gm-quick-t">快捷短语</div><div class="gm-chips-row">' +
+      quick.map(t => '<button class="gm-chip" data-say="' + esc(t) + '">' + esc(t) + '</button>').join('') +
+      '</div>' +
+      (pool.length ? '<div class="gm-quick-t">表情</div><div class="gm-chips-row gm-femos">' +
+        pool.slice(0, 30).map(src => '<button class="gm-chip gm-femo" data-emo="' + esc(src) + '"><img src="' + esc(src) + '"></button>').join('') +
+        '</div>' : '');
   }
   function buildPropsHtml() {
-    return '<span class="gm-prop-to" id="gm-prop-to"></span>' + PROPS.map(p => '<button class="gm-chip gm-propbig" data-prop="' + p.id + '">' +
+    /* 她 10-09：道具只显示图标，不再带「扔鸡蛋」这类字样（扔给谁的面板标题还在） */
+    return '<span class="gm-prop-to" id="gm-prop-to"></span>' + PROPS.map(p => '<button class="gm-chip gm-propbig gm-propicon" data-prop="' + p.id + '" title="' + esc(p.name) + '">' +
       (p.id === 'egg' ? '<span class="gm-ico gm-ico-egg"></span>' : '<span class="gm-ico ' + p.ico + '"></span>') +
-      esc(p.name) + '</button>').join('');
+      '</button>').join('');
   }
   /* 面板标题写清“扔给谁”：多人桌双击的是哪个座位就是谁（她 08-30：要能自己选对象） */
   function syncPropLabel() {
@@ -26000,7 +26749,16 @@ const Games = (function () {
   }
   function bindRow(row) {
     row.querySelectorAll('[data-say]').forEach(b => b.addEventListener('click', () => { roomSay(b.dataset.say); row.classList.add('hidden'); }));
+    row.querySelectorAll('[data-emo]').forEach(b => b.addEventListener('click', () => { roomSticker(b.dataset.emo); row.classList.add('hidden'); }));
     row.querySelectorAll('[data-prop]').forEach(b => b.addEventListener('click', () => { throwProp(b.dataset.prop); row.classList.add('hidden'); }));
+  }
+  /* 她 10-09：悬浮球面板里的表情——发进游戏播报里（真图），TA 照常接一句话 */
+  function roomSticker(src) {
+    const r = curRoom(); if (!r || !src) return;
+    feed(r, 'me', '<img class="gm-feed-emo" src="' + esc(src) + '">');
+    const line = pickLine('快捷短语', taUid(r), DEF_TA);
+    if (line) r.plans.push({ kind: 'say', at: Date.now() + rand(QUICK_SEC[0], QUICK_SEC[1]) * 1000, done: false, text: line });
+    DB.save(); renderRoom(); scheduleTimers(r);
   }
   function pickAll(groupName, builtin) {
     const l = lib();
@@ -26698,6 +27456,7 @@ const Games = (function () {
     register(Ludo.def());    // 大厅第四张：飞行棋（P46，她 09-01 22:13 点名要的游戏）
     register(Doudizhu.def()); // 大厅第五张：斗地主（P50，她 09-02 17:10：“去做斗地主吧”）
   register(Mono.def());     // 大厅第六张：大富翁（P51，她 09-03 08:30 拍了三件事后开工）
+  register(Billiards.def()); // 大厅第七张：台球（P70，她 10-09 00:43 点名，双人 9 球制）
     ensureSeed();
     const sb = document.getElementById('gm-stats-btn');
     if (sb) sb.addEventListener('click', openStats);
@@ -29214,38 +29973,42 @@ const Schedule = (function () {
   /* ---------------- 启动 ---------------- */
   function init() {
     // 统一图标挂载（icons.js 内联SVG，弃用emoji图标）
-    mountIcons();
-    Diary.init();   // 心事簿返回键绑定（P21）
+    // 她 10-09 07:06「不要再犯」：init 前段逐段包 runSafe——上面任何一处抛错
+    // （某台设备缺某个 API、某个模块初始化炸了）都杀不断下面的 bindTabs/bindNav/
+    // bindMine/bindSettings，页面永远不会再出现“看着好好的但点啥都不动”。
+    runSafe('init.icons', () => mountIcons());
+    runSafe('init.diary', () => Diary.init());   // 心事簿返回键绑定（P21）
+    runSafe('init.theme', () => Theme.apply(DB.state.settings.theme, false));
 
-    Theme.apply(DB.state.settings.theme, false);
-
-    const nameEl = document.getElementById('my-name');
-    const statusEl = document.getElementById('my-status');
-    nameEl.value = DB.state.profile.name || '';
-    statusEl.value = DB.state.profile.statusText || '';
-
-    // 兼容早期联系人：补齐回复参数默认值（默认值只住在 Engine.params 一处，08-30 P41）
-    DB.state.contacts.forEach(ct => {
-      ct.params = Engine.params(ct);
+    runSafe('init.profile', () => {
+      const nameEl = document.getElementById('my-name');
+      const statusEl = document.getElementById('my-status');
+      nameEl.value = DB.state.profile.name || '';
+      statusEl.value = DB.state.profile.statusText || '';
     });
 
-    // 会话↔联系人完整性自检（数据异常时 visibly 报警，不吞）
-    const orphan = DB.state.convs.filter(cv =>
-      cv.type === 'single' && !Home.contactById(cv.peerId));
-    if (orphan.length) {
-      logErr('自检：' + orphan.length + '个会话找不到对应联系人，可能经历了数据回滚或存储切换');
-    }
-    const orphanGroup = DB.state.convs.filter(cv =>
-      cv.type === 'group' && Home.membersOf(cv).length < 2);
-    if (orphanGroup.length) {
-      logErr('自检：' + orphanGroup.length + '个群聊成员不足2人');
-    }
+    // 兼容早期联系人：补齐回复参数默认值（默认值只住在 Engine.params 一处，08-30 P41）
+    runSafe('init.params', () => DB.state.contacts.forEach(ct => { ct.params = Engine.params(ct); }));
 
-    bindTabs();
-    bindNav();
-    bindMine();
-    bindSettings();
-    StatusEngine.init();
+    // 会话↔联系人完整性自检（数据异常时 visibly 报警，不吞）
+    runSafe('init.orphan', () => {
+      const orphan = DB.state.convs.filter(cv =>
+        cv.type === 'single' && !Home.contactById(cv.peerId));
+      if (orphan.length) {
+        logErr('自检：' + orphan.length + '个会话找不到对应联系人，可能经历了数据回滚或存储切换');
+      }
+      const orphanGroup = DB.state.convs.filter(cv =>
+        cv.type === 'group' && Home.membersOf(cv).length < 2);
+      if (orphanGroup.length) {
+        logErr('自检：' + orphanGroup.length + '个群聊成员不足2人');
+      }
+    });
+
+    runSafe('init.tabs', () => bindTabs());
+    runSafe('init.nav', () => bindNav());
+    runSafe('init.mine', () => bindMine());
+    runSafe('init.settings', () => bindSettings());
+    runSafe('init.status', () => StatusEngine.init());
     /* 对方主动发消息结算：启动时对每位联系人掷一次（她 11:17，默认 0=不主动） */
     DB.state.contacts.forEach(ct => runSafe('proactive', () => Engine.maybeProactive(ct)));
     /* 心事簿引擎结算（P22）：生成今日计划+落库到点计划+戳戳链，幂等；
@@ -29257,8 +30020,8 @@ const Schedule = (function () {
     runSafe('kinship', () => Kinship.settleMonthly());
     /* 朋友圈互动结算（08-28“回评要补”）：TA 的赞/评/回评落库排程，到点补跑，幂等 */
     runSafe('moments', () => Moments.settle());
-    Report.init();   /* P25 报备页按钮接线 */
-    Quiz.init();     /* P34 灵魂拷问：主页/题库/出卷按钮接线 */
+    runSafe('init.report', () => Report.init());   /* P25 报备页按钮接线 */
+    runSafe('init.quiz', () => Quiz.init());     /* P34 灵魂拷问：主页/题库/出卷按钮接线 */
     /* P34 交卷引擎结算：启动时把到点的卷子落库（幂等，与心跳同源） */
     runSafe('quiz', () => Quiz.advanceAll());
     /* P31（清然 12:57“设置了怎么没触发”）：运行中自驱落库——之前只在启动/回前台跑
@@ -29318,11 +30081,11 @@ Router.register('report', () => Report.render());   /* P25 */
     Router.register('gstats', () => Games.renderStats());/* P40 战绩档案 */
     Router.register('mall', () => Mall.renderPage());    /* P64 商城与外卖（进页/返回重渲，幂等） */
     /* 她 09:41：排班表页面拆了，模块内嵌发现页（Router 走 discover 刷新钩子） */
-    Home.init();
-    Chat.init();
-    Profile.init();
-    Group.init();
-    Call.init();
+    runSafe('init.home', () => Home.init());
+    runSafe('init.chat', () => Chat.init());
+    runSafe('init.profile2', () => Profile.init());
+    runSafe('init.group', () => Group.init());
+    runSafe('init.call', () => Call.init());
   /* P24 后的启动加固（她 10-08 线上反馈「卡死主界面、点不开消息」）：每个模块 init 各自包
      runSafe——一个模块炸了不再拖死整条启动链，症状从「全站死」降级成「单功能坏」 */
   runSafe('init.letter', () => Letter.init());   /* P8 写信慢消息：启动补跑到期回信+心跳 */
@@ -29482,6 +30245,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
 
   /* ---------------- 个人中心 ---------------- */
   function bindSettings() {
+    /* 幂等闸：重复调（重绑救援口）不叠层叠监听；正常启动只走一遍 */
+    if (bindSettings._done) return;
+    bindSettings._done = true;
 
     /* --- 主题设置：底部上滑弹窗，实时预览可连续试（决策记录#12） --- */
     document.getElementById('cell-theme').addEventListener('click', openThemeSheet);
@@ -29756,25 +30522,37 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     });
 
     /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 ---
-       导出全部走 exportBundle：媒体本体一并打包，导入不再丢朋友圈视频/大图（她 10-06） */
+       导出全部走 exportBundle：媒体本体一并打包，导入不再丢朋友圈视频/大图（她 10-06）
+       她 10-09 06:15：导出期间主线程被序列化喋住，整页看似卡死；统一挂忙碌条+防重复点 */
+    let exporting = false;
     async function exportAllData() {
-      const blob = new Blob([await DB.exportBundle(DB.state, 'all')], { type: 'application/json' });
-      const d = new Date(), p = n => String(n).padStart(2, '0');
-      UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-                   '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出（含图片视频本体，文件会大一点）');
+      if (exporting) return UI.toast('正在打包上一份，别急');
+      exporting = true;
+      UI.busy('正在打包全部数据（含图片视频本体），大可能要等十几秒…');
+      try {
+        const blob = new Blob([await DB.exportBundle(DB.state, 'all')], { type: 'application/json' });
+        const d = new Date(), p = n => String(n).padStart(2, '0');
+        UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+                     '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出（含图片视频本体，文件会大一点）');
+      } finally { exporting = false; UI.busyDone(); }
     }
     async function exportContactData(ct) {
-      const cv = DB.state.convs.find(x => x.type === 'single' && x.peerId === ct.id);
-      const pack = {
-        contact: JSON.parse(JSON.stringify(ct)),
-        conv: cv ? JSON.parse(JSON.stringify(cv)) : null,
-        msgs: cv ? (DB.state.msgs[cv.id] || []) : []
-      };
-      const blob = new Blob([await DB.exportBundle(pack, 'contact')], { type: 'application/json' });
-      const d = new Date(), p = n => String(n).padStart(2, '0');
-      UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
-        d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
-        '「' + Home.displayName(ct) + '」的全部数据已导出');
+      if (exporting) return UI.toast('正在打包上一份，别急');
+      exporting = true;
+      UI.busy('正在打包「' + Home.displayName(ct) + '」的数据…');
+      try {
+        const cv = DB.state.convs.find(x => x.type === 'single' && x.peerId === ct.id);
+        const pack = {
+          contact: JSON.parse(JSON.stringify(ct)),
+          conv: cv ? JSON.parse(JSON.stringify(cv)) : null,
+          msgs: cv ? (DB.state.msgs[cv.id] || []) : []
+        };
+        const blob = new Blob([await DB.exportBundle(pack, 'contact')], { type: 'application/json' });
+        const d = new Date(), p = n => String(n).padStart(2, '0');
+        UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
+          d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
+          '「' + Home.displayName(ct) + '」的全部数据已导出');
+      } finally { exporting = false; UI.busyDone(); }
     }
     function importContactData(pack) {
       if (!pack || !pack.contact) throw new Error('这不是联系人备份文件');
@@ -29830,11 +30608,16 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       exportBundle(pack, n);
     }
     async function exportBundle(pack, n) {
-      const blob = new Blob([await DB.exportBundle(pack, 'msgs')], { type: 'application/json' });
-      const d = new Date(), p = x => String(x).padStart(2, '0');
-      UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-        '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
-        '聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
+      if (exporting) return UI.toast('正在打包上一份，别急');
+      exporting = true;
+      UI.busy('正在打包聊天记录（' + n + ' 条）…');
+      try {
+        const blob = new Blob([await DB.exportBundle(pack, 'msgs')], { type: 'application/json' });
+        const d = new Date(), p = x => String(x).padStart(2, '0');
+        UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+          '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
+          '聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
+      } finally { exporting = false; UI.busyDone(); }
     }
     function importMsgsData(pack) {
       if (!pack || !pack.msgs) throw new Error('这不是聊天记录文件');
@@ -30087,6 +30870,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       Home.render();
       UI.toast('已恢复到上次备份');
     }
+    /* 她 10-09 07:06「这个问题不要再犯」：设置页全绑完后立标记 + 暴露重绑口。
+     哨兵（模板头）8s 后查这个标记，若页面开了但按钮没接线，弹一条「修复」直接重绑——
+     不管哪种设备、哪种原因（init 中途抛错/装载时序），「点不动」都不再是死局。 */
+    window.__LX_BIND_DONE = true;
+    window.__LX_REBIND = function () { bindSettings._done = false; bindSettings(); };
   }
 
   /* 主题设置：底部上滑弹窗（不占页面空间），选中即时生效可连续预览 */
