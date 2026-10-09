@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-174800 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261009-200400 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -3190,14 +3190,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .bt-slot{width:13px;height:13px;border-radius:50%;border:1px dashed var(--t3);flex:none;
   display:flex;align-items:center;justify-content:center;font-size:7.5px;color:var(--t3)}
 .bt-slot.on{border:none;color:transparent;box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
-/* 双滑条（她 10-09 13:53 拍板恢复；16:24 拍板：短条，跟参考图 88 的 1/4 屏长度） */
-.bt-slider{position:relative;border-radius:999px;background:#5d3717;touch-action:none;cursor:pointer}
-.bt-slider .bt-fill{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:5px;height:0;border-radius:3px;background:#d9b98c}
-.bt-slider .bt-knob{position:absolute;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;
+/* 双滑条（她 10-09 19:49 再拍板）：窄条照参考图；左=力度（拉杆初始最顶下拉蓄力），右=转杆（滚轮感） */
+.bt-slider{position:relative;border-radius:999px;background:#5d3717;touch-action:none;cursor:pointer;width:20px;margin:0 auto}
+.bt-slider .bt-fill{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:4px;height:0;border-radius:3px;background:#d9b98c}
+.bt-slider .bt-knob{position:absolute;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;
   background:#f6f4ee;border:2px solid #5d3717;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .bt-board{position:relative;border-radius:12px;overflow:hidden;
   border:3px solid #7a4a21;box-shadow:0 4px 14px rgba(0,0,0,.22);background:#2e8b57}
 .bt-board canvas{display:block;width:100%;height:auto;touch-action:none}
+/* 杆 overlay：盖在桌区上、四向出界 76px，杆能伸出桌框（她 10-09 19:49：杆和白球一块） */
+.bt-center{position:relative}
+.bt-cue-ov{position:absolute;left:-76px;top:-76px;width:calc(100% + 152px);height:calc(100% + 152px);pointer-events:none}
 .bt-notice{position:absolute;left:50%;top:8px;transform:translateX(-50%);max-width:86%;
   padding:4px 12px;border-radius:999px;background:rgba(0,0,0,.62);color:#ffe9a8;
   font-size:11px;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
@@ -13429,7 +13432,25 @@ const Doodle = (function () {
       { pts: dot(70, 34), c: A.a[0], w: 3.2 }, { pts: dot(62, 58), c: A.a[1], w: 3.2 },
       { pts: dot(36, 68), c: A.a[1], w: 3.2 },
       { pts: J([[28, 30], [50, 22], [70, 34], [62, 58], [36, 68], [28, 30]]), c: 'ink' }
-    ] }
+    ] },
+  /* 直线系三题（她 10-09 19:49：直线图形也进对方的涂鸦库） */
+  { n: '小房子', cat: 2, f: A => [
+    { pts: J([[28, 52], [28, 80], [72, 80], [72, 52]]), c: 'ink' },
+    { pts: J([[22, 52], [50, 28], [78, 52]]), c: A.a[0] },
+    { pts: J([[44, 80], [44, 64], [56, 64], [56, 80]]), c: A.a[1] },
+    { pts: J([[32, 58], [40, 58], [40, 66], [32, 66], [32, 58]]), c: 'ink' }
+  ] },
+  { n: '火箭', cat: 2, f: A => [
+    { pts: J([[44, 26], [56, 26], [59, 46], [59, 66], [41, 66], [41, 46], [44, 26]]), c: 'ink' },
+    { pts: J([[44, 26], [50, 12], [56, 26]]), c: A.a[0] },
+    { pts: J([[41, 52], [33, 70], [41, 66]]), c: A.a[1] },
+    { pts: J([[59, 52], [67, 70], [59, 66]]), c: A.a[1] },
+    { pts: J([[46, 66], [50, 80], [54, 66]]), c: A.a[2] || A.a[0] }
+  ] },
+  { n: '小旗', cat: 4, f: A => [
+    { pts: J([[38, 20], [38, 82]]), c: 'ink' },
+    { pts: J([[38, 24], [70, 32], [38, 44]]), c: A.a[0] }
+  ] }
   ];
 
   /* ---------- 角落小装饰（0~2 个，随手点的） ---------- */
@@ -13443,30 +13464,57 @@ const Doodle = (function () {
   ];
 
   /* ---------- 出图 ---------- */
+  /* 复合模式用：以主题自身包围盒中心为准，平移+缩放到目标格位 */
+  function placeStrokes(list, cx, cy, sc, A, out) {
+    const xs = [], ys = [];
+    list.forEach(s => s.pts.forEach(p => { xs.push(p[0]); ys.push(p[1]); }));
+    const mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+    const my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+    list.forEach(s => {
+      const pts = s.pts.map(p => [cx + (p[0] - mx) * sc, cy + (p[1] - my) * sc]);
+      out.push({ d: smooth(pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: Math.max(1.3, (s.w || rnd(2.1, 3.1)) * sc * 1.4) });
+    });
+  }
   function make() {
-    const sub = pick(SUBJECTS);
+    /* 复合涂鸦（她 10-09 19:49 补充）：约 1/3 的画是 2~3 个主题同框，允许重复组合，更丰富 */
+    const comboN = Math.random() < 0.34 ? 2 + (Math.random() < 0.45 ? 1 : 0) : 1;
     /* 每张抽 2~3 支马克笔 */
     const pool = PAL.slice();
     const a = [];
     const nColor = 2 + (Math.random() < 0.45 ? 1 : 0);
     for (let i = 0; i < nColor; i++) a.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     const A = { ink: INK, a: a };
-    const strokes = sub.f(A).map(s => ({
-      d: smooth(s.pts),
-      col: (s.c === 'ink') ? INK : (A.a[s.c] || INK),
-      w: s.w || rnd(2.1, 3.1)
-    }));
-    /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
-    const gCount = Math.random() < 0.5 ? (Math.random() < 0.3 ? 2 : 1) : 0;
-    const corners = [[16, 16], [84, 16], [16, 86], [84, 86]].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < gCount; i++) {
-      const g = pick(GARNISH)(A);
-      /* 装饰有的是单笔画有的是一组（小爱心三笔）——归一成数组再逐笔推 */
-      const gs = Array.isArray(g) ? g : [g];
-      const gx = corners[i][0] + rnd(-4, 4), gy = corners[i][1] + rnd(-4, 4);
-      gs.forEach(g => {
-        strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: g.w || 1.6 });
+    const strokes = [];
+    let name, cat;
+    if (comboN === 1) {
+      const sub = pick(SUBJECTS);
+      sub.f(A).forEach(s => {
+        strokes.push({ d: smooth(s.pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: s.w || rnd(2.1, 3.1) });
       });
+      name = sub.n; cat = sub.cat;
+      /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
+      const gCount = Math.random() < 0.5 ? (Math.random() < 0.3 ? 2 : 1) : 0;
+      const corners = [[16, 16], [84, 16], [16, 86], [84, 86]].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < gCount; i++) {
+        const g = pick(GARNISH)(A);
+        /* 装饰有的是单笔画有的是一组（小爱心三笔）——归一成数组再逐笔推 */
+        const gs = Array.isArray(g) ? g : [g];
+        const gx = corners[i][0] + rnd(-4, 4), gy = corners[i][1] + rnd(-4, 4);
+        gs.forEach(g => {
+          strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: g.w || 1.6 });
+        });
+      }
+    } else {
+      /* 复合：同框分区，主题允许重复；不出角落装饰（画面已满） */
+      const boxes = comboN === 2 ? [[50, 30], [50, 72]] : [[32, 28], [68, 28], [50, 74]];
+      const base = comboN === 2 ? 0.5 : 0.38;
+      const names = [];
+      for (let i = 0; i < comboN; i++) {
+        const sub = pick(SUBJECTS);
+        names.push(sub.n);
+        placeStrokes(sub.f(A), boxes[i][0] + rnd(-3, 3), boxes[i][1] + rnd(-2, 2), base * rnd(0.92, 1.1), A, strokes);
+      }
+      name = names.join(' + '); cat = pick(SUBJECTS).cat;
     }
     const rot = rnd(-6, 6).toFixed(1);
     const svg =
@@ -13480,7 +13528,7 @@ const Doodle = (function () {
       '</g></svg>';
     return {
       dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
-      name: sub.n, cat: CATS[sub.cat]
+      name: name, cat: CATS[cat]
     };
   }
 
@@ -25260,7 +25308,7 @@ const Billiards = (function () {
       v: 2                                  // 数据形状版本：旧 9 球房没有这个标，摸到就重摆（ensure）
     };
     const b = room.bill;
-    feed(room, 'sys', '台球开局：8 球制，开球分实色花色，清台后打进黑 8 赢');
+    feed(room, 'sys', '台球开局：8 球制，先手直接开杆，先进球的人定实色/花色，清台后进黑 8 赢');
     feed(room, 'sys', taFirst ? esc(name(room.players.find(u => u !== 'me'))) + ' 先开球' : '你先开球：按住桌面拖动瞄准，松手出杆');
     if (b.turn !== 'me') armTa(room);
     else Games.armUrge(room);
@@ -25554,26 +25602,31 @@ const Billiards = (function () {
       '<div class="bt-wrap">' +
         '<div class="bt-mid">' +
           '<div class="bt-side">' + panel('me') +
-            '<div class="bt-slider" id="bt-fine" title="微调方向"><i class="bt-fill" id="bt-fine-fill"></i><i class="bt-knob" id="bt-fine-knob"></i></div>' +
-          '</div>' +
-          '<div class="bt-board"><canvas id="bt-cv" width="' + W * 2 + '" height="' + H * 2 + '"></canvas>' +
-            '<div class="bt-notice' + (b.notice ? ' show' : '') + '" id="bt-notice">' + esc(b.notice) + '</div></div>' +
-          '<div class="bt-side">' + panel(ta) +
             '<div class="bt-slider" id="bt-pow" title="力度"><i class="bt-fill" id="bt-pow-fill"></i><i class="bt-knob" id="bt-pow-knob"></i></div>' +
           '</div>' +
+          '<div class="bt-center">' +
+            '<div class="bt-board"><canvas id="bt-cv" width="' + W * 2 + '" height="' + H * 2 + '"></canvas>' +
+              '<div class="bt-notice' + (b.notice ? ' show' : '') + '" id="bt-notice">' + esc(b.notice) + '</div></div>' +
+            '<canvas id="bt-cue" class="bt-cue-ov" width="' + (W + CUE_OV * 2) * 2 + '" height="' + (H + CUE_OV * 2) * 2 + '"></canvas>' +
+          '</div>' +
+          '<div class="bt-side">' + panel(ta) +
+            '<div class="bt-slider" id="bt-fine" title="转杆"><i class="bt-fill" id="bt-fine-fill"></i><i class="bt-knob" id="bt-fine-knob"></i></div>' +
+          '</div>' +
         '</div>' +
-        '<div class="bt-tip">' + (b.phase === 'aim' && b.turn === 'me' ? '桌上拖动定方向 · 左条微调 · 右条拉力度松手出杆' :
-          b.phase === 'place' && b.turn === 'me' ? '自由球：点桌上摆白球' : '&nbsp;') + '</div>' +
+        '<div class="bt-tip">' + (b.phase === 'aim' && b.turn === 'me' ? '杆跟着白球 · 右条上下滑转杆 · 左条下拉蓄力松手出杆' :
+          b.phase === 'place' && b.turn === 'me' ? '犯规自由球：点桌上摆白球' :
+          (b.phase === 'taThink' || (b.phase === 'moving' && b.turn !== 'me')) ? esc(name(ta)) + ' 拿着杆对准白球呢，看着他打' : '&nbsp;') + '</div>' +
       '</div>';
     const cv = el.querySelector('#bt-cv');
     bindCanvas(r, cv);
-    bindSlider(r, el.querySelector('#bt-pow'), v => { B(r).power = v; });
-    bindSlider(r, el.querySelector('#bt-fine'), v => { B(r).fine = (v - 0.5) * 0.14; });
+    bindSlider(r, el.querySelector('#bt-pow'), v => { B(r).power = v; }, 'pow');
+    bindSlider(r, el.querySelector('#bt-fine'), v => { B(r).fine = (v - 0.5) * FINE_MAX * 2; }, 'fine');
     setKnobs(r);
     loop(r);
   }
-  /* ---------- 双滑条 + 瞄准射线（她 10-09 13:53 拍板恢复旧交互，配色跟新绿呢走） ----------
-     左条=力度（拉到顶松手出杆），右条=角度微调（±4°）；桌上拖动=出杆方向（手指即方向）。 */
+  /* ---------- 双滑条（她 10-09 19:49 重新拍板口径）：左=力度，拉杆默认最顶、按住下拉蓄力、
+     松手出杆；右=转杆，滚轮感上下滑、杆绕白球转。变窄见 CSS；±FINE_MAX 弧度。 ---------- */
+  const FINE_MAX = 0.5;                     // ±0.5rad ≈ ±28.6°，围着白球转得动（工程值，文档记待拍）
   function effAngle(r) { const b = B(r); return b.aimA + (b.fine || 0); }
   function setKnobs(r) {
     const el = document.getElementById('bt-cv'); if (!el) return;
@@ -25582,16 +25635,18 @@ const Billiards = (function () {
     const fin = wrap.querySelector('#bt-fine-knob'), finF = wrap.querySelector('#bt-fine-fill');
     const b = B(r);
     const pv = Math.max(0, Math.min(1, b.power));
-    pow.style.bottom = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.height = (pv * 100).toFixed(1) + '%';
-    const fv = (b.fine || 0) / 0.14 + 0.5;
+    /* 力度从顶往下灌：拉杆初始最顶（power=0），拉到底=最大力（她 19:49 口径） */
+    pow.style.top = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.top = '8px'; powF.style.height = 'calc(' + (pv * 100).toFixed(1) + '% - 8px)'; powF.style.bottom = 'auto';
+    const fv = (b.fine || 0) / FINE_MAX + 0.5;
     fin.style.bottom = 'calc(' + (fv * 100).toFixed(1) + '% - 8px)'; finF.style.height = (fv * 100).toFixed(1) + '%';
   }
-  function bindSlider(r, el, onMove) {
+  function bindSlider(r, el, onMove, kind) {
     if (!el) return;
     const move = e => {
       const rc = el.getBoundingClientRect();
-      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rc.top) / rc.height));
-      onMove(v); setKnobs(r); DB.save();
+      const v = Math.max(0, Math.min(1, (e.clientY - rc.top) / rc.height));
+      onMove(kind === 'fine' ? 1 - v : v);   // 力度：下拉=大；转杆：上滑=往一边、下滑=往另一边
+      setKnobs(r); DB.save();
     };
     el.addEventListener('pointerdown', e => {
       const b = B(r);
@@ -25600,7 +25655,7 @@ const Billiards = (function () {
       const up = () => {
         el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
         const b2 = B(r);
-        if (el.id === 'bt-pow' && b2.power > 0.04) shoot(r, effAngle(r), b2.power);
+        if (kind === 'pow' && b2.power > 0.02) shoot(r, effAngle(r), b2.power);
         else setKnobs(r);
       };
       el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
@@ -25747,30 +25802,9 @@ const Billiards = (function () {
         ctx.beginPath(); ctx.moveTo(ex - 6, ey - 6); ctx.lineTo(ex + 6, ey + 6); ctx.stroke();
       }
     }
-    /* 球杆：瞄准时搭在白球后（拉杆随力度）；击球瞬间前推一拍 */
-    const showCue = (myAim || b.phase === 'moving');
-    if (showCue && cue.on) {
-      const ang = b.aimA;
-      let pull = myAim ? 10 + (b.power || 0) * 30 : 0;
-      if (b.phase === 'moving' && b.cueStrike) {
-        const t = Date.now() - b.cueStrike;
-        pull = t < 130 ? Math.max(0, 10 + (b.lastPow || 0.5) * 30 - t / 130 * (10 + (b.lastPow || 0.5) * 30 + 14)) : -100;
-      }
-      if (pull > -50) {
-        const bx = cue.x - Math.cos(ang) * (BR + 2 + pull), by = cue.y - Math.sin(ang) * (BR + 2 + pull);
-        const tx = cue.x - Math.cos(ang) * (BR + 2 + pull + 88), ty = cue.y - Math.sin(ang) * (BR + 2 + pull + 88);
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = RAIL_D; ctx.lineWidth = 3.4;
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
-        ctx.strokeStyle = '#d9b98c'; ctx.lineWidth = 2.2;
-        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo((bx + tx) / 2, (by + ty) / 2); ctx.stroke();
-        ctx.strokeStyle = '#3b6ea5'; ctx.lineWidth = 3.2;
-        ctx.beginPath();
-        ctx.moveTo(bx, by);
-        ctx.lineTo(bx - Math.cos(ang) * 2.5, by - Math.sin(ang) * 2.5); ctx.stroke();
-        ctx.lineCap = 'butt';
-      }
-    }
+    /* 球杆：她 10-09 19:49 拍板——杆跟白球是一体的，始终跟着白球（对方回合也在猫准），
+       刚开局竖着对白球；杆画在 overlay 画布上、能延伸出桌框（参考图 88 那样）。 */
+    drawCueStick(r, myAim);
     /* 球（标准彩色：实色 1-7 / 花色 9-15 / 黑 8 / 白球） */
     for (const ball of b.balls) {
       if (!ball.on) continue;
@@ -25794,6 +25828,44 @@ const Billiards = (function () {
         ctx.fillText(String(ball.n), ball.x, ball.y + 0.4);
       }
     }
+  }
+  /* 杆 overlay（她 10-09 19:49「杆和球是一块的」）：四向出界 CUE_OV 逻辑 px，
+     杆能伸出桌框（参考图 88 杆就是伸出画面的）；竖直开球时不再被画布裁剩一小截。 */
+  const CUE_OV = 76;
+  function drawCueStick(r, myAim) {
+    const ov = document.getElementById('bt-cue');
+    const boardEl = document.getElementById('bt-cv');
+    const b = B(r);
+    if (!ov || !boardEl || !b) return;
+    const br = boardEl.getBoundingClientRect(), or = ov.getBoundingClientRect();
+    const ctx = ov.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, ov.width, ov.height);
+    const cue = b.balls.find(x => x.n === 0);
+    if (b.phase === 'over' || !cue.on || !br.width || !or.width) return;
+    /* 桌面逻辑坐标 → overlay 内部像素（按 board 实际显示 rect 换算，防 CSS 缩放变形） */
+    const k = ov.width / or.width;                  /* 内部物理 px / 显示 px */
+    const m = k * br.width / W;                     /* 内部 px / 逻辑坐标 */
+    const offX = (br.left - or.left) * k, offY = (br.top - or.top) * k;
+    ctx.setTransform(m, 0, 0, m, offX, offY);
+    const ang = b.aimA;
+    let pull = myAim ? 9 + (b.power || 0) * 26 : (b.phase === 'moving' ? 0 : 6);
+    if (b.phase === 'moving' && b.cueStrike) {
+      const t = Date.now() - b.cueStrike;
+      pull = t < 130 ? Math.max(0, 9 + (b.lastPow || 0.5) * 26 - t / 130 * (9 + (b.lastPow || 0.5) * 26 + 14)) : -100;
+    }
+    if (pull <= -50) return;
+    const L = 122;
+    const bx = cue.x - Math.cos(ang) * (BR + 2.5 + pull), by = cue.y - Math.sin(ang) * (BR + 2.5 + pull);
+    const tx = cue.x - Math.cos(ang) * (BR + 2.5 + pull + L), ty = cue.y - Math.sin(ang) * (BR + 2.5 + pull + L);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = RAIL_D; ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#d9b98c'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx * 0.45 + tx * 0.55, by * 0.45 + ty * 0.55); ctx.stroke();
+    ctx.strokeStyle = '#3b6ea5'; ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx - Math.cos(ang) * 2.5, by - Math.sin(ang) * 2.5); ctx.stroke();
+    ctx.lineCap = 'butt';
   }
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
