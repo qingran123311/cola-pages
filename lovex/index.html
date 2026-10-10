@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261010-144936 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261010-164127 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -5106,29 +5106,38 @@ const DB = (function () {
     return mergeForeign({ msgs });
   }
 
-  /* ---- 每日自动备份（她 10-05）：整档一份，每人一份，留 7 天 ----
-     触发在开页时（一天只写一份）；恢复是整档覆盖，所以调用方要先跟她确认。 */
+  /* ---- 每日自动备份（她 10-05）：整档一份，留 7 天 ----
+     她 10-10 16:31 拍板：每日备份要全量。两层分工：
+     ① 手机「下载」目录那份 = 全量含图本体（exportBundle），是硬退路，写成才算今天备完；
+     ② IDB @bk 那份 = 轻量引用版（防配额爆），只当快速回滚用。
+     手机文件写失败当天自动重试（她 10-10：备份不能默默缺席）；浏览器没有静默写文件，@bk 写成即算数。 */
   async function dailySnap(force) {
     const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
     if (!V) return false;                                  // 没 IDB 就不写（不然整档塞 localStorage 会当场爆配额）
     if (!force && state.settings.dailyBackup === false) return false;
     try {
       const day = todayKey();
-      const idx = await V.listFull();
-      if (!force && idx.some(x => x.day === day)) return false;   // 今天已经备份过
+      const hasNative = typeof window !== 'undefined' && window.LovexNative
+        && typeof window.LovexNative.saveBackup === 'function';
+      if (!force && localStorage.getItem('LOVEX_BKFULL_DAY') === day) return false;   // 今天已经备份成过
       clearTimeout(saveTimer); writeNow();                 // 先把主档落盘，备的是最新那份
       const ok = await V.snapFull(day, JSON.parse(JSON.stringify(state)));
-      /* 她 10-05：在 APK 壳里再往手机「下载」目录写一份真文件（网页做不到静默写文件，
-         壳里能）——备份不能只躺在同一个 IDB 里，那样被清就一起没了 */
+      let where = '';
       try {
-        if (ok && typeof window !== 'undefined' && window.LovexNative
-          && typeof window.LovexNative.saveBackup === 'function' && state.settings.dailyBackup !== false) {
+        if (ok && hasNative && state.settings.dailyBackup !== false) {
           /* 带媒体本体（exportBundle）：这份文件是「浏览器被清只剩它」时的硬退路，只有引用串等于没备份视频/大图 */
-          const where = window.LovexNative.saveBackup(await exportBundle(state, 'all'),
+          where = window.LovexNative.saveBackup(await exportBundle(state, 'all'),
             'LOVEX每日备份-' + day + '.json');
           if (where && typeof logErr === 'function') logErr('备份：已写到手机 ' + where);
         }
       } catch (e2) { if (typeof logErr === 'function') logErr('备份：写手机文件失败 ' + (e2 && e2.message)); }
+      if (!hasNative || where) {
+        localStorage.setItem('LOVEX_BKFULL_DAY', day);     // 浏览器：@bk 写成即算数；APK：手机文件到手才算数
+      } else if (!force) {
+        /* 她 10-10：手机文件没写成不装没看见，当天 15 分钟后重试（热更新窗口/存储忙都躲得开） */
+        if (typeof logErr === 'function') logErr('备份：手机文件没写成，15 分钟后重试');
+        setTimeout(() => { dailySnap(); }, 15 * 60 * 1000);
+      }
       return ok;
     } catch (e) {
       if (typeof logErr === 'function') logErr('备份：每日备份失败 ' + (e && e.message));
@@ -9024,7 +9033,9 @@ const MediaVault = (function () {
     await Promise.all(jobs);
     if (missing && typeof logErr === 'function' && !st.missingLogged) {
       st.missingLogged = 1;
-      logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（多半是浏览器清了站点 IndexedDB）——趁页面还开着先导出备份，内存里还在的图都能带走');
+      /* 她 10-10 16:39 骨刀：这句文案在 APK 里是胡说——数据在应用沙箱，不存什么浏览器。
+       如实写：存储层被系统关掉/清掉，她没动过任何东西也会发生；清扫有黑匣子，不会无声删 */
+    logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（媒体库存储被系统层关闭或清掉了，不是清扫删的——清扫删必记账）。去手机「下载」目录找 LOVEX每日备份 json 导入，图都能拿回来');
     }
     return { found, missing };
   }
@@ -30729,8 +30740,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
   runSafe('theme.deco', () => applyDeco());
   /* 她 10-05：重进后静默重挂（权限还在就重新接上；权限真没了就把开关改成关） */
   runSafe('notify.resume', () => Notify.resume());
-  /* 她 10-05 新提：每天自动备份一份全档（一天一次，只留最近 7 天） */
-  runSafe('backup.daily', () => { DB.dailySnap(); });
+  /* 她 10-05 新提：每天自动备份一份全档（一天一次，只留最近 7 天）。
+     她 10-10 16:31 报“压根没有全档备份”钉出的时序炸弹：开页立刻打包全量（大档几十秒），
+     而热更新在开页 10 秒内拿到新版就 web.reload()——备份每次都被摧死在半路，一个文件都没写成。
+     推到开页 75 秒后跑：躲开热更新窗口，也避开启动繁忙期。 */
+  setTimeout(() => { runSafe('backup.daily', () => { DB.dailySnap(); }); }, 75000);
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
     document.getElementById('btn-side').addEventListener('click', () => Router.go('mine'));
