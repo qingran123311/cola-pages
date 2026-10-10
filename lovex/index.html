@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261009-202258 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261010-092015 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -25381,7 +25381,10 @@ const Billiards = (function () {
   /* ---------- 出杆与结算（8 球规矩，参考文档 §6） ---------- */
   function shoot(r, angle, power) {
     const b = B(r);
-    if (b.phase !== 'aim' && b.phase !== 'place') return;
+    /* taThink 也放行（10-10 根治「TA 回合永远卡死」）：旧闸只放 aim/place，
+       TA 的出杆全被第一行弹回——球出不去、回合永远轮不回来、控制权交不到她手上，
+       她看到的就是“我打完轮到对方就没反应了”。 */
+    if (b.phase !== 'aim' && b.phase !== 'place' && b.phase !== 'taThink') return;
     const cue = b.balls.find(x => x.n === 0);
     const sp = 2.2 + power * 14;
     cue.vx = Math.cos(angle) * sp; cue.vy = Math.sin(angle) * sp;
@@ -25482,7 +25485,9 @@ const Billiards = (function () {
 
   /* ---------- TA ---------- */
   function armTa(r) {
-    r.plans.push({ kind: 'btTa', at: Date.now() + rand(TA_SEC[0], TA_SEC[1]) * 1000, done: false });
+    /* 思考时长：基础 2.6~5.2s，8% 概率“长考”（犹豫一下再打），更像真人 */
+    const think = rand(TA_SEC[0], TA_SEC[1]) * (Math.random() < 0.08 ? 2.2 : 1);
+    r.plans.push({ kind: 'btTa', at: Date.now() + think * 1000, done: false });
     /* 10-09 根治（她报「开不了球」）：计划只进队列不排定时器——旧房迁移/续杆后的
        btTa 干等 30s 心跳，她在桌上看到的就是永远卡 TA 回合、没球杆、滑条全被闸住。
        推计划的地方自己排，不再指望別处别忘了调 scheduleTimers。 */
@@ -25494,15 +25499,16 @@ const Billiards = (function () {
     let t = ((cx - ax) * dx + (cy - ay) * dy) / L2; t = Math.max(0, Math.min(1, t));
     return Math.hypot(ax + dx * t - cx, ay + dy * t - cy) - rad;
   }
-  function taShot(r) {
+  function taPick(r) {
     const b = B(r);
     const cue = b.balls.find(x => x.n === 0);
     const myG = myGroupOf(r, 'ta');
     let targets;
     if (myG && groupLeft(r, myG) === 0) targets = b.balls.filter(x => x.on && x.n === 8);
     else if (myG) targets = b.balls.filter(x => x.on && ballGroup(x.n) === myG);
-    else targets = b.balls.filter(x => x.on && x.n !== 0);          // 开放桌：随便挑最好打的
-    if (!targets.length) return;
+    /* 开放桌绝不睛黑 8（10-10 修）：进了黑 8 直接判负，旧码 n!==0 把 8 号也当候选，TA 会自杀 */
+    else targets = b.balls.filter(x => x.on && x.n !== 0 && x.n !== 8);
+    if (!targets.length) return null;
     const roll = (r.stateRoll | 0) || 50;
     const others = b.balls.filter(x => x.on && x.n !== 0);
     let best = null;
@@ -25518,23 +25524,51 @@ const Billiards = (function () {
         if (!blocked) for (const o of b.balls) { if (!o.on || o === t) continue; if (segCircle(t.x, t.y, p.x, p.y, o.x, o.y, BR * 1.9) < 0) { blocked = true; break; } }
         if (blocked) continue;
         const score = cut * 2 + A / W + L / H;
-        if (!best || score < best.score) best = { angle: Math.atan2(ay, ax), score: score, dist: A };
+        if (!best || score < best.score) best = { angle: Math.atan2(ay, ax), cut: cut, dist: A, score: score };
       }
     }
-    let angle, power;
     if (best) {
-      angle = best.angle;
-      const err = (1 - roll / 100) * 0.06 + 0.01;
-      angle += (Math.random() - 0.5) * 2 * err;
-      power = Math.max(0.3, Math.min(0.92, 0.34 + best.dist / W * 0.55 + Math.random() * 0.12));
-    } else {
-      /* 安全球：轻推最近的目标球，保证首触合法 */
-      let near = targets[0], nd = Infinity;
-      for (const t of targets) { const d = Math.hypot(t.x - cue.x, t.y - cue.y); if (d < nd) { nd = d; near = t; } }
-      angle = Math.atan2(near.y - cue.y, near.x - cue.x) + (Math.random() - 0.5) * 0.08;
-      power = 0.32;
+      /* 拟人力度：距离越远越重（原有），加三条——
+         ① 薄球收力：切角越大越轻，防止白球疯跑跟着进袋；
+         ② 黑 8 收官杆只用中力（最稳，不赌大力）；
+         ③ 大力手抖：发力越大误差略增，配合实力 roll。 */
+      let power = 0.34 + best.dist / W * 0.55;
+      power -= Math.max(0, best.cut - 0.5) * 0.25;
+      if (myG && groupLeft(r, myG) === 0) power = 0.45 + Math.random() * 0.18;
+      power += (Math.random() - 0.5) * 0.12;
+      power = Math.max(0.3, Math.min(0.92, power));
+      const err = (1 - roll / 100) * 0.06 + 0.01 + power * 0.012;
+      return { angle: best.angle + (Math.random() - 0.5) * 2 * err, power: power };
     }
-    shoot(r, angle, power);
+    /* 安全球：轻推最近的目标球，保证首触合法 */
+    let near = targets[0], nd = Infinity;
+    for (const t of targets) { const d = Math.hypot(t.x - cue.x, t.y - cue.y); if (d < nd) { nd = d; near = t; } }
+    return { angle: Math.atan2(near.y - cue.y, near.x - cue.x) + (Math.random() - 0.5) * 0.08, power: 0.32 };
+  }
+  function taShot(r) {
+    const b = B(r);
+    if (b.taAnim) return;   /* 已在出杆动画中，不叠加 */
+    const plan = taPick(r);
+    if (!plan) return;
+    /* 动画期间自愈闸不补计划，但 place 态的 TA 自由球还得闸住自愈——保持原逻辑范围 */
+    /* 出杆三拍动画（她 10-10：要看得见对方出杆）：
+       ① 转杆瞒准：杆从当前角缓动到目标角（带人手微晃，越接近目标抖得越小）；
+       ② 拉杆蓄力：杆往回拉到这杆力度对应的拉伸量；
+       ③ 击出：复用 cueStrike 击打动画，球应声而出。
+       用 setTimeout 推进（不依赖 rAF，页面切走也照打）；渲染层每帧按时间插值。 */
+    let d = plan.angle - b.aimA;
+    d = Math.atan2(Math.sin(d), Math.cos(d));       /* 走最近的等价角，不绕大圈 */
+    b.taAnim = { from: b.aimA, to: b.aimA + d, pow: plan.power, t0: Date.now(),
+      aimDur: 900 + Math.random() * 500, pullDur: 300 + Math.random() * 200 };
+    setTimeout(() => {
+      const bb = B(r); if (!bb || bb.phase !== 'taThink' || !bb.taAnim) return;
+      bb.taPullAt = Date.now();
+    }, b.taAnim.aimDur);
+    setTimeout(() => {
+      const bb = B(r); if (!bb || bb.phase !== 'taThink' || !bb.taAnim) return;
+      const a = bb.taAnim; bb.taAnim = null; bb.taPullAt = null;
+      shoot(r, a.to, a.pow);
+    }, b.taAnim.aimDur + b.taAnim.pullDur);
   }
 
   /* ---------- 计划环 ---------- */
@@ -25732,7 +25766,7 @@ const Billiards = (function () {
     } else lastTs = 0;
     /* 自愈闸（10-09 根治）：TA 回合/TA 自由球却没有任何待执行计划 = 永久卡死。
        任何路径把计划弄丢（advance 吃了坏计划、迁移、时钟冻结）都在这里补回。 */
-    if (b.phase === 'taThink' || (b.phase === 'place' && b.turn !== 'me')) {
+    if ((b.phase === 'taThink' && !b.taAnim) || (b.phase === 'place' && b.turn !== 'me')) {   /* 出杆动画进行中不算卡死，别重排（会双杆同出） */
       if (!(r.plans || []).some(p => p.kind === 'btTa' && !p.done)) armTa(r);
     }
     draw(r, cv);
@@ -25759,10 +25793,11 @@ const Billiards = (function () {
       ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.2; ctx.stroke();
     }
     const myAim = b.phase === 'aim' && b.turn === 'me';
+    const taThink = b.phase === 'taThink' && b.turn !== 'me';   /* TA 瞄准中：高亮/射线也给 TA，看得见对方在想哪杆 */
     const cue = b.balls.find(x => x.n === 0);
-    /* 己方目标球高亮（我的回合且已分球） */
-    if (myAim) {
-      const g = myGroupOf(r, 'me');
+    /* 己方目标球高亮（我的回合且已分球；TA 回合同样闪 TA 的目标球） */
+    if (myAim || taThink) {
+      const g = myGroupOf(r, myAim ? 'me' : 'ta');
       const must8 = g && groupLeft(r, g) === 0;
       for (const ball of b.balls) {
         if (!ball.on) continue;
@@ -25775,15 +25810,16 @@ const Billiards = (function () {
         ctx.setLineDash([]);
       }
     }
-    /* 瞄准射线：白球 → 第一接触（虚线 + 幽灵球 + 反弹短线；非法目标红禁止符，旧版口径） */
-    if (myAim) {
-      const ang = effAngle(r);
+    /* 瞄准射线：白球 → 第一接触（虚线 + 幽灵球 + 反弹短线；非法目标红禁止符，旧版口径）。
+       TA 瞄准中同款射线但更淡（看得见对方对准哪儿，人味） */
+    if (myAim || taThink) {
+      const ang = myAim ? effAngle(r) : taAnimAngle(b);
       const ray = rayFirst(b, ang);
       const ex = cue.x + ray.dx * ray.t, ey = cue.y + ray.dy * ray.t;
       const g = myGroupOf(r, 'me');
       const must8 = g && groupLeft(r, g) === 0;
       const illegal = ray.hit && g ? (must8 ? ray.hit.n !== 8 : ballGroup(ray.hit.n) !== g) : false;
-      ctx.strokeStyle = illegal ? '#ff8a80' : 'rgba(255,255,255,.72)';
+      ctx.strokeStyle = illegal ? '#ff8a80' : (myAim ? 'rgba(255,255,255,.72)' : 'rgba(255,255,255,.34)');
       ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(cue.x, cue.y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath(); ctx.arc(ex, ey, BR, 0, 7); ctx.stroke();
@@ -25833,6 +25869,13 @@ const Billiards = (function () {
   /* 杆 overlay（她 10-09 19:49「杆和球是一块的」）：四向出界 CUE_OV 逻辑 px，
      杆能伸出桌框（参考图 88 杆就是伸出画面的）；竖直开球时不再被画布裁剩一小截。 */
   const CUE_OV = 76;
+  /* TA 出杆动画的杆角：转杆缓动（easeOutCubic）+ 人手微晃（越接近目标抖得越小） */
+  function taAnimAngle(b) {
+    const a = b.taAnim;
+    if (!a) return b.aimA;
+    const t = Date.now() - a.t0, p = Math.min(1, t / a.aimDur), e = 1 - Math.pow(1 - p, 3);
+    return a.from + (a.to - a.from) * e + Math.sin(t / 85) * ((1 - p) * 0.045 + 0.005);
+  }
   function drawCueStick(r, myAim) {
     const ov = document.getElementById('bt-cue');
     const boardEl = document.getElementById('bt-cv');
@@ -25849,8 +25892,13 @@ const Billiards = (function () {
     const m = k * br.width / W;                     /* 内部 px / 逻辑坐标 */
     const offX = (br.left - or.left) * k, offY = (br.top - or.top) * k;
     ctx.setTransform(m, 0, 0, m, offX, offY);
-    const ang = b.aimA;
+    let ang = b.aimA;
     let pull = myAim ? 9 + (b.power || 0) * 26 : (b.phase === 'moving' ? 0 : 6);
+    if (!myAim && b.taAnim && b.phase === 'taThink') {
+      ang = taAnimAngle(b);
+      const a = b.taAnim;
+      pull = b.taPullAt ? 6 + Math.min(1, (Date.now() - b.taPullAt) / a.pullDur) * (3 + a.pow * 26) : 6;
+    }
     if (b.phase === 'moving' && b.cueStrike) {
       const t = Date.now() - b.cueStrike;
       pull = t < 130 ? Math.max(0, 9 + (b.lastPow || 0.5) * 26 - t / 130 * (9 + (b.lastPow || 0.5) * 26 + 14)) : -100;
