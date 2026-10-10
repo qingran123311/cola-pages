@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261010-092015 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261010-144936 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -13550,6 +13550,17 @@ const Doodle = (function () {
    组不出通顺话就返回 null 回落字卡，不硬凑；金额/地址照旧不碰。
    她 10-08 16:42：词典再加宽（复合词/活动类）、百家姓名字调低、
    同音字层 applyTypo 已随 17:33 口径退役（23:02 死代码清扫拆除），组话选词过程内建在 composeDetailed 里。
+   她 10-10 14:27 词典再丰富批：
+   ① 动词区分及物/不及物（不及物能独立成谓：在散步/在发呆）；
+   ② 近义词圈（累/乏/疲惫…，组完小概率换着说，带选词时间）；
+   ③ 修辞层：比喻/拟人整句素材；
+   ④ 百家姓新口径：一般不组名字，只有自报家门（我是小杨/我姓王）才用百家姓；
+      对她的称呼不变：她的名字/名字叠词/名字＋老阿/亲密称呼（姓氏从称呼里退出）；
+   ⑤ 人称代词入词典（人家/我们/自己…）；
+   ⑥ 主题加宽：景物/特殊名词/人物/情绪（emo 本）；
+   ⑦ 字卡单卡丰富：卡后续小尾巴（两卡拆拼/剪词/加头原有不动）；
+   ⑧ 26 键拼音选字层：同音字成十上百（yang→羊阳杨洋养样痒氧…），候选按使用频度排序
+      （通用语文常识），高频字挑得快、低频字翻页久、偶先拿错再换回——全是时间痕迹不上屏。
    ===================================================== */
 const FreeTalk = (function () {
 
@@ -13567,7 +13578,12 @@ const FreeTalk = (function () {
       { t: '路过', obj: ['place'] }, { t: '困在', obj: ['place'], suffix: '了' },
       { t: '在撸', obj: ['animal'] }, { t: '想养', obj: ['animal'] }, { t: '喂了', obj: ['animal'] },
       { t: '约了', obj: ['hobby'] }, { t: '去打', obj: ['hobby'] }, { t: '想玩', obj: ['hobby'] },
-      { t: '刚玩完', obj: ['hobby'] }, { t: '报了', obj: ['hobby'] }, { t: '在追', obj: ['media'] }
+      { t: '刚玩完', obj: ['hobby'] }, { t: '报了', obj: ['hobby'] }, { t: '在追', obj: ['media'] },
+      { t: '在拍', obj: ['scenery'] }, { t: '去看', obj: ['scenery'] }, { t: '想看', obj: ['scenery'] },
+      { t: '在晒', obj: ['scenery'] }, { t: '等', obj: ['scenery'] },
+      /* 她 10-10 14:27：及物/不及物区分——tr:0 不及物，不带宾语也能独立成谓 */
+      { t: '在散步', tr: 0 }, { t: '在发呆', tr: 0 }, { t: '在打盹', tr: 0 },
+      { t: '刚睡醒', tr: 0 }, { t: '在赖床', tr: 0 }, { t: '睡不着', tr: 0 }, { t: '醒得早', tr: 0 }
     ],
     /* 名词：tag=搭配标签（食物/饮品/水果/动物/物品/地点/内容/人物） */
     noun: [
@@ -13597,6 +13613,13 @@ const FreeTalk = (function () {
       { t: '游泳', tag: 'hobby' }, { t: '骑行', tag: 'hobby' },
       { t: '江边', tag: 'place' }, { t: '天台', tag: 'place' }, { t: '自习室', tag: 'place' },
       { t: '图书馆', tag: 'place' }, { t: '食堂', tag: 'place' },
+      /* 她 10-10 14:27：主题加宽——景物/特殊名词；人物也加员 */
+      { t: '夕阳', tag: 'scenery' }, { t: '晚霞', tag: 'scenery' }, { t: '月亮', tag: 'scenery' },
+      { t: '星星', tag: 'scenery' }, { t: '初雪', tag: 'scenery' }, { t: '樱花', tag: 'scenery' },
+      { t: '落叶', tag: 'scenery' }, { t: '彩虹', tag: 'scenery' }, { t: '云', tag: 'scenery' },
+      { t: '海边', tag: 'scenery' }, { t: '大雾', tag: 'scenery' }, { t: '日出', tag: 'scenery' },
+      { t: '盲盒', tag: 'thing' }, { t: '优惠券', tag: 'thing' }, { t: '单曲循环', tag: 'media' },
+      { t: '新歌', tag: 'media' }, { t: '合集', tag: 'media' }, { t: '周末限定', tag: 'hobby' },
       { t: '房间', tag: 'thing' }, { t: '衣柜', tag: 'thing' }, { t: '快递', tag: 'thing' },
       { t: '桌子', tag: 'thing' }, { t: '新手机', tag: 'thing' }, { t: '耳机', tag: 'thing' },
       { t: '充电器', tag: 'thing' }, { t: '被窝', tag: 'thing' }, { t: '枕头', tag: 'thing' },
@@ -13608,7 +13631,8 @@ const FreeTalk = (function () {
       { t: '新出的综艺', tag: 'media' }, { t: '歌单', tag: 'media' }, { t: '播客', tag: 'media' },
       { t: '同事', tag: 'person' }, { t: '我妈', tag: 'person' }, { t: '室友', tag: 'person' },
       { t: '店员', tag: 'person' }, { t: '外卖小哥', tag: 'person' }, { t: '食堂阿姨', tag: 'person' },
-      { t: '辅导员', tag: 'person' }, { t: '快递员', tag: 'person' }, { t: '前台小姐姐', tag: 'person' }
+      { t: '辅导员', tag: 'person' }, { t: '快递员', tag: 'person' }, { t: '前台小姐姐', tag: 'person' },
+      { t: '表姐', tag: 'person' }, { t: '表哥', tag: 'person' }, { t: '邻居家的猫', tag: 'animal' }
     ],
     /* 形容词（表感觉/情绪/评价/天气感） */
     adj: [
@@ -13672,7 +13696,31 @@ const FreeTalk = (function () {
             '带':'戴','戴':'带','哪':'那','那':'哪','里':'理','理':'里' },
     /* 语气尾 */
     tail: ['呀', '啦', '哟', '嘛', '呗', '咯', '哈', '呜', '嘿嘿', '哈哈', '~'],
-    qtail: ['吗', '呢', '啊', '吧', '嘛']
+    qtail: ['吗', '呢', '啊', '吧', '嘛'],
+    /* 她 10-10 14:27：人称代词本（主语位可换） */
+    pron: ['我', '你', '我们', '人家', '自己'],
+    /* 她 10-10 14:27：情绪本（emo 也算词库） */
+    emo: ['emo了', '破防了', '被治愈到了', '突然emo', '绷不住了', '原地复活', '满血复活',
+      '电量满格', '有点郁闷', '心情美丽', '多云转晴', '丧丧的', '超开心', '泪目了', '麻中带笑'],
+    /* 她 10-10 14:27：修辞层——比喻/拟人整句素材（{a} 从形容/感觉词里填） */
+    metaphor: ['今天{a}得像条咸鱼', '被窝像个大拥抱，不想出来', '外面冷得像冰箱',
+      '脑子{a}得像浆糊', '这天气{a}得像蒸笼', '困得像只冬眠的熊', '饿得能吃下一头牛',
+      '累得像刚跑完八百米'],
+    personify: ['太阳晒得人发懒', '月亮还在加班', '风一直敲窗户', '闹钟天天跟我作对',
+      '床在喊我名字', '胃在抗议了', '周末过得飞快，根本追不上'],
+    /* 她 10-10 14:27：近义词圈——组完小概率换着说（带选词时间痕迹） */
+    syn: [
+      ['累', '乏', '疲惫', '累摊'],
+      ['开心', '高兴', '快乐', '美滋滋'],
+      ['困', '迷糊', '睁不开眼'],
+      ['好吃', '好香', '美味'],
+      ['难受', '不舒服', '不得劲'],
+      ['生气', '恼火', '来气'],
+      ['紧张', '慌', '心慌'],
+      ['无聊', '闲得慌', '没事干'],
+      ['好看', '耐看', '顺眼'],
+      ['想你了', '想你啦', '惦记你了']
+    ]
   };
   const DIC_CAP = 160;          // 每词类条目上限：防历史消息把词典撑成垃圾场
 
@@ -13680,10 +13728,10 @@ const FreeTalk = (function () {
   function pickObj(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   /* 她 09:45：成分一律等概率随机组 */
 
-  /* ---------- 搭配检：动词的 obj 要含名词的 tag ---------- */
+  /* ---------- 搭配检：动词的 obj 要含名词的 tag；不及物（tr:0）不进动宾搭配 ---------- */
   function voPair() {
     const n = pick(DIC.noun);
-    const vs = DIC.verb.filter(v => (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
+    const vs = DIC.verb.filter(v => v.tr !== 0 && (v.obj || []).indexOf(n.tag) >= 0 && !v.suffix);
     if (!vs.length) return null;
     const v = pick(vs);
     return { v: v.t, n: n.t };
@@ -13693,20 +13741,24 @@ const FreeTalk = (function () {
     return p ? '我' + p.v + p.n : null;
   }
 
-  /* 称呼现组：小/阿/老＋她的名字字或百家姓，或名字末字/爱称＋宝/崽/酱……
-     她 10-08 16:42：百家姓名字调低——名字字 0.72、爱称 0.8 优先，姓氏只作垫底 */
+  /* 称呼现组：小/阿/老＋她的名字字，或名字末字/爱称＋宝/崽/酱……
+     她 10-10 14:27 新口径：一般不组名字——百家姓从称呼里退出，垫底改爱称/叠词；
+     百家姓只留给自报家门（selfIntro：我是小杨/我姓王）用。
+     对她：她的名字、名字叠词、名字＋老/阿、亲密称呼都行（原有 style 保留） */
   function makeNickname(ctx) {
     const my = String((ctx && ctx.myName) || '').trim();
     const pet = String((ctx && ctx.pet) || '').trim();
     const coreFromName = my ? pick(my.replace(/\s/g, '').split('')) : null;
-    const core = coreFromName && Math.random() < 0.72 ? coreFromName
-      : (pet && Math.random() < 0.8 ? pet : pick(DIC.surname));
+    let core, isRedup = false;
+    if (coreFromName && Math.random() < 0.72) core = coreFromName;
+    else if (pet && Math.random() < 0.8) core = pet;
+    else { core = pick(DIC.redup); isRedup = true; }   /* 爱称/叠词是现成昵称，整词出场，不截尾加工（不然“年糕”会变出“糕糕”） */
     const style = Math.random();
     if (style < 0.3) return pick(DIC.namePre) + core;
     if (style < 0.5) return core + pick(DIC.nameSuf);
-    if (style < 0.7 && core.length >= 2) return core.slice(-1) + core.slice(-1);
+    if (style < 0.7 && core.length >= 2 && !isRedup) return core.slice(-1) + core.slice(-1);
     if (style < 0.85) return pick(DIC.namePre) + core + pick(DIC.nameSuf);
-    return pick(DIC.redup);
+    return isRedup ? core : pick(DIC.redup);
   }
   function whoOf(ctx) { return ctx && (ctx.pet || ctx.myName) ? (ctx.pet || ctx.myName) : null; }
 
@@ -13783,7 +13835,19 @@ const FreeTalk = (function () {
         const nick = makeNickname(ctx);
         const s = pick(DIC.short);
         return Math.random() < 0.5 ? nick : nick + '，' + s.t;
-      } }
+      } },
+    /* 她 10-10 14:27：不及物动词能独立成谓（在散步/睡不着），带时间/地点状语也行 */
+    { id: 'svi', make() { const vs = DIC.verb.filter(v => v.tr === 0); return vs.length ? '我' + pick(vs).t : null; } },
+    { id: 'sviT', make() { const vs = DIC.verb.filter(v => v.tr === 0); return vs.length ? pick(DIC.advT) + pick(vs).t + (Math.random() < 0.3 ? pick(DIC.tail) : '') : null; } },
+    /* 修辞层：比喻/拟人（{a} 从形容/感觉词里填，填不进就弃整句） */
+    { id: 'metaph', make() { const m = pick(DIC.metaphor); const a = pick(DIC.adj); const out = m.replace('{a}', a); return out.indexOf('{a}') < 0 && /[累困冷热饿]/.test(a) ? out : null; } },
+    { id: 'personi', make() { return pick(DIC.personify) + (Math.random() < 0.3 ? pick(DIC.tail) : ''); } },
+    /* 情绪：今天 + emo 词，或 emo 词 + 小尾巴 */
+    { id: 'emoF', make() { return Math.random() < 0.5 ? pick(DIC.time) + pick(DIC.emo) : pick(DIC.emo) + '，' + pick(DIC.short).t; } },
+    /* 人称代词开头：人家想吃火锅 / 我们去看日落 */
+    { id: 'pronV', make() { const p = voPair(); return p ? pick(DIC.pron) + p.v + p.n : null; } },
+    /* 自报家门（她 10-10：百家姓唯一的出场场景） */
+    { id: 'selfIntro', make() { return Math.random() < 0.5 ? '我是' + pick(DIC.namePre) + pick(DIC.surname) : '我姓' + pick(DIC.surname) + (Math.random() < 0.4 ? '，' + pick(DIC.short).t : ''); } }
   ];
 
   /* 她 10-08 16:42：同音字层——TA「打字」也有拼音选词的过程，
@@ -13800,6 +13864,49 @@ const FreeTalk = (function () {
   };
   function homoOf(word) { return HOMO_WORDS[word] || null; }
 
+  /* 她 10-10 14:27：26 键拼音选字层——同音字成十上百（yang→羊阳杨洋养样痒氧…），
+     TA 打字跟真人一样要翻候选挑字：候选按使用频度排序（通用语文常识，不是编造数据），
+     高频字靠前挑得快、低频字翻页久；候选多的音节（十上百个）多花页数；
+     偶尔先拿错再换回（时间痕迹，发出去的永远是挑好的那个，不上屏乱字）。
+     声调/词性的考量内建在频度序里（高频先出，同音别字本来就是拿错了声调邻字） */
+  const HOMO_SYL = {
+    'yang': ['羊', '阳', '杨', '洋', '养', '样', '痒', '氧', '扬', '秧'],
+    'shi':  ['是', '事', '时', '十', '食', '使', '史', '世', '市', '式'],
+    'yi':   ['一', '以', '已', '意', '义', '易', '艺', '仪', '宜', '移'],
+    'ma':   ['吗', '嘛', '妈', '马', '麻', '码', '骂'],
+    'chi':  ['吃', '迟', '持', '池', '尺', '齿', '痴'],
+    'shui': ['水', '睡', '谁', '税'],
+    'wan':  ['玩', '晚', '碗', '万', '湾', '完', '丸'],
+    'xiang':['想', '向', '象', '像', '香', '箱', '相', '项', '巷', '响'],
+    'zai':  ['在', '再', '载', '栽', '灾'],
+    'de':   ['的', '得', '地', '德'],
+    'ta':   ['他', '她', '它', '塌', '塔'],
+    'hao':  ['好', '号', '浩', '耗', '毫'],
+    'wo':   ['我', '窝', '涡', '卧'],
+    'le':   ['了', '乐', '勒'],
+    'mei':  ['没', '美', '妹', '每', '梅', '媒', '煤'],
+    'ni':   ['你', '泥', '尼', '逆', '腻'],
+    'jin':  ['今', '金', '斤', '进', '近', '尽', '劲', '锦'],
+    'tian': ['天', '田', '甜', '添', '填', '舔'],
+    'zhu':  ['住', '主', '猪', '珠', '竹', '煮', '祝'],
+    'xi':   ['喜', '西', '息', '习', '洗', '系', '细']
+  };
+  const CHAR_SYL = {};
+  Object.keys(HOMO_SYL).forEach(s => HOMO_SYL[s].forEach((c, i) => {
+    if (!(c in CHAR_SYL)) CHAR_SYL[c] = { rank: i, n: HOMO_SYL[s].length };
+  }));
+  /* 单字选字时间：起手翻候选；目标字位次越靠后（越低频）翻得越久；候选多的音节多翻页；
+     18% 先拿错再看一眼换回来 */
+  function charSelectMs(c) {
+    const e = CHAR_SYL[c];
+    if (!e) return 0;
+    let ms = 150 + Math.random() * 200;
+    ms += e.rank * (180 + Math.random() * 200);
+    if (e.n >= 8) ms += 200 + Math.random() * 300;
+    if (Math.random() < 0.18) ms += 400 + Math.random() * 600;
+    return ms;
+  }
+
   /* 一个词的选字时间：起手 150~400ms；有同音候选就逐个翻（每个 +250~550ms），
      25% 概率先拿错再看一眼换回来（+500~1200ms）——这就是「挑选的机会和时间」 */
   function selectTime(word) {
@@ -13814,7 +13921,22 @@ const FreeTalk = (function () {
   function deliberate(text) {
     let ms = 0;
     Object.keys(HOMO_WORDS).forEach(w => { if (String(text).indexOf(w) >= 0) ms += selectTime(w); });
+    /* 她 10-10 14:27：26 键选字层——句中每个字都有同音候选要翻，命中才计时 */
+    String(text).split('').forEach(c => { ms += charSelectMs(c); });
     return ms;
+  }
+  /* 她 10-10 14:27：近义词圈——组完小概率换着说（换个说法也是挑词，带时间痕迹） */
+  function synonymize(text) {
+    const t = String(text);
+    for (const g of DIC.syn) {
+      const i = g.findIndex(w => t.indexOf(w) >= 0);
+      if (i >= 0 && Math.random() < 0.2) {
+        let j = Math.floor(Math.random() * g.length);
+        if (j === i) j = (j + 1) % g.length;
+        return { text: t.replace(g[i], g[j]), extraMs: Math.round(300 + Math.random() * 500) };
+      }
+    }
+    return null;
   }
   /* 打字本身的时间：按拼音按键数估（沿用二十六字母层手感，含声母/韵母位数） */
   function strokeTime(text) {
@@ -13840,7 +13962,10 @@ const FreeTalk = (function () {
       spent += 180 + Math.random() * 320;   /* 起手想一句的时间 */
       if (line) {
         /* 她 10-08 17:33：挑词+打字的时间不算在重调窗内——组好了就打，
-           打字/选词时间真加进发送间隔（打不完不算组词失败） */
+           打字/选词时间真加进发送间隔（打不完不算组词失败）；
+           她 10-10 14:27：近义换说也是挑选过程的一步 */
+        const syn = synonymize(line);
+        if (syn) return { text: syn.text, extraMs: Math.round(strokeTime(syn.text) + deliberate(syn.text) + syn.extraMs) };
         return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
       }
     }
@@ -13872,6 +13997,7 @@ const FreeTalk = (function () {
     rolls.push(() => (Math.random() < 0.5 ? '说真的，' : '真的，') + t);                           // 加头
     rolls.push(() => pick(DIC.conj) + '，' + t);                                                  // 转折词开头
     if (!/[呀啦哟哦~…]$/.test(t)) rolls.push(() => t + pick(DIC.tail));                            // 语气尾
+    rolls.push(() => t + '，' + pick(DIC.short).t);                                                // 她 10-10：单卡丰富——卡后续小尾巴
     const who = whoOf(ctx);
     if (who) rolls.push(() => who + '，' + t);                                                    // 前缀称呼
     rolls.push(() => makeNickname(ctx) + '，' + t);                                               // 现组称呼前缀
@@ -13955,7 +14081,9 @@ const FreeTalk = (function () {
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗 */
+  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序 */
+  /* 单字在同音候选里的位次（0=最高频）与该音节候选总数，只读，不上屏 */
+  function homoRank(c) { const e = CHAR_SYL[c]; return e ? { rank: e.rank, n: e.n } : null; }
 })();
 
 /* =====================================================
@@ -17114,6 +17242,7 @@ const Mall = (function () {
     return Math.min(96, Math.max(3, Math.round((Date.now() - s.placedTs) / Math.max(1, span) * 100)));
   }
   function cardStateHtml(order) {
+    if (order.cancelled) return '订单已取消';
     const s = statusOf(order);
     if (s.done) {
       if (order.signed) return order.review
@@ -17397,7 +17526,12 @@ const Mall = (function () {
       const add = sh.body.querySelector('[data-act="cart"]');
       const buy = sh.body.querySelector('[data-act="buy"]');
       if (add) add.addEventListener('click', () => {
-        st().cart.push({ id: 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), pid: p.id, qty, spec: Object.assign({}, sel), ts: Date.now() });
+        const spec = Object.assign({}, sel);
+        const key = JSON.stringify(spec);
+        /* 同商品同规格合并件数（她 10-10：购物车显示件数，别一行行堆同样的） */
+        const same = st().cart.find(c => c.pid === p.id && JSON.stringify(c.spec || {}) === key);
+        if (same) same.qty = Math.min(99, same.qty + qty);
+        else st().cart.push({ id: 'mc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), pid: p.id, qty, spec, ts: Date.now() });
         DB.save(); updateCartDot(); sh.close();
         UI.toast('已加入购物车');
       });
@@ -17431,8 +17565,8 @@ const Mall = (function () {
       sh.body.innerHTML = list.map(c => {
         const p = productById(c.pid);
         return '<div class="cart-row"><button type="button" class="cart-chk' + (checked[c.id] ? ' on' : '') + '" data-chk="' + c.id + '"><i data-icon="check" data-size="12"></i></button>' +
-          (p ? thumbHtml(p, 'cart-thumb') + '<div class="cart-mid"><b>' + esc(p.name) + '</b><small>' + esc(specText(c)) + '</small>' +
-            '<span class="cart-price">¥' + Wallet.yuan(p.fen) + '</span></div>' : '<div class="cart-mid"><b>商品已下架</b></div>') +
+          (p ? thumbHtml(p, 'cart-thumb') + '<div class="cart-mid"><b>' + esc(p.name) + '</b><small>' + esc(specText(c)) + (c.qty > 1 ? ' · ×' + c.qty + ' 件' : '') + '</small>' +
+            '<span class="cart-price">¥' + Wallet.yuan(p.fen * c.qty) + '</span></div>' : '<div class="cart-mid"><b>商品已下架</b></div>') +
           '<button type="button" class="cart-del" data-del="' + c.id + '"><i data-icon="trash" data-size="14"></i></button></div>';
       }).join('') +
         '<div class="cart-foot"><span>全选 <button type="button" class="cart-chk all' + (chosen.length === list.length ? ' on' : '') + '" data-chk="*"><i data-icon="check" data-size="12"></i></button></span>' +
@@ -17461,7 +17595,15 @@ const Mall = (function () {
   /* ---------- 结算（收货人 → 地址 → 费用明细/券 → 支付方式 → 提交；全走 Pay 唯一口）
      P67 她 11:56：外卖加打包费/跑腿费、券抵商品部分、可邀请 TA 代付 ---------- */
   function openCheckout(lines) {
-    const items = lines.map(l => ({ l, p: productById(l.pid) })).filter(x => x.p);
+    /* 同商品同规格合并为一单（她 10-10：同一件东西别拆成几个订单），cartIds 收齐用于结算后清购物车 */
+    const merged = [];
+    lines.forEach(l => {
+      const key = l.pid + '|' + JSON.stringify(l.spec || {});
+      const hit = merged.find(x => x.key === key);
+      if (hit) hit.qty += l.qty;
+      else merged.push({ key, pid: l.pid, qty: l.qty, spec: l.spec, cartIds: [l.cartId].filter(Boolean) });
+    });
+    const items = merged.map(m0 => ({ l: m0, p: productById(m0.pid) })).filter(x => x.p);
     if (!items.length) { UI.toast('商品都不在了'); return; }
     const sh = sheet('确认订单', { tall: true });
     let toUid = 'me';
@@ -17561,7 +17703,7 @@ const Mall = (function () {
       const m = st();
       if (cpn) cpn.used = true;
       items.forEach(x => { m.sales[x.p.id] = (m.sales[x.p.id] || 0) + x.l.qty; });
-      const ids = items.map(x => x.l.cartId).filter(Boolean);
+      const ids = items.reduce((s, x) => s.concat(x.l.cartIds || []), []);
       if (ids.length) m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0);
       DB.save(); updateCartDot();
       /* 送给 TA 的：聊天里落订单卡（对标「找人代付」卡） */
@@ -17590,7 +17732,7 @@ const Mall = (function () {
       });
       if (fee.coupon) fee.coupon.used = true;
       items.forEach(x => { m.sales[x.p.id] = (m.sales[x.p.id] || 0) + x.l.qty; });
-      const ids = items.map(x => x.l.cartId).filter(Boolean);
+      const ids = items.reduce((s, x) => s.concat(x.l.cartIds || []), []);
       if (ids.length) m.cart = m.cart.filter(c => ids.indexOf(c.id) < 0);
       DB.save(); updateCartDot();
       orders.forEach(order => { if (order.toUid !== 'me') pushOrderCard(order, 'me', null); });
@@ -17621,7 +17763,9 @@ const Mall = (function () {
       finishOrder(made, { packFen, errandFen, coupon: null });   /* 代付不动我的券 */
       made.forEach(ord => { ord.payReq = { to: uid, state: 'waiting', ts: Date.now() }; });
       DB.save();
-      made.forEach(ord => pushOrderCard(ord, 'me', null));
+      /* 卡发给“被邀请付钱的那位”（她 10-10：给自己买+邀 TA 代付时，以前按收货人算落到自己头上，
+         自己买给自己的单直接不进聊天——代付邀请就这样被吞了） */
+      made.forEach(ord => pushCardTo(ord.payReq.to, ord, 'me', null));
       sh.close();
       UI.toast('代付邀请已发给 TA');
       /* TA 的反应是模拟的：随机几秒后接受；TA 付款走 settlePeer（亲密付优先，不够落 TA 零钱，都不够=没付成） */
@@ -17641,9 +17785,7 @@ const Mall = (function () {
       peer: order.buyerUid === 'me' ? 'me' : order.toUid
     });
     if (r.err) {
-      order.payReq.state = 'failed';
-      const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
-      DB.save();
+      cancelOrder(order, 'TA 没付成，订单取消了');
       return;
     }
     order.pay = r; order.payReq.state = 'ok'; order.buyerUid = uid;
@@ -17671,18 +17813,31 @@ const Mall = (function () {
     return (o.pay.via && o.pay.via !== Pay.BALANCE) ? '亲密付 · ' + Wallet.userName(o.pay.ownerUid) : '钱包零钱';
   }
 
-  /* 订单卡进聊天：from=下单人一侧；paidBy=下单人≠收货人时为真 */
-  function pushOrderCard(order, fromUid, paidBy) {
-    const peerUid = order.toUid !== 'me' ? order.toUid : order.buyerUid;
-    if (!peerUid || peerUid === 'me') return;   // 自己买给自己不进聊天
+  /* 订单卡进聊天：发给指定会话（peerUid）；from=下单人一侧；paidBy=下单人≠收货人时为真 */
+  function pushCardTo(peerUid, order, fromUid, paidBy) {
+    if (!peerUid || peerUid === 'me' || typeof Engine === 'undefined') return;   // 不发给自己
     const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === peerUid);
-    if (!conv || typeof Engine === 'undefined') return;
+    if (!conv) return;
     Engine.pushRaw(conv, {
       id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
       from: fromUid === 'me' ? 'me' : 'ai', type: 'mall',
       orderId: order.id, senderId: fromUid === 'me' ? null : fromUid,
       paidBy: !!paidBy, ts: Date.now()
     });
+  }
+  function pushOrderCard(order, fromUid, paidBy) {
+    const peerUid = order.toUid !== 'me' ? order.toUid : order.buyerUid;
+    pushCardTo(peerUid, order, fromUid, paidBy);
+  }
+
+  /* 取消不删单（她 10-10）：订单标 cancelled 保留在列表，详情只说“订单已取消”；已售同步回滚，不虚报 */
+  function cancelOrder(order, note) {
+    order.cancelled = { ts: Date.now() };
+    if (order.payReq) order.payReq.state = 'declined';
+    if (note) order.cancelNote = note;
+    const m = st();
+    order.items.forEach(it => { m.sales[it.pid] = Math.max(0, (m.sales[it.pid] || 0) - it.qty); });
+    DB.save();
   }
 
   /* 支付成功弹层（对标参考图：绿勾 + 余额提示） */
@@ -17705,7 +17860,10 @@ const Mall = (function () {
     const sh = sheet('我的订单', { tall: true });
     let f = 'all';   // all | going | review | done | after
     function filtered() {
-      return st().orders.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => {
+      /* 她 10-10：TA 自己给自己买的单不进她的订单列表；取消单保留、只在“全部”里可见 */
+      const mine = st().orders.filter(o => o.buyerUid === 'me' || o.toUid === 'me');
+      return mine.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => {
+        if (o.cancelled) return f === 'all';
         const s = statusOf(o);
         if (f === 'going') return !s.done;
         if (f === 'review') return o.signed && o.toUid === 'me' && !o.myReview && !(o.after);
@@ -17722,10 +17880,11 @@ const Mall = (function () {
         (list.length ? list.map(o => {
           const it = itemMain(o);
           const p = productById(it.pid);
-          const s = statusOf(o);
-          const state = o.after ? (o.after.type === 'refund' ? '已退款' : '已婉拒') : (!s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? (o.myReview ? '已完成' : '待评价') : '待签收'));
+          const state = o.cancelled ? '已取消'
+            : o.after ? (o.after.type === 'refund' ? '已退款' : '已婉拒')
+            : (() => { const s = statusOf(o); return !s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? (o.myReview ? '已完成' : '待评价') : '待签收'); })();
           return '<button class="mo-row" data-oid="' + o.id + '">' +
-            '<span class="mo-row-state ' + (s.done || o.after ? 'ok' : '') + '">' + state + '</span>' +
+            '<span class="mo-row-state ' + (o.cancelled || o.after ? 'ok' : '') + '">' + state + '</span>' +
             thumbHtml(p, 'cart-thumb') +
             '<span class="mo-row-mid"><b>' + esc(it.name) + (o.items.length > 1 ? ' 等' + o.items.length + '件' : '') + '</b>' +
             '<small>' + esc(cardStateHtml(o)) + '</small></span>' +
@@ -17763,9 +17922,11 @@ const Mall = (function () {
           (sum.coupon ? '<div class="off"><span>优惠券 · ' + esc(sum.coupon.name) + '</span>-¥' + Wallet.yuan(sum.coupon.offFen) + '</div>' : '') +
           '</div>' : '') +
         '<div class="od-amount"><span>实付' + (payLabel(order) ? '（' + payLabel(order) + '）' : '') + '</span><b>¥' + Wallet.yuan(order.totalFen) + '</b></div></div>' +
-        '<div class="od-timeline">' + order.timeline.map((n, i) =>
+        (order.cancelled
+          ? '<div class="od-timeline"><div class="od-node on"><i></i><span>订单已取消' + (order.cancelNote ? ' · ' + esc(order.cancelNote) : '') + '</span><small>' + fmtMDHM(order.cancelled.ts) + '</small></div></div>'
+          : '<div class="od-timeline">' + order.timeline.map((n, i) =>
           '<div class="od-node' + (i <= s.idx ? ' on' : '') + (i === s.idx && !s.done ? ' now' : '') + '">' +
-          '<i></i><span>' + esc(n.label) + '</span><small>' + (i <= s.idx ? fmtMDHM(n.ts) : '预计 ' + fmtMDHM(n.ts)) + '</small></div>').join('') + '</div>' +
+          '<i></i><span>' + esc(n.label) + '</span><small>' + (i <= s.idx ? fmtMDHM(n.ts) : '预计 ' + fmtMDHM(n.ts)) + '</small></div>').join('') + '</div>') +
         '<div class="od-meta"><div><span>下单人</span>' + esc(buyerName) + '</div>' +
         '<div><span>收货人</span>' + esc(toName) + '</div>' +
         (order.addr ? '<div><span>地址</span><b>' + esc(order.addr.tag) + '</b> ' + esc(order.addr.text) + '</div>' : '') +
@@ -17774,6 +17935,7 @@ const Mall = (function () {
         (order.myReview ? '<div class="od-review"><span class="od-review-name">我的点评 · ' + '★'.repeat(order.myReview.stars) + '</span><p>' + esc(order.myReview.text) + '</p></div>' : '') +
         (order.after && order.after.type === 'refund' ? '<div class="od-review after"><span class="od-review-name">售后</span><p>已退款，钱按原路退回了（' + fmtMDHM(order.after.ts) + '）</p></div>' : '') +
         '<div class="od-acts">' +
+        (order.cancelled ? '' :
         (order.payReq && order.payReq.state === 'waiting' && order.payReq.to === 'me' ? '<button class="btn btn-primary" data-act="payok">帮他付 ¥' + Wallet.yuan(order.totalFen) + '</button>' +
           '<button class="btn btn-secondary" data-act="payno">婉拒</button>' : '') +
         (order.payReq && order.payReq.state === 'waiting' && order.payReq.to !== 'me' ? '<div class="od-wait">等 TA 处理中，结果在这条订单上更新</div>' : '') +
@@ -17781,7 +17943,7 @@ const Mall = (function () {
         (s.idx === 0 && !s.done && !order.payReq ? '<button class="btn btn-secondary" data-act="cancel">取消订单</button>' : '') +
         (order.signed && !order.after && order.toUid === 'me' && !order.myReview ? '<button class="btn btn-secondary" data-act="review">写评价</button>' : '') +
         (order.signed && !order.after && order.pay ? '<button class="btn btn-secondary" data-act="refund">申请退款</button>' : '') +
-        (order.signed ? '<button class="btn btn-secondary" data-act="del">删除订单</button>' : '') +
+        (order.signed ? '<button class="btn btn-secondary" data-act="del">删除订单</button>' : '')) +
         '</div>';
       const okPay = sh.body.querySelector('[data-act="payok"]');
       if (okPay) okPay.addEventListener('click', () => {
@@ -17798,9 +17960,8 @@ const Mall = (function () {
       const noPay = sh.body.querySelector('[data-act="payno"]');
       if (noPay) noPay.addEventListener('click', async () => {
         if (!(await UI.confirmBox({ title: '婉拒代付', text: '婉拒后这笔订单会取消，不再提醒。', okText: '婉拒', danger: true }))) return;
-        order.payReq.state = 'declined';
-        const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
-        DB.save(); sh.close();
+        cancelOrder(order, 'TA 婉拒了代付');
+        sh.close();
       });
       const rvw = sh.body.querySelector('[data-act="review"]');
       if (rvw) rvw.addEventListener('click', () => openReview(order));
@@ -17812,8 +17973,8 @@ const Mall = (function () {
       if (cancel) cancel.addEventListener('click', async () => {
         if (!(await UI.confirmBox({ title: '取消订单', text: '钱会按原路退回，确定取消？', okText: '取消订单', danger: true }))) return;
         Pay.refundFor({ fromUid: order.buyerUid, pay: order.pay }, order.totalFen, '商城订单取消', order.toUid !== 'me' ? order.toUid : null);
-        const m = st(); m.orders = m.orders.filter(z => z.id !== order.id);
-        DB.save(); sh.close(); UI.toast('已取消，钱原路退回');
+        cancelOrder(order, '你自己取消的');
+        render(); UI.toast('已取消，钱原路退回');
       });
       const del = sh.body.querySelector('[data-act="del"]');
       if (del) del.addEventListener('click', async () => {
@@ -18047,8 +18208,16 @@ const Mall = (function () {
 
   /* ---------- TA 给我买（购物率，她 23:06④：默认 3%、联系人独立、0=关） ----------
      触发：每回复批次掷一次（engine fireBatch 尾部挂），另有 2 小时防抖（工程防抖，不改口径）。
-     买什么：从商城真实在架商品里抽一个，真扣 TA 的钱（Pay.settlePeer，不够=这笔没发生）；
-     订单卡以「已代付」样式进聊天，钱与账单全部走老口径。 */
+     她 10-10 补充：掷中后可能给自己买，也可能给你买（各半，工程值待拍）；
+     下单后还有小概率取消（TA_CANCEL_RATE，仅限未收货的，她拍板“取消的仅限未收货”）。 */
+  const TA_CANCEL_RATE = 7;   // TA 下单后取消的概率%（她 10-10 拍板 7%）
+  const SELF_LINES = ['给自己点了{n}，生活要有点甜', '刚下单了{n}，犒劳一下自己', '随手给自己买了{n}，别眼馋～'];
+  const CANCEL_LINES = ['刚那单我取消了，冲动消费要不得', '下单又取消啦，纠结星人是我没错了', '那单我取消了，临时不想买了'];
+  function armTaCancel(order) {
+    if (Math.random() * 100 >= TA_CANCEL_RATE) return;
+    order.taCancelPlan = Date.now() + rand(2, 25) * 60000;   // 下单后一段时间内取消（工程值）
+    DB.save();
+  }
   function maybeGift(conv, ct) {
     if (!conv || !ct || conv.type !== 'single') return false;
     let rate = 3;
@@ -18060,6 +18229,27 @@ const Mall = (function () {
     if (!pool.length) return false;
     const p = pick(pool);
     st().lastGiftAt[ct.id] = Date.now();
+    /* 她 10-10：也可能给自己买（不进她的订单列表，聊天里轻一句） */
+    if (Math.random() < 0.5) {
+      const r = Pay.settlePeer(ct.id, p.fen, {
+        type: 'mall',
+        note: (p.takeout ? '外卖-' : '商城-') + p.name + ' · 给自己买',
+        peer: null
+      });
+      if (r.err) return false;   // 钱 不够就当这笔没发生，余额不准被掏成负数
+      st().sales[p.id] = (st().sales[p.id] || 0) + 1;
+      const order = createOrder({
+        kind: p.takeout ? 'takeout' : 'shop',
+        items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
+        totalFen: p.fen, buyerUid: ct.id, toUid: ct.id, pay: r, addr: null
+      });
+      armTaCancel(order);
+      Engine.pushRaw(conv, {
+        id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+        from: 'ai', type: 'text', text: pick(SELF_LINES).replace('{n}', p.name), ts: Date.now()
+      });
+      return true;
+    }
     /* 她 11:56：TA 也有概率邀请我帮他付——40% 走代付邀请（工程值），其余 TA 自己掏（亲密付优先，settlePeer 定） */
     if (Math.random() < 0.4) {
       const req = createOrder({
@@ -18084,6 +18274,7 @@ const Mall = (function () {
       items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
       totalFen: p.fen, buyerUid: ct.id, toUid: 'me', pay: r, addr: null
     });
+    armTaCancel(order);
     pushOrderCard(order, ct.id, true);
     return true;
   }
@@ -18106,10 +18297,37 @@ const Mall = (function () {
     });
   }
 
+  /* TA 取消（她 10-10）：下单后小概率反悔，仅限未收货的；到点在心跳里执行 */
+  function taCancelTick() {
+    let changed = false;
+    st().orders.forEach(order => {
+      if (!order.taCancelPlan || order.cancelled || order.signed) return;
+      if (Date.now() < order.taCancelPlan) return;
+      delete order.taCancelPlan;
+      /* 取消仅限还未收货的（她拍板）：已到站待签收的也不动了 */
+      if (statusOf(order).done) return;
+      const paidBy = order.buyerUid || 'me';
+      Pay.refundFor({ fromUid: paidBy, pay: order.pay }, order.totalFen, '订单取消',
+        order.toUid !== 'me' ? order.toUid : null);
+      cancelOrder(order, 'TA 取消的');
+      changed = true;
+      /* TA 取消买给你的单：卡上自动变已取消，再补一句人话 */
+      if (order.toUid === 'me' && order.buyerUid !== 'me' && typeof Engine !== 'undefined') {
+        const conv = DB.state.convs.find(c => c.type === 'single' && c.peerId === order.buyerUid);
+        if (conv) Engine.pushRaw(conv, {
+          id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+          from: 'ai', type: 'text', text: pick(CANCEL_LINES), ts: Date.now()
+        });
+      }
+    });
+    if (changed) DB.save();
+  }
+
   /* ---------- 心跳：到点的节点推进 + 可见卡片 ETA 刷新（20s，轻量） ---------- */
   function tick() {
     runSafe('mall.tick.settle', () => settleAll());
     runSafe('mall.tick.income', tickIncome);
+    runSafe('mall.tick.taCancel', taCancelTick);
     runSafe('mall.tick.paint', () => {
       if (document.getElementById('page-mall').classList.contains('active')) { renderCats(); renderList(); }
       document.querySelectorAll('#page-chat .moc[data-order]').forEach(card => {
@@ -25323,13 +25541,48 @@ const Billiards = (function () {
      不各处打补丁，整局按 8 球重摆并播报一句。 */
   function ensure(r) {
     const b = B(r);
-    if (b && b.v === 2) return b;
+    if (b && b.v === 2) {
+      /* 残局跟新（她 10-10 11:11“残局也要及时跟着改”）：升级前的存量局带着旧伤——
+         先手协商结果（blackUid）和台球回合（bill.turn）是两套，旧局可能“她先手却显示对方打”。
+         还没人出过杆的局（开局特征）就对齐协商结果，别让她接着玩一局错手序的棋。 */
+      if (r.blackUid && b.first == null && (b.phase === 'aim' || b.phase === 'taThink') && b.turn !== r.blackUid) {
+        applyFirst(r, r.blackUid, false);
+        return B(r);
+      }
+      return b;
+    }
     newRoom(r);
     feed(r, 'sys', '台球升级 8 球制，这一局重摆');
     return B(r);
   }
+  /* 先手对齐（她 10-10：“明明是我先手，下方显示对方打”）：协商定的先手写进台球回合。
+     开局特征（first==null，还没人出过杆）才动，打到一半不动。 */
+  function applyFirst(r, uid, silent) {
+    const b = B(r);
+    b.turn = uid;
+    (r.plans || []).forEach(p => { if (p.kind === 'btTa' || p.kind === 'btStrike') p.done = true; });
+    r.plans = (r.plans || []).filter(p => !p.done);
+    b.taAnim = null; b.taPullAt = null;
+    if (uid === 'me') { b.phase = 'aim'; Games.armUrge(r); }
+    else { b.phase = 'taThink'; armTa(r); }
+    if (!silent) feed(r, 'sys', '先手更正：' + (uid === 'me' ? '你' : esc(name(uid))) + ' 先开杆');
+    DB.save();
+  }
+  function syncFirst(r, uid) {
+    const b = B(r);
+    if (!b || b.v !== 2) return;
+    if (b.first != null || b.phase === 'moving' || b.phase === 'over') return;   /* 开过杆的不动 */
+    applyFirst(r, uid, true);
+  }
   function taUid(r) { return (r.players || []).find(u => u !== 'me') || 'ta'; }
-  function name(u) { return u === 'me' ? '我' : ((DB.state.contacts || []).find(c => c.id === u) || { name: 'TA' }).name || 'TA'; }
+  /* 名字统一走 Home.uidName（备注/别名优先）：旧写法直读 contact.name，她给联系人改了备注
+     （如叫 baby）桌上还落原始名（如测试）——她 10-10 13:47 抓到。同 game.js 的 name() 口径。 */
+  function name(u) {
+    if (u === 'me') return '我';
+    /* 桌上的人不在了（局中被删好友）给 '?'：同 game.js 八修 N 段口径 */
+    if (typeof Home !== 'undefined' && Home.uidName) return Home.contactById(u) ? Home.uidName(u) : '?';
+    return ((DB.state.contacts || []).find(c => c.id === u) || { name: 'TA' }).name || 'TA';
+  }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
   function feed(r, who, text) { if (typeof Games !== 'undefined' && Games.feed) Games.feed(r, who, text); }
   function myGroupOf(r, uid) { return B(r).group[uid === 'me' ? 'me' : 'ta']; }
@@ -25424,11 +25677,29 @@ const Billiards = (function () {
     }
     const myG = myGroupOf(r, shooter);
     const cleared = myG ? groupLeft(r, myG) === 0 : false;
-    /* 黑 8 先裁胜负（不管这杆犯不犯规） */
+    /* 黑 8（她 10-10 11:11 拍板：提前进黑 8 不再判输赢，只判违规 + 自由球；清台收官进黑 8 才算赢） */
     if (eight) {
       const win = !cuePot && myG && cleared;
-      return finish(r, win ? shooter : opp,
-        win ? '清台打进黑 8' : (myG ? '未清台进黑 8' : '开球进了黑 8'));
+      if (win) return finish(r, shooter, '清台打进黑 8');
+      /* 提前进黑 8 = 犯规：黑 8 放回置球点，对局继续，按犯规交对方自由球 */
+      const eightBall = b.balls.find(x => x.n === 8);
+      if (eightBall) {
+        eightBall.on = true; eightBall.vx = 0; eightBall.vy = 0;
+        let ex = W / 2, ey = H * 0.30, tries = 0;
+        while (b.balls.some(o => o.on && o !== eightBall && Math.hypot(o.x - ex, o.y - ey) < BR * 2.3) && tries++ < 40) {
+          ex = PAD + BR + Math.random() * (W - 2 * (PAD + BR));
+          ey = H * 0.26 + Math.random() * (H * 0.12);
+        }
+        eightBall.x = ex; eightBall.y = ey;
+      }
+      b.potted = b.potted.filter(n => n !== 8);
+      b.fouls[shooter === 'me' ? 'me' : 'ta']++;
+      const why8 = cuePot ? '白球和黑 8 一起进袋' : '提前进了黑 8';
+      feed(r, 'sys', '犯规：' + why8 + '，黑 8 放回桌面');
+      b.notice = '犯规 · ' + why8;
+      collectPots(r, shooter);
+      handOver(r, true);
+      return;
     }
     /* 犯规判定 */
     let foul = false, why = '';
@@ -25547,28 +25818,28 @@ const Billiards = (function () {
   }
   function taShot(r) {
     const b = B(r);
-    if (b.taAnim) return;   /* 已在出杆动画中，不叠加 */
+    if (b.taAnim) {
+      /* 动画在但击杆计划丢了（advance 吃掉/迁移）：补排，别让动画空转卡死 */
+      if (!(r.plans || []).some(p => p.kind === 'btStrike' && !p.done)) {
+        (r.plans || []).push({ kind: 'btStrike', at: Date.now() + 800, done: false });
+        if (typeof Games !== 'undefined' && Games.scheduleTimers) Games.scheduleTimers(r);
+      }
+      return;
+    }
     const plan = taPick(r);
     if (!plan) return;
-    /* 动画期间自愈闸不补计划，但 place 态的 TA 自由球还得闸住自愈——保持原逻辑范围 */
     /* 出杆三拍动画（她 10-10：要看得见对方出杆）：
-       ① 转杆瞒准：杆从当前角缓动到目标角（带人手微晃，越接近目标抖得越小）；
+       ① 转杆瞄准：杆从当前角缓动到目标角（带人手微晃，越接近目标抖得越小）；
        ② 拉杆蓄力：杆往回拉到这杆力度对应的拉伸量；
        ③ 击出：复用 cueStrike 击打动画，球应声而出。
-       用 setTimeout 推进（不依赖 rAF，页面切走也照打）；渲染层每帧按时间插值。 */
+       计划环驱动（她 10-09 教训：计划只进队列不排定时器会卡死；且真机切后台 setTimeout 会被冻结）——
+       btStrike 计划到点才真出杆，渲染层只按时间插值，不再依赖 setTimeout。 */
     let d = plan.angle - b.aimA;
     d = Math.atan2(Math.sin(d), Math.cos(d));       /* 走最近的等价角，不绕大圈 */
     b.taAnim = { from: b.aimA, to: b.aimA + d, pow: plan.power, t0: Date.now(),
       aimDur: 900 + Math.random() * 500, pullDur: 300 + Math.random() * 200 };
-    setTimeout(() => {
-      const bb = B(r); if (!bb || bb.phase !== 'taThink' || !bb.taAnim) return;
-      bb.taPullAt = Date.now();
-    }, b.taAnim.aimDur);
-    setTimeout(() => {
-      const bb = B(r); if (!bb || bb.phase !== 'taThink' || !bb.taAnim) return;
-      const a = bb.taAnim; bb.taAnim = null; bb.taPullAt = null;
-      shoot(r, a.to, a.pow);
-    }, b.taAnim.aimDur + b.taAnim.pullDur);
+    (r.plans || []).push({ kind: 'btStrike', at: Date.now() + b.taAnim.aimDur + b.taAnim.pullDur, done: false });
+    if (typeof Games !== 'undefined' && Games.scheduleTimers) Games.scheduleTimers(r);
   }
 
   /* ---------- 计划环 ---------- */
@@ -25587,6 +25858,14 @@ const Billiards = (function () {
       taShot(r);
       return true;
     }
+    if (p.kind === 'btStrike') {
+      /* 三拍的第三拍：计划环到点真出杆（幂等：动画已清就吞掉） */
+      if (b.phase !== 'taThink' || !b.taAnim) return true;
+      const a = b.taAnim; b.taAnim = null; b.taPullAt = null;
+      shoot(r, a.to, a.pow);
+      return true;
+    }
+    if (p.kind === 'taMove') return true;   /* 先手已由 syncFirst 在协商落定时对齐，壳层这步没有活干 */
     return false;
   }
   function taPlace(r) {
@@ -25766,7 +26045,8 @@ const Billiards = (function () {
     } else lastTs = 0;
     /* 自愈闸（10-09 根治）：TA 回合/TA 自由球却没有任何待执行计划 = 永久卡死。
        任何路径把计划弄丢（advance 吃了坏计划、迁移、时钟冻结）都在这里补回。 */
-    if ((b.phase === 'taThink' && !b.taAnim) || (b.phase === 'place' && b.turn !== 'me')) {   /* 出杆动画进行中不算卡死，别重排（会双杆同出） */
+    if ((b.phase === 'taThink' && !((r.plans || []).some(p => (p.kind === 'btTa' || p.kind === 'btStrike') && !p.done))) ||
+        (b.phase === 'place' && b.turn !== 'me')) {
       if (!(r.plans || []).some(p => p.kind === 'btTa' && !p.done)) armTa(r);
     }
     draw(r, cv);
@@ -25896,8 +26176,8 @@ const Billiards = (function () {
     let pull = myAim ? 9 + (b.power || 0) * 26 : (b.phase === 'moving' ? 0 : 6);
     if (!myAim && b.taAnim && b.phase === 'taThink') {
       ang = taAnimAngle(b);
-      const a = b.taAnim;
-      pull = b.taPullAt ? 6 + Math.min(1, (Date.now() - b.taPullAt) / a.pullDur) * (3 + a.pow * 26) : 6;
+      const a = b.taAnim, t = Date.now() - a.t0;
+      pull = t <= a.aimDur ? 6 : 6 + Math.min(1, (t - a.aimDur) / a.pullDur) * (3 + a.pow * 26);
     }
     if (b.phase === 'moving' && b.cueStrike) {
       const t = Date.now() - b.cueStrike;
@@ -25931,6 +26211,7 @@ const Billiards = (function () {
       onPlan: onPlan,
       onTimeout: onTimeout,
       onResign: onResign,
+      syncFirst: syncFirst,
       render: render
     };
   }
@@ -26419,6 +26700,11 @@ const Games = (function () {
   function setBlack(r, uid, line) {
     r.blackUid = uid; r.pendingFirst = null; r.phase = 'playing';
     feed(r, 'sys', line || ('商定好了——' + esc(name(uid)) + ' 先手'));
+    /* 先手张冠李戴根治（她 10-10 11:11）：协商定的先手要同步进对局——台球这类自己管回合的
+       游戏，回合以前是按 stateRoll 抽的，跟协商结果完全脱钩，出现过“明明是我先手，
+       下方显示对方打”。有 syncFirst 的游戏协商落定就把先手写进去。 */
+    const d0 = defOf(r);
+    if (d0.syncFirst) d0.syncFirst(r, uid);
     armUrge(r);        // 一口钟只住 armUrge，不在这里再拼一遗
     if (uid !== 'me') r.plans.push({ kind: 'taMove', at: Date.now() + rand(TA_MOVE_SEC[0], TA_MOVE_SEC[1]) * 1000, done: false });
     scheduleTimers(r);
