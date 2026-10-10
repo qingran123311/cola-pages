@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261010-164127 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261010-174118 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -5027,7 +5027,10 @@ const DB = (function () {
       if (!navigator.storage || !navigator.storage.persist) { persistFlag = '这浏览器不支持'; return Promise.resolve(persistFlag); }
       return navigator.storage.persist()
         .then(() => (navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)))
-        .then(p => { persistFlag = p ? '已受保护（浏览器不会自己清）' : '未授权（磁盘紧张时浏览器可能自己清掉）'; return persistFlag; })
+        .then(p => { persistFlag = p ? '已受保护（浏览器不会自己清）' : '未授权（磁盘紧张时浏览器可能自己清掉）';
+          /* 她 10-10：拿不到持久化保护＝丢图根因之一。但这是常态不是异常（黑匣子留给真异常），
+             保护状态在存储概览常显；若未授权，全量备份就是留好的退路 */
+          return persistFlag; })
         .catch(() => { persistFlag = '查不到'; return persistFlag; });
     } catch (e) { persistFlag = '查不到'; return Promise.resolve(persistFlag); }
   }
@@ -5049,6 +5052,14 @@ const DB = (function () {
       const V = vault();
       if (!V) { try { snapMsgs(); } catch (e) {} return true; }
       try { await V.unpack(state); } catch (e) {}
+      /* 她 10-10：媒体本体搬进原生私有文件——IDB 只当缓存，系统清/坏 IDB 也清不到应用私有文件。
+         幂等，每次启动扫一遍；壳没桥时这里空转。
+         不堵启动链：搬家不急，和清扫一样挂空闲档（stub/慢 IDB 环境卡住也不能拖 boot） */
+      setTimeout(() => {
+        (async function () {
+          try { if (V.migrateToNative) { const mv = await V.migrateToNative(); if (mv && typeof logErr === 'function') logErr('媒体搬家：' + mv + ' 个本体落进原生文件'); } } catch (e) { if (typeof logErr === 'function') logErr('媒体搬家启动失败：' + ((e && e.message) || e) + '（下次开页自动重试）'); }
+        })();
+      }, 2500);
       try { await V.snap(todayKey(), V.pack(state.msgs).doc); } catch (e) {}
       try { await migrateLegacySnaps(); } catch (e) {}
       /* 上次主档没写进去（配额）而整档进了影子：影子更新就把那份新的顶上，一条不丢 */
@@ -8855,6 +8866,19 @@ const Media = (function () {
    file:// 下 IDB 可用且刷新持久已实测（docs/idb-probe.html，2026-08-27）。 */
 const MediaStore = (function () {
   const DBN = 'LOVEX_MEDIA', ST = 'blobs';
+  /* 她 10-10 16:59 根治（她说“如何做到持久不丢”）：媒体本体进原生私有文件（微信同款架构）——
+     WebView 的 IndexedDB 会被系统弄坏（组件更新/渲染进程崩溃/配额驱逐，今天 199 个本体就是这么没的），
+     应用私有文件 Android 永不动。IDB 降级成缓存：写=原生+IDB 双写，读=原生优先 IDB 兑底，
+     启动时把 IDB 里还活着的本体搬进原生（幂等）。壳没这三座桥（旧 APK/网页）就自动降级纯 IDB。 */
+  /* 惰性现查：桥什么时候挂上都能用（APK 里 addJavascriptInterface 先于页面；探针里 mock 在 boot 后也不怕） */
+  const NATIVE = () => (typeof window !== 'undefined' && window.LovexNative &&
+    typeof window.LovexNative.saveMedia === 'function' &&
+    typeof window.LovexNative.loadMedia === 'function' &&
+    typeof window.LovexNative.delMedia === 'function') ? window.LovexNative : null;
+  const NK = k => String(k).replace(/[^@a-z0-9:]/gi, '_');
+  function nativePut(k, v) { const N = NATIVE(); if (!N) return false; try { return N.saveMedia(NK(k), v) === true; } catch (e) { return false; } }
+  function nativeGet(k) { const N = NATIVE(); if (!N) return ''; try { return N.loadMedia(NK(k)) || ''; } catch (e) { return ''; } }
+  function nativeDel(k) { const N = NATIVE(); if (!N) return; try { N.delMedia(NK(k)); } catch (e) { /* 原生侧删失败不刷黑匣子：残留本体由媒体体检兜底发现，IDB 侧已删即不再引用 */ } }
   const urls = new Map();   // key→objectURL 复用，避免反复建销
   let dbP = null;
   function db() {
@@ -8885,8 +8909,22 @@ const MediaStore = (function () {
       rq.onerror = () => reject(rq.error || new Error('idb-keys'));
     }));
   }
+  /* 媒体本体搬家：IDB → 原生私有文件（只搬 @mv 本体，快照/备份是对象在 IDB 足够）。幂等，启动时跑 */
+  async function migrateToNative() {
+    if (!NATIVE()) return 0;
+    let ks = [];
+    try { ks = await keys(); } catch (e) { return 0; }
+    let n = 0;
+    for (const k of ks) {
+      if (!/^@mv/.test(k) || nativeGet(k)) continue;
+      const v = await run('readonly', s => s.get(k));
+      if (typeof v === 'string' && v.length > 512 && nativePut(k, v)) n++;
+    }
+    return n;
+  }
   return {
     available() { return !!window.indexedDB; },
+    migrateToNative,
     /* dataURL → Blob（视频/封面导出成 JSON 要转回来；moments 同用这一份，不两处各写一套） */
     dataUrlToBlob(dataUrl) {
       const p = String(dataUrl).split(',');
@@ -8896,9 +8934,19 @@ const MediaStore = (function () {
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
       return new Blob([arr], { type: mime });
     },
-    put(key, blob) { return run('readwrite', s => s.put(blob, key)); },
-    get(key) { return run('readonly', s => s.get(key)); },
+    put(key, blob) {
+      /* 字符串本体（dataURL 图/音频）镜像进原生；对象（快照/备份 doc）和 Blob（视频）留 IDB */
+      if (typeof blob === 'string' && blob.length > 512) nativePut(key, blob);
+      return run('readwrite', s => s.put(blob, key));
+    },
+    get(key) {
+      /* 原生优先：命中直接回（同步桥）；没命中回 IDB（异步）——IDB 被清也读得回来 */
+      const s = nativeGet(key);
+      if (s) return Promise.resolve(s);
+      return run('readonly', s => s.get(key));
+    },
     del(key) {
+      nativeDel(key);
       const u = urls.get(key);
       if (u) { try { URL.revokeObjectURL(u); } catch (_) {} urls.delete(key); }
       return run('readwrite', s => s.delete(key));
@@ -9035,7 +9083,12 @@ const MediaVault = (function () {
       st.missingLogged = 1;
       /* 她 10-10 16:39 骨刀：这句文案在 APK 里是胡说——数据在应用沙箱，不存什么浏览器。
        如实写：存储层被系统关掉/清掉，她没动过任何东西也会发生；清扫有黑匣子，不会无声删 */
-    logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（媒体库存储被系统层关闭或清掉了，不是清扫删的——清扫删必记账）。去手机「下载」目录找 LOVEX每日备份 json 导入，图都能拿回来');
+    logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（媒体库存储被系统层关闭或清掉了，不是清扫删的——清扫删必记账）。去手机「下载」目录找 LOVEX每日备份 json 用「找回图片」补回');
+      /* 她 10-10 拍板：丢图必须解决——发现丢，第一时间把手机全量备份写掉（内存里还在的都能带走），
+         别等她手点：丢剩下的跟着丢就是二次事故 */
+      if (typeof DB !== 'undefined' && DB.dailySnap) {
+        try { DB.dailySnap(true); } catch (e) { /* 体检触发的自动备份失败不在这里记：dailySnap 内部自己有失败记账+15 分钟重试 */ }
+      }
     }
     return { found, missing };
   }
@@ -9204,7 +9257,10 @@ const MediaVault = (function () {
     snapFull, listFull, readFull, harvest,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
-    broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); }
+    broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); },
+    /* 她 10-10：媒体本体搬原生，透传 MediaStore 的搬家器给启动链；mediaStore 供探针验双写 */
+    migrateToNative() { return MediaStore.migrateToNative(); },
+    mediaStore: MediaStore
   };
 })();
 /* =====================================================
