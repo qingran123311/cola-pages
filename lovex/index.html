@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-142906 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-145902 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -5353,7 +5353,11 @@ var Notify = (function () {
       if (N) {                                   /* 壳里：直接交给系统通知 */
         if (!DB.state.settings.notify) return;
         if (document.visibilityState === 'visible' && document.hasFocus()) return;
-        runSafe('notify.native', function () { N.notifyNow(title, body); });
+        runSafe('notify.native', function () {
+          /* 她 10-11 14:45：原生返回结果，失败原因进黑匣子，不再两头静默 */
+          var r = N.notifyNow(title, body);
+          if (r && r !== 'ok') elog('横幅没弹出：' + r);
+        });
         return;
       }
       if (!DB.state.settings.notify || !supported()) return;
@@ -5414,7 +5418,14 @@ var Notify = (function () {
 
   /* mine 页行文案 */
   function rowText() {
-    if (native()) return DB.state.settings.notify ? '已开启（应用通知）' : '未开启';
+    var N = native();
+    if (N) {
+      /* 她 10-11 14:45：壳里把系统层状态直接亮出来，被拒/总开关关一眼看到 */
+      var d = '';
+      if (typeof N.notifyDiag === 'function') d = String(N.notifyDiag());   /* 桥缺失时空串即可，不吞异常口 */
+      var sys = d.indexOf('perm=1') >= 0 && d.indexOf('enabled=1') >= 0 ? '' : '（系统权限被拒，点开重授）';
+      return DB.state.settings.notify ? ('已开启（应用通知）' + sys) : '未开启';
+    }
     if (!supported()) return '不支持';
     if (DB.state.settings.notify && Notification.permission === 'granted') return '已开启';
     return '未开启';
