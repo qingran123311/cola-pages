@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261010-174118 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-102127 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -8909,18 +8909,33 @@ const MediaStore = (function () {
       rq.onerror = () => reject(rq.error || new Error('idb-keys'));
     }));
   }
-  /* 媒体本体搬家：IDB → 原生私有文件（只搬 @mv 本体，快照/备份是对象在 IDB 足够）。幂等，启动时跑 */
+  /* 媒体本体搬家：IDB → 原生私有文件。搬两类：@mv 字符串本体（图/音频 dataURL）、
+     Blob 本体（视频 cvr_/vid_/海报 pos_，转 dataURL 存文本）。@ 开头的快照/备份 doc 是对象，不搬。
+     幂等（原生已有即跳过），启动时跑 */
   async function migrateToNative() {
     if (!NATIVE()) return 0;
     let ks = [];
     try { ks = await keys(); } catch (e) { return 0; }
     let n = 0;
     for (const k of ks) {
-      if (!/^@mv/.test(k) || nativeGet(k)) continue;
+      if (k.charAt(0) === '@' && k.indexOf('@mv') !== 0) continue;   // 快照/备份/影子是 doc，不搬
+      if (nativeGet(k)) continue;
       const v = await run('readonly', s => s.get(k));
-      if (typeof v === 'string' && v.length > 512 && nativePut(k, v)) n++;
+      if (typeof v === 'string' && v.length > 512) { if (nativePut(k, v)) n++; continue; }
+      if (v && typeof v === 'object' && typeof v.type === 'string' && v.size > 0) {
+        try { const t = await blobToDataUrl(v); if (t && nativePut(k, t)) n++; } catch (e) { /* 单个 Blob 转换失败不拦整批，下次开页搬家自动重试 */ }
+      }
     }
     return n;
+  }
+  /* dataURL ⇄ Blob 互转的另一半（Blob→dataURL；导出备份/原生镜像用，moments 同用这一份） */
+  function blobToDataUrl(blob) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = () => rej(fr.error || new Error('fr-fail'));
+      fr.readAsDataURL(blob);
+    });
   }
   return {
     available() { return !!window.indexedDB; },
@@ -8934,13 +8949,22 @@ const MediaStore = (function () {
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
       return new Blob([arr], { type: mime });
     },
-    put(key, blob) {
-      /* 字符串本体（dataURL 图/音频）镜像进原生；对象（快照/备份 doc）和 Blob（视频）留 IDB */
+    async put(key, blob) {
+      /* 字符串本体（dataURL 图/音频）镜像进原生；对象（快照/备份 doc）留 IDB。
+         Blob（视频/封面，idb: 引用）也要进原生——10-11 她报朋友圈封面丢了：图（@mv 字符串）救回了，
+         视频封面（Blob）没进搬家/备份的找回链——现在 Blob 异步转 dataURL 也镜像进原生 */
       if (typeof blob === 'string' && blob.length > 512) nativePut(key, blob);
+      else if (blob && typeof blob === 'object' && typeof blob.type === 'string' && blob.size > 0) {
+        /* 镜像异步走（FileReader 是真 I/O，不等它拖慢入库）；IDB 是主位，
+           「IDB 清了原生还没写完」的窗口由每次开页搬家器幂等补搬兜底 */
+        blobToDataUrl(blob).then(t => { if (t) nativePut(key, t); }).catch(() => {});
+      }
       return run('readwrite', s => s.put(blob, key));
     },
     get(key) {
-      /* 原生优先：命中直接回（同步桥）；没命中回 IDB（异步）——IDB 被清也读得回来 */
+      /* 原生优先：命中直接回（同步桥）；没命中回 IDB（异步）——IDB 被清也读得回。
+         注意：原生命中时视频/封面返回的是 dataURL 字符串（原生层只存文本），
+         消费方要 Blob 的走 src()，那里面统一转回 */
       const s = nativeGet(key);
       if (s) return Promise.resolve(s);
       return run('readonly', s => s.get(key));
@@ -8964,7 +8988,8 @@ const MediaStore = (function () {
       try {
         const b = await this.get(key);
         if (!b) return '';
-        const u = URL.createObjectURL(b);
+        /* 原生命中时是 dataURL 字符串（原生层只存文本），转回 Blob 再给 objectURL */
+        const u = URL.createObjectURL(typeof b === 'string' ? this.dataUrlToBlob(b) : b);
         urls.set(key, u);
         return u;
       } catch (e) { return ''; }
@@ -13716,7 +13741,9 @@ const FreeTalk = (function () {
     advY:  ['真的', '其实', '反正', '好像', '大概', '应该', '居然', '确定'],             // 语气
     time:  ['今天', '明天', '后天', '昨天', '每天', '晚上', '半夜', '一大早', '周末', '放假', '刚才', '等下', '下周', '月底'],
     conj:  ['不过', '但是', '可是', '然后', '对了', '其实', '话说', '突然', '反正', '就是说', '结果', '而且', '后来', '所以'],
-    sigh:  ['哇', '诶', '哎', '嘶', '呜', '噢', '啊这', '好家伙', '救命', '麻了', '绝了', '无语住了', '笑不活了', '绷不住了', '服了', '离谱'],
+    join2: ['，', '，', '，', ' ', '，然后', '，不过', '，而且', '，就是', '，后来', '，结果'],
+  preT:  ['那', '嗯嗯', '诶', '哈', '哦对', '话说', '我跟你讲', '欸', '刚刚', '突然', '怎么说呢', '说起来'],
+  sigh:  ['哇', '诶', '哎', '嘶', '呜', '噢', '啊这', '好家伙', '救命', '麻了', '绝了', '无语住了', '笑不活了', '绷不住了', '服了', '离谱'],
     weather: ['下雨了', '起风了', '好冷', '好晒', '闷得很', '降温了', '打雷了', '出太阳了', '月亮好圆'],
     quit:  ['熬夜', '生气', '难过', '乱想', '不吃早饭', '一直玩手机', '瞎想', '喝冰的'],
     /* 她 09:45：口语化表达/长短句/单词句/叠词叠句；dup=可整句重复，who=可带称呼尾巴 */
@@ -13876,8 +13903,8 @@ const FreeTalk = (function () {
         const rolls = [];
         const core = svbCore();
         if (core) {
-          rolls.push(core + '，' + pick(DIC.short).t);
-          rolls.push(pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj) + '，' + core);
+          rolls.push(core + pick(DIC.join2) + pick(DIC.short).t);
+          rolls.push(pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj) + pick(DIC.join2) + core);
         }
         const c2 = pick(DIC.collo);
         if (c2) rolls.push(pick(DIC.conj) + '，' + c2);
@@ -13887,7 +13914,7 @@ const FreeTalk = (function () {
         const core = svbCore();
         if (!core) return null;
         const c2 = pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj);
-        return pick(DIC.sigh) + '，' + core + '，' + c2;
+        return pick(DIC.sigh) + pick(DIC.join2) + core + pick(DIC.join2) + c2;
       } },
     { id: 'collo', make() { return pick(DIC.collo) + (Math.random() < 0.4 ? pick(DIC.tail) : ''); } },  // 口语整句
     { id: 'short', make() { const s = pick(DIC.short); return s.t + (Math.random() < 0.35 ? pick(DIC.tail) : ''); } },  // 单词句/短句
@@ -13927,7 +13954,28 @@ const FreeTalk = (function () {
   const HOMO_WORDS = {
     '猫猫': ['毛毛'], '毛毛': ['猫猫'], '豆豆': ['逗逗'], '逗逗': ['豆豆'],
     '圆圆': ['园园'], '园园': ['圆圆'], '球球': ['求求'], '求求': ['球球'],
-    '妹妹': ['美美'], '美美': ['妹妹']
+    '妹妹': ['美美'], '美美': ['妹妹'],
+    '晚安': ['碗安', '完安'], '早上': ['枣上'], '今晚': ['金晚', '斤晚'],
+    '想你': ['香腻'], '爱你': ['艾你'], '喜欢': ['西欢'], '开心': ['开薪'],
+    '生气': ['声气'], '放心': ['芳心'], '知道': ['直到'], '直到': ['知道'],
+    '睡觉': ['水饺'], '水饺': ['睡觉'], '吃饭': ['迟饭'], '游戏': ['有戏'],
+    '手机': ['收集'], '收集': ['手机'], '朋友': ['盆友'], '时间': ['十件'],
+    '工作': ['攻坐'], '学习': ['薛习'], '结果': ['接过'], '接过': ['结果'],
+    '需要': ['须要'], '须要': ['需要'], '原来': ['元来'], '声音': ['身音'],
+    '现在': ['现载'], '明天': ['名天'], '今天': ['金天'], '下午': ['下五'],
+    '中午': ['钟午'], '晚上': ['碗上'], '早上': ['早商'], '白天': ['百天'],
+    '为什么': ['为什莫'], '怎么样': ['怎莫样'], '好吧': ['把吧'],
+    '好啦': ['好拉'], ' come': null,
+    '回来': ['会来'], '出来': ['初来'], '过来': ['过赖'],
+    '吃了吗': ['迟了吗'], '干嘛': ['敢嘛'], '忙吗': ['芒吗'],
+    '累吗': ['雷吗'], '饿吗': ['额吗'], '好呀': ['号呀'],
+    '没事': ['没试'], '不好': ['不号'], '不用': ['不勇'],
+    '烦人': ['凡人'], '难过': ['难国'], '开心吗': ['开薪吗'],
+    '洗澡': ['洗枣'], '追剧': ['锥剧'], '上班': ['上斑'],
+    '下课': ['下棵'], '回家': ['会家'], '到家': ['到假'],
+    '早安': ['枣安'], '午安': ['五安'], '晚安啦': ['碗安啦'],
+    '宝宝': ['饱饱'], '抱抱': ['报报'], '亲亲': ['芹芹'],
+    '加油': ['加柚'], '辛苦': ['辛库'], '休息': ['休西']
   };
   function homoOf(word) { return HOMO_WORDS[word] || null; }
 
@@ -13956,7 +14004,84 @@ const FreeTalk = (function () {
     'jin':  ['今', '金', '斤', '进', '近', '尽', '劲', '锦'],
     'tian': ['天', '田', '甜', '添', '填', '舔'],
     'zhu':  ['住', '主', '猪', '珠', '竹', '煮', '祝'],
-    'xi':   ['喜', '西', '息', '习', '洗', '系', '细']
+    'xi':   ['喜', '西', '息', '习', '洗', '系', '细'],
+    'bu':   ['不', '布', '步', '部', '补', '捕'],
+    'ren':  ['人', '仁', '任', '忍'],
+    'zhong':['中', '种', '重', '钟', '忠', '终'],
+    'dao':  ['到', '道', '倒', '岛', '刀', '稻'],
+    'shang':['上', '商', '伤', '赏', '尚'],
+    'xia':  ['下', '夏', '吓', '虾', '侠'],
+    'guo':  ['过', '国', '果', '锅', '裹'],
+    'da':   ['大', '打', '达', '答', '搭'],
+    'xiao': ['小', '笑', '校', '消', '宵', '霄'],
+    'duo':  ['多', '朵', '躲', '舵'],
+    'shao': ['少', '烧', '勺', '绍'],
+    'kan':  ['看', '砍', '侃'],
+    'ting': ['听', '停', '厅', '挺', '亭'],
+    'shuo': ['说', '硕', '朔'],
+    'zuo':  ['做', '坐', '作', '昨', '左', '座'],
+    'ai':   ['爱', '唉', '挨', '哀', '癌'],
+    'neng': ['能'],
+    'yao':  ['要', '腰', '摇', '遥', '药', '耀'],
+    'hui':  ['会', '回', '汇', '慧', '灰', '恢'],
+    'lai':  ['来', '莱', '赖'],
+    'qu':   ['去', '取', '娶', '趣', '曲'],
+    'jia':  ['家', '加', '佳', '假', '价', '驾'],
+    'xue':  ['学', '雪', '血', '靴'],
+    'he':   ['喝', '和', '河', '何', '合', '盒'],
+    'di':   ['第', '低', '底', '地', '弟', '递'],
+    'gan':  ['干', '敢', '感', '赶', '甘'],
+    'pang': ['胖', '旁', '庞', '乓'],
+    'shou': ['瘦', '手', '受', '收', '首', '售'],
+    'sheng':['生', '声', '胜', '剩', '升', '绳'],
+    'xin':  ['心', '新', '信', '辛', '欣', '薪'],
+    'kai':  ['开', '凯', '揩'],
+    'mang': ['忙', '盲', '茫', '莽'],
+    'lei':  ['累', '雷', '泪', '类', '磊'],
+    'e':    ['饿', '恶', '额', '俄'],
+    're':   ['热', '惹'],
+    'leng': ['冷', '愣', '棱'],
+    'liang':['亮', '凉', '两', '量', '良', '辆'],
+    'an':   ['安', '按', '暗', '岸', '案'],
+    'ye':   ['也', '夜', '叶', '页', '业', '耶'],
+    'jiu':  ['就', '久', '酒', '旧', '救', '九'],
+    'dou':  ['都', '斗', '豆', '逗', '兜'],
+    'hai':  ['还', '海', '害', '孩', '嗨'],
+    'hen':  ['很', '狠', '恨'],
+    'tai':  ['太', '台', '抬', '态', '泰'],
+    'zhen': ['真', '枕', '阵', '镇', '针', '珍'],
+    'meng': ['梦', '猛', '萌', '蒙'],
+    'ming': ['明', '名', '命', '鸣', '铭'],
+    'xing': ['醒', '星', '姓', '性', '兴', '行'],
+    'qi':   ['起', '气', '七', '期', '齐', '骑'],
+    'ba':   ['吧', '八', '爸', '把', '罢'],
+    'a':    ['啊', '阿', '呵'],
+    'na':   ['哪', '拿', '那', '娜'],
+    'zhi':  ['知', '只', '之', '直', '纸', '指'],
+    'zhe':  ['这', '着', '折', '哲'],
+    'ge':   ['个', '歌', '哥', '隔', '格', '各'],
+    'jie':  ['姐', '接', '借', '街', '届', '结'],
+    'qing': ['请', '晴', '清', '轻', '青', '情'],
+    'song': ['送', '松', '宋', '颂'],
+    'gei':  ['给'],
+    'pei':  ['陪', '配', '佩', '赔'],
+    'bao':  ['抱', '宝', '报', '包', '饱', '暴'],
+    'qin':  ['亲', '勤', '琴', '芹', '寝'],
+    'bei':  ['被', '杯', '悲', '北', '背'],
+    'jiao': ['叫', '觉', '脚', '教', '角', '骄'],
+    'nao':  ['脑', '闹', '恼'],
+    'yan':  ['眼', '言', '严', '烟', '颜', '演'],
+    'zui':  ['嘴', '最', '罪', '醉'],
+    'tou':  ['头', '投', '透', '偷'],
+    'shen': ['身', '什', '深', '神', '申'],
+    'ti':   ['题', '提', '体', '替', '踢'],
+    'you':  ['有', '又', '右', '油', '游', '友'],
+    'hua':  ['话', '花', '画', '化', '华'],
+    'wen':  ['问', '闻', '文', '稳', '蚊'],
+    'xie':  ['写', '谢', '些', '鞋', '血'],
+    'su':   ['素', '速', '宿', '塑'],
+    'ku':   ['哭', '苦', '库', '酷', '裤'],
+    'han':  ['韩', '含', '寒', '喊', '汗']
   };
   const CHAR_SYL = {};
   Object.keys(HOMO_SYL).forEach(s => HOMO_SYL[s].forEach((c, i) => {
@@ -13967,9 +14092,10 @@ const FreeTalk = (function () {
   function charSelectMs(c) {
     const e = CHAR_SYL[c];
     if (!e) return 0;
-    let ms = 150 + Math.random() * 200;
-    ms += e.rank * (180 + Math.random() * 200);
-    if (e.n >= 8) ms += 200 + Math.random() * 300;
+    let ms = 180 + Math.random() * 220;
+    ms += e.rank * (200 + Math.random() * 220);
+    if (e.n >= 8) ms += 260 + Math.random() * 320;
+    if (e.n >= 10) ms += 200 + Math.random() * 260;   /* 候选上百的音节：多翻几页，挑准再上屏 */
     if (Math.random() < 0.18) ms += 400 + Math.random() * 600;
     return ms;
   }
@@ -13991,6 +14117,42 @@ const FreeTalk = (function () {
     /* 她 10-10 14:27：26 键选字层——句中每个字都有同音候选要翻，命中才计时 */
     String(text).split('').forEach(c => { ms += charSelectMs(c); });
     return ms;
+  }
+  /* 她 10-11 09:52：词级变换层——自由说话对组好的句子/抽到的字卡现场做小改动
+     （拼字卡机制本身不动，这是自由说话这一侧的加工）。算子全开、各自独立小概率：
+     前缀/尾缀/副词/形容词定语/疑问/删减（啥都能删）/加主语/代词换说/感叹开头，
+     命中一处=一次真实的挑选/删除/插入动作，带时间痕迹 */
+  const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '可', '贼'];
+  const QT2 = ['吗', '呢', '对吧', '好不好', '是不是呀', '啊', '是吧'];
+  function wordTransform(text, ctx) {
+    const t0 = String(text || '').trim();
+    if (!t0 || t0.length > 44 || FEED_BAD.test(t0) || /\d/.test(t0)) return null;
+    let out = t0, ms = 0;
+    const hit = () => { ms += 200 + Math.random() * 500; };
+    const r = p => Math.random() < p;
+    if (r(0.14) && !/^[我你哦嗯诶哇哈那话说]/.test(out)) { out = pick(DIC.preT) + '，' + out; hit(); }
+    else if (r(0.18) && !/[呀呢哦啦嘛鸭哟~…？?]$/.test(out)) { out = out + pick(DIC.tail.concat(['鸭', '哟', '……'])); hit(); }
+    else if (r(0.15)) {
+      const vs = DIC.verb.filter(v => out.indexOf(v.t) >= 0);
+      if (vs.length) { const v = pick(vs); out = out.replace(v.t, pick(ADV_INS) + v.t); hit(); } else return null;
+    }
+    else if (r(0.12)) {
+      const ns = DIC.noun.filter(n => n.t && out.indexOf(n.t) > 0);
+      if (ns.length) { const n = pick(ns); out = out.replace(n.t, pick(DIC.adjC) + '的' + n.t); hit(); } else return null;
+    }
+    else if (r(0.14) && !/[？?]/.test(out)) { out = out.replace(/[。！～~]*$/, '') + pick(QT2); hit(); }
+    else if (r(0.15)) {
+      if (/^我们?/.test(out) && out.length > 4) { out = out.replace(/^我们?/, ''); hit(); }
+      else if (/^(真的|其实|反正|好像|大概|应该)/.test(out) && out.length > 5) { out = out.replace(/^(真的|其实|反正|好像|大概|应该)/, ''); hit(); }
+      else if (/[，,]/.test(out)) { out = out.split(/[，,]/).pop(); hit(); }
+      else return null;
+    }
+    else if (r(0.12) && DIC.verb.some(v => out.indexOf(v.t) === 0)) { out = '我' + out; hit(); }
+    else if (r(0.1) && out.indexOf('我') === 0 && out.length > 3) { out = out.replace('我', '人家'); hit(); }
+    else if (r(0.1)) { out = pick(DIC.sigh) + '，' + out; hit(); }
+    else return null;
+    if (!out || out.length > 50 || out.indexOf('undefined') >= 0) return null;
+    return { text: out, extraMs: Math.round(ms) };
   }
   /* 她 10-10 14:27：近义词圈——组完小概率换着说（换个说法也是挑词，带时间痕迹） */
   function synonymize(text) {
@@ -14033,6 +14195,8 @@ const FreeTalk = (function () {
            她 10-10 14:27：近义换说也是挑选过程的一步 */
         const syn = synonymize(line);
         if (syn) return { text: syn.text, extraMs: Math.round(strokeTime(syn.text) + deliberate(syn.text) + syn.extraMs) };
+        const wt = (Math.random() < 0.3) ? wordTransform(line, ctx) : null;
+        if (wt) return { text: wt.text, extraMs: Math.round(strokeTime(wt.text) + deliberate(wt.text) + wt.extraMs) };
         return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
       }
     }
@@ -14080,7 +14244,8 @@ const FreeTalk = (function () {
     const arr = (Array.isArray(src) ? src : [src]).map(s => String(s || '').trim()).filter(Boolean);
     if (!arr.length) return null;
     let spent = 0;
-    while (spent < budget) {
+    if (arr[0] && arr[0].length <= 40 && Math.random() < 0.35) { const wt0 = wordTransform(arr[0], ctx); if (wt0) return { text: wt0.text, extraMs: Math.round(spent + strokeTime(wt0.text) + deliberate(wt0.text) + wt0.extraMs) }; }
+      while (spent < budget) {
       let line = null;
       try { line = makeRemix(arr, ctx); } catch (e) { line = null; }
       spent += 200 + Math.random() * 350;
@@ -14148,9 +14313,11 @@ const FreeTalk = (function () {
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序 */
+  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序 */
   /* 单字在同音候选里的位次（0=最高频）与该音节候选总数，只读，不上屏 */
   function homoRank(c) { const e = CHAR_SYL[c]; return e ? { rank: e.rank, n: e.n } : null; }
+  /* long2/long3 的连接方式多样化探针口：抽一句长句给探针统计连接符 */
+  function longSample() { const pool = FRAMES.filter(x => x.id === 'long2' || x.id === 'long3'); for (let i = 0; i < 24; i++) { const s = pool[Math.floor(Math.random() * pool.length)].make({}); if (s) return s; } return null; }
 })();
 
 /* =====================================================
@@ -31181,6 +31348,19 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { doc = JSON.parse(await f.text()); }
       catch (e) { UI.toast('这个文件读不出来，选导出的那种 .json 备份'); return; }
       const found = V.harvest(doc);
+      /* 备份文件 media 区的键值对直补（idb: 引用按原键回库）：视频/朋友圈封面/海报
+         是 'idb:cvr_xxx' 这种键名引用，不走 @mv 内容哈希链——10-11 她报封面找回后仍丢就是这条漏了 */
+      let blobPut = 0;
+      if (Array.isArray(doc.media)) {
+        for (const it of doc.media) {
+          try {
+            if (!it || !it.k || typeof it.v !== 'string') continue;
+            if (await MediaStore.get(it.k)) continue;   // 本体已在（原生/IDB）就不覆盖
+            await MediaStore.put(it.k, it.b ? MediaStore.dataUrlToBlob(it.v) : it.v);
+            blobPut++;
+          } catch (e) { logErr('找回图片：视频/封面入库失败 ' + (e && e.message)); }
+        }
+      }
       const need = V.pendingRefs(DB.state);
       const map = {};
       let put = 0;
@@ -31210,7 +31390,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         title: '找回图片结果', okText: '知道了',
         text: '这份文件里带图的 ' + found.size + ' 张\n'
           + '对上了 ' + keys.size + ' 张，贴回 ' + sites + ' 处\n'
-          + '· 聊天 ' + cChat + ' 处\n· 图片表情库 ' + cLib + ' 处\n· 朋友圈 ' + cMo + ' 处\n· 头像 ' + cAva + ' 处\n'
+          + '· 聊天 ' + cChat + ' 处\n· 图片表情库 ' + cLib + ' 处\n· 朋友圈 ' + cMo + ' 处\n· 头像 ' + cAva + ' 处\\n'
+          + (blobPut ? ('· 视频/封面 ' + blobPut + ' 个按原位补回\\n') : '')
           + (found.size > keys.size ? ('文件里还有 ' + (found.size - keys.size) + ' 张现在没地方用（不是丢的那些）\n') : '')
           + (keys.size ? '刷新一下就都出来了。' : '没对上——这份备份里的图和你现在缺的可能不是同一批。')
       });
@@ -31522,10 +31703,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const b = await DB.importBundleText(text);
       if (b.kind === 'all') {
         await DB.importAllBundle(b.data);
+        DB.save();                      // 整档换血立刻落盘：后面任何一步炸了新数据也不丢（她 10-10 实测：崩在渲染，导入白做）
         Theme.apply(DB.state.settings.theme, false);
-        renderMine();
-        renderMyAvatar();
+        /* 09-02 拆全局钩子时 bindMine 里的 renderMine 成了局部函数，这里裸调必炸（她 10-10 实报
+           renderMine is not defined）——整档覆盖后所有页面都要重画，直接重载，不逐个补调 */
         UI.toast('导入成功，数据已恢复' + (b.media ? ('，带回媒体本体 ' + b.media + ' 个') : ''));
+        setTimeout(() => location.reload(), 700);
+        return;
       } else if (b.kind === 'contact') {
         await importContactData(b.data);
       } else if (b.kind === 'msgs') {
@@ -31561,10 +31745,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!ok) return;
       DB.recoverFromBackup();
       Theme.apply(DB.state.settings.theme, false);
-      renderMine();
-      renderMyAvatar();
-      Home.render();
+      /* 同 runImportText：整档换血后重载，不裸调 bindMine 的局部函数（renderMine is not defined） */
       UI.toast('已恢复到上次备份');
+      setTimeout(() => location.reload(), 700);
+      return;
     }
     /* 她 10-09 07:06「这个问题不要再犯」：设置页全绑完后立标记 + 暴露重绑口。
      哨兵（模板头）8s 后查这个标记，若页面开了但按钮没接线，弹一条「修复」直接重绑——
