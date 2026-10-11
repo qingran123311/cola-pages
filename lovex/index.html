@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-102127 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-114631 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -13963,9 +13963,9 @@ const FreeTalk = (function () {
     '工作': ['攻坐'], '学习': ['薛习'], '结果': ['接过'], '接过': ['结果'],
     '需要': ['须要'], '须要': ['需要'], '原来': ['元来'], '声音': ['身音'],
     '现在': ['现载'], '明天': ['名天'], '今天': ['金天'], '下午': ['下五'],
-    '中午': ['钟午'], '晚上': ['碗上'], '早上': ['早商'], '白天': ['百天'],
+    '中午': ['钟午'], '晚上': ['碗上'], '白天': ['百天'],
     '为什么': ['为什莫'], '怎么样': ['怎莫样'], '好吧': ['把吧'],
-    '好啦': ['好拉'], ' come': null,
+    '好啦': ['好拉'],
     '回来': ['会来'], '出来': ['初来'], '过来': ['过赖'],
     '吃了吗': ['迟了吗'], '干嘛': ['敢嘛'], '忙吗': ['芒吗'],
     '累吗': ['雷吗'], '饿吗': ['额吗'], '好呀': ['号呀'],
@@ -13975,7 +13975,10 @@ const FreeTalk = (function () {
     '下课': ['下棵'], '回家': ['会家'], '到家': ['到假'],
     '早安': ['枣安'], '午安': ['五安'], '晚安啦': ['碗安啦'],
     '宝宝': ['饱饱'], '抱抱': ['报报'], '亲亲': ['芹芹'],
-    '加油': ['加柚'], '辛苦': ['辛库'], '休息': ['休西']
+    '加油': ['加柚'], '辛苦': ['辛库'], '休息': ['休西'],
+    '奶茶': ['那茶'], '水果': ['睡果'], '周末': ['粥末'], '放假': ['方假'],
+    '电视': ['店视'], '电影': ['店影'], '音乐': ['音月'], '出门': ['初门'],
+    '等下': ['灯下'], '外套': ['袜套']
   };
   function homoOf(word) { return HOMO_WORDS[word] || null; }
 
@@ -14113,44 +14116,54 @@ const FreeTalk = (function () {
   }
   function deliberate(text) {
     let ms = 0;
-    Object.keys(HOMO_WORDS).forEach(w => { if (String(text).indexOf(w) >= 0) ms += selectTime(w); });
+    const s = String(text);
+    /* 长词优先：命中长词（如「开心吗」）后，被它包含的短词（「开心」）不重复计时 */
+    const hits = Object.keys(HOMO_WORDS).filter(w => s.indexOf(w) >= 0)
+      .filter(w => !Object.keys(HOMO_WORDS).some(k => k !== w && k.length > w.length && s.indexOf(k) >= 0 && k.indexOf(w) >= 0));
+    hits.forEach(w => { ms += selectTime(w); });
     /* 她 10-10 14:27：26 键选字层——句中每个字都有同音候选要翻，命中才计时 */
-    String(text).split('').forEach(c => { ms += charSelectMs(c); });
+    s.split('').forEach(c => { ms += charSelectMs(c); });
     return ms;
   }
   /* 她 10-11 09:52：词级变换层——自由说话对组好的句子/抽到的字卡现场做小改动
      （拼字卡机制本身不动，这是自由说话这一侧的加工）。算子全开、各自独立小概率：
      前缀/尾缀/副词/形容词定语/疑问/删减（啥都能删）/加主语/代词换说/感叹开头，
      命中一处=一次真实的挑选/删除/插入动作，带时间痕迹 */
-  const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '可', '贼'];
+  /* 她 10-11 11:39 复查重构：算子表轮询——老版 else-if 链抑中算子但不适用（如句里没动词）
+     就 return null 短路，后面本来能用的算子全被浪费；改洗牌后逐个试，
+     拄中且适用才生效，不适用继续下一个，全不中才放弃——每个算子都有真实机会 */
+  const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '贼'];   /* 「可」单独放动词前不通（可吃火锅），已剔 */
   const QT2 = ['吗', '呢', '对吧', '好不好', '是不是呀', '啊', '是吧'];
+  const WT_REDUP = /好吃|好玩|好看|好累|好困|好渴|好饱|开心|难过|害怕|可爱/;   /* 形容词类才叠词，动词叠了怪 */
+  const WT_OPS = [
+    { p: 0.14, ok: t => !/^[我你哦嗯诶哇哈那话说]/.test(t), go: t => pick(DIC.preT) + '，' + t },
+    { p: 0.18, ok: t => !/[呀呢哦啦嘛鸭哟~…？?]$/.test(t), go: t => t + pick(DIC.tail.concat(['鸭', '哟', '……'])) },
+    { p: 0.15, ok: t => DIC.verb.some(v => t.indexOf(v.t) >= 0), go: t => { const v = pick(DIC.verb.filter(v => t.indexOf(v.t) >= 0)); return t.replace(v.t, pick(ADV_INS) + v.t); } },
+    { p: 0.12, ok: t => DIC.noun.some(n => n.t && t.indexOf(n.t) > 0), go: t => { const n = pick(DIC.noun.filter(n => n.t && t.indexOf(n.t) > 0)); return t.replace(n.t, pick(DIC.adjC) + '的' + n.t); } },
+    { p: 0.14, ok: t => !/[？?]/.test(t), go: t => t.replace(/[。！～~]*$/, '') + pick(QT2) },
+    { p: 0.15, ok: t => (/^我们?/.test(t) && t.length > 4) || /^(真的|其实|反正|好像|大概|应该)/.test(t) || /[，,]/.test(t),
+      go: t => /^我们?/.test(t) && t.length > 4 ? t.replace(/^我们?/, '')
+        : /^(真的|其实|反正|好像|大概|应该)/.test(t) ? t.replace(/^(真的|其实|反正|好像|大概|应该)/, '')
+        : t.split(/[，,]/).pop() },
+    { p: 0.12, ok: t => DIC.verb.some(v => t.indexOf(v.t) === 0), go: t => '我' + t },
+    { p: 0.10, ok: t => t.indexOf('我') === 0 && t.length > 3 && !/^我们/.test(t), go: t => t.replace('我', '人家') },   /* 「我们」不进换说（会变人家们） */
+    { p: 0.10, ok: () => true, go: t => pick(DIC.sigh) + '，' + t },
+    { p: 0.10, ok: t => WT_REDUP.test(t) && !/(.)\1/.test(t), go: t => t.replace(WT_REDUP, '$&$&') },
+    { p: 0.10, ok: t => /^(我们|我|你|他|她)/.test(t) && t.length > 5, go: t => t.replace(/^(我们|我|你|他|她)/, m => m + pick(['就', '还', '又', '才', '都'])) }
+  ];
   function wordTransform(text, ctx) {
     const t0 = String(text || '').trim();
     if (!t0 || t0.length > 44 || FEED_BAD.test(t0) || /\d/.test(t0)) return null;
     let out = t0, ms = 0;
     const hit = () => { ms += 200 + Math.random() * 500; };
     const r = p => Math.random() < p;
-    if (r(0.14) && !/^[我你哦嗯诶哇哈那话说]/.test(out)) { out = pick(DIC.preT) + '，' + out; hit(); }
-    else if (r(0.18) && !/[呀呢哦啦嘛鸭哟~…？?]$/.test(out)) { out = out + pick(DIC.tail.concat(['鸭', '哟', '……'])); hit(); }
-    else if (r(0.15)) {
-      const vs = DIC.verb.filter(v => out.indexOf(v.t) >= 0);
-      if (vs.length) { const v = pick(vs); out = out.replace(v.t, pick(ADV_INS) + v.t); hit(); } else return null;
+    /* 洗牌轮询：每个算子独立小概率+适用性检查，第一个双重命中的生效 */
+    const order = WT_OPS.slice();
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    for (const op of order) {
+      if (r(op.p) && op.ok(out)) { out = op.go(out); hit(); break; }
     }
-    else if (r(0.12)) {
-      const ns = DIC.noun.filter(n => n.t && out.indexOf(n.t) > 0);
-      if (ns.length) { const n = pick(ns); out = out.replace(n.t, pick(DIC.adjC) + '的' + n.t); hit(); } else return null;
-    }
-    else if (r(0.14) && !/[？?]/.test(out)) { out = out.replace(/[。！～~]*$/, '') + pick(QT2); hit(); }
-    else if (r(0.15)) {
-      if (/^我们?/.test(out) && out.length > 4) { out = out.replace(/^我们?/, ''); hit(); }
-      else if (/^(真的|其实|反正|好像|大概|应该)/.test(out) && out.length > 5) { out = out.replace(/^(真的|其实|反正|好像|大概|应该)/, ''); hit(); }
-      else if (/[，,]/.test(out)) { out = out.split(/[，,]/).pop(); hit(); }
-      else return null;
-    }
-    else if (r(0.12) && DIC.verb.some(v => out.indexOf(v.t) === 0)) { out = '我' + out; hit(); }
-    else if (r(0.1) && out.indexOf('我') === 0 && out.length > 3) { out = out.replace('我', '人家'); hit(); }
-    else if (r(0.1)) { out = pick(DIC.sigh) + '，' + out; hit(); }
-    else return null;
+    if (out === t0) return null;   /* 一个都没中，不硬改 */
     if (!out || out.length > 50 || out.indexOf('undefined') >= 0) return null;
     return { text: out, extraMs: Math.round(ms) };
   }
@@ -14195,7 +14208,7 @@ const FreeTalk = (function () {
            她 10-10 14:27：近义换说也是挑选过程的一步 */
         const syn = synonymize(line);
         if (syn) return { text: syn.text, extraMs: Math.round(strokeTime(syn.text) + deliberate(syn.text) + syn.extraMs) };
-        const wt = (Math.random() < 0.3) ? wordTransform(line, ctx) : null;
+        const wt = (Math.random() < 0.35) ? wordTransform(line, ctx) : null;   /* 她 11:39 要多多：0.3→0.35 */
         if (wt) return { text: wt.text, extraMs: Math.round(strokeTime(wt.text) + deliberate(wt.text) + wt.extraMs) };
         return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
       }
@@ -14244,7 +14257,11 @@ const FreeTalk = (function () {
     const arr = (Array.isArray(src) ? src : [src]).map(s => String(s || '').trim()).filter(Boolean);
     if (!arr.length) return null;
     let spent = 0;
-    if (arr[0] && arr[0].length <= 40 && Math.random() < 0.35) { const wt0 = wordTransform(arr[0], ctx); if (wt0) return { text: wt0.text, extraMs: Math.round(spent + strokeTime(wt0.text) + deliberate(wt0.text) + wt0.extraMs) }; }
+    if (arr[0] && arr[0].length <= 40 && Math.random() < 0.35) {
+      const wt0 = wordTransform(arr[0], ctx);
+      if (wt0) { spent += 200 + Math.random() * 350;   /* 起手想一句的时间，与 makeRemix 路同手感 */
+        return { text: wt0.text, extraMs: Math.round(spent + strokeTime(wt0.text) + deliberate(wt0.text) + wt0.extraMs) }; }
+    }
       while (spent < budget) {
       let line = null;
       try { line = makeRemix(arr, ctx); } catch (e) { line = null; }
