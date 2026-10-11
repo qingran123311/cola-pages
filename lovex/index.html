@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-133404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-142906 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -10804,6 +10804,11 @@ const Chat = (function () {
           DP_PAL.map(c => '<button class="dp-sw" data-c="' + c + '" type="button" style="background:' + c + '" aria-label="选颜色"></button>').join('') +
           '<button class="dp-sw dp-custom" type="button" aria-label="调色盘自选"><input class="dp-picker" type="color" value="#3A3A42"></button>' +
         '</div>' +
+        '<div class="dp-pens" style="display:flex;gap:6px;justify-content:center;padding:4px 10px 0;flex-wrap:wrap">' +
+          [['细', 3], ['中', 6], ['粗', 10]].map((w, i) => '<button class="btn btn-secondary dp-w' + (i === 1 ? ' on' : '') + '" data-w="' + w[1] + '" type="button" style="padding:4px 14px">' + w[0] + '</button>').join('') +
+          '<span style="width:10px"></span>' +
+          [['圆头', 'round'], ['马克', 'marker'], ['蜡笔', 'crayon']].map((st, i) => '<button class="btn btn-secondary dp-st' + (i === 0 ? ' on' : '') + '" data-st="' + st[1] + '" type="button" style="padding:4px 14px">' + st[0] + '</button>').join('') +
+        '</div>' +
         '<div class="dp-acts">' +
           '<button class="btn btn-secondary" data-dp="undo" type="button">撤销一笔</button>' +
           '<button class="btn btn-secondary" data-dp="clear" type="button">清空</button>' +
@@ -10818,17 +10823,29 @@ const Chat = (function () {
     const strokes = [];
     let curStroke = null;
     let curColor = '#3A3A42';
+    let curW = 6, curStyle = 'round';   /* 她 10-11 14:21：粗细三档 + 笔感三档（圆头/马克/蜡笔） */
     const PAPER = '#FFFDF6';
+    function drawStroke(st) {
+      c2.strokeStyle = st.c; c2.fillStyle = st.c;
+      const line = (lw, alpha, dx, dy) => {
+        c2.lineWidth = lw; c2.globalAlpha = alpha;
+        const allSame = st.pts.every(p => Math.abs(p[0] - st.pts[0][0]) < 0.5 && Math.abs(p[1] - st.pts[0][1]) < 0.5);
+        c2.beginPath();
+        if (allSame) { c2.arc(st.pts[0][0] + (dx || 0), st.pts[0][1] + (dy || 0), Math.max(1.5, lw / 2), 0, Math.PI * 2); c2.fill(); return; }
+        st.pts.forEach((p, i) => { const X = p[0] + (dx || 0), Y = p[1] + (dy || 0); if (i) c2.lineTo(X, Y); else c2.moveTo(X, Y); });
+        c2.stroke();
+      };
+      c2.lineJoin = 'round';
+      if (st.style === 'marker') { c2.lineCap = 'butt'; line(st.w * 1.5, 0.55); }
+      else if (st.style === 'crayon') {
+        c2.lineCap = 'round';
+        line(st.w * 0.8, 0.3, 0.8, 0.5); line(st.w, 0.3); line(st.w * 0.6, 0.35, -0.7, -0.4);
+      } else { c2.lineCap = 'round'; line(st.w, 1); }
+      c2.globalAlpha = 1;
+    }
     function repaint() {
       c2.fillStyle = PAPER; c2.fillRect(0, 0, W, H);
-      c2.lineWidth = 5; c2.lineCap = 'round'; c2.lineJoin = 'round';
-      strokes.concat(curStroke ? [curStroke] : []).forEach(st => {
-        c2.strokeStyle = st.c; c2.fillStyle = st.c;
-        c2.beginPath();
-        st.pts.forEach((p, i) => { if (i) c2.lineTo(p[0], p[1]); else c2.moveTo(p[0], p[1]); });
-        if (st.pts.length === 1) { c2.arc(st.pts[0][0], st.pts[0][1], 2.5, 0, Math.PI * 2); c2.fill(); }
-        c2.stroke();
-      });
+      strokes.concat(curStroke ? [curStroke] : []).forEach(drawStroke);
     }
     repaint();
     function pos(e) {
@@ -10836,7 +10853,7 @@ const Chat = (function () {
       return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
     }
     cv.addEventListener('pointerdown', e => {
-      e.preventDefault(); curStroke = { pts: [pos(e)], c: curColor }; repaint();
+      e.preventDefault(); curStroke = { pts: [pos(e)], c: curColor, w: curW, style: curStyle }; repaint();
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     });
     cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.pts.push(pos(e)); repaint(); });
@@ -10855,6 +10872,16 @@ const Chat = (function () {
       curColor = sw.dataset.c; markOn(sw);
     });
     customSw.addEventListener('click', () => mask.querySelector('.dp-picker').click());
+    /* 粗细/笔感切换（她 10-11 14:21）：选中态互斥，只影响之后的笔画 */
+    mask.querySelector('.dp-pens').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const box = mask.querySelector('.dp-pens');
+      if (b.classList.contains('dp-w')) {
+        curW = +b.dataset.w; box.querySelectorAll('.dp-w').forEach(x => x.classList.toggle('on', x === b));
+      } else if (b.classList.contains('dp-st')) {
+        curStyle = b.dataset.st; box.querySelectorAll('.dp-st').forEach(x => x.classList.toggle('on', x === b));
+      }
+    });
     mask.querySelector('.dp-picker').addEventListener('input', e => {
       curColor = e.target.value; customSw.style.background = curColor; markOn(customSw);
     });
@@ -13565,20 +13592,25 @@ const Doodle = (function () {
 
   /* ---------- 出图 ---------- */
   /* 复合模式用：以主题自身包围盒中心为准，平移+缩放到目标格位 */
-  function placeStrokes(list, cx, cy, sc, A, out) {
+  function placeStrokes(list, cx, cy, sc, A, out, pen) {
     const xs = [], ys = [];
     list.forEach(s => s.pts.forEach(p => { xs.push(p[0]); ys.push(p[1]); }));
     const mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
     const my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
     list.forEach(s => {
       const pts = s.pts.map(p => [cx + (p[0] - mx) * sc, cy + (p[1] - my) * sc]);
-      out.push({ d: smooth(pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: Math.max(1.3, (s.w || rnd(2.1, 3.1)) * sc * 1.4) });
+      out.push({ d: smooth(pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: Math.max(1.3, (s.w || rnd(2.1, 3.1)) * sc * 1.4 * (pen || 1)), pts });
     });
   }
   function make() {
     /* 复合涂鸦（她 10-09 20:08 拍板）：画几幅纯随机等概率（1/2/3 幅各 1/3），不调权重；
        主题全库等概率抓，直线曲线、规则不规则自然相遇，允许重复，画画随心 */
     const comboN = 1 + Math.floor(Math.random() * 3);
+    /* 她 10-11 14:21：TA 也要笔感/粗细有区分、能填色、能换彩笔——
+       每幅搫一种笔感（圆头/马克/蜡笔）、一支笔号（细/中/粗乘在笔画粗细上），
+       闭形状 40% 概率垫填色层，55% 的幅面把部分黑墨笔画换成彩色笔（内容色，不套 UI 四色禁令） */
+    const style = pick(['round', 'round', 'marker', 'crayon', 'crayon']);
+    const pen = pick([0.72, 1, 1, 1.55]);
     /* 每张抽 2~3 支马克笔 */
     const pool = PAL.slice();
     const a = [];
@@ -13590,7 +13622,7 @@ const Doodle = (function () {
     if (comboN === 1) {
       const sub = pick(SUBJECTS);
       sub.f(A).forEach(s => {
-        strokes.push({ d: smooth(s.pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: s.w || rnd(2.1, 3.1) });
+        strokes.push({ d: smooth(s.pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: (s.w || rnd(2.1, 3.1)) * pen, pts: s.pts });
       });
       name = sub.n; cat = sub.cat;
       /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
@@ -13602,7 +13634,7 @@ const Doodle = (function () {
         const gs = Array.isArray(g) ? g : [g];
         const gx = corners[i][0] + rnd(-4, 4), gy = corners[i][1] + rnd(-4, 4);
         gs.forEach(g => {
-          strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: g.w || 1.6 });
+          strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: (g.w || 1.6) * pen, pts: g.pts });
         });
       }
     } else {
@@ -13613,19 +13645,42 @@ const Doodle = (function () {
       for (let i = 0; i < comboN; i++) {
         const sub = pick(SUBJECTS);
         names.push(sub.n);
-        placeStrokes(sub.f(A), boxes[i][0] + rnd(-3, 3), boxes[i][1] + rnd(-2, 2), base * rnd(0.92, 1.1), A, strokes);
+        placeStrokes(sub.f(A), boxes[i][0] + rnd(-3, 3), boxes[i][1] + rnd(-2, 2), base * rnd(0.92, 1.1), A, strokes, pen);
       }
       name = names.join(' + '); cat = pick(SUBJECTS).cat;
     }
+    /* 上色：闭形状 40% 垫填色层（马克笔色半透明，垫在所有笔画下面）；
+       55% 的幅面再挑 1~3 笔黑墨换彩笔——她要的「填色或者用不同颜色的画笔」 */
+    const fills = [];
+    strokes.forEach(s => {
+      if (!s.pts || s.pts.length < 6) return;
+      const a = s.pts[0], b = s.pts[s.pts.length - 1];
+      const dd = Math.sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]));
+      if (dd < 7 && Math.random() < 0.4) fills.push({ d: s.d, col: pick(A.a) });
+    });
+    if (fills.length > 2) fills.length = 2;   /* 最多两块填色，别涂满 */
+    if (Math.random() < 0.55) {
+      const inkIdx = strokes.map((s, i) => (s.col === INK ? i : -1)).filter(i => i >= 0);
+      const nRe = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < nRe && inkIdx.length; i++) {
+        const k = inkIdx.splice(Math.floor(Math.random() * inkIdx.length), 1)[0];
+        strokes[k].col = pick(A.a);
+      }
+    }
     const rot = rnd(-6, 6).toFixed(1);
+    const strokePath = s => {
+      if (style === 'marker') return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 1.35).toFixed(1) + '" stroke-linecap="butt" stroke-linejoin="round" opacity="0.78"/>';
+      if (style === 'crayon') return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 0.9).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>' +
+        '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 0.55).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" transform="translate(0.5 0.4)"/>';
+      return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + s.w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.94"/>';
+    };
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">' +
       '<rect x="2" y="2" width="96" height="96" rx="7" fill="#FFFEF8"/>' +
       '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="' + INK + '" stroke-width="1.1" opacity="0.55"/>' +
       '<g transform="rotate(' + rot + ' 50 50)">' +
-      strokes.map(s =>
-        '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + s.w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.94"/>'
-      ).join('') +
+      fills.map(f => '<path d="' + f.d + '" fill="' + f.col + '" fill-opacity="0.32" stroke="none"/>').join('') +
+      strokes.map(strokePath).join('') +
       '</g></svg>';
     return {
       dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
