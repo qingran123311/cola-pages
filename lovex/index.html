@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-115441 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-133404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -4183,6 +4183,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <header class="navbar">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
       <div class="navbar-title">商城</div>
+      <button class="mall-navact" id="mall-ta-eye-btn" title="TA 的购买记录"><i data-icon="eye" data-size="18"></i></button>
       <button class="mall-navact" id="mall-orders-btn" title="我的订单"><i data-icon="box" data-size="18"></i></button>
       <button class="mall-navact" id="mall-cart-btn" title="购物车"><i data-icon="cart" data-size="18"></i><i class="mall-cart-dot" id="mall-cart-dot" hidden></i></button>
     </header>
@@ -4341,7 +4342,7 @@ const DB = (function () {
       ,
       /* P64 商城与外卖（她 10-07 拍板）：自定义商品/订单/购物车/双层地址。内置商品是代码常量（Mall.BUILTIN），
          不进档；订单时间轴在生成时就定好各节点真实时刻，关页错过也补得回来 */
-      mall: { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {} }
+      mall: { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} } }
     };
   }
 
@@ -4613,7 +4614,6 @@ const DB = (function () {
         }
       }
       if (st.mall.addr) kill(st.mall.addr.byContact, cid);
-      if (st.mall.lastGiftAt) kill(st.mall.lastGiftAt, cid);
     }
 
     /* 8) 朋友圈：TA 发的动态（连本体）、TA 的评论与点赞、「给谁看」名单 */
@@ -7771,6 +7771,7 @@ const ICONS = {
   'search':        '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/>',
   'pin':           '<path d="M8 3.5h8l-.8 6.3 2.8 3.2H6l2.8-3.2z"/><path d="M12 13v8"/>',
   'dots':          '<path d="M12 5.5h.01M12 12h.01M12 18.5h.01" stroke-width="2.6"/>',
+  'eye':           '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
   'x':             '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   'check':         '<path d="M4.5 12.5l5 5L19.5 7"/>',
   'clock':         '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
@@ -12855,6 +12856,19 @@ const Engine = (function () {
           dur: vItem.dur || 1, audio: vItem.audio, senderId: ct ? ct.id : null }));
         continue;
       }
+      /* 涂鸦率（她 10-08 00:58；10-11 12:00 改口径：她拍的数直接生效）——
+         旧「排表情/图片位后面占气泡」被表情15%+图片20%+自由说话蚕食，拍 100 实际只有约45%
+         （verify-1011-涂鸦蚕食.js 实证），改独立掷：掷中本条就是画，掷不中才走原链 */
+      if (doodleOK && Math.random() * 100 < doodleProb) {
+        const d = runSafe('doodle.make', () => Doodle.make());
+        if (d && d.dataUrl) {
+          const dd = d.dataUrl;
+          t += (i === 0 ? 0 : rollDelay(p));
+          later(conv.id, t, () => pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            from: 'ai', type: 'img', img: dd, doodle: true, senderId: ct ? ct.id : null }));
+          continue;
+        }   /* 画砸了不空过：落回下面老链 */
+      }
       /* 自由组话·逐条融入（她 10-06 11:50 定）：本条先独立掷一次概率，掷中且组得出话就是本条内容；
          她 10-06 晚放开手脚：一半现组（短词短句/叠词叠句/带称呼），一半拿她的固定字卡改写加工删减成新话；
          两路都组不出就回落字卡/表情那条老路，不硬凑，也不吃掉气泡位 */
@@ -12892,12 +12906,6 @@ const Engine = (function () {
         text = pickDeco(Math.random() < 0.5 ? 'em' : 'kao');       // 单独emoji/颜文字
       } else if (r < 15 + imgProb && soloImgOK && stickers.length) {
         img = pick(stickers);                                      // 图片表情占气泡位
-      } else if (r < 15 + imgProb + doodleProb && doodleOK) {
-        /* 涂鸦占气泡位（她 10-08）：现画现发——调度时就画好，发送只管推 */
-        const d = runSafe('doodle.make', () => Doodle.make());
-        if (d && d.dataUrl) doodle = d.dataUrl;
-        else if (cards.length) text = maybeDecorate(pick(cards));   // 画砸了回落字卡，这一位不空过
-        else continue;
       } else if (cards.length) {
         text = maybeDecorate(pick(cards));                         // 字卡文本
       } else {
@@ -17368,14 +17376,68 @@ const Mall = (function () {
     { key: 'done',     label: '已送达',   min: 30, max: 90 }    // 分钟（派送开始后再走一程）
   ];
 
+  /* 她 10-11 12:00：聊天页眼睛——切到 TA 视角看 TA 的全部购买记录（含 TA 给自己买的） */
+  function openTaOrders(contactId) {
+    const c = Home.contactById(contactId);
+    if (!c) return;
+    const name = Home.displayName(c) || 'TA';
+    const sh = sheet(name + ' 的购买记录', { tall: true });
+    const list = st().orders.filter(o => o.buyerUid === contactId || o.toUid === contactId)
+      .sort((a, b) => ((b.timeline[b.timeline.length - 1] || {}).ts || 0) - ((a.timeline[a.timeline.length - 1] || {}).ts || 0));
+    if (!list.length) {
+      sh.body.innerHTML = '<p class="foot-note" style="text-align:center;padding:30px 0">还没有购买记录</p>';
+      return;
+    }
+    sh.body.innerHTML = '<div>' + list.map(o => {
+      const it = itemMain(o);
+      const self = o.buyerUid === contactId && o.toUid === contactId;
+      const who = o.buyerUid === 'me' ? '你下单' : (self ? name + '自己买' : name + '买');
+      const to = self ? '自己用' : (o.toUid === contactId ? '送到 TA 那里' : '送到你那里');
+      return '<div class="taord" data-order="' + o.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer">' +
+        thumbHtml(productById(it.pid), 'moc-thumb') +
+        '<div class="moc-mid" style="flex:1"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b>' +
+        '<small style="display:block">' + esc(who) + ' · ' + to + ' · ' + fmtMDHM((o.timeline[0] || {}).ts || Date.now()) + '</small></div>' +
+        '<b style="flex:none">¥' + Wallet.yuan(o.totalFen) + '</b></div>';
+    }).join('') + '</div>';
+    sh.body.querySelectorAll('.taord').forEach(el => {
+      el.addEventListener('click', () => { sh.close(); openOrderDetail(el.dataset.order); });
+    });
+  }
+
+  /* 她 10-11 13:28 定：眼睛在商城页——点开看全部 TA 的购买记录（含 TA 自己买的），每行带名字 */
+  function openTaOrders() {
+    const sh = sheet('TA 的购买记录', { tall: true });
+    const list = st().orders.filter(o => o.buyerUid !== 'me' || o.toUid !== 'me')
+      .sort((a, b) => ((b.timeline[b.timeline.length - 1] || {}).ts || 0) - ((a.timeline[a.timeline.length - 1] || {}).ts || 0));
+    if (!list.length) {
+      sh.body.innerHTML = '<p class="foot-note" style="text-align:center;padding:30px 0">还没有购买记录</p>';
+      return;
+    }
+    sh.body.innerHTML = '<div>' + list.map(o => {
+      const it = itemMain(o);
+      const self = o.buyerUid !== 'me' && o.toUid !== 'me' && o.buyerUid === o.toUid;
+      const nm = (o.buyerUid !== 'me' && Home.contactById(o.buyerUid)) ? Home.displayName(Home.contactById(o.buyerUid)) : 'TA';
+      const who = o.buyerUid === 'me' ? '你下单' : (self ? nm + ' 自己买' : nm + ' 买');
+      const toWho = (o.toUid !== 'me' && Home.contactById(o.toUid)) ? Home.displayName(Home.contactById(o.toUid)) : null;
+      const to = o.toUid === 'me' ? '送到你这里' : (self ? '自己用' : '送到 ' + (toWho || 'TA') + ' 那里');
+      return '<div class="taord" data-order="' + o.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer">' +
+        thumbHtml(productById(it.pid), 'moc-thumb') +
+        '<div class="moc-mid" style="flex:1"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b>' +
+        '<small style="display:block">' + esc(who) + ' · ' + esc(to) + ' · ' + fmtMDHM((o.timeline[0] || {}).ts || Date.now()) + '</small></div>' +
+        '<b style="flex:none">¥' + Wallet.yuan(o.totalFen) + '</b></div>';
+    }).join('') + '</div>';
+    sh.body.querySelectorAll('.taord').forEach(el => {
+      el.addEventListener('click', () => { sh.close(); openOrderDetail(el.dataset.order); });
+    });
+  }
+
   function st() {
     const s = DB.state;
-    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, lastGiftAt: {}, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {}, customSubs: {} };
+    if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {}, customSubs: {} };
     if (!s.mall.custom) s.mall.custom = [];
     if (!s.mall.orders) s.mall.orders = [];
     if (!s.mall.cart) s.mall.cart = [];
     if (!s.mall.addr) s.mall.addr = { me: [], byContact: {} };
-    if (!s.mall.lastGiftAt) s.mall.lastGiftAt = {};
     if (!s.mall.hidden) s.mall.hidden = [];
     if (!s.mall.overrides) s.mall.overrides = {};
     if (!s.mall.coupons) s.mall.coupons = [];   /* P67 她 11:56：满减券，结算抵扣、退款返还 */
@@ -18462,7 +18524,6 @@ const Mall = (function () {
      她 10-10 补充：掷中后可能给自己买，也可能给你买（各半，工程值待拍）；
      下单后还有小概率取消（TA_CANCEL_RATE，仅限未收货的，她拍板“取消的仅限未收货”）。 */
   const TA_CANCEL_RATE = 7;   // TA 下单后取消的概率%（她 10-10 拍板 7%）
-  const SELF_LINES = ['给自己点了{n}，生活要有点甜', '刚下单了{n}，犒劳一下自己', '随手给自己买了{n}，别眼馋～'];
   const CANCEL_LINES = ['刚那单我取消了，冲动消费要不得', '下单又取消啦，纠结星人是我没错了', '那单我取消了，临时不想买了'];
   function armTaCancel(order) {
     if (Math.random() * 100 >= TA_CANCEL_RATE) return;
@@ -18474,14 +18535,24 @@ const Mall = (function () {
     let rate = 3;
     try { rate = Math.min(100, Math.max(0, Math.round(+Engine.params(ct).shopRate))); } catch (e) { rate = 0; }
     if (!rate || Math.random() * 100 >= rate) return false;
-    const last = st().lastGiftAt[ct.id] || 0;
-    if (Date.now() - last < 2 * 3600 * 1000) return false;
+    /* 她 10-11 12:00 拍板：取消两小时冷却（原「2h 内只买一次」限制拆除，lastGiftAt 字段退役） */
     const pool = products();
     if (!pool.length) return false;
     const p = pick(pool);
-    st().lastGiftAt[ct.id] = Date.now();
-    /* 她 10-10：也可能给自己买（不进她的订单列表，聊天里轻一句） */
+    /* 她 10-10：也可能给自己买。她 10-11 13:28 拍板：不要「轻一句」，聊天里只发订单卡；
+       支付方式与「给我买」同口径——40% 概率邀请我代付，其余 TA 自己捕 */
     if (Math.random() < 0.5) {
+      if (Math.random() < 0.4) {   /* 代付邀请：TA 自己的单让我付（同「给我买」40% 口径） */
+        const req = createOrder({
+          kind: p.takeout ? 'takeout' : 'shop',
+          items: [{ pid: p.id, name: p.name, icon: p.icon, img: p.img || null, fen: p.fen, qty: 1, spec: {} }],
+          totalFen: p.fen, buyerUid: ct.id, toUid: ct.id, pay: null, addr: null
+        });
+        req.payReq = { to: 'me', state: 'waiting', ts: Date.now() };
+        DB.save();
+        pushCardTo(ct.id, req, ct.id, null);
+        return true;
+      }
       const r = Pay.settlePeer(ct.id, p.fen, {
         type: 'mall',
         note: (p.takeout ? '外卖-' : '商城-') + p.name + ' · 给自己买',
@@ -18495,10 +18566,7 @@ const Mall = (function () {
         totalFen: p.fen, buyerUid: ct.id, toUid: ct.id, pay: r, addr: null
       });
       armTaCancel(order);
-      Engine.pushRaw(conv, {
-        id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-        from: 'ai', type: 'text', text: pick(SELF_LINES).replace('{n}', p.name), ts: Date.now()
-      });
+      pushCardTo(ct.id, order, ct.id, false);   /* 她 10-11 13:28：聊天里只有订单卡，轻一句拆除 */
       return true;
     }
     /* 她 11:56：TA 也有概率邀请我帮他付——40% 走代付邀请（工程值），其余 TA 自己掏（亲密付优先，settlePeer 定） */
@@ -18599,6 +18667,8 @@ const Mall = (function () {
     const ordersBtn = document.getElementById('mall-orders-btn');
     if (cartBtn) cartBtn.addEventListener('click', openCart);
     if (ordersBtn) ordersBtn.addEventListener('click', openOrders);
+    const eyeBtn = document.getElementById('mall-ta-eye-btn');
+    if (eyeBtn) eyeBtn.addEventListener('click', openTaOrders);   /* 她 10-11 13:28：眼睛在商城页 */
     const tabs = document.getElementById('mall-tabs');
     if (tabs) tabs.querySelectorAll('[data-mtab]').forEach(b => b.addEventListener('click', () => {
       tab = b.dataset.mtab; cat = 'all'; sub = 'all';   /* 她 10-08 16:42：子标签随类目一起重置 */
@@ -18613,7 +18683,7 @@ const Mall = (function () {
 
   return { init, open, renderPage, maybeGift, orderById, cardHtml, settleAll, openOrders, products, productById,
     openProduct, openCart, openCheckout, openOrderDetail, openAddr, openForm, openCoupons, tickIncome,
-    openAddSub, subsOf };   /* P68 她 10-08 16:42：子标签自加入口/清单，探针与资料卡共用 */
+    openAddSub, subsOf, openTaOrders };   /* P68 她 10-08 16:42：子标签自加入口/清单，探针与资料卡共用；眼睛视角她 10-11 12:00 加 */
 })();
 
 /* =====================================================
@@ -28682,6 +28752,9 @@ const Profile = (function () {
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
     ['pf-imgmode', 'pf-imgprob', 'pf-doodlerate', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+      /* 她 10-11 12:00：数字/概率格子改完直接退页不触发 change（失焦才发），最后一改会白丢——
+         input 也派发同一次保存；handler 内部全是幂等操作（重排钟/清钟），高频触发无害 */
+      el(id).addEventListener('input', () => el(id).dispatchEvent(new Event('change')));
       el(id).addEventListener('change', () => {
         const c = cur(); if (!c) return;
         const p = Object.assign({}, PFORM_DEF, Engine.params(c));   // 与上面显示同一张表，不再各兑一份
