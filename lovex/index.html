@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-114631 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-115441 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -14132,7 +14132,7 @@ const FreeTalk = (function () {
   /* 她 10-11 11:39 复查重构：算子表轮询——老版 else-if 链抑中算子但不适用（如句里没动词）
      就 return null 短路，后面本来能用的算子全被浪费；改洗牌后逐个试，
      拄中且适用才生效，不适用继续下一个，全不中才放弃——每个算子都有真实机会 */
-  const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '贼'];   /* 「可」单独放动词前不通（可吃火锅），已剔 */
+  const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '贼', '可以'];   /* 她 11:52：那位置要「可以吃火锅」；「就」类虚词走主语后插入算子，不进这表 */
   const QT2 = ['吗', '呢', '对吧', '好不好', '是不是呀', '啊', '是吧'];
   const WT_REDUP = /好吃|好玩|好看|好累|好困|好渴|好饱|开心|难过|害怕|可爱/;   /* 形容词类才叠词，动词叠了怪 */
   const WT_OPS = [
