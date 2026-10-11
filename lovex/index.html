@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-145902 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261011-152254 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -12481,6 +12481,16 @@ const Engine = (function () {
     const g = gen(convId);
     return setTimeout(() => { if (gen(convId) === g) fn(); }, ms);
   }
+  /* 行为尾巴专用（她 10-11 15:10 报撤回率不运转顺出的根）：撤回/购物/拍一拍/来电/邀请
+     是 TA 独立于这轮回复的行为，不是「还没落地的话」——她补话打断旧批时，
+     later() 的代号校验会把这些已掷中的行为整批静默吞掉（rate 低时掷中即丢，触发率被硬压）。
+     这五个改走 laterKeep：不随打断作废，只随会话删除自然哑（届时 msgs/convs 已清，各 fn 内部有防护） */
+  function laterKeep(convId, ms, fn) {
+    return setTimeout(() => {
+      if (!DB.state.convs.find(c => c.id === convId)) return;
+      fn();
+    }, ms);
+  }
   /* 本轮进行中 = 这个会话里还有成员挂着未结束的批次（timers 是排程时就占牌） */
   function inFlight(convId) {
     for (const k of timers.keys()) if (k.indexOf(convId + ':') === 0) return true;
@@ -12722,7 +12732,7 @@ const Engine = (function () {
     later(conv.id, delay, () => {
       const total = fireBatch(conv, p, ct, n, typeof share === 'number' ? share : null);
       /* 1% 一起看邀请是聊天批次行为，不依赖浮窗；安排在本轮聊天回复之后，保留真实链接卡供回看。 */
-      later(conv.id, Math.max(total, 0), () => maybeInviteWatch(conv, ct));
+      laterKeep(conv.id, Math.max(total, 0), () => maybeInviteWatch(conv, ct));
       // 「正在输入」持续到本批最后一条落地；全员结束才熄灭
       later(conv.id, Math.max(total, 0) + 60, () => {
         timers.delete(key);
@@ -12974,7 +12984,7 @@ const Engine = (function () {
     const patProb = 7;
     if (patProb > 0 && Math.random() * 100 < patProb) {
       t += rand(600, 1600);
-      later(conv.id, t, () => aiPatNow(conv, ct));
+      laterKeep(conv.id, t, () => aiPatNow(conv, ct));
     }
     /* AI主动视频通话（策719）：固定3%（#39p 撤用户可调），会话级互斥 */
     const vidProb = 3;
@@ -12982,7 +12992,7 @@ const Engine = (function () {
       /* #39y补：若该联系人正在某群通话中等待未接，此次视频触发改为判定是否补入该通话 */
       if (Call.tryJoinActiveGroup && Call.tryJoinActiveGroup(ct)) return t;
       t += rand(3000, 15000);
-      later(conv.id, t, () => Call.incoming(conv, ct));
+      laterKeep(conv.id, t, () => Call.incoming(conv, ct));
     }
 
     /* 撤回（二期P35，她 20:17 定）：params.revokeRate 开启后 TA 偶尔手滑撤回自己最近的消息。
@@ -12990,12 +13000,12 @@ const Engine = (function () {
        maybeRevoke 内部另有 1.2~3.5s “反应过来”延迟 */
     if (conv.type === 'single' && typeof Chat !== 'undefined' && Chat.maybeRevoke) {
       const revokeAt = t + rand(800, 2200);
-      later(conv.id, revokeAt, () => runSafe('chat.revoke', () => Chat.maybeRevoke(conv, ct)));
+      laterKeep(conv.id, revokeAt, () => runSafe('chat.revoke', () => Chat.maybeRevoke(conv, ct)));
     }
     /* 购物率（她 10-07 23:06 拍板④，默认 3%）：挂整批回复之后（同拍一拍/撤回层级），
        每回复批次掷一次；真商品真扣钱，订单卡进聊天，钱与账单全走老口径（Mall.maybeGift 内部） */
     if (conv.type === 'single' && typeof Mall !== 'undefined' && Mall.maybeGift) {
-      later(conv.id, t + rand(1200, 2600), () => runSafe('mall.gift', () => Mall.maybeGift(conv, ct)));
+      laterKeep(conv.id, t + rand(1200, 2600), () => runSafe('mall.gift', () => Mall.maybeGift(conv, ct)));
     }
 
     return t;
