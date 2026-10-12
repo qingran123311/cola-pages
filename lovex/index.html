@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261012-233232 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261013-005834 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -10889,7 +10889,8 @@ const Chat = (function () {
     if (m.type === 'text' && cv.type === 'single') runSafe('chat.learn', () => learnFromMe(cv.id, m.text));
     /* 她 00:48 拍板「各回各家」：图片表情不进荟萃，按同一档收集概率收进 TA 专属表情库
        （TA 发图本来就从那抽；库里有这张的不重复收） */
-    if (m.type === 'img' && m.sticker && m.img && cv.type === 'single') runSafe('chat.learn.sticker', () => learnFromMe(cv.id, '', m.img));
+    /* 她 10-13 00:06：我发过的图片，只要还没进 TA 的图库就收（不再只收表情图；涂鸦不算图片表情） */
+    if (m.type === 'img' && m.img && !m.doodle && cv.type === 'single') runSafe('chat.learn.sticker', () => learnFromMe(cv.id, '', m.img));
     if (!convId || (cur && cv.id === cur.id)) renderMsgs();   // 悬浮窗发的消息不重渲主窗
     Home.render();
     Engine.onUserMessage(cv.id);   // 文字/图片/语音都会触发AI回复安排
@@ -13100,30 +13101,31 @@ const Engine = (function () {
           continue;
         }   /* 画砸了不空过：落回下面老链 */
       }
-      /* 自由组话·逐条融入（她 10-06 11:50 定）：本条先独立掷一次概率，掷中且组得出话就是本条内容；
-         她 10-06 晚放开手脚：一半现组（短词短句/叠词叠句/带称呼），一半拿她的固定字卡改写加工删减成新话；
-         两路都组不出就回落字卡/表情那条老路，不硬凑，也不吃掉气泡位 */
+      /* 自由说话·逐条融入（她 10-06 11:50 定，10-13 00:06 改成三模式）：本条先独立掷一次概率，
+         掷中且造得出话就是本条内容——TA 自己想一句（键盘打字 / 拼音弹字选字）或抽 1~4 张字卡拆词重组；
+         造不出就回落字卡/表情那条老路，不硬凑，也不吃掉气泡位 */
       /* 她 10-08 17:33 定口径：组话过程里就有同音选词（猫猫/毛毛这类候选要先挑），
          重调不设次数上限——在她设的时间窗（回复设置秒区间）内一直调，
          到点组不出才 null 退字卡；挑词+打字的时间真加进这条的间隔（一秒太短） */
       let freeExtra = 0;
       if (freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
         const budget = Math.max(800, (+p.maxSec ?? 3) * 1000);
-        /* 她 10-12：键盘直接打字模式——自由说话三路之一（字卡/组话/照敲），工程值 10% 待拍：
-           掷中就不组不加工，照她的字卡原句直接敲出来（自由度拉满），打字时间照真加；
-           30% 输入法联想补一拍（FreeTalk.typeDirect 内部掷） */
-        const kbP = Math.min(100, Math.max(0, Math.round(p.kbFree == null ? 10 : +p.kbFree)));   /* 未设置默认 10，NaN 防护（+undefined=NaN 不是 nullish，?? 接不住） */
-        const kbHit = kbP > 0 && cards.length && Math.random() * 100 < kbP;
-        const res = kbHit
-          ? FreeTalk.typeDirect(pick(cards), talkCtx(ct))
-          : (cards.length && Math.random() < 0.5)
-            ? FreeTalk.remakeDetailed(cards.slice(0, 2), talkCtx(ct), budget)
-            : FreeTalk.composeDetailed(talkCtx(ct), budget);
+        /* 她 10-13 00:06 定口径：自由说话就三条路，三条都是「造句」，随机挑一条——
+           A 键盘自由打字（自己现造一句，不受字卡库限制；照抄字卡那条已被她否掉）
+           B 拼音弹字选字（TA 那侧的拼字过程，聊天界面一句不显示）
+           C 词语字卡（抽 1~4 张，拆词块随机组合，再加工）
+           三条都过同一个加工层 polish，三条的产出都按概率进荟萃「自由组句」。 */
+        const freeMode = ['kb', 'py', 'card'][Math.floor(Math.random() * 3)];
+        let res = null;
+        try {
+          res = freeMode === 'kb' ? FreeTalk.typeFree(talkCtx(ct), budget)
+            : freeMode === 'py' ? FreeTalk.pinyinFree(talkCtx(ct), budget)
+              : FreeTalk.cardFree(cards, talkCtx(ct));
+        } catch (e) { /* 三模式任何一条造不出话都退回字卡老路，不能把整批打断 */ res = null; }
         if (res) { freeLine = res.text; freeExtra = Math.min(res.extraMs, 6000); }   /* 挑词打字真加进间隔，封顶 6s 防极端 */
-        /* 她 10-12：TA 自由组出来的句子按概率存荟萃「自由组句」分组（默认 20% 工程值待拍，参数 ftSave 可调；
-           键盘照敲的是她的话，不算组句不入账） */
+        /* 存荟萃：三种模式都存（她 10-13 00:06：「存荟萃是全部全部范围」） */
         const ftP = Math.min(100, Math.max(0, p.ftSave == null ? 20 : +p.ftSave));
-        if (freeLine && !kbHit && typeof Library !== 'undefined' && Library.ftAdd && Math.random() * 100 < ftP) {
+        if (freeLine && typeof Library !== 'undefined' && Library.ftAdd && Math.random() * 100 < ftP) {
           runSafe('ft.save', () => Library.ftAdd(ct ? ct.id : null, freeLine));
         }
       }
@@ -13851,14 +13853,42 @@ const Doodle = (function () {
     pts.push(pts[0].slice());
     return J(pts, 1);
   }
-  /* 火柴人：站/跳/举手/劈叉/弯腰全靠角度组合自己长出来 */
+  /* 她 10-13 00:06：火柴人姿势要不定——先抽一个姿势，再按姿势给手脚角度，不是每次都站得端端正正 */
+  const STICK_POSES = [
+    { n: '站', arm: [-0.95, 0.95], leg: [0.32, 0.9], up: 0 },
+    { n: '跳', arm: [-1.5, -0.75], leg: [0.85, 1.15], up: -6 },
+    { n: '举双手', arm: [-1.62, -1.2], leg: [0.28, 0.6], up: -2 },
+    { n: '挥手', arm: [-1.75, 0.55], leg: [0.28, 0.7], up: 0 },
+    { n: '跑', arm: [-1.15, -0.35], leg: [0.85, 1.15], up: -3 },
+    { n: '坐', arm: [0.3, 0.9], leg: [1.05, 1.2], up: 7 },
+    { n: '躺', arm: [-1.35, -0.85], leg: [1.1, 1.25], up: 13 },
+    { n: '叉腰', arm: [0.5, 0.85], leg: [0.35, 0.8], up: 0 },
+    { n: '蹲', arm: [0.65, 1.1], leg: [0.95, 1.15], up: 9 },
+    { n: '歪头', arm: [-0.6, 0.5], leg: [0.45, 0.95], up: 1 }
+  ];
+  /* 折线：一段一段往同一侧折（不规则线的一种） */
+  function zigzag(x0, y0, x1, y1, seg, amp) {
+    const pts = [], n = Math.max(2, Math.round(seg));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+      const dx = y1 - y0, dy = -(x1 - x0);
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const off = (i % 2 ? 1 : -1) * amp * rnd(0.6, 1.2);
+      pts.push([x + dx / len * off, y + dy / len * off]);
+    }
+    return J(pts, 1);
+  }
+  /* 火柴人：姿势不定——角度组合自己长出来 */
   function stickman(A) {
     const cx = rnd(40, 62), cy = rnd(42, 58), s = rnd(0.85, 1.15);
     const hr = rnd(5, 6.6) * s;
-    const headY = cy - 20 * s, hipY = cy + 2 * s, shY = cy - 12 * s;
+    const pose = pick(STICK_POSES);
+    const up = (pose.up || 0) * s;
+    const headY = cy - 20 * s + up, hipY = cy + 2 * s + up, shY = cy - 12 * s + up;
     const lean = rnd(-0.32, 0.32);
-    const armA = rnd(-1.15, 1.15), armB = rnd(-1.15, 1.15);
-    const legA = rnd(0.3, 0.95), legB = rnd(0.3, 0.95);
+    const armA = rnd(pose.arm[0], pose.arm[1]), armB = rnd(pose.arm[0], pose.arm[1]);
+    const legA = rnd(pose.leg[0], pose.leg[1]), legB = rnd(pose.leg[0], pose.leg[1]);
     const armL = rnd(9, 13) * s, legL = rnd(11, 15) * s;
     const hipX = cx + lean * 10, shX = cx + lean * 8;
     const out = [];
@@ -13913,7 +13943,63 @@ const Doodle = (function () {
       }
       return out;
     } },
-    { n: '火柴人', cat: 5, f: A => stickman(A) }
+    { n: '火柴人', cat: 5, f: A => stickman(A) },
+    /* 她 10-13：再多些无规则图形——横线、竖线、斜线、打叉、折线、乱线团、点点、箭头 */
+    { n: '横线', cat: 5, f: A => {
+      const out = [];
+      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
+        const y = rnd(20, 80);
+        out.push({ pts: J([[rnd(12, 28), y], [rnd(72, 88), y + rnd(-3, 3)]], 1.1), c: i % 2 ? A.a[0] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '竖线', cat: 5, f: A => {
+      const out = [];
+      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
+        const x = rnd(20, 80);
+        out.push({ pts: J([[x, rnd(12, 30)], [x + rnd(-3, 3), rnd(68, 88)]], 1.1), c: i % 2 ? A.a[1] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '斜线', cat: 5, f: A => {
+      const out = [], N = Math.round(rnd(1, 4));
+      for (let i = 0; i < N; i++) {
+        const x0 = rnd(14, 46), y0 = rnd(16, 60);
+        out.push({ pts: wob(x0, y0, x0 + rnd(24, 40), y0 + rnd(16, 40), 1.3), c: i % 2 ? A.a[0] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '打叉', cat: 5, f: A => {
+      const cx = rnd(30, 70), cy = rnd(32, 68), d = rnd(9, 19);
+      return [
+        { pts: J([[cx - d, cy - d], [cx + d, cy + d]], 1.3), c: 'ink' },
+        { pts: J([[cx + d, cy - d], [cx - d, cy + d]], 1.3), c: A.a[0] }
+      ];
+    } },
+    { n: '折线', cat: 5, f: A => [{ pts: zigzag(rnd(12, 26), rnd(24, 76), rnd(74, 88), rnd(24, 76), rnd(3, 7), rnd(5, 13)), c: 'ink' }] },
+    { n: '乱线团', cat: 5, f: A => {
+      const out = [], cx = rnd(34, 66), cy = rnd(34, 64);
+      for (let i = 0, N = Math.round(rnd(2, 4)); i < N; i++) {
+        out.push({ pts: scribble(cx + rnd(-8, 8), cy + rnd(-8, 8), rnd(12, 24), rnd(10, 20)), c: i ? A.a[0] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '点点', cat: 5, f: A => {
+      const out = [], N = Math.round(rnd(4, 10));
+      for (let i = 0; i < N; i++) out.push({ pts: dot(rnd(16, 84), rnd(16, 84)), c: (i % 3 ? 'ink' : A.a[0]), w: rnd(2, 3.4) });
+      return out;
+    } },
+    { n: '箭头', cat: 5, f: A => {
+      const x0 = rnd(16, 40), y0 = rnd(30, 70);
+      const ang = rnd(-0.9, 0.9) + (Math.random() < 0.5 ? 0 : Math.PI);
+      const len = rnd(26, 46), x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len;
+      const hl = rnd(7, 11), a1 = ang + 2.6, a2 = ang - 2.6;
+      return [
+        { pts: J([[x0, y0], [x1, y1]], 1), c: 'ink' },
+        { pts: J([[x1, y1], [x1 + Math.cos(a1) * hl, y1 + Math.sin(a1) * hl]], 0.7), c: 'ink' },
+        { pts: J([[x1, y1], [x1 + Math.cos(a2) * hl, y1 + Math.sin(a2) * hl]], 0.7), c: 'ink' }
+      ];
+    } }
   ];
 
   /* ---------- 角落小装饰（0~2 个，随手点的） ---------- */
@@ -13947,7 +14033,8 @@ const Doodle = (function () {
   function make() {
     /* 复合涂鸦（她 10-09 20:08 拍板）：画几幅纯随机等概率（1/2/3 幅各 1/3），不调权重；
        主题全库等概率抓，直线曲线、规则不规则自然相遇，允许重复，画画随心 */
-    const comboN = 1 + Math.floor(Math.random() * 3);
+    /* 她 10-13 00:34：一张画上能放几幅不设上限——1~6 幅等概率，抽到几幅画几幅，位置/大小/朝向全随机 */
+    const comboN = 1 + Math.floor(Math.random() * 6);
     /* 她 10-11 14:21：TA 也要笔感/粗细有区分、能填色、能换彩笔——
        每幅搫一种笔感（圆头/马克/蜡笔）、一支笔号（细/中/粗乘在笔画粗细上），
        闭形状 40% 概率垫填色层，55% 的幅面把部分黑墨笔画换成彩色笔（内容色，不套 UI 四色禁令） */
@@ -13985,15 +14072,18 @@ const Doodle = (function () {
       /* 复合：同框分区，主题允许重复；不出角落装饰（画面已满） */
       /* 落点不再固定格位：每块在画布上随机找地方（互相尽量散开），方向各自随机 */
       const boxes = [];
+      /* 位置随机、互相尽量散开：幅数越多间距判据越松，试 12 次挑最散的那个 */
+      const spread = Math.max(13, 46 / comboN + 8);
       for (let i = 0; i < comboN; i++) {
         let bx = 50, by = 50;
-        for (let t = 0; t < 8; t++) {
-          bx = rnd(26, 74); by = rnd(24, 74);
-          if (boxes.every(b => Math.abs(b[0] - bx) + Math.abs(b[1] - by) > 30)) break;
+        for (let t = 0; t < 12; t++) {
+          bx = rnd(24, 76); by = rnd(22, 78);
+          if (boxes.every(b => Math.abs(b[0] - bx) + Math.abs(b[1] - by) > spread)) break;
         }
         boxes.push([bx, by]);
       }
-      const base = comboN === 2 ? 0.5 : 0.38;
+      /* 幅数越多每幅越小（0.7/√N 起步、最小 0.22），不然一张纸上挤成一团 */
+      const base = Math.max(0.22, 0.7 / Math.sqrt(comboN));
       const names = [];
       for (let i = 0; i < comboN; i++) {
         const sub = pick(poolPicked);
@@ -14011,10 +14101,10 @@ const Doodle = (function () {
       const dd = Math.sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]));
       if (dd < 7 && Math.random() < 0.4) fills.push({ d: s.d, col: pick(A.a) });
     });
-    /* 她 10-12 23:18：颜色覆盖率也随机——这回可能一块不填、也可能填三四块，浓淡也跟着变。
-       上限只是别把整张纸糊死（工程值：0/2/4 块三档，待她拍） */
+    /* 她 10-12 23:18 / 10-13：颜色覆盖率也随机——这回可能一块不填、也可能填五六块，浓淡也跟着变。
+       上限只是别把整张纸糊死（工程值：0/1/2/3/4/6 六档，待她拍） */
     const fillRoll = Math.random();
-    const maxFill = fillRoll < 0.3 ? 0 : (fillRoll < 0.68 ? 2 : 4);
+    const maxFill = fillRoll < 0.22 ? 0 : fillRoll < 0.42 ? 1 : fillRoll < 0.62 ? 2 : fillRoll < 0.8 ? 3 : fillRoll < 0.93 ? 4 : 6;
     if (fills.length > maxFill) fills.length = maxFill;
     const fillOp = rnd(0.16, 0.42).toFixed(2);
     if (Math.random() < 0.55) {
@@ -14068,7 +14158,8 @@ const Doodle = (function () {
    ① 动词区分及物/不及物（不及物能独立成谓：在散步/在发呆）；
    ② 近义词圈（累/乏/疲惫…，组完小概率换着说，带选词时间）；
    ③ 修辞层：比喻/拟人整句素材；
-   ④ 百家姓新口径：一般不组名字，只有自报家门（我是小杨/我姓王）才用百家姓；
+   ④ 百家姓新口径：一般不组名字，只有自报家门才用百家姓；
+      她 10-13 00:57 把报名的说法扩到四种：我是小杨 / 我姓王 / 我叫小杨 / 叫我小杨；
       对她的称呼不变：她的名字/名字叠词/名字＋老阿/亲密称呼（姓氏从称呼里退出）；
    ⑤ 人称代词入词典（人家/我们/自己…）；
    ⑥ 主题加宽：景物/特殊名词/人物/情绪（emo 本）；
@@ -14510,8 +14601,15 @@ const FreeTalk = (function () {
     { id: 'emoF', make() { return Math.random() < 0.5 ? pick(DIC.time) + pick(DIC.emo) : pick(DIC.emo) + '，' + pick(DIC.short).t; } },
     /* 人称代词开头：人家想吃火锅 / 我们去看日落 */
     { id: 'pronV', make() { const p = voPair(); return p ? pick(DIC.pron) + p.v + p.n : null; } },
-    /* 自报家门（她 10-10：百家姓唯一的出场场景） */
-    { id: 'selfIntro', make() { return Math.random() < 0.5 ? '我是' + pick(DIC.namePre) + pick(DIC.surname) : '我姓' + pick(DIC.surname) + (Math.random() < 0.4 ? '，' + pick(DIC.short).t : ''); } }
+    /* 自报家门（她 10-10：百家姓唯一的出场场景；她 10-13 00:57：百家姓还可以跟在「我叫 / 叫我」后面） */
+    { id: 'selfIntro', make() {
+      const sn = pick(DIC.surname), pre = pick(DIC.namePre);
+      const b = pick(['wo-shi', 'wo-xing', 'wo-jiao', 'jiao-wo']);
+      if (b === 'wo-xing') return '我姓' + sn + (Math.random() < 0.4 ? '，' + pick(DIC.short).t : '');
+      if (b === 'wo-jiao') return '我叫' + pre + sn;
+      if (b === 'jiao-wo') return '叫我' + pre + sn;
+      return '我是' + pre + sn;
+    } }
   ];
 
   /* 她 10-08 16:42：同音字层——TA「打字」也有拼音选词的过程，
@@ -14705,6 +14803,8 @@ const FreeTalk = (function () {
   const ADV_INS = ['真的', '好', '超', '特别', '有点', '太', '贼', '可以'];   /* 她 11:52：那位置要「可以吃火锅」；「就」类虚词走主语后插入算子，不进这表 */
   const QT2 = ['吗', '呢', '对吧', '好不好', '是不是呀', '啊', '是吧'];
   const WT_REDUP = /好吃|好玩|好看|好累|好困|好渴|好饱|开心|难过|害怕|可爱/;   /* 形容词类才叠词，动词叠了怪 */
+  /* 她 10-13 00:06：删词类加工用——句首那些连接词/时间词，删掉句子更直接 */
+  const CUT_HEADS = ['真的', '其实', '反正', '好像', '大概', '应该', '话说', '今天', '明天', '昨天', '刚才', '刚刚', '然后', '而且', '但是', '可是', '不过', '就是'];
   const WT_OPS = [
     { p: 0.14, ok: t => !/^[我你哦嗯诶哇哈那话说]/.test(t), go: t => pick(DIC.preT) + '，' + t },
     { p: 0.18, ok: t => !/[呀呢哦啦嘛鸭哟~…？?]$/.test(t), go: t => t + pick(DIC.tail.concat(['鸭', '哟', '……'])) },
@@ -14723,23 +14823,74 @@ const FreeTalk = (function () {
         const ins = pick(DIC.advT.concat(['超', '好', '特别'])); return t.slice(0, i) + ins + t.slice(i); } },
     { p: 0.10, ok: () => true, go: t => pick(DIC.sigh) + '，' + t },
     { p: 0.10, ok: t => WT_REDUP.test(t) && !/(.)\1/.test(t), go: t => t.replace(WT_REDUP, '$&$&') },
-    { p: 0.10, ok: t => /^(我们|我|你|他|她)/.test(t) && t.length > 5, go: t => t.replace(/^(我们|我|你|他|她)/, m => m + pick(['就', '还', '又', '才', '都'])) }
+    { p: 0.10, ok: t => /^(我们|我|你|他|她)/.test(t) && t.length > 5, go: t => t.replace(/^(我们|我|你|他|她)/, m => m + pick(['就', '还', '又', '才', '都'])) },
+    /* ---- 她 10-13 00:06：加工不只是换近义词——删词 / 加词 / 替换 / 又删又加都要有 ---- */
+    /* 删：删掉句首的连接词/时间词 */
+    { p: 0.13, ok: t => t.length > 4 && CUT_HEADS.some(w => t.indexOf(w) === 0),
+      go: t => { const ws = CUT_HEADS.filter(w => t.indexOf(w) === 0); if (!ws.length) return null;
+        return t.slice(pick(ws).length).replace(/^[，,、]\s*/, ''); } },
+    /* 删：多分句只留后半句（删减） */
+    { p: 0.12, ok: t => t.split(/[，,]/).filter(s => s.trim()).length > 1,
+      go: t => { const parts = t.split(/[，,]/).map(s => s.trim()).filter(Boolean); return parts.length > 1 ? parts[parts.length - 1] : null; } },
+    /* 删：删掉句尾的称呼/小尾巴 */
+    { p: 0.08, ok: t => t.split(/[，,]/).filter(s => s.trim()).length > 1 && /[，,]\s*[^\s，,。]{1,4}$/.test(t),
+      go: t => t.replace(/[，,]\s*[^\s，,。]{1,4}$/, '') },
+    /* 加：句尾加称呼（她这边的名字，真人聊天最常见） */
+    { p: 0.12, ok: (t, ctx) => !!whoOf(ctx) && t.indexOf(String(whoOf(ctx))) < 0,
+      go: (t, ctx) => t + '，' + whoOf(ctx) },
+    /* 替换：同音词（她 10-13：加工不一定换近义词，同音词也行——像挑到同音候选） */
+    { p: 0.10, ok: t => Object.keys(HOMO_WORDS).some(w => t.indexOf(w) >= 0),
+      go: t => { const ws = Object.keys(HOMO_WORDS).filter(w => t.indexOf(w) >= 0); if (!ws.length) return null;
+        const w = pick(ws), cands = HOMO_WORDS[w]; return (cands && cands.length) ? t.replace(w, pick(cands)) : null; } },
+    /* 替换：近义词（原来是单独的 synonymize 口，她 10-13 拢进加工层） */
+    { p: 0.12, ok: t => DIC.syn.some(g => g.some(w => t.indexOf(w) >= 0)),
+      go: t => { const gs = DIC.syn.filter(g => g.some(w => t.indexOf(w) >= 0)); if (!gs.length) return null;
+        const g = pick(gs), i = g.findIndex(w => t.indexOf(w) >= 0);
+        let j = Math.floor(Math.random() * g.length); if (j === i) j = (j + 1) % g.length;
+        return t.replace(g[i], g[j]); } },
+    /* 又删又加：砍掉后半句，换一句新的接上 */
+    { p: 0.12, ok: t => t.split(/[，,]/).filter(s => s.trim()).length > 1,
+      go: t => { const parts = t.split(/[，,]/).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) return null; return parts[0] + '，' + pick(DIC.short).t; } }
   ];
-  function wordTransform(text, ctx) {
+  /* 加工引擎（她 10-13 00:06 拢成一个口，三模式共用）：算子表洗牌轮询，
+     maxOps=最多动几处刀（1＝老的单算子版；2＝可以又删又加/两处一起动），
+     recheck=复查再编辑的概率（改完再看一遍，再动一处）。一处没动就返回 null（不硬改） */
+  function applyPol(text, ctx, maxOps, recheck) {
     const t0 = String(text || '').trim();
     if (!t0 || t0.length > 44 || FEED_BAD.test(t0) || /\d/.test(t0)) return null;
-    let out = t0, ms = 0;
-    const hit = () => { ms += 200 + Math.random() * 500; };
-    const r = p => Math.random() < p;
-    /* 洗牌轮询：每个算子独立小概率+适用性检查，第一个双重命中的生效 */
-    const order = WT_OPS.slice();
-    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-    for (const op of order) {
-      if (r(op.p) && op.ok(out)) { out = op.go(out); hit(); break; }
+    let out = t0, ms = 0, moved = 0;
+    const beat = () => { ms += 200 + Math.random() * 500; };
+    const once = () => {
+      const order = WT_OPS.slice();
+      for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+      for (const op of order) {
+        if (Math.random() < op.p && op.ok(out, ctx)) {
+          let nx = null;
+          try { nx = op.go(out, ctx); } catch (e) { nx = null; }
+          if (nx && nx !== out) { out = nx; beat(); moved++; return true; }
+        }
+      }
+      return false;
+    };
+    once();
+    if (moved && maxOps > 1 && Math.random() < 0.42) once();          /* 又删又加／两处一起动 */
+    if (moved && recheck > 0 && Math.random() < recheck) {           /* 复查再编辑：再看一遍再动一处 */
+      ms += 300 + Math.random() * 500;
+      once();
     }
-    if (out === t0) return null;   /* 一个都没中，不硬改 */
-    if (!out || out.length > 50 || out.indexOf('undefined') >= 0) return null;
+    if (!moved || out === t0) return null;
+    if (out.length > 50 || out.indexOf('undefined') >= 0) return null;
     return { text: out, extraMs: Math.round(ms) };
+  }
+  /* 老口（她 10-11 09:52 那批的加工口）：单算子版，行为不变，老调用与探针照用 */
+  function wordTransform(text, ctx) { return applyPol(text, ctx, 1, 0); }
+  /* 自由说话三模式共用的加工层：可以动两处刀（删+加／替换），8% 复查再编辑，
+     12% 打字打错同音字再看一眼改回来（她 10-13：错字改正也算加工——只留挑选时间，上屏的是改好的） */
+  function polish(text, ctx) {
+    const r = applyPol(text, ctx, 2, 0.08);
+    if (r && Math.random() < 0.12) r.extraMs = Math.round(r.extraMs + 400 + Math.random() * 700);
+    return r;
   }
   /* 她 10-10 14:27：近义词圈——组完小概率换着说（换个说法也是挑词，带时间痕迹） */
   function synonymize(text) {
@@ -14799,17 +14950,112 @@ const FreeTalk = (function () {
     }
     return null;
   }
-  /* 她 10-12：键盘直接打字模式——不组不加工，照着她的字卡原句直接敲出来（自由度拉满）；
-     30% 输入法联想补一拍（尾追一个联想词，带真打字时间）。返回 {text, extraMs} 或 null */
-  function typeDirect(text, ctx) {
-    const t0 = String(text || '').trim();
-    if (!t0 || t0.length > 60) return null;
+  /* ---------- 自由说话三模式（她 10-13 00:06 亲口定，三条都是「造句」，没有照抄这一路）----------
+     A 键盘直接打字：TA 自己想一句全新的话打出来，**不受她字卡库任何限制**
+       （她说得清楚：照抄字卡原句等于白做，那不如直接选字卡）
+     B 拼音弹字选字：想好一句 → 打拼音 → 同音候选里一个个选字拼出来。
+       这是「对方那侧」的行为模式，聊天界面一句都不显示，她只看到 TA「正在输入…」
+     C 词语字卡：从字卡池抽 1~4 张（可以只抽一张就对着它改），
+       多张先把卡拆成词块再随机组合成句，然后加工
+     三条都过同一个加工层 polish；三条产出的句子都按概率进荟萃「自由组句」。 */
+
+  /* 造句内核（A/B 共用）：抽句式框架现造一句，不看她的字卡库 */
+  function makeLine(ctx) {
+    for (let i = 0; i < 24; i++) {
+      const f = FRAMES[Math.floor(Math.random() * FRAMES.length)];
+      let line = null;
+      try { line = f.make(ctx); } catch (e) { line = null; }
+      if (line) return line;
+    }
+    return null;
+  }
+  /* 在调用方给的时间窗里现造一句（到点还造不出就 null，调用方退回落字卡） */
+  function freeSentence(ctx, budgetMs) {
+    const budget = Math.max(0, +budgetMs || 0);
+    let spent = 0;
+    while (spent < budget) {
+      const line = makeLine(ctx);
+      spent += 180 + Math.random() * 320;   /* 起手想一句的时间 */
+      if (line) return line;
+    }
+    return null;
+  }
+  /* A：键盘直接打字——完全自由造句；打字途中 30% 弹一次输入法联想（句尾追一个联想词） */
+  function typeFree(ctx, budgetMs) {
+    const line = freeSentence(ctx, budgetMs);
+    if (!line) return null;
+    let text = line, ms = 0;
+    const pol = (Math.random() < 0.55) ? polish(line, ctx) : null;
+    if (pol) { text = pol.text; ms += pol.extraMs; }
     if (Math.random() < 0.3) {
       const lian = pick(DIC.emo.concat(DIC.short.map(x => x.t)));
-      const t1 = t0 + (/[，。！？~…]$/.test(t0) ? '' : '，') + lian;
-      if (t1.length <= 60) return { text: t1, extraMs: Math.round(strokeTime(t1) + 200 + Math.random() * 400) };
+      const t1 = text + (/[，。！？~…]$/.test(text) ? '' : '，') + lian;
+      if (t1.length <= 60) { text = t1; ms += 200 + Math.random() * 400; }
     }
-    return { text: t0, extraMs: Math.round(strokeTime(t0)) };
+    return { text, extraMs: Math.round(strokeTime(text) + ms) };
+  }
+  /* B：拼音弹字选字——同一颗造句内核，但过程是拼音选字：选字/翻候选的时间真加进去，
+     25% 先挑错一个同音字再看一眼换回来。这套拼字过程只存在 TA 那侧，不上屏 */
+  function pinyinFree(ctx, budgetMs) {
+    const line = freeSentence(ctx, budgetMs);
+    if (!line) return null;
+    let text = line, ms = 0;
+    const pol = (Math.random() < 0.72) ? polish(line, ctx) : null;
+    if (pol) { text = pol.text; ms += pol.extraMs; }
+    ms += deliberate(text);                                     /* 打拼音 + 翻同音候选选字的时间 */
+    if (Math.random() < 0.25) ms += 400 + Math.random() * 800;  /* 候选挑错一眼再换回来 */
+    return { text, extraMs: Math.round(strokeTime(text) + ms) };
+  }
+  /* 拆词块：先按标点切分句，再把分句拆成词（词典里认得的词 + 剩下的碎块） */
+  function splitChunks(s) {
+    const t = String(s || '').trim();
+    if (!t) return [];
+    const dict = DIC.noun.concat(DIC.verb).concat((DIC.short || []).map(x => ({ t: x.t })))
+      .map(x => x.t).filter(w => w && w.length >= 2);
+    const out = [];
+    t.split(/[，,。！？!?…]+/).map(x => x.trim()).filter(Boolean).forEach(seg => {
+      let rest = seg, guard = 0;
+      while (rest && guard++ < 12) {
+        let hit = null, at = -1;
+        dict.forEach(w => {
+          const i = rest.indexOf(w);
+          if (i >= 0 && (at < 0 || i < at || (i === at && hit && w.length > hit.length))) { hit = w; at = i; }
+        });
+        if (!hit) { out.push(rest); break; }
+        if (at > 0) out.push(rest.slice(0, at));
+        out.push(hit);
+        rest = rest.slice(at + hit.length);
+      }
+    });
+    return out.filter(x => x && x.trim());
+  }
+  /* 多张卡拼新句：每张卡拆出的词块里各抽一块，打乱顺序拼起来（先拆词、再随机组合） */
+  function blendCards(take) {
+    const rows = take.map(c => splitChunks(c)).filter(r => r.length);
+    if (rows.length < 2) return null;
+    const out = [];
+    rows.forEach(r => { if (Math.random() < 0.85) out.push(pick(r)); });
+    if (out.length < 2) return null;
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+    const line = Math.random() < 0.5 ? out.join('') : out.join('，');
+    if (!line || line.length > 46 || line.indexOf('undefined') >= 0) return null;
+    return line;
+  }
+  /* C：词语字卡——抽 1~4 张卡，拆词块随机组合（只抽到一张就对着它改），再加工 */
+  function cardFree(cards, ctx) {
+    const pool = (cards || []).map(s => String(s || '').trim()).filter(s => s && s.length <= 40 && !FEED_BAD.test(s));
+    if (!pool.length) return null;
+    const bag = pool.slice(), take = [];
+    const n = 1 + Math.floor(Math.random() * 4);               /* 她 10-13 00:06：1~4 张，可以只抽一张 */
+    while (take.length < n && bag.length) take.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    let text = (take.length === 1) ? take[0] : (blendCards(take) || take[0]);
+    if (!text) return null;
+    const pol = (Math.random() < 0.72) ? polish(text, ctx) : null;
+    const ms = 200 + Math.random() * 350 + (pol ? pol.extraMs : 0);
+    if (pol) text = pol.text;
+    if (take.length === 1 && !pol) return null;                /* 一张又一点没改：不硬发，调用方落回她的字卡原句 */
+    if (!text || text.length > 60 || text.indexOf('undefined') >= 0) return null;
+    return { text, extraMs: Math.round(strokeTime(text) + deliberate(text) + ms) };
   }
   /* 兼容旧调用（日记/朋友圈/测一测）：给个宽限窗，返回纯文本 */
   function compose(ctx, budgetMs) {
@@ -14926,7 +15172,7 @@ const FreeTalk = (function () {
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample, dicSearch, pinyinOf, typeDirect };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序；10-12 加词典检索/拼音/键盘打字口 */
+  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, polish, applyPol, makeLine, splitChunks, blendCards, typeFree, pinyinFree, cardFree, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample, dicSearch, pinyinOf };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序；10-12 加词典检索/拼音口；10-13 三模式（typeFree/pinyinFree/cardFree）+ 三模式共用的加工层 polish */
   /* 单字在同音候选里的位次（0=最高频）与该音节候选总数，只读，不上屏 */
   function homoRank(c) { const e = CHAR_SYL[c]; return e ? { rank: e.rank, n: e.n } : null; }
   /* long2/long3 的连接方式多样化探针口：抽一句长句给探针统计连接符 */
@@ -15946,12 +16192,17 @@ const Library = (function () {
     return true;
   }
   /* 平铺文本库（emojis/kamoji）的收条口：分组兜底+按文本查重 */
+  function collectGroup(lib) {
+    defGroups(lib);
+    let g = (lib.groups || []).find(x => x && x.name === '收集');
+    if (!g) { g = { id: gid(), name: '收集', blocked: false }; lib.groups.push(g); }
+    return g.id;
+  }
   function libPushText(kind, t) {
     const lib = DB.state.libs[kind];
     if (!lib) return false;
-    defGroups(lib);
     if ((lib.items || []).some(it => norm(it.text) === t)) return false;
-    lib.items.push({ id: iid(), text: t, groupId: (lib.groups[0] || {}).id });
+    lib.items.push({ id: iid(), text: t, groupId: collectGroup(lib) });
     return true;
   }
   /* 纯 emoji：整句只有 emoji 及其连接件（FE0F/ZWJ/区域旗），不含普通文字数字 */
@@ -15965,6 +16216,8 @@ const Library = (function () {
   }
   /* 她 00:48 拍板「各回各家」：图片表情不进荟萃（荟萃只放话），收进 TA 的专属表情库——
      TA 发图本来就从 contactStickers/sharedStickers 抽，收来的图从这出。同图不重复收。 */
+  /* 她 10-13 00:06 口径：这张图要是已经躺在任何一个图库里（我自己的/共享的/TA 们各自的），
+     就算「已经存到图片库了」，不再重复收；真没进过库的（比如我发的相册照片）才收。 */
   function inAnyStickerLib(img) {
     const L = DB.state.libs || {};
     const pools = [L.userStickers, L.sharedStickers];
@@ -15975,11 +16228,9 @@ const Library = (function () {
     if (!img || !ctId) return false;
     if (inAnyStickerLib(img)) return false;
     const m = DB.state.libs.contactStickers;
-    if (!m[ctId]) m[ctId] = { groups: [{ id: gid(), name: '默认', blocked: false }], items: [] };
+    if (!m[ctId]) m[ctId] = { groups: [], items: [] };
     const lib = m[ctId];
-    if (!lib.groups || !lib.groups.length) lib.groups = [{ id: gid(), name: '默认', blocked: false }];
-    if ((lib.items || []).some(it => it.img === img)) return false;
-    lib.items.push({ id: iid(), img, groupId: lib.groups[0].id });
+    lib.items.push({ id: iid(), img, groupId: collectGroup(lib) });
     return true;
   }
   /* 学舌库删除：TA 拒绝/再问由 TA 本人在会话里说话（文案沿用她验收过的那批） */
@@ -29984,7 +30235,9 @@ const Call = (function () {
     const who = st.mode === 'single' ? Home.displayName(peerOf(st.conv)) : '';
     let line = '';
     if (st.phase === 'outgoing' && reason === 'user') {
-      /* 呼出未接通就取消：不留记录 */
+      /* 她 10-13 00:06（原话「我发现如果取消通话没记录哎？就是还未接通的时候取消通话，需要这个」）：
+         呼出还没接通就自己取消，聊天里也要留一条 */
+      if (st.mode === 'single') pushCallSys((DB.state.profile.name || '我') + ' 取消了视频通话');
       teardown(); return;
     }
     if (reason === 'noanswer-ai') {
@@ -30361,7 +30614,11 @@ const Call = (function () {
       if (!b || !st) return;
       const act = b.dataset.cact;
       if (act === 'hangup') endBy('user');
-      else if (act === 'reject') { teardown(); }
+      /* 她 10-13 00:06：来电点「拒绝」也要留记录 */
+      else if (act === 'reject') {
+        if (st.mode === 'single') pushCallSys((DB.state.profile.name || '我') + ' 拒绝了 ' + Home.displayName(peerOf(st.conv)) + ' 的视频通话');
+        teardown();
+      }
       else if (act === 'answer') connect();
       else if (act === 'close') teardown();
       else if (act === 'mute') toggleMute();
@@ -31488,12 +31745,11 @@ const Schedule = (function () {
      实战面 = DB.state.msgs[convId] 里 TA 真发过的消息（按 type/标志数）
      专项面 = games.records / mall.orders / moments.posts / letters / diary / reports / redpackets / kinship.cards
      认不出来的一律如实说「档案里认不出」，不拿估算顶。
-   ※ 打分口径（她 10-12 23:18 亲口纠，每格都上屏显证据，看得见怎么算的）：
-     掌握度 = 学习程度 = 熟练度：只看 TA「学到了多少、会多少种」——手里备着的料、
-              TA 自己攒出来的种类（按种数算，不按次数）。闸门开没开、做过多少次
-              一律不进掌握度：开关只进挑战度，次数只在子项里当证据摆着。
-     挑战度 = 让 TA 做成这件事有多难（闸门越窄/等得越久/越靠运气越高），理由上屏
-     没有可学之料的板块（通话/状态轮换/撤回/回复这类 TA 天生就会的）：掌握度如实显示「—」
+   ※ 打分口径（她 10-13 00:06 亲口定）：掌握度就是随机数字——她原话「你就随机数字就好了呀
+     掌握度……所以给我随机」。按 联系人（或群）× 板块 派生一个稳定的随机数：
+     同一个人同一个板块刷新不跳数，换人/换板块就换数，不参与任何统计。
+     挑战度照旧按闸门算（她没让改）。子项下面那些「料/条数/种数/现状」照样上屏——
+     它们是档案里真有的东西，摆着给人看，不参与算分。
    ===================================================== */
 const Detect = (function () {
 
@@ -31515,13 +31771,16 @@ const Detect = (function () {
   const open = (v, hi) => Math.min(1, Math.max(0, (+v || 0) / (hi || 30)));
   /* 折满：手上有多少（多少条料、会多少种）折算成 0~1 */
   const use = (n, ref) => Math.min(1, (+n || 0) / (ref || 8));
-  /* 掌握度（她 10-12 23:18 纠口径）：掌握度＝学习程度＝熟练度。
-     口径 = 本板块「学习类子项」的平均分（子项各自有判据、都上屏看得见）；
-     sc:false 的子项是现状证据（开关/次数），一律不进掌握度。 */
-  const learnOf = subs => {
-    const on = (subs || []).filter(s => s && s.sc !== false);
-    return on.length ? pct(on.reduce((a, s) => a + (+s.p || 0), 0) / on.length) : null;
+  /* 掌握度（她 10-13 00:06：随机数字就好，不要那套统计口径）。
+     按 联系人（或群）× 板块 key 派生一个稳定的随机数——稳定是为了刷新不跳数，
+     随机是她的口径；换人、换板块就换数。 */
+  const h32 = s => {
+    let h = 2166136261 >>> 0;
+    const t = String(s == null ? '' : s);
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h >>> 0;
   };
+  const rnd100 = (seed, lo, hi) => lo + (h32(seed) % (hi - lo + 1));
   const day = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
 
   /* ---------- 消息面统计（只数真档案） ---------- */
@@ -31576,7 +31835,7 @@ const Detect = (function () {
     const learnedN = (typeof Library !== 'undefined' && Library.learnedCount) ? Library.learnedCount(ct.id) : 0;
     const ftN = (typeof Library !== 'undefined' && Library.ftCount) ? Library.ftCount(ct.id) : 0;   /* 荟萃·自由组句分组 */
     const emoN = (typeof Engine !== 'undefined' && Engine.emotionLibrary) ? Engine.emotionLibrary.length : 8;
-    const push = (r) => { r.score = r.noLearn ? null : learnOf(r.subs); r.challenge = pct(r.chal); rows.push(r); };
+    const push = (r) => { r.score = pct(rnd100(ct.id + '|' + r.key, 22, 94)); r.challenge = pct(r.chal); rows.push(r); };
 
     /* ---- 字卡 ---- */
     {
@@ -31854,7 +32113,7 @@ const Detect = (function () {
     }
 
     /* ---- 视频通话 ---- */
-    push({ key: 'call', name: '视频通话', icon: 'video', noLearn: true,
+    push({ key: 'call', name: '视频通话', icon: 'video',
       chal: 70,
       hard: '这件事没有可学的料：打不打过来是固定的 3%，TA 天生就会——所以掌握度不适用，只看挑战度。' + '时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
       subs: [
@@ -31879,7 +32138,7 @@ const Detect = (function () {
     }
 
     /* ---- 撤回 ---- */
-    push({ key: 'revoke', name: '撤回', icon: 'x', noLearn: true,
+    push({ key: 'revoke', name: '撤回', icon: 'x',
       chal: 100 * (1 - open(p.revokeRate, 50)),
       hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算（会不会撤不靠学，所以掌握度不适用）',
       subs: [
@@ -31898,7 +32157,7 @@ const Detect = (function () {
       if (hi >= 60) bad.push('最慢要等 ' + hi + ' 秒才回，聊起来会像断线');
       if (mc >= 4) bad.push('一轮至少 ' + mc + ' 条，容易刷屏');
       if (hi && lo && hi - lo > 45) bad.push('快慢差太大（' + lo + '~' + hi + ' 秒），节奏忽快忽慢');
-      push({ key: 'reply', name: '回复', icon: 'chat', noLearn: true,
+      push({ key: 'reply', name: '回复', icon: 'chat',
         chal,
         hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%（节奏类没有可学的料，掌握度不适用）',
         subs: [
@@ -31923,7 +32182,7 @@ const Detect = (function () {
     arr.forEach(m => { if (m.from === 'ai' && m.senderId) speaker[m.senderId] = (speaker[m.senderId] || 0) + 1; });
     const spoke = members.filter(id => speaker[id]);
     const rows = [];
-    const push = r => { r.score = r.noLearn ? null : learnOf(r.subs); r.challenge = pct(r.chal); rows.push(r); };
+    const push = r => { r.score = pct(rnd100(g.id + '|' + r.key, 22, 94)); r.challenge = pct(r.chal); rows.push(r); };
 
     push({ key: 'g-members', name: '成员活跃', icon: 'user',
       chal: pct(100 * (1 - use(spoke.length, Math.max(1, members.length)))),
@@ -31939,7 +32198,7 @@ const Detect = (function () {
       })),
       adv: members.length > spoke.length ? '有 ' + (members.length - spoke.length) + ' 位成员一直没说话——群里发言是抢名额的，人越多越难轮到' : '' });
 
-    push({ key: 'g-limit', name: '每轮名额', icon: 'chat', noLearn: true,
+    push({ key: 'g-limit', name: '每轮名额', icon: 'chat',
       chal: pct(100 * (1 - Math.min(1, (conv.groupMaxCount || 0) / 8))),
       hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分（名额是闸门，掌握度不适用）',
       subs: [
@@ -32030,16 +32289,10 @@ const Detect = (function () {
     const now = +((ct.params || {})[knob[0]] != null ? (ct.params || {})[knob[0]] : (p[knob[0]] || 0));
     if (num == null) return curTxt + '「' + knob[1] + '」现在是 ' + now + '%。想改直接说个数，我给你算改完的样子。';
     const val = Math.max(0, Math.min(100, Math.round(+num)));
-    const saved = (ct.params || {})[knob[0]];
-    ct.params = ct.params || {};
-    ct.params[knob[0]] = val;                     // 试算：只在内存里，问完就还原
-    const after = buildCt(ct).find(r => r.key === key);
-    if (saved == null) delete ct.params[knob[0]]; else ct.params[knob[0]] = saved;
-    const delta = after.score - row.score;
-    const verdict = val === 0 ? '⚠ 设成 0 就是关掉这个功能，掌握度会掉到 ' + after.score + '%。'
-      : delta >= 5 ? '可行，而且明显有提升：' + row.score + '% → ' + after.score + '%。'
-      : delta <= -5 ? '不建议：掌握度会从 ' + row.score + '% 掉到 ' + after.score + '%。'
-      : '可行，但变化不大：' + row.score + '% → ' + after.score + '%（' + knob[1] + '不是这件事最卡的那一格）。';
+    /* 掌握度改成随机数字后，调开关跟掌握度不再挂钩（她 10-13 00:06）：只答这件事本身会怎样 */
+    const verdict = val === 0
+      ? '⚠ 设成 0 就是关掉这件事，TA 之后不会主动做了。'
+      : '可行：这格只调频率，开大开小不影响 TA「会不会」这件事。';
     return curTxt + '把「' + knob[1] + '」从 ' + now + '% 改成 ' + val + '% 的话：' + verdict
       + (row.adv ? '　我的建议还是：' + row.adv : '');
   }
@@ -32089,7 +32342,7 @@ const Detect = (function () {
         '<div class="dt-total-b"><b>' + (all.m == null ? '—' : all.m + '%') + '</b><small>总体掌握度</small>' + bar(all.m || 0, 'ok') + '</div>' +
         '<div class="dt-total-b"><b>' + all.c + '%</b><small>总体挑战度</small>' + bar(all.c, 'warn') + '</div>' +
       '</div>' +
-      '<div class="dt-tip">掌握度＝TA 对这件事的学习程度（学到了多少、会多少种），跟开关和次数无关；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
+      '<div class="dt-tip">掌握度＝TA 对这件事的熟练程度；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
 
     list.innerHTML = rs.map((r, i) =>
       '<button class="dt-row card" data-i="' + i + '">' +
