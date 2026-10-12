@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261012-184032 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261012-233232 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -3754,7 +3754,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dt-adv span{font-size:var(--fs-small);color:var(--t2);line-height:1.6}
 .dt-fix{align-self:flex-start;padding:6px 12px;border:none;border-radius:9px;background:var(--primary);color:#fff;font-size:var(--fs-small)}
 .dt-empty{padding:30px 0;text-align:center;color:var(--t3)}
-.dt-dcard{padding:18px}
+.dt-dcard{width:min(340px,88vw);background:var(--card);
+  -webkit-backdrop-filter:var(--panel-blur);backdrop-filter:var(--panel-blur);
+  border-radius:var(--r-card);box-shadow:var(--shadow-float);padding:18px}
+/* 10-12 她报「点开板块透明底、全叠一起」：详情卡此前只穿了 dialog-card 却没写皮，
+   玻璃主题下 --card 是 66% 半透明 → 看上去就是透明。今后这类弹层卡一律在本文件里写全皮，
+   不允许只挂 dialog-card 就上屏。 */
 .dt-dhead{display:flex;align-items:center}
 .dt-dhead b{flex:1;font-size:16px;color:var(--t1)}
 .dt-x{border:none;background:transparent;color:var(--t3);font-size:16px}
@@ -3765,6 +3770,9 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dt-sub-t{display:flex;font-size:var(--fs-aux);color:var(--t1);margin-bottom:5px}
 .dt-sub-t span{flex:1}
 .dt-sub small{display:block;margin-top:5px;font-size:var(--fs-small);color:var(--t3)}
+/* 不计分的现状项：压淡一些，右边挂「现状」而不是百分比（她 10-12 23:18 定的掌握度口径） */
+.dt-sub-ref{opacity:.76}
+.dt-ref{color:var(--t3);font-weight:400;font-size:var(--fs-small)}
 .dt-dadv{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--fill);font-size:var(--fs-aux);color:var(--t1);line-height:1.6}
 .dt-dbtns{display:flex;gap:10px;margin-top:14px}
 .dt-dbtns button{flex:1;padding:11px 0;border:none;border-radius:11px;background:var(--fill);color:var(--t1);font-size:var(--fs-aux)}
@@ -4023,10 +4031,11 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <button class="more-tile" data-more="redpacket"><span class="tile-ico"><i data-icon="hongbao" data-size="20"></i></span><span>红包</span></button>
       <button class="more-tile" data-more="diary"><span class="tile-ico"><i data-icon="book" data-size="20"></i></span><span>心事簿</span></button>
 <button class="more-tile" data-more="report"><span class="tile-ico"><i data-icon="compass" data-size="20"></i></span><span>报备</span></button>
-<button class="more-tile" data-more="quiz"><span class="tile-ico"><i data-icon="quiz" data-size="20"></i></span><span>灵魂拷问</span></button>
       </div>
-      <!-- P36a（她 08-27 定：往右滑第2页，像微信） -->
+      <!-- P36a（她 08-27 定：8格一页、两行，新的往右滑第2页，像微信）；
+           清然 2026-10-12：每页恒 8 格，多出来的砖一律往下一页放，禁止挤成三行 -->
       <div class="cmp-page">
+        <button class="more-tile" data-more="quiz"><span class="tile-ico"><i data-icon="quiz" data-size="20"></i></span><span>灵魂拷问</span></button>
         <button class="more-tile" data-more="link"><span class="tile-ico"><i data-icon="link" data-size="20"></i></span><span>链接</span></button>
         <button class="more-tile" data-more="drawpad"><span class="tile-ico"><i data-icon="brush" data-size="20"></i></span><span>画板</span></button>
       </div>
@@ -13418,7 +13427,7 @@ const Doodle = (function () {
 
   /* ---------- 主题库：52 种 ---------- */
   /* 每个主题 = f(A) → 笔画数组；A={ink, a:[三个马克笔色]}；笔画={pts, c:'ink'|0|1|2, w} */
-  const CATS = ['生物', '食物', '物品', '自然', '图案'];
+  const CATS = ['生物', '食物', '物品', '自然', '图案', '随笔'];
   const SUBJECTS = [
     /* ===== 生物 ===== */
     { n: '小猫', cat: 0, f: A => [
@@ -13794,6 +13803,119 @@ const Doodle = (function () {
   ] }
   ];
 
+  /* ---------- 她 10-12 23:18：TA 也要能「自己创作」 ----------
+     不总是从固定主题库里抽：给 TA 一手线一支笔，随手画出无规则的东西——
+     横线/竖线/斜线/波浪/锯齿/螺旋/圈圈/涂抹，还有火柴人（姿势全靠关节角度随机）。
+     这些项和固定主题同结构 {n, cat, f}，接在同一个池子里，只是抽中权重更高。 */
+  function wob(x0, y0, x1, y1, amp) { return J([[x0, y0], [x1, y1]], amp == null ? 1.6 : amp); }
+  /* 波浪 / 锯齿：沿一条线来回摆开 */
+  function wave(x0, y0, x1, y1, amp, n, zig) {
+    const pts = [];
+    const N = n || Math.round(rnd(3, 7));
+    const dx = x1 - x0, dy = y1 - y0;
+    const L = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const nx = x0 + dx * t, ny = y0 + dy * t;
+      const off = (i === 0 || i === N) ? 0 : (zig ? (i % 2 ? amp : -amp) : amp * Math.sin(t * Math.PI * 2));
+      pts.push([nx + (-dy / L) * off, ny + (dx / L) * off]);
+    }
+    return J(pts, 0.6);
+  }
+  /* 螺旋：从中心往外绕 */
+  function spiral(cx, cy, r0, r1, turns) {
+    const pts = [], N = 40;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, ang = t * Math.PI * 2 * turns, r = r0 + (r1 - r0) * t;
+      pts.push([cx + r * Math.cos(ang), cy + r * Math.sin(ang) * 0.85]);
+    }
+    return J(pts, 0.7);
+  }
+  /* 随手涂：一条来回折返的线（像用笔把一小块涂满） */
+  function scribble(cx, cy, w, h, seg) {
+    const pts = [], N = seg || Math.round(rnd(5, 9));
+    for (let i = 0; i <= N; i++) {
+      const y = cy - h / 2 + h * (i / N);
+      pts.push([(i % 2) ? cx - w / 2 + rnd(-2, 2) : cx + w / 2 + rnd(-2, 2), y + rnd(-1.5, 1.5)]);
+    }
+    return J(pts, 0.8);
+  }
+  /* 怪形状：闭合的随手多边形（点位随机，出来什么是什么） */
+  function blob(cx, cy, r, n) {
+    const N = n || Math.round(rnd(5, 8)), pts = [];
+    for (let i = 0; i < N; i++) {
+      const ang = (Math.PI * 2 * i) / N + rnd(-0.25, 0.25);
+      const rr = r * rnd(0.65, 1.3);
+      pts.push([cx + rr * Math.cos(ang), cy + rr * Math.sin(ang) * 0.9]);
+    }
+    pts.push(pts[0].slice());
+    return J(pts, 1);
+  }
+  /* 火柴人：站/跳/举手/劈叉/弯腰全靠角度组合自己长出来 */
+  function stickman(A) {
+    const cx = rnd(40, 62), cy = rnd(42, 58), s = rnd(0.85, 1.15);
+    const hr = rnd(5, 6.6) * s;
+    const headY = cy - 20 * s, hipY = cy + 2 * s, shY = cy - 12 * s;
+    const lean = rnd(-0.32, 0.32);
+    const armA = rnd(-1.15, 1.15), armB = rnd(-1.15, 1.15);
+    const legA = rnd(0.3, 0.95), legB = rnd(0.3, 0.95);
+    const armL = rnd(9, 13) * s, legL = rnd(11, 15) * s;
+    const hipX = cx + lean * 10, shX = cx + lean * 8;
+    const out = [];
+    out.push({ pts: J(E(hipX, headY, hr, hr), 0.8), c: 'ink' });
+    out.push({ pts: J([[cx + lean * 4, headY + hr], [hipX, hipY]], 0.9), c: 'ink' });
+    out.push({ pts: J([[shX, shY], [shX + Math.cos(Math.PI + armA) * armL, shY + Math.sin(Math.PI + armA) * armL]], 0.9), c: 'ink' });
+    out.push({ pts: J([[shX, shY], [shX + Math.cos(armB) * armL, shY + Math.sin(armB) * armL]], 0.9), c: 'ink' });
+    out.push({ pts: J([[hipX, hipY], [hipX + Math.cos(Math.PI / 2 + legA) * legL, hipY + Math.sin(Math.PI / 2 + legA) * legL]], 0.9), c: 'ink' });
+    out.push({ pts: J([[hipX, hipY], [hipX + Math.cos(Math.PI / 2 - legB) * legL, hipY + Math.sin(Math.PI / 2 - legB) * legL]], 0.9), c: 'ink' });
+    if (Math.random() < 0.5) {
+      out.push({ pts: dot(hipX - hr * 0.35, headY - 1), c: 'ink', w: 2.4 });
+      out.push({ pts: dot(hipX + hr * 0.35, headY - 1), c: 'ink', w: 2.4 });
+    }
+    /* 三成多手里拎个小东西（彩色小气球） */
+    if (Math.random() < 0.35) {
+      out.push({ pts: J(E(shX + armL * 1.05, shY - armL * 0.7, rnd(2.5, 4), rnd(2.8, 4.2)), 0.7), c: A.a[0] });
+    }
+    return out;
+  }
+
+  const FREEHAND = [
+    { n: '随手画的线', cat: 5, f: A => {
+      const out = [], N = Math.round(rnd(2, 5));
+      for (let i = 0; i < N; i++) {
+        const x0 = rnd(14, 60), y0 = rnd(16, 84);
+        out.push({ pts: wob(x0, y0, x0 + rnd(12, 34), y0 + rnd(-26, 26), 1.6), c: 'ink' });
+      }
+      return out;
+    } },
+    { n: '波浪线', cat: 5, f: A => {
+      const out = [];
+      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
+        const y = rnd(24, 76);
+        out.push({ pts: wave(rnd(12, 24), y, rnd(74, 88), y + rnd(-8, 8), rnd(4, 9), Math.round(rnd(3, 6))), c: i ? A.a[1] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '锯齿线', cat: 5, f: A => [{ pts: wave(rnd(12, 20), rnd(40, 60), rnd(78, 88), rnd(40, 60), rnd(4, 8), Math.round(rnd(4, 8)), true), c: 'ink' }] },
+    { n: '螺旋', cat: 5, f: A => [{ pts: spiral(rnd(40, 60), rnd(42, 58), rnd(2, 5), rnd(16, 26), rnd(1.6, 2.8)), c: 'ink' }] },
+    { n: '圈圈', cat: 5, f: A => {
+      const out = [];
+      for (let i = 0, N = Math.round(rnd(2, 4)); i < N; i++) {
+        out.push({ pts: J(E(rnd(26, 74), rnd(26, 74), rnd(5, 14), rnd(5, 13)), 1.4), c: i % 2 ? A.a[0] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '随手涂', cat: 5, f: A => [{ pts: scribble(rnd(36, 64), rnd(36, 64), rnd(16, 30), rnd(12, 26)), c: A.a[0] }] },
+    { n: '乱画的形状', cat: 5, f: A => {
+      const out = [];
+      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
+        out.push({ pts: blob(rnd(30, 70), rnd(30, 70), rnd(8, 18)), c: i % 2 ? A.a[1] : 'ink' });
+      }
+      return out;
+    } },
+    { n: '火柴人', cat: 5, f: A => stickman(A) }
+  ];
+
   /* ---------- 角落小装饰（0~2 个，随手点的） ---------- */
   const GARNISH = [
     A => ({ pts: J([[0, -3], [3, 0], [0, 3], [-3, 0], [0, -3]]), c: A.a[0], w: 1.6 }),          // 小星
@@ -13806,13 +13928,19 @@ const Doodle = (function () {
 
   /* ---------- 出图 ---------- */
   /* 复合模式用：以主题自身包围盒中心为准，平移+缩放到目标格位 */
-  function placeStrokes(list, cx, cy, sc, A, out, pen) {
+  function placeStrokes(list, cx, cy, sc, A, out, pen, rotDeg) {
     const xs = [], ys = [];
     list.forEach(s => s.pts.forEach(p => { xs.push(p[0]); ys.push(p[1]); }));
     const mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
     const my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+    /* 她 10-12 23:18：方向不定——每块自己再转一个角度，不都摆得端端正正 */
+    const rot = ((rotDeg == null ? rnd(-20, 20) : rotDeg)) * Math.PI / 180;
+    const cs = Math.cos(rot), sn = Math.sin(rot);
     list.forEach(s => {
-      const pts = s.pts.map(p => [cx + (p[0] - mx) * sc, cy + (p[1] - my) * sc]);
+      const pts = s.pts.map(p => {
+        const px = (p[0] - mx) * sc, py = (p[1] - my) * sc;
+        return [cx + px * cs - py * sn, cy + px * sn + py * cs];
+      });
       out.push({ d: smooth(pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: Math.max(1.3, (s.w || rnd(2.1, 3.1)) * sc * 1.4 * (pen || 1)), pts });
     });
   }
@@ -13825,6 +13953,9 @@ const Doodle = (function () {
        闭形状 40% 概率垫填色层，55% 的幅面把部分黑墨笔画换成彩色笔（内容色，不套 UI 四色禁令） */
     const style = pick(['round', 'round', 'marker', 'crayon', 'crayon']);
     const pen = pick([0.72, 1, 1, 1.55]);
+    /* 她 10-12 23:18：TA 也要能自己创作——四成多直接走「随笔」（乱线/火柴人/怪形状），
+       其余才抽固定主题库（工程值 45%，待她拍） */
+    const poolPicked = Math.random() < 0.45 ? FREEHAND : SUBJECTS;
     /* 每张抽 2~3 支马克笔 */
     const pool = PAL.slice();
     const a = [];
@@ -13834,10 +13965,9 @@ const Doodle = (function () {
     const strokes = [];
     let name, cat;
     if (comboN === 1) {
-      const sub = pick(SUBJECTS);
-      sub.f(A).forEach(s => {
-        strokes.push({ d: smooth(s.pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: (s.w || rnd(2.1, 3.1)) * pen, pts: s.pts });
-      });
+      const sub = pick(poolPicked);
+      /* 位子、大小、朝向都随机（她 10-12 23:18：位置随机、方向不定） */
+      placeStrokes(sub.f(A), rnd(34, 66), rnd(34, 64), rnd(0.74, 1.04), A, strokes, pen, rnd(-16, 16));
       name = sub.n; cat = sub.cat;
       /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
       const gCount = Math.random() < 0.5 ? (Math.random() < 0.3 ? 2 : 1) : 0;
@@ -13853,15 +13983,24 @@ const Doodle = (function () {
       }
     } else {
       /* 复合：同框分区，主题允许重复；不出角落装饰（画面已满） */
-      const boxes = comboN === 2 ? [[50, 30], [50, 72]] : [[32, 28], [68, 28], [50, 74]];
+      /* 落点不再固定格位：每块在画布上随机找地方（互相尽量散开），方向各自随机 */
+      const boxes = [];
+      for (let i = 0; i < comboN; i++) {
+        let bx = 50, by = 50;
+        for (let t = 0; t < 8; t++) {
+          bx = rnd(26, 74); by = rnd(24, 74);
+          if (boxes.every(b => Math.abs(b[0] - bx) + Math.abs(b[1] - by) > 30)) break;
+        }
+        boxes.push([bx, by]);
+      }
       const base = comboN === 2 ? 0.5 : 0.38;
       const names = [];
       for (let i = 0; i < comboN; i++) {
-        const sub = pick(SUBJECTS);
+        const sub = pick(poolPicked);
         names.push(sub.n);
-        placeStrokes(sub.f(A), boxes[i][0] + rnd(-3, 3), boxes[i][1] + rnd(-2, 2), base * rnd(0.92, 1.1), A, strokes, pen);
+        placeStrokes(sub.f(A), boxes[i][0], boxes[i][1], base * rnd(0.82, 1.12), A, strokes, pen, rnd(-22, 22));
       }
-      name = names.join(' + '); cat = pick(SUBJECTS).cat;
+      name = names.join(' + '); cat = pick(poolPicked).cat;
     }
     /* 上色：闭形状 40% 垫填色层（马克笔色半透明，垫在所有笔画下面）；
        55% 的幅面再挑 1~3 笔黑墨换彩笔——她要的「填色或者用不同颜色的画笔」 */
@@ -13872,7 +14011,12 @@ const Doodle = (function () {
       const dd = Math.sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]));
       if (dd < 7 && Math.random() < 0.4) fills.push({ d: s.d, col: pick(A.a) });
     });
-    if (fills.length > 2) fills.length = 2;   /* 最多两块填色，别涂满 */
+    /* 她 10-12 23:18：颜色覆盖率也随机——这回可能一块不填、也可能填三四块，浓淡也跟着变。
+       上限只是别把整张纸糊死（工程值：0/2/4 块三档，待她拍） */
+    const fillRoll = Math.random();
+    const maxFill = fillRoll < 0.3 ? 0 : (fillRoll < 0.68 ? 2 : 4);
+    if (fills.length > maxFill) fills.length = maxFill;
+    const fillOp = rnd(0.16, 0.42).toFixed(2);
     if (Math.random() < 0.55) {
       const inkIdx = strokes.map((s, i) => (s.col === INK ? i : -1)).filter(i => i >= 0);
       const nRe = 1 + Math.floor(Math.random() * 3);
@@ -13893,7 +14037,7 @@ const Doodle = (function () {
       '<rect x="2" y="2" width="96" height="96" rx="7" fill="#FFFEF8"/>' +
       '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="' + INK + '" stroke-width="1.1" opacity="0.55"/>' +
       '<g transform="rotate(' + rot + ' 50 50)">' +
-      fills.map(f => '<path d="' + f.d + '" fill="' + f.col + '" fill-opacity="0.32" stroke="none"/>').join('') +
+      fills.map(f => '<path d="' + f.d + '" fill="' + f.col + '" fill-opacity="' + fillOp + '" stroke="none"/>').join('') +
       strokes.map(strokePath).join('') +
       '</g></svg>';
     return {
@@ -13903,7 +14047,8 @@ const Doodle = (function () {
   }
 
   /* 只读口：探针验收用（种类数/类目/逐主题自检） */
-  return { make, count: SUBJECTS.length, cats: CATS, subjects: SUBJECTS };
+  return { make, count: SUBJECTS.length, allCount: SUBJECTS.length + FREEHAND.length,
+    freeCount: FREEHAND.length, free: FREEHAND, cats: CATS, subjects: SUBJECTS };
 })();
 
 /* =====================================================
@@ -15760,6 +15905,14 @@ const Library = (function () {
       .map(it => it.text);
   }
   function learnedCount(ctId) { const lib = (DB.state.libs.learned || {})[ctId]; return lib ? lib.items.length : 0; }
+  /* 她 10-12 23:18：检测中心要看「TA 自己组出来的话攒了多少」——自由组句分组单独数 */
+  function ftCount(ctId) {
+    const lib = (DB.state.libs.learned || {})[ctId];
+    if (!lib) return 0;
+    const gs = (lib.groups || []).filter(g => g.name === '自由组句').map(g => g.id);
+    if (!gs.length) return 0;
+    return (lib.items || []).filter(it => gs.indexOf(it.groupId) >= 0).length;
+  }
   /* 她 10-06：对方学我说话时，只要这句已经在字卡库里（共辞/私叙/轻叩/状态/红包/游戏任一处），
      就不再往荟萃里攒——同一个句子不存两遍。跨库查（荟萃库自己不算，上面那行已单独查过）。 */
   /* 她 10-06：字卡库里已经有这句 → 不入荟萃（去重跨全部字卡库）；
@@ -15890,7 +16043,7 @@ const Library = (function () {
   }
 
   return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId,
-    learnAdd, learnAddSticker, learnedTexts, learnedCount, inAnyCardLib, inAnyStickerLib, ftAdd };
+    learnAdd, learnAddSticker, learnedTexts, learnedCount, ftCount, inAnyCardLib, inAnyStickerLib, ftAdd };
 })();
 
 /* =====================================================
@@ -31335,10 +31488,12 @@ const Schedule = (function () {
      实战面 = DB.state.msgs[convId] 里 TA 真发过的消息（按 type/标志数）
      专项面 = games.records / mall.orders / moments.posts / letters / diary / reports / redpackets / kinship.cards
      认不出来的一律如实说「档案里认不出」，不拿估算顶。
-   ※ 打分口径（每格都上屏显证据，看得见怎么算的）：
-     开通度 = 闸门开没开、料备没备（0~1）；实战度 = TA 真用过多少次（0~1，有封顶折算）
-     掌握度 = 40%开通度 + 60%实战度
+   ※ 打分口径（她 10-12 23:18 亲口纠，每格都上屏显证据，看得见怎么算的）：
+     掌握度 = 学习程度 = 熟练度：只看 TA「学到了多少、会多少种」——手里备着的料、
+              TA 自己攒出来的种类（按种数算，不按次数）。闸门开没开、做过多少次
+              一律不进掌握度：开关只进挑战度，次数只在子项里当证据摆着。
      挑战度 = 让 TA 做成这件事有多难（闸门越窄/等得越久/越靠运气越高），理由上屏
+     没有可学之料的板块（通话/状态轮换/撤回/回复这类 TA 天生就会的）：掌握度如实显示「—」
    ===================================================== */
 const Detect = (function () {
 
@@ -31356,11 +31511,17 @@ const Detect = (function () {
   const textsOf = k => libItems(k).filter(i => i && !i.blocked && i.text).map(i => String(i.text));
   const P = ct => Engine.params(ct);
   const raw = (ct, k, d) => { const v = (ct.params || {})[k]; return v == null ? d : +v; };
-  /* 闸门开通度：0=关着；到 hi 算满 */
+  /* 闸门开通度：0=关着；到 hi 算满 —— 只喂挑战度，不参与掌握度 */
   const open = (v, hi) => Math.min(1, Math.max(0, (+v || 0) / (hi || 30)));
-  /* 实战度：真用过 n 次，ref 次算满 */
+  /* 折满：手上有多少（多少条料、会多少种）折算成 0~1 */
   const use = (n, ref) => Math.min(1, (+n || 0) / (ref || 8));
-  const mix = (o, u) => pct(100 * (0.4 * o + 0.6 * u));
+  /* 掌握度（她 10-12 23:18 纠口径）：掌握度＝学习程度＝熟练度。
+     口径 = 本板块「学习类子项」的平均分（子项各自有判据、都上屏看得见）；
+     sc:false 的子项是现状证据（开关/次数），一律不进掌握度。 */
+  const learnOf = subs => {
+    const on = (subs || []).filter(s => s && s.sc !== false);
+    return on.length ? pct(on.reduce((a, s) => a + (+s.p || 0), 0) / on.length) : null;
+  };
   const day = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
 
   /* ---------- 消息面统计（只数真档案） ---------- */
@@ -31368,8 +31529,19 @@ const Detect = (function () {
     const all = msgsOf(ctId), ai = all.filter(m => m.from === 'ai' && !m.deleted);
     const by = f => ai.filter(f).length;
     const kamojiSet = new Set(textsOf('kamoji')), emojiSet = new Set(textsOf('emojis'));
+    /* 种类（去重）——熟练度看「会多少种」，不看「做过多少次」 */
+    const kinds = f => new Set(ai.filter(f).map(m => String(m.text == null ? (m.img || m.audio || '') : m.text))).size;
     return {
       all, ai,
+      aiTextKinds: kinds(m => m.type === 'text' && !kamojiSet.has(String(m.text)) && !emojiSet.has(String(m.text))),
+      aiKamojiKinds: kinds(m => m.type === 'text' && kamojiSet.has(String(m.text))),
+      aiEmojiKinds: kinds(m => m.type === 'text' && emojiSet.has(String(m.text))),
+      aiImgKinds: kinds(m => m.type === 'img' && !m.doodle),
+      aiDoodleKinds: kinds(m => m.type === 'img' && m.doodle),
+      aiVoiceKinds: kinds(m => m.type === 'voice'),
+      aiEmotionKinds: kinds(m => m.emotion),
+      aiLetterKinds: kinds(m => m.type === 'letter'),
+      aiRpKinds: kinds(m => m.type === 'redpacket'),
       aiText: by(m => m.type === 'text'),
       aiImg: by(m => m.type === 'img'),
       aiDoodle: by(m => m.type === 'img' && m.doodle),
@@ -31402,20 +31574,20 @@ const Detect = (function () {
     const stk = (typeof Library !== 'undefined' && Library.usableStickerPool) ? Library.usableStickerPool(ct) || [] : [];
     const voice = (typeof Library !== 'undefined' && Library.usableVoicePool) ? Library.usableVoicePool(ct.id) || [] : [];
     const learnedN = (typeof Library !== 'undefined' && Library.learnedCount) ? Library.learnedCount(ct.id) : 0;
-    const push = (r) => { r.score = mix(r.o, r.u); r.challenge = pct(r.chal); rows.push(r); };
+    const ftN = (typeof Library !== 'undefined' && Library.ftCount) ? Library.ftCount(ct.id) : 0;   /* 荟萃·自由组句分组 */
+    const emoN = (typeof Engine !== 'undefined' && Engine.emotionLibrary) ? Engine.emotionLibrary.length : 8;
+    const push = (r) => { r.score = r.noLearn ? null : learnOf(r.subs); r.challenge = pct(r.chal); rows.push(r); };
 
     /* ---- 字卡 ---- */
     {
-      const o = (use(cards.length, 30) + open(p.cardComboProb, 20)) / 2;
-      const u = use(t.aiText - t.aiKamoji - t.aiEmoji, 40);
-      push({ key: 'cards', name: '字卡', icon: 'book', o, u,
+      push({ key: 'cards', name: '字卡', icon: 'book',
         chal: 70 * (1 - open(p.cardComboProb, 20)) + 30 * (1 - use(cards.length, 30)),
         hard: (p.cardComboProb || 0) <= 0 ? '拼字卡是关着的，TA 只会一句一句单发' : '拼卡概率 ' + p.cardComboProb + '%，一次拼 ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条',
         subs: [
-          { n: '字卡库里有多少话给 TA', v: cards.length + ' 条可用', p: pct(100 * use(cards.length, 30)) },
-          { n: '拼字卡（多条拼一句）', v: (p.cardComboProb || 0) + '% · ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条', p: pct(100 * open(p.cardComboProb, 20)) },
-          { n: 'TA 真发过多少条文字', v: (t.aiText - t.aiKamoji - t.aiEmoji) + ' 条', p: pct(100 * use(t.aiText - t.aiKamoji - t.aiEmoji, 40)) },
-          { n: '句子里插词（组话时在句中补词）', v: '内在机制，跟着自由说话走', p: pct(100 * open(p.gaFree, 30)) }
+          { n: '字卡库里备了多少话', v: cards.length + ' 条可用', p: pct(100 * use(cards.length, 30)) },
+          { n: 'TA 说得出多少种不同的话', v: t.aiTextKinds + ' 种', p: pct(100 * use(t.aiTextKinds, 30)) },
+          { n: 'TA 一共发过多少条文字（现状，不计分）', v: (t.aiText - t.aiKamoji - t.aiEmoji) + ' 条', p: pct(100 * use(t.aiText - t.aiKamoji - t.aiEmoji, 40)), sc: false },
+          { n: '拼卡概率（现状，不计分）', v: (p.cardComboProb || 0) + '% · ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条', p: pct(100 * open(p.cardComboProb, 20)), sc: false }
         ],
         adv: cards.length < 5 ? '字卡库只剩 ' + cards.length + ' 条，TA 能说的话就那几句——去字卡库补 10 条以上'
           : (p.cardComboProb || 0) <= 0 ? '拼字卡关着：开到 10% 左右，TA 说话就不会总是一句一句孤零零的'
@@ -31425,13 +31597,14 @@ const Detect = (function () {
     }
 
     /* ---- 颜文字 / EMOJI ---- */
-    [['kamoji', '颜文字', 'kaomoji', nOf('kamoji'), t.aiKamoji], ['emojis', 'EMOJI', 'smile', nOf('emojis'), t.aiEmoji]].forEach(([k, nm, ic, n, used]) => {
-      push({ key: k, name: nm, icon: ic, o: use(n, 12), u: use(used, 8),
+    [['kamoji', '颜文字', 'kaomoji', nOf('kamoji'), t.aiKamoji, t.aiKamojiKinds], ['emojis', 'EMOJI', 'smile', nOf('emojis'), t.aiEmoji, t.aiEmojiKinds]].forEach(([k, nm, ic, n, used, kinds]) => {
+      push({ key: k, name: nm, icon: ic,
         chal: 100 * (1 - use(n, 12)),
         hard: n ? (n + ' 条备着，聊到兴头上自己会冒出来') : '一条都没有，TA 想发也发不出来',
         subs: [
-          { n: '库里备了多少', v: n + ' 条', p: pct(100 * use(n, 12)) },
-          { n: 'TA 单独发过几次', v: (used || 0) + ' 次', p: pct(100 * use(used, 8)) }
+          { n: '库里备了多少条', v: n + ' 条', p: pct(100 * use(n, 12)) },
+          { n: 'TA 用出过多少种', v: (kinds || 0) + ' 种', p: pct(100 * use(kinds, 8)) },
+          { n: 'TA 单独发过几次（现状，不计分）', v: (used || 0) + ' 次', p: pct(100 * use(used, 8)), sc: false }
         ],
         adv: n < 3 ? nm + '库太空，补几条（聊天里一句' + nm + '算一条）' : (used ? '' : '备着 ' + n + ' 条但一次没发过——多半是聊天量太少'),
         fix: n < 3 ? [{ id: 'lib-' + k, label: '去' + nm + '库' }] : [] });
@@ -31439,13 +31612,13 @@ const Detect = (function () {
 
     /* ---- 表情包图片 ---- */
     push({ key: 'stickers', name: '表情包图片', icon: 'image',
-      o: (use(stk.length, 10) + open(p.imgProb, 20)) / 2, u: use(t.aiSticker || t.aiImg, 12),
       chal: 60 * (1 - open(p.imgProb, 20)) + 40 * (1 - use(stk.length, 10)),
       hard: '图片概率 ' + (p.imgProb || 0) + '% · 模式「' + ({ single: '单独发', attach: '文字后附带', mix: '混合发' }[p.imgMode || 'single']) + '」',
       subs: [
-        { n: 'TA 能用的表情图', v: stk.length + ' 张', p: pct(100 * use(stk.length, 10)) },
-        { n: '图片概率', v: (p.imgProb || 0) + '%', p: pct(100 * open(p.imgProb, 20)) },
-        { n: 'TA 真发过多少张图', v: (t.aiSticker || t.aiImg) + ' 条', p: pct(100 * use(t.aiSticker || t.aiImg, 12)) }
+        { n: 'TA 手上有多少张表情图', v: stk.length + ' 张', p: pct(100 * use(stk.length, 10)) },
+        { n: 'TA 发过多少种不同的图', v: t.aiImgKinds + ' 种', p: pct(100 * use(t.aiImgKinds, 12)) },
+        { n: '图片概率（现状，不计分）', v: (p.imgProb || 0) + '%', p: pct(100 * open(p.imgProb, 20)), sc: false },
+        { n: 'TA 一共发过多少张（现状，不计分）', v: (t.aiSticker || t.aiImg) + ' 条', p: pct(100 * use(t.aiSticker || t.aiImg, 12)), sc: false }
       ],
       adv: stk.length === 0 ? '一张图都没给 TA——去表情库放几张' : ((p.imgProb || 0) === 0 ? '图片概率是 0，TA 永远不会发图' : ''),
       fix: [stk.length === 0 ? { id: 'lib-stickers', label: '去表情库' } : null, (p.imgProb || 0) === 0 ? { key: 'imgProb', label: '图片概率开到 20%', val: 20 } : null].filter(Boolean) });
@@ -31453,15 +31626,15 @@ const Detect = (function () {
     /* ---- 学我说话 ---- */
     {
       const lr = p.learnRate || 0;
+      const mineN = Math.max(0, learnedN - ftN);   /* 荟萃里属于「学我说话」的部分，自由组句另算 */
       push({ key: 'learn', name: '学我说话', icon: 'chat',
-        o: (open(lr, 20) + use(learnedN, 20)) / 2, u: use(learnedN, 20),
         chal: 100 * (1 - open(lr, 20)),
         hard: lr ? ('我发的每句话有 ' + lr + '% 被收走') : '收集概率是 0，TA 一句都学不到',
         subs: [
-          { n: '收集概率', v: lr + '%', p: pct(100 * open(lr, 20)) },
-          { n: '已经在荟萃里的', v: learnedN + ' 条', p: pct(100 * use(learnedN, 20)) },
-          { n: '我给 TA 的语料（我说过的话）', v: t.myText + ' 条', p: pct(100 * use(t.myText, 40)) },
-          { n: '学到的怎么用', v: '混进字卡池等概率用，不单独掷', p: pct(100 * (learnedN ? 1 : 0)) }
+          { n: '已经学到手的话', v: mineN + ' 条', p: pct(100 * use(mineN, 20)) },
+          { n: '我给过的语料（我说过的话）', v: t.myText + ' 条', p: pct(100 * use(t.myText, 40)) },
+          { n: '收集概率（现状，不计分）', v: lr + '%', p: pct(100 * open(lr, 20)), sc: false },
+          { n: '学到的怎么用（现状，不计分）', v: '混进字卡池等概率用，不单独掷', p: pct(100 * (learnedN ? 1 : 0)), sc: false }
         ],
         adv: lr === 0 ? '收集概率是 0——想让 TA 说话像我，先开到 10%' : (learnedN === 0 ? '开着 ' + lr + '% 但还没收到话：多说几句带情绪的话给它学' : ''),
         fix: [lr === 0 ? { key: 'learnRate', label: '收集开到 10%', val: 10 } : null, { id: 'lib-learned', label: '去荟萃看' }].filter(Boolean) });
@@ -31473,61 +31646,60 @@ const Detect = (function () {
       let canCompose = false, sample = '';
       try { if (typeof FreeTalk !== 'undefined' && FreeTalk.compose) { sample = FreeTalk.compose() || ''; canCompose = !!sample; } } catch (e) { /* 检测只读：组话口不可用就按「不能组」计，不拖身 */ }
       push({ key: 'free', name: '自由说话', icon: 'pencil',
-        o: (open(gf, 30) + (canCompose ? 1 : 0) + open(p.ftSave == null ? 20 : p.ftSave, 20)) / 3,
-        u: use((t.aiText - t.aiKamoji - t.aiEmoji), 40),
         chal: 100 * (1 - open(gf, 30)),
         hard: '概率 ' + gf + '% · ' + (canCompose ? ('现在当场就能组出话：「' + sample + '」') : '现在组不出话（词典不够用）'),
         subs: [
-          { n: '自由说话概率', v: gf + '%', p: pct(100 * open(gf, 30)) },
-          { n: '拼音适配（能按音节挑字）', v: '词典带音节表，检索时按同音展开', p: 100 },
-          { n: '同音字（写错音也能挑对字）', v: '组话过程本身，无需开关', p: 100 },
-          { n: '组句节奏（按键数算打字时间）', v: '跟着拼音键数走，长短句时间不一样', p: 100 },
-          { n: '自由度（一句里能换多少词）', v: canCompose ? '当场试了一句，能组' : '组不出，词不够', p: canCompose ? 100 : 30 },
-          { n: '组出来的句子存进荟萃', v: (p.ftSave == null ? 20 : p.ftSave) + '%', p: pct(100 * open(p.ftSave == null ? 20 : p.ftSave, 20)) }
+          { n: '当场能不能组出话（词典够不够）', v: canCompose ? ('能，刚试出一句：「' + sample + '」') : '组不出，词不够', p: canCompose ? 100 : 30 },
+          { n: 'TA 自己组出来攒下的话', v: ftN + ' 句（荟萃·自由组句）', p: pct(100 * use(ftN, 20)) },
+          { n: '自由度（一句里能换多少词）（现状，不计分）', v: canCompose ? '能换词' : '换不了', p: canCompose ? 100 : 40, sc: false },
+          { n: '组出来的句子存进荟萃（现状，不计分）', v: (p.ftSave == null ? 20 : p.ftSave) + '%', p: pct(100 * open(p.ftSave == null ? 20 : p.ftSave, 20)), sc: false },
+          { n: '自由说话概率（现状，不计分）', v: gf + '%', p: pct(100 * open(gf, 30)), sc: false }
         ],
         adv: gf === 0 ? '自由说话是 0%——TA 只会念字卡，开到 30% 它会自己组话' : (!canCompose ? '组不出话：多喂点我的话给它，词典薄' : ''),
         fix: [gf === 0 ? { key: 'gaFree', label: '开到 30%', val: 30 } : null].filter(Boolean) });
     }
 
     /* ---- 语音 ---- */
-    push({ key: 'voice', name: '语音', icon: 'mic', o: use(voice.length, 5), u: use(t.aiVoice, 6),
+    push({ key: 'voice', name: '语音', icon: 'mic',
       chal: 100 * (1 - use(voice.length, 5)),
       hard: voice.length ? '语音库 ' + voice.length + ' 条 · 每句话 6% 概率用语音回' : '语音库是空的，TA 想发语音也没料',
       subs: [
-        { n: 'TA 能用的语音', v: voice.length + ' 条', p: pct(100 * use(voice.length, 5)) },
-        { n: 'TA 发过几条语音', v: t.aiVoice + ' 条', p: pct(100 * use(t.aiVoice, 6)) }
+        { n: 'TA 手上有多少条语音', v: voice.length + ' 条', p: pct(100 * use(voice.length, 5)) },
+        { n: 'TA 用过多少种', v: t.aiVoiceKinds + ' 种', p: pct(100 * use(t.aiVoiceKinds, 5)) },
+        { n: 'TA 一共发过几条（现状，不计分）', v: t.aiVoice + ' 条', p: pct(100 * use(t.aiVoice, 6)), sc: false }
       ],
       adv: voice.length === 0 ? '给 TA 录/导几条语音，它才有语音可发' : '',
       fix: voice.length === 0 ? [{ id: 'lib-voice', label: '去语音库' }] : [] });
 
     /* ---- 情绪标记 ---- */
-    push({ key: 'emotion', name: '情绪标记', icon: 'heart', o: open(p.emotionRate, 20), u: use(t.aiEmotion, 25),
+    push({ key: 'emotion', name: '情绪标记', icon: 'heart',
       chal: 100 * (1 - open(p.emotionRate, 20)),
       hard: '概率 ' + (p.emotionRate || 0) + '%（每条文字独立掷）',
       subs: [
-        { n: '标记概率', v: (p.emotionRate || 0) + '%', p: pct(100 * open(p.emotionRate, 20)) },
-        { n: '带标记的气泡', v: t.aiEmotion + ' 条', p: pct(100 * use(t.aiEmotion, 25)) }
+        { n: 'TA 手上有多少种情绪可用', v: emoN + ' 种（情绪表）', p: pct(100 * use(emoN, 8)) },
+        { n: 'TA 用出过多少种', v: t.aiEmotionKinds + ' 种', p: pct(100 * use(t.aiEmotionKinds, 8)) },
+        { n: '标记概率（现状，不计分）', v: (p.emotionRate || 0) + '%', p: pct(100 * open(p.emotionRate, 20)), sc: false },
+        { n: '带标记的气泡（现状，不计分）', v: t.aiEmotion + ' 条', p: pct(100 * use(t.aiEmotion, 25)), sc: false }
       ],
       adv: (p.emotionRate || 0) === 0 ? '情绪标记关着——开了 TA 的话会带上心情小标，看着更活' : '' });
 
     /* ---- 朋友圈 ---- */
     {
       const posts = (S().moments.posts || []), mine = posts.filter(x => x.uid === ct.id);
+      const mineKinds = new Set(mine.map(x => String(x.text != null ? x.text : (x.content != null ? x.content : x.id)))).size;
       const myCmts = mine.reduce((s, x) => s + ((x.comments || []).filter(c => c.uid !== ct.id).length), 0);
       const likes = mine.reduce((s, x) => s + ((x.likes || []).length), 0);
       push({ key: 'moments', name: '朋友圈', icon: 'camera',
-        o: (open(p.moPostRate, 30) + open(p.moImgProb, 70) + open(p.moComboProb, 80) + (p.moMutual ? 1 : 0)) / 4,
-        u: use(mine.length, 6),
         chal: 100 * (1 - open(p.moPostRate, 30)),
         hard: '发帖 ' + (p.moPostRate || 0) + '% · 间隔 ' + (p.moPostMin || 0) + '~' + (p.moPostMax || 0) + ({ hour: ' 小时', min: ' 分钟' }[p.moPostUnit || 'hour']) + '/次',
         subs: [
-          { n: '发帖概率', v: (p.moPostRate || 0) + '%', p: pct(100 * open(p.moPostRate, 30)) },
-          { n: '配图率', v: (p.moImgProb || 0) + '%', p: pct(100 * open(p.moImgProb, 70)) },
-          { n: '拼字卡率', v: (p.moComboProb || 0) + '%', p: pct(100 * open(p.moComboProb, 80)) },
-          { n: '互评（其他联系人能不能来评）', v: p.moMutual ? '开着' : '只有我能评', p: p.moMutual ? 100 : 0 },
-          { n: 'TA 发过的帖', v: mine.length + ' 条' + (mine.length ? '，最近 ' + day(Math.max(...mine.map(x => x.ts || 0))) : ''), p: pct(100 * use(mine.length, 6)) },
-          { n: 'TA 收到的赞/评', v: likes + ' 赞 · ' + myCmts + ' 评', p: pct(100 * use(likes + myCmts, 20)) },
-          { n: '删自己帖的概率', v: (p.taDelRate || 0) + '%', p: pct(100 * open(p.taDelRate, 20)) }
+          { n: 'TA 发过多少种不同的帖', v: mineKinds + ' 种（共 ' + mine.length + ' 条）' + (mine.length ? '，最近 ' + day(Math.max(...mine.map(x => x.ts || 0))) : ''), p: pct(100 * use(mineKinds, 8)) },
+          { n: 'TA 收到的赞/评（现状，不计分）', v: likes + ' 赞 · ' + myCmts + ' 评', p: pct(100 * use(likes + myCmts, 20)), sc: false },
+          { n: '发帖概率（现状，不计分）', v: (p.moPostRate || 0) + '%', p: pct(100 * open(p.moPostRate, 30)), sc: false },
+          { n: '配图率（现状，不计分）', v: (p.moImgProb || 0) + '%', p: pct(100 * open(p.moImgProb, 70)), sc: false },
+          { n: '拼字卡率（现状，不计分）', v: (p.moComboProb || 0) + '%', p: pct(100 * open(p.moComboProb, 80)), sc: false },
+          { n: '互评（现状，不计分）', v: p.moMutual ? '开着' : '只有我能评', p: p.moMutual ? 100 : 0, sc: false },
+          { n: '删自己帖的概率（现状，不计分）', v: (p.taDelRate || 0) + '%', p: pct(100 * open(p.taDelRate, 20)), sc: false }
         ],
         adv: (p.moPostRate || 0) === 0 ? '发帖概率是 0，朋友圈不会动——开到 30% 看看' : (mine.length === 0 ? '开着但还没发过：等等看，或者把间隔收窄到 2~6 小时' : ''),
         fix: [(p.moPostRate || 0) === 0 ? { key: 'moPostRate', label: '发帖开到 30%', val: 30 } : null].filter(Boolean) });
@@ -31535,13 +31707,13 @@ const Detect = (function () {
 
     /* ---- 信 ---- */
     push({ key: 'letter', name: '信', icon: 'mail',
-      o: (open(p.letterRate, 30) + (raw(ct, 'ltrMinH', 1) > 0 ? 1 : 0)) / 2, u: use(t.aiLetter, 3),
       chal: 100 * (1 - open(p.letterRate, 30)),
       hard: (p.letterRate || 0) + '% · 间隔 ' + raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时',
       subs: [
-        { n: '来信概率', v: (p.letterRate || 0) + '%', p: pct(100 * open(p.letterRate, 30)) },
-        { n: '间隔', v: raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时', p: 100 },
-        { n: '往来信件', v: t.aiLetter + ' 封', p: pct(100 * use(t.aiLetter, 3)) }
+        { n: 'TA 写过多少种不同的信', v: t.aiLetterKinds + ' 种', p: pct(100 * use(t.aiLetterKinds, 4)) },
+        { n: '往来信件（现状，不计分）', v: t.aiLetter + ' 封', p: pct(100 * use(t.aiLetter, 3)), sc: false },
+        { n: '来信概率（现状，不计分）', v: (p.letterRate || 0) + '%', p: pct(100 * open(p.letterRate, 30)), sc: false },
+        { n: '间隔（现状，不计分）', v: raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时', p: 100, sc: false }
       ],
       adv: (p.letterRate || 0) === 0 ? '来信概率是 0——想收信就开 20% 左右' : '',
       fix: [(p.letterRate || 0) === 0 ? { key: 'letterRate', label: '来信开到 20%', val: 20 } : null].filter(Boolean) });
@@ -31563,12 +31735,13 @@ const Detect = (function () {
       });
       /* 带规则复杂度的子项：用它单独算挑战度 */
       const played = keys.filter((k, i) => subs[i].v !== '没一起玩过');
+      const kindsPlayed = new Set(mine.map(r => r.game)).size;
       const avgDiff = played.length ? played.reduce((s, k) => s + ({ uno: 55, doudizhu: 70, billiards: 65, gomoku: 50, ludo: 35, mono: 60, mine: 45, wheel: 15 }[k]), 0) / played.length : 60;
       push({ key: 'games', name: '游戏', icon: 'dice',
-        o: use(mine.length, 8), u: use(mine.length, 8),
         chal: pct(avgDiff),
         hard: mine.length ? ('一起玩过 ' + mine.length + ' 局 · 邀我 ' + t.aiGame + ' 次 · 最常玩 ' + (names[(mine.map(r => r.game).sort((a, b) => mine.filter(x => x.game === b).length - mine.filter(x => x.game === a).length)[0])] || '未知')) : '一局都没开过——TA 有 1% 概率邀你玩',
-        subs: subs.map(s => ({ n: s.n, v: s.v, p: s.p })),
+        subs: [{ n: '会玩几种游戏', v: kindsPlayed + ' / ' + keys.length + ' 种', p: pct(100 * use(kindsPlayed, keys.length)) }]
+          .concat(subs.map(s => ({ n: s.n, v: s.v, p: s.p, sc: false }))),
         adv: mine.length === 0 ? '还没一起玩过：找 TA 开一局，或者等它 1% 概率来邀你' : '',
         fix: [{ id: 'game', label: '去游戏大厅' }] });
 
@@ -31578,15 +31751,14 @@ const Detect = (function () {
       try { if (typeof Quiz !== 'undefined' && Quiz.askPool) pool = (Quiz.askPool(ct.id) || []).length; } catch (e) { /* 检测只读：题库口不在就按 0 道题算 */ }
       const papers = (S().quizzes || []).filter(z => !z.targets || z.targets.indexOf(ct.id) >= 0 || z.targets.indexOf('all') >= 0);
       push({ key: 'quiz', name: '决策（灵魂拷问）', icon: 'quiz',
-        o: (open(p.quizRate, 20) + Math.min(1, (qlib.questions || []).length / 20)) / 2, u: use(t.aiQuiz, 3),
         chal: pct(100 * (1 - open(p.quizRate, 20)) + ((qlib.questions || []).length ? 0 : 20)),
         hard: (p.quizRate || 0) + '% · 题库 ' + (qlib.questions || []).length + ' 题' + (pool ? ('，现在能抽到 ' + pool + ' 题') : '，抽不到题'),
         subs: [
-          { n: '聊天里突然考你的概率', v: (p.quizRate || 0) + '%', p: pct(100 * open(p.quizRate, 20)) },
-          { n: '题库有多少题', v: (qlib.questions || []).length + ' 题 · ' + (qlib.groups || []).length + ' 个分组', p: pct(100 * Math.min(1, (qlib.questions || []).length / 20)) },
+          { n: '题库里有多少题', v: (qlib.questions || []).length + ' 题 · ' + (qlib.groups || []).length + ' 个分组', p: pct(100 * Math.min(1, (qlib.questions || []).length / 20)) },
           { n: 'TA 现在能抽到几题', v: pool + ' 题', p: pct(100 * Math.min(1, pool / 10)) },
-          { n: '出过的卷子', v: papers.length + ' 份', p: pct(100 * use(papers.length, 3)) },
-          { n: 'TA 真考过你几次', v: t.aiQuiz + ' 次', p: pct(100 * use(t.aiQuiz, 3)) }
+          { n: '出过的卷子（现状，不计分）', v: papers.length + ' 份', p: pct(100 * use(papers.length, 3)), sc: false },
+          { n: 'TA 真考过你几次（现状，不计分）', v: t.aiQuiz + ' 次', p: pct(100 * use(t.aiQuiz, 3)), sc: false },
+          { n: '拷问概率（现状，不计分）', v: (p.quizRate || 0) + '%', p: pct(100 * open(p.quizRate, 20)), sc: false }
         ],
         adv: (p.quizRate || 0) === 0 ? '拷问概率是 0（默认关）——开了 TA 会聊着聊着甩你一道题'
           : (!(qlib.questions || []).length ? '题库里没题，抽也抽不出来——先去题库加题'
@@ -31602,30 +31774,31 @@ const Detect = (function () {
       const ibought = orders.filter(o => o.buyerUid === 'me' && o.toUid === ct.id);
       const addr = (((S().mall || {}).addr || {}).byContact || {})[ct.id];
       push({ key: 'mall', name: '商城', icon: 'box',
-        o: (open(p.shopRate, 10) + (gift.length ? 1 : 0)) / 2, u: use(gift.length, 3),
         chal: 100 * (1 - open(p.shopRate, 10)),
         hard: '购物率 ' + (p.shopRate || 0) + '%（每轮聊天掷一次，2 小时防抖）',
         subs: [
-          { n: '给我购物', v: gift.length + ' 单', p: pct(100 * use(gift.length, 3)) },
-          { n: '给自己下单', v: self.length + ' 单', p: pct(100 * use(self.length, 3)) },
-          { n: '我买给 TA', v: ibought.length + ' 单', p: pct(100 * use(ibought.length, 3)) },
-          { n: '购物率', v: (p.shopRate || 0) + '%', p: pct(100 * open(p.shopRate, 10)) },
-          { n: 'TA 的收货地址', v: addr ? '填过了' : '没填（要用我的）', p: addr ? 100 : 40 }
+          { n: 'TA 会几种买法', v: [gift.length, self.length, ibought.length].filter(n => n > 0).length + ' / 3 种（送我 / 买给自己 / 我买给它）', p: pct(100 * [gift.length, self.length, ibought.length].filter(n => n > 0).length / 3) },
+          { n: 'TA 的收货地址（现状，不计分）', v: addr ? '填过了' : '没填（要用我的）', p: addr ? 100 : 40, sc: false },
+          { n: '给我购物（现状，不计分）', v: gift.length + ' 单', p: pct(100 * use(gift.length, 3)), sc: false },
+          { n: '给自己下单（现状，不计分）', v: self.length + ' 单', p: pct(100 * use(self.length, 3)), sc: false },
+          { n: '我买给 TA（现状，不计分）', v: ibought.length + ' 单', p: pct(100 * use(ibought.length, 3)), sc: false },
+          { n: '购物率（现状，不计分）', v: (p.shopRate || 0) + '%', p: pct(100 * open(p.shopRate, 10)), sc: false }
         ],
         adv: (p.shopRate || 0) === 0 ? '购物率是 0——TA 不会给你买东西/点外卖' : (gift.length === 0 ? '开着但还没买过：多聊几轮（2 小时防抖）' : ''),
         fix: [(p.shopRate || 0) === 0 ? { key: 'shopRate', label: '购物率开到 5%', val: 5 } : null, { id: 'mall', label: '去商城' }].filter(Boolean) });
     }
 
     /* ---- 绘画 ---- */
+    const doodleN = (typeof Doodle !== 'undefined') ? (Doodle.allCount || Doodle.count || 0) : 0;
     push({ key: 'doodle', name: '绘画', icon: 'brush',
-      o: open(p.doodleRate, 10), u: use(t.aiDoodle, 5),
       chal: 100 * (1 - open(p.doodleRate, 10)),
       hard: '涂鸦率 ' + (p.doodleRate || 0) + '%（画的东西是现画的，不重样）',
       subs: [
-        { n: '涂鸦率', v: (p.doodleRate || 0) + '%', p: pct(100 * open(p.doodleRate, 10)) },
-        { n: 'TA 画给你的', v: t.aiDoodle + ' 张', p: pct(100 * use(t.aiDoodle, 5)) },
-        { n: 'TA 的涂鸦草稿', v: Object.keys((S().libs.doodleDrafts) || (S().doodleDrafts || {})).length ? '有画一半放着的' : '没有', p: 100 },
-        { n: '能画的题材', v: (typeof Doodle !== 'undefined' ? Doodle.count : 0) + ' 种', p: 100 }
+        { n: 'TA 会画多少种题材', v: doodleN + ' 种（固定 ' + (typeof Doodle !== 'undefined' ? Doodle.count : 0) + ' + 随笔 ' + (typeof Doodle !== 'undefined' ? (Doodle.freeCount || 0) : 0) + '）', p: pct(100 * use(doodleN, 20)) },
+        { n: 'TA 画过多少张不重样的', v: t.aiDoodleKinds + ' 张', p: pct(100 * use(t.aiDoodleKinds, 8)) },
+        { n: 'TA 画给你的（现状，不计分）', v: t.aiDoodle + ' 张', p: pct(100 * use(t.aiDoodle, 5)), sc: false },
+        { n: '涂鸦率（现状，不计分）', v: (p.doodleRate || 0) + '%', p: pct(100 * open(p.doodleRate, 10)), sc: false },
+        { n: 'TA 的画稿草稿（现状，不计分）', v: Object.keys((S().doodleDrafts) || {}).length ? '有画一半放着的' : '没有', p: 100, sc: false }
       ],
       adv: (p.doodleRate || 0) === 0 ? '涂鸦率是 0——TA 不会给你画小纸片' : '',
       fix: [(p.doodleRate || 0) === 0 ? { key: 'doodleRate', label: '涂鸦开到 1%', val: 1 } : null].filter(Boolean) });
@@ -31634,14 +31807,16 @@ const Detect = (function () {
     {
       const recs = ((S().reports || {})[ct.id]) || [];
       const rp = raw(ct, 'repRate', 0), ck = raw(ct, 'chkRate', 0);
+      const taRecs = recs.filter(r => r && r.from === 'ai');
+      const kindsRec = new Set(taRecs.map(r => String(r.type || r.kind || '报备'))).size;
       push({ key: 'report', name: '报备', icon: 'compass',
-        o: (open(rp, 80) + open(ck, 80)) / 2, u: use(recs.length, 4),
         chal: 100 * (1 - (open(rp, 80) + open(ck, 80)) / 2),
         hard: rp || ck ? ('自动报备 ' + rp + '% · 来查岗 ' + ck + '%') : '两个都是关着的',
         subs: [
-          { n: 'TA 自动报备', v: rp + '%', p: pct(100 * open(rp, 80)) },
-          { n: 'TA 来查岗', v: ck + '%', p: pct(100 * open(ck, 80)) },
-          { n: '记录条数', v: recs.length + ' 条', p: pct(100 * use(recs.length, 4)) }
+          { n: 'TA 报备过多少种不同的事', v: kindsRec + ' 种', p: pct(100 * use(kindsRec, 5)) },
+          { n: '记录条数（现状，不计分）', v: recs.length + ' 条', p: pct(100 * use(recs.length, 4)), sc: false },
+          { n: 'TA 自动报备（现状，不计分）', v: rp + '%', p: pct(100 * open(rp, 80)), sc: false },
+          { n: 'TA 来查岗（现状，不计分）', v: ck + '%', p: pct(100 * open(ck, 80)), sc: false }
         ],
         adv: (!rp && !ck) ? '报备是关的——去报备页的开，TA 会自己报行踪、偶尔来查岗' : '' });
     }
@@ -31653,13 +31828,12 @@ const Detect = (function () {
       const visits = (bk.visits || []).length;
       const dr = ((S().settings || {}).diaryRates) || {};
       push({ key: 'diary', name: '心事簿', icon: 'book',
-        o: open(dr.diary, 80), u: use(days, 7),
         chal: 100 * (1 - open(dr.diary, 80)),
         hard: '全局概率：写心事 ' + (dr.diary || 0) + '% · 评论 ' + (dr.comment || 0) + '% · 回复 ' + (dr.reply || 0) + '%（这项是全局的，不按人）',
         subs: [
-          { n: 'TA 写心事概率', v: (dr.diary || 0) + '%（全局）', p: pct(100 * open(dr.diary, 80)) },
-          { n: '写过的天数', v: days + ' 天', p: pct(100 * use(days, 7)) },
-          { n: '来看过我几次', v: visits + ' 次', p: pct(100 * use(visits, 6)) }
+          { n: 'TA 写了多少天心事', v: days + ' 天', p: pct(100 * use(days, 14)) },
+          { n: '来看过我几次（现状，不计分）', v: visits + ' 次', p: pct(100 * use(visits, 6)), sc: false },
+          { n: 'TA 写心事概率（现状，不计分）', v: (dr.diary || 0) + '%（全局）', p: pct(100 * open(dr.diary, 80)), sc: false }
         ],
         adv: (dr.diary || 0) === 0 ? '心事簿概率是 0（个人中心那边可调）' : (days === 0 ? '还没写过：进心事簿留一页，TA 会跟上' : '') });
     }
@@ -31668,25 +31842,24 @@ const Detect = (function () {
     {
       const rps = Object.values(S().redpackets || {}).filter(r => r.fromUid === ct.id);
       push({ key: 'redpacket', name: '红包', icon: 'hongbao',
-        o: open(p.giftRedRate, 4), u: use(rps.length, 3),
         chal: 100 * (1 - open(p.giftRedRate, 4)),
         hard: '主动发红包 ' + (p.giftRedRate || 0) + '% · 备注库 ' + nOf('redNotes') + ' 条',
         subs: [
-          { n: '主动发红包概率', v: (p.giftRedRate || 0) + '%', p: pct(100 * open(p.giftRedRate, 4)) },
-          { n: 'TA 发过的红包', v: rps.length + ' 个', p: pct(100 * use(rps.length, 3)) },
-          { n: '红包备注库', v: nOf('redNotes') + ' 条', p: pct(100 * Math.min(1, nOf('redNotes') / 5)) }
+          { n: '红包备注库备了多少条', v: nOf('redNotes') + ' 条', p: pct(100 * Math.min(1, nOf('redNotes') / 5)) },
+          { n: 'TA 写过多少种不同的备注', v: t.aiRpKinds + ' 种', p: pct(100 * use(t.aiRpKinds, 5)) },
+          { n: 'TA 发过的红包（现状，不计分）', v: rps.length + ' 个', p: pct(100 * use(rps.length, 3)), sc: false },
+          { n: '主动发红包概率（现状，不计分）', v: (p.giftRedRate || 0) + '%', p: pct(100 * open(p.giftRedRate, 4)), sc: false }
         ],
         adv: (p.giftRedRate || 0) === 0 ? '主动发红包关着（默认 2%），开了 TA 会偶尔塞个红包' : '' });
     }
 
     /* ---- 视频通话 ---- */
-    push({ key: 'call', name: '视频通话', icon: 'video',
-      o: raw(ct, 'callLo', '') !== '' ? 1 : 0.5, u: use(t.call, 3),
+    push({ key: 'call', name: '视频通话', icon: 'video', noLearn: true,
       chal: 70,
-      hard: '聊天里 3% 概率打过来 · 时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
+      hard: '这件事没有可学的料：打不打过来是固定的 3%，TA 天生就会——所以掌握度不适用，只看挑战度。' + '时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
       subs: [
-        { n: '通话时长设置', v: raw(ct, 'callLo', '') === '' ? '没设，按默认 20~90 秒' : '设过了', p: raw(ct, 'callLo', '') === '' ? 50 : 100 },
-        { n: '打过来过几次', v: t.call + ' 次', p: pct(100 * use(t.call, 3)) }
+        { n: '通话时长设置（现状，不计分）', v: raw(ct, 'callLo', '') === '' ? '没设，按默认 20~90 秒' : '设过了', p: raw(ct, 'callLo', '') === '' ? 50 : 100, sc: false },
+        { n: '打过来过几次（现状，不计分）', v: t.call + ' 次', p: pct(100 * use(t.call, 3)), sc: false }
       ],
       adv: t.call === 0 ? '还没通过话：这个 3% 是固定的，多聊几轮' : '' });
 
@@ -31695,25 +31868,23 @@ const Detect = (function () {
       const st = (typeof StatusEngine !== 'undefined' && StatusEngine.statusOf) ? StatusEngine.statusOf(ct) : null;
       const rot = ct.rot || null;
       push({ key: 'status', name: '状态', icon: 'pulse',
-        o: rot && rot.rate > 0 ? 1 : 0.2, u: use(nOf('aiStatus'), 6),
         chal: rot && rot.rate > 0 ? 30 : 90,
         hard: rot && rot.rate > 0 ? ('每 ' + rot.minH + '~' + rot.maxH + ' 小时换一次，概率 ' + rot.rate + '%') : '状态轮换没开',
         subs: [
-          { n: '当前状态', v: st ? st.name : '—', p: 100 },
-          { n: '轮换', v: rot && rot.rate > 0 ? ('开着 · ' + rot.rate + '%') : '关着', p: rot && rot.rate > 0 ? 100 : 0 },
-          { n: '状态库', v: nOf('aiStatus') + ' 条', p: pct(100 * Math.min(1, nOf('aiStatus') / 6)) }
+          { n: '状态库备了多少条', v: nOf('aiStatus') + ' 条', p: pct(100 * Math.min(1, nOf('aiStatus') / 6)) },
+          { n: '当前状态（现状，不计分）', v: st ? st.name : '—', p: 100, sc: false },
+          { n: '轮换（现状，不计分）', v: rot && rot.rate > 0 ? ('开着 · ' + rot.rate + '%') : '关着', p: rot && rot.rate > 0 ? 100 : 0, sc: false }
         ],
         adv: !(rot && rot.rate > 0) ? '状态轮换关着，TA 会一直挂同一个状态' : '' });
     }
 
     /* ---- 撤回 ---- */
-    push({ key: 'revoke', name: '撤回', icon: 'x',
-      o: open(p.revokeRate, 50), u: use(t.revoke, 3),
+    push({ key: 'revoke', name: '撤回', icon: 'x', noLearn: true,
       chal: 100 * (1 - open(p.revokeRate, 50)),
-      hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算',
+      hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算（会不会撤不靠学，所以掌握度不适用）',
       subs: [
-        { n: '撤回概率', v: (p.revokeRate || 0) + '%', p: pct(100 * open(p.revokeRate, 50)) },
-        { n: '真撤回过几次', v: t.revoke + ' 次', p: pct(100 * use(t.revoke, 3)) }
+        { n: '撤回概率（现状，不计分）', v: (p.revokeRate || 0) + '%', p: pct(100 * open(p.revokeRate, 50)), sc: false },
+        { n: '真撤回过几次（现状，不计分）', v: t.revoke + ' 次', p: pct(100 * use(t.revoke, 3)), sc: false }
       ],
       adv: (p.revokeRate || 0) === 0 ? '撤回关着（默认 0）——开了 TA 会偶尔手滑撤回刚发的' : (t.revoke === 0 ? '开着但还没撤过：多来几轮' : '') });
 
@@ -31727,16 +31898,15 @@ const Detect = (function () {
       if (hi >= 60) bad.push('最慢要等 ' + hi + ' 秒才回，聊起来会像断线');
       if (mc >= 4) bad.push('一轮至少 ' + mc + ' 条，容易刷屏');
       if (hi && lo && hi - lo > 45) bad.push('快慢差太大（' + lo + '~' + hi + ' 秒），节奏忽快忽慢');
-      push({ key: 'reply', name: '回复', icon: 'chat',
-        o: (use(hi, 60) + open(rnr, 50)) / 2, u: use(t.aiText, 40),
+      push({ key: 'reply', name: '回复', icon: 'chat', noLearn: true,
         chal,
-        hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%',
+        hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%（节奏类没有可学的料，掌握度不适用）',
         subs: [
-          { n: '回复延迟', v: lo + '~' + hi + ' 秒', p: pct(100 * Math.min(1, hi / 60)) },
-          { n: '一轮几条', v: mc + '~' + mx + ' 条', p: pct(100 * Math.min(1, mc / 4)) },
-          { n: '已读不回', v: rnr + '%', p: pct(100 * open(rnr, 50)) },
-          { n: '引用最近的话（固定 20%）', v: '每条批次掷一次', p: 60 },
-          { n: '拍一拍（固定 7%）', v: '真拍到 ' + t.pat + ' 次', p: pct(100 * use(t.pat, 3)) }
+          { n: '回复延迟（现状，不计分）', v: lo + '~' + hi + ' 秒', p: pct(100 * Math.min(1, hi / 60)), sc: false },
+          { n: '一轮几条（现状，不计分）', v: mc + '~' + mx + ' 条', p: pct(100 * Math.min(1, mc / 4)), sc: false },
+          { n: '已读不回（现状，不计分）', v: rnr + '%', p: pct(100 * open(rnr, 50)), sc: false },
+          { n: '引用最近的话（固定 20%）（现状，不计分）', v: '每条批次掷一次', p: 60, sc: false },
+          { n: '拍一拍（固定 7%）（现状，不计分）', v: '真拍到 ' + t.pat + ' 次', p: pct(100 * use(t.pat, 3)), sc: false }
         ],
         adv: bad.length ? bad.join('；') : '这套回复参数挺顺，不用动' });
     }
@@ -31753,52 +31923,56 @@ const Detect = (function () {
     arr.forEach(m => { if (m.from === 'ai' && m.senderId) speaker[m.senderId] = (speaker[m.senderId] || 0) + 1; });
     const spoke = members.filter(id => speaker[id]);
     const rows = [];
-    const push = r => { r.score = mix(r.o, r.u); r.challenge = pct(r.chal); rows.push(r); };
+    const push = r => { r.score = r.noLearn ? null : learnOf(r.subs); r.challenge = pct(r.chal); rows.push(r); };
 
     push({ key: 'g-members', name: '成员活跃', icon: 'user',
-      o: use(members.length, 5), u: use(spoke.length, 5),
       chal: pct(100 * (1 - use(spoke.length, Math.max(1, members.length)))),
       hard: members.length + ' 位成员，其中 ' + spoke.length + ' 位说过话',
-      subs: members.map(id => {
+      subs: [
+        { n: '群里有几位成员', v: members.length + ' 位', p: pct(100 * use(members.length, 5)) },
+        { n: '开口说过话的有几位', v: spoke.length + ' / ' + members.length + ' 位', p: pct(100 * spoke.length / Math.max(1, members.length)) }
+      ].concat(members.map(id => {
         const c = Home.contactById(id);
         const a = arr.filter(m => m.from === 'ai' && m.senderId === id).length;
         const ma = arr.filter(m => m.from === 'me' && m.senderId === id).length;
-        return { n: Home.displayName(c), v: a + ' 条发言 · 被点名 ' + ma + ' 次', p: pct(100 * use(a, 15)) };
-      }),
+        return { n: Home.displayName(c), v: a + ' 条发言 · 被点名 ' + ma + ' 次', p: pct(100 * use(a, 15)), sc: false };
+      })),
       adv: members.length > spoke.length ? '有 ' + (members.length - spoke.length) + ' 位成员一直没说话——群里发言是抢名额的，人越多越难轮到' : '' });
 
-    push({ key: 'g-limit', name: '每轮名额', icon: 'chat',
-      o: Math.min(1, (conv.groupMaxCount || 0) / 8), u: use(arr.filter(m => m.from === 'ai').length, 40),
+    push({ key: 'g-limit', name: '每轮名额', icon: 'chat', noLearn: true,
       chal: pct(100 * (1 - Math.min(1, (conv.groupMaxCount || 0) / 8))),
-      hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分',
+      hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分（名额是闸门，掌握度不适用）',
       subs: [
-        { n: '每轮条数上限', v: (conv.groupMaxCount || 0) + ' 条', p: pct(100 * Math.min(1, (conv.groupMaxCount || 0) / 8)) },
-        { n: '群里 AI 发言总数', v: arr.filter(m => m.from === 'ai').length + ' 条', p: pct(100 * use(arr.filter(m => m.from === 'ai').length, 40)) }
+        { n: '每轮条数上限（现状，不计分）', v: (conv.groupMaxCount || 0) + ' 条', p: pct(100 * Math.min(1, (conv.groupMaxCount || 0) / 8)), sc: false },
+        { n: '群里 AI 发言总数（现状，不计分）', v: arr.filter(m => m.from === 'ai').length + ' 条', p: pct(100 * use(arr.filter(m => m.from === 'ai').length, 40)), sc: false }
       ],
       adv: (conv.groupMaxCount || 0) <= 2 && members.length >= 4 ? '人多条少，每轮就一两条：把上限提到 5 左右更像群聊' : '' });
 
     const commish = (S().mall.orders || []).filter(o => o.convId === conv.id || (o.buyerUid !== 'me' && members.indexOf(o.buyerUid) >= 0));
+    const behaveKinds = [['redpacket'], ['quiz', 'quizask'], ['mall'], ['link']].filter(ts => arr.some(m => ts.indexOf(m.type) >= 0)).length;
     push({ key: 'g-behave', name: '群内行为', icon: 'dice',
-      o: ((conv.autoMuteProb || 0) > 0 ? 1 : 0.4), u: use(arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length, 6),
       chal: 55,
       hard: '自动禁言 ' + (conv.autoMuteProb || 0) + '% · 管理员 ' + ((conv.adminIds || []).length) + ' 位',
       subs: [
-        { n: '群红包/拷问/订单/链接', v: arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length + ' 条', p: pct(100 * use(arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length, 6)) },
-        { n: '管理员自动禁言', v: (conv.autoMuteProb || 0) + '%', p: pct(100 * Math.min(1, (conv.autoMuteProb || 0) / 20)) },
-        { n: '群收款/账单', v: '在钱包账单里按群收款看', p: 60 },
-        { n: '群内订单', v: commish.length + ' 单', p: pct(100 * use(commish.length, 3)) }
+        { n: '群里会玩几种花样（红包/拷问/订单/链接）', v: behaveKinds + ' / 4 种', p: pct(100 * behaveKinds / 4) },
+        { n: '管理员自动禁言（现状，不计分）', v: (conv.autoMuteProb || 0) + '%', p: pct(100 * Math.min(1, (conv.autoMuteProb || 0) / 20)), sc: false },
+        { n: '群收款/账单（现状，不计分）', v: '在钱包账单里按群收款看', p: 60, sc: false },
+        { n: '群内订单（现状，不计分）', v: commish.length + ' 单', p: pct(100 * use(commish.length, 3)), sc: false },
+        { n: '群红包/拷问/订单/链接（现状，不计分）', v: arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length + ' 条', p: pct(100 * use(arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length, 6)), sc: false }
       ],
       adv: (conv.autoMuteProb || 0) === 0 ? '管理员不会自己禁言——想让群有点秩序，开 10% 左右' : '' });
 
+    const avgKinds = members.length ? members.reduce((s, id) => s + tally(id).aiTextKinds, 0) / members.length : 0;
     push({ key: 'g-memberscore', name: '成员能力均分', icon: 'pulse',
-      o: 1, u: members.length ? use(members.reduce((s, id) => { const c = Home.contactById(id); return s + (c ? Math.min(1, tally(id).aiText / 30) : 0); }, 0) / members.length, 1) : 0,
       chal: pct(100 * (1 - Math.min(1, members.length / 5))),
       hard: '每位成员各带自己那份回复设置，群里互不干扰',
-      subs: members.map(id => {
+      subs: [
+        { n: '成员们各会说多少种话（均分）', v: Math.round(avgKinds) + ' 种 / 人', p: pct(100 * use(avgKinds, 30)) }
+      ].concat(members.map(id => {
         const c = Home.contactById(id);
         const tt = tally(id);
-        return { n: Home.displayName(c), v: '单聊里说过 ' + tt.aiText + ' 条', p: pct(100 * Math.min(1, tt.aiText / 30)) };
-      }),
+        return { n: Home.displayName(c), v: '单聊里说过 ' + tt.aiTextKinds + ' 种不同的话', p: pct(100 * Math.min(1, tt.aiTextKinds / 30)), sc: false };
+      })),
       adv: '' });
 
     return rows;
@@ -31890,9 +32064,10 @@ const Detect = (function () {
     return cur.kind === 'ct' ? buildCt(o) : buildGroup(o);
   }
   function overall(rs) {
-    if (!rs.length) return { m: 0, c: 0 };
+    if (!rs.length) return { m: null, c: 0 };
+    const sc = rs.filter(r => r.score != null);   /* 没有可学之料的板块不进总掌握度 */
     return {
-      m: pct(rs.reduce((s, r) => s + r.score, 0) / rs.length),
+      m: sc.length ? pct(sc.reduce((s, r) => s + r.score, 0) / sc.length) : null,
       c: pct(rs.reduce((s, r) => s + r.challenge, 0) / rs.length)
     };
   }
@@ -31911,17 +32086,17 @@ const Detect = (function () {
     head.innerHTML =
       '<button class="dt-who" id="dt-who"><i data-icon="user" data-size="15"></i><span>' + esc(curName()) + '</span><em>切换 ›</em></button>' +
       '<div class="dt-total">' +
-        '<div class="dt-total-b"><b>' + all.m + '%</b><small>总体掌握度</small>' + bar(all.m, 'ok') + '</div>' +
+        '<div class="dt-total-b"><b>' + (all.m == null ? '—' : all.m + '%') + '</b><small>总体掌握度</small>' + bar(all.m || 0, 'ok') + '</div>' +
         '<div class="dt-total-b"><b>' + all.c + '%</b><small>总体挑战度</small>' + bar(all.c, 'warn') + '</div>' +
       '</div>' +
-      '<div class="dt-tip">掌握度＝开通没开通 + 真用过多少次；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
+      '<div class="dt-tip">掌握度＝TA 对这件事的学习程度（学到了多少、会多少种），跟开关和次数无关；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
 
     list.innerHTML = rs.map((r, i) =>
       '<button class="dt-row card" data-i="' + i + '">' +
         '<span class="dt-ic"><i data-icon="' + r.icon + '" data-size="18"></i></span>' +
-        '<span class="dt-main"><b>' + esc(r.name) + '</b>' + bar(r.score, r.score >= 60 ? 'ok' : (r.score >= 30 ? '' : 'bad')) +
+        '<span class="dt-main"><b>' + esc(r.name) + '</b>' + bar(r.score || 0, r.score == null ? '' : (r.score >= 60 ? 'ok' : (r.score >= 30 ? '' : 'bad'))) +
         '<small>' + esc(String(r.hard || '').slice(0, 46)) + '</small></span>' +
-        '<span class="dt-num"><b>' + r.score + '%</b><small>挑战 ' + r.challenge + '%</small></span>' +
+        '<span class="dt-num"><b>' + (r.score == null ? '—' : r.score + '%') + '</b><small>挑战 ' + r.challenge + '%</small></span>' +
       '</button>').join('');
 
     const advs = rs.filter(r => r.adv).sort((a, b) => a.score - b.score).slice(0, 4);
@@ -31976,14 +32151,15 @@ const Detect = (function () {
     const rs = rows(); const r = rs[i]; if (!r) return;
     const ct = curObj();
     const lines = (r.subs || []).map(s =>
-      '<div class="dt-sub"><div class="dt-sub-t"><span>' + esc(s.n) + '</span><b>' + s.p + '%</b></div>' +
-      bar(s.p, s.p >= 60 ? 'ok' : (s.p >= 30 ? '' : 'bad')) +
+      '<div class="dt-sub' + (s.sc === false ? ' dt-sub-ref' : '') + '"><div class="dt-sub-t"><span>' + esc(s.n) + '</span>' +
+      (s.sc === false ? '<b class="dt-ref">现状</b>' : '<b>' + s.p + '%</b>') + '</div>' +
+      (s.sc === false ? '' : bar(s.p, s.p >= 60 ? 'ok' : (s.p >= 30 ? '' : 'bad'))) +
       '<small>' + esc(s.v) + '</small></div>').join('');
     const mask = document.createElement('div');
     mask.className = 'dialog-mask show dt-detail';
     mask.innerHTML = '<div class="dialog-card dt-dcard">' +
       '<div class="dt-dhead"><b>' + esc(r.name) + '</b><button class="dt-x" data-x="1">✕</button></div>' +
-      '<div class="dt-dsum"><span>掌握度 <b>' + r.score + '%</b></span><span>挑战度 <b>' + r.challenge + '%</b></span></div>' +
+      '<div class="dt-dsum">' + (r.score == null ? '<span>掌握度 <b>—</b></span>' : '<span>掌握度 <b>' + r.score + '%</b></span>') + '<span>挑战度 <b>' + r.challenge + '%</b></span></div>' +
       '<div class="dt-dhard">' + esc(r.hard || '') + '</div>' +
       '<div class="dt-subs">' + lines + '</div>' +
       (r.adv ? '<div class="dt-dadv">建议：' + esc(r.adv) + '</div>' : '') +
