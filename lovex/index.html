@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261011-152254 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261012-184032 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -16,53 +16,77 @@
    产物格式与导出全部数据 exportBundle v2 同源，导入口直接认。 */
 (function(){
   var CDN = 'https://cdn.jsdelivr.net/gh/qingran123311/cola-pages@gh-pages/lovex/index.html';
+  /* 紧急导出（她 10-12 17:24 再锤：「网站也导不出来」）。
+     真因＝这条紧急路是并打包：所有媒体一次读进内存 → 一起转 base64 → 拼一个巨大字符串，
+     手机上内存一爆整页就冻死（她说的「网站点不动还导不出来」就是这个形状）。
+     现在改成两段，每段都能独立成功：
+     ① 先只打包数据（不含媒体本体）——小、快、必定成功，先让她手里有一份；
+     ② 再走 DB.exportBundle（10-09 已修的串行取本、每 6 个让一拍）打全量含媒体。
+     他不在（应用真坏了）就停在第①步，绝不拿并打包把页面再拖死一次。 */
+  function deliver(text, name, done){
+    var blob = new Blob([text], { type: 'application/json' });
+    try {
+      if (window.LovexNative && typeof window.LovexNative.saveFile === 'function'){
+        var fr = new FileReader();
+        fr.onload = function(){
+          var s = String(fr.result || ''), i = s.indexOf(','), where = '';
+          try { where = window.LovexNative.saveFile(name, 'application/json', i >= 0 ? s.slice(i + 1) : s) || ''; } catch(e){}
+          done(!!where, where);
+        };
+        fr.onerror = function(){ done(false, ''); };
+        fr.readAsDataURL(blob);
+        return;
+      }
+    } catch(e){}
+    try {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      (document.body || document.documentElement).appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+      done(true, '浏览器下载');
+    } catch(e2){
+      try { window.open(URL.createObjectURL(blob), '_blank'); done(true, '新开一页，长按保存'); } catch(e3){ done(false, ''); }
+    }
+  }
   function escExport(){
     var raw = null;
     try { raw = localStorage.getItem('LOVEX_DB_V1') || localStorage.getItem('LOVEX_DB_BAK'); } catch(e){}
     if (!raw){ alert('这台机器上没找到 LOVE♡X 的旧数据'); return; }
     var state;
     try { state = JSON.parse(raw); } catch(e){ alert('旧数据读不完整，稍后再试一次'); return; }
-    var btn = document.getElementById('lx-exp-btn'); if (btn){ btn.disabled = true; btn.textContent = '正在打包…'; }
-    var keys = {};
-    (function walk(v){
-      if (typeof v === 'string'){
-        if (/^@mv[0-9a-z]+$/.test(v)) keys[v] = 1;
-        else if (/^idb:.+/.test(v)) keys[v.slice(4)] = 1;
+    var btn = document.getElementById('lx-exp-btn');
+    if (btn){ btn.disabled = true; btn.textContent = '正在存数据…（别刷新）'; }
+    var day = new Date().toISOString().slice(0, 10);
+    var dataText;
+    try {
+      dataText = JSON.stringify({ app:'LOVEX-BUNDLE', version:2, kind:'all', exportedAt:new Date().toISOString(), data:state, media:[] });
+    } catch(e){
+      alert('旧数据读不完整，稍后再试一次');
+      if (btn){ btn.disabled = false; btn.textContent = '把全部备份存到手机'; }
+      return;
+    }
+    deliver(dataText, 'LOVEX紧急导出-' + day + '-数据.json', function(ok, where){
+      if (!ok){
+        if (btn){ btn.disabled = false; btn.textContent = '数据没存下来，再点一次（换个浏览器更稳）'; }
         return;
       }
-      if (Array.isArray(v)){ v.forEach(walk); return; }
-      if (v && typeof v === 'object') for (var k in v) if (Object.prototype.hasOwnProperty.call(v,k)) walk(v[k]);
-    })(state);
-    function b2u(b){ return new Promise(function(res,rej){ var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.onerror = function(){ rej(fr.error||new Error('read-fail')); }; fr.readAsDataURL(b); }); }
-    function idbGet(k){ return new Promise(function(res){
-      try {
-        var r = indexedDB.open('LOVEX_MEDIA', 1);
-        r.onsuccess = function(){ var d = r.result;
-          try { var t = d.transaction('blobs','readonly'); var q = t.objectStore('blobs').get(k);
-            q.onsuccess = function(){ res(q.result || null); }; q.onerror = function(){ res(null); };
-          } catch(e){ res(null); } };
-        r.onerror = function(){ res(null); };
-      } catch(e){ res(null); }
-    }); }
-    var media = [], ks = Object.keys(keys), done = 0, finished = false;
-    function finish(){
-      if (finished) return; finished = true;
-      var doc = { app:'LOVEX-BUNDLE', version:2, kind:'all', exportedAt:new Date().toISOString(), data:state, media:media };
-      var blob = new Blob([JSON.stringify(doc)], { type:'application/json' });
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = 'LOVEX紧急导出-' + new Date().toISOString().slice(0,10) + '.json';
-      (document.body || document.documentElement).appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
-      if (btn){ btn.textContent = '已导出，去新线路导入'; }
-    }
-    if (!ks.length){ finish(); return; }
-    var guard = setTimeout(finish, 20000);   /* 兼底：媒体收不齐也先把主档交出去，不让她白点 */
-    function next(){ done++; if (done >= ks.length){ clearTimeout(guard); finish(); } }
-    ks.forEach(function(k){ idbGet(k).then(function(v){
-      if (v == null) next();
-      else if (typeof v === 'string'){ media.push({ k:k, v:v }); next(); }
-      else { b2u(v).then(function(u){ media.push({ k:k, v:u, b:1 }); next(); }, next); return; }
-    }); });
+      if (btn) btn.textContent = '数据已存（' + where + '），正在打包图片视频…';
+      /* 注意：DB 是全局词法绑定，不在 window 上（window.DB 取不到）——按名字取 */
+      var dbo = (typeof DB !== 'undefined') ? DB : null;
+      if (!dbo || typeof dbo.exportBundle !== 'function' || !dbo.state){
+        if (btn){ btn.disabled = false; btn.textContent = '数据已存到「' + where + '」（媒体这次没打包）'; }
+        return;
+      }
+      Promise.resolve().then(function(){ return dbo.exportBundle(dbo.state, 'all'); }).then(function(txt){
+        deliver(txt, 'LOVEX紧急导出-' + day + '.json', function(ok2, where2){
+          if (btn){
+            btn.disabled = false;
+            btn.textContent = ok2 ? ('全量（含图/视频）也存好了：' + where2) : '数据已存好；全量那份没存下来，先别卸载';
+          }
+        });
+      })['catch'](function(){
+        if (btn){ btn.disabled = false; btn.textContent = '数据已存好；图片视频那份打包失败，先别卸载'; }
+      });
+    });
   }
   window.__LX_ESC_EXPORT = escExport;
   function show(){
@@ -72,11 +96,11 @@
     d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:18px;z-index:99999;background:#2B2B31;color:#F5F2EA;'+
       'border-radius:14px;padding:14px;font-size:14px;line-height:1.6;box-shadow:0 10px 30px rgba(0,0,0,.35);'+
       'font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
-    d.innerHTML = '启动没完成——多半是网络没把页面拉全，刷新一下多半就好。'+
-      '<div style="margin-top:10px;display:flex;gap:8px">'+
-      '<button onclick="location.reload()" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:#F5F2EA;color:#2B2B31;font-size:14px">刷新重试</button>'+
-      '<button onclick="location.href=\'' + CDN + '\'" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:transparent;color:#F5F2EA;font-size:14px;border:1px solid rgba(245,242,234,.4)">高速线路进入</button></div>'+
-      '<div style="margin-top:8px"><button id="lx-exp-btn" onclick="__LX_ESC_EXPORT()" style="width:100%;padding:9px 0;border:none;border-radius:10px;background:rgba(245,242,234,.12);color:#F5F2EA;font-size:14px">先把这里的旧数据导出</button></div>';
+    d.innerHTML = '启动没完成——先把这里的备份存到手机，别急着重装。'+
+      '<div style="margin-top:10px"><button id="lx-exp-btn" onclick="__LX_ESC_EXPORT()" style="width:100%;padding:10px 0;border:none;border-radius:10px;background:#F5F2EA;color:#2B2B31;font-size:14px">把全部备份存到手机</button></div>'+
+      '<div style="margin-top:8px;display:flex;gap:8px">'+
+      '<button onclick="location.reload()" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:transparent;color:#F5F2EA;font-size:14px;border:1px solid rgba(245,242,234,.4)">刷新重试</button>'+
+      '<button onclick="location.href=\'' + CDN + '\'" style="flex:1;padding:9px 0;border:none;border-radius:10px;background:transparent;color:#F5F2EA;font-size:14px;border:1px solid rgba(245,242,234,.4)">备用线路（浏览器用）</button></div>';
     (document.body || document.documentElement).appendChild(d);
   }
   window.__LX_BOOTWATCH = show;
@@ -1177,6 +1201,9 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 /* 相册发视频（她 10-02）：气泡裸贴视频，内联播放 */
 .msg-video{display:block;max-width:min(62vw,220px);border-radius:8px;background:#000}
 .bubble-video{background:none;border:none;padding:0}
+/* 她 10-12：动图态——封面就是画面本体在动，不要黑块大播放键 */
+.bubble-gif .msg-video{cursor:pointer;background:transparent}
+.bubble-gif .msg-video::-webkit-media-controls{display:none !important}
 .msg-flash{animation:msgFlash 1.2s ease}
 @keyframes msgFlash{0%,60%{background:var(--primary-ultra)}100%{background:transparent}}
 
@@ -3628,6 +3655,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mo-row-state{flex:0 0 auto;font-size:var(--fs-small);color:var(--t2);width:44px}
 .mo-row-state.ok{color:var(--ok)}
 .mo-row-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mo-row-ava{flex:none;width:34px;height:34px;border-radius:50%;overflow:hidden;background:var(--fill)}
+.mo-row-ava img{width:100%;height:100%;object-fit:cover;display:block}
 .mo-row-mid b{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
 .mo-row-mid small{font-size:var(--fs-small);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mo-row-amt{font-size:var(--fs-aux);color:var(--t1);font-weight:600}
@@ -3688,6 +3717,58 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .moc-bar{height:3px;border-radius:2px;background:var(--fill);overflow:hidden;margin:2px 0 6px}
 .moc-bar i{display:block;height:100%;background:var(--primary);border-radius:2px}
 .moc-eta{font-size:var(--fs-small);color:var(--t2)}
+
+/* ===== 检测中心（她 10-12 16:52 口述）：量化掌握度 / 挑战度，可下钻可提问 ===== */
+.dt-head{padding:14px}
+.dt-who{display:flex;align-items:center;gap:6px;width:100%;padding:9px 12px;border:none;border-radius:12px;background:var(--fill);color:var(--t1);font-size:var(--fs-aux)}
+.dt-who span{flex:1;text-align:left;font-weight:600}
+.dt-who em{color:var(--t3);font-style:normal;font-size:var(--fs-small)}
+.dt-total{display:flex;gap:10px;margin-top:12px}
+.dt-total-b{flex:1;display:flex;flex-direction:column;gap:4px}
+.dt-total-b b{font-size:24px;color:var(--t1)}
+.dt-total-b small{font-size:var(--fs-small);color:var(--t3)}
+.dt-tip{margin-top:10px;font-size:var(--fs-small);color:var(--t3);line-height:1.6}
+.dt-bar{display:block;height:5px;border-radius:3px;background:var(--fill);overflow:hidden}
+.dt-bar i{display:block;height:100%;background:var(--t3);border-radius:3px}
+.dt-bar.ok i{background:var(--primary)}
+.dt-bar.warn i{background:#E0A458}
+.dt-bar.bad i{background:#D9756E}
+.dt-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.dt-row{display:flex;align-items:center;gap:10px;width:100%;padding:12px;border:none;border-radius:14px;text-align:left}
+.dt-ic{width:34px;height:34px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.dt-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.dt-main b{font-size:var(--fs-aux);color:var(--t1)}
+.dt-main small{font-size:var(--fs-small);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dt-num{text-align:right;flex:0 0 auto}
+.dt-num b{display:block;font-size:15px;color:var(--t1)}
+.dt-num small{font-size:var(--fs-small);color:var(--t3)}
+.dt-ask,.dt-advs{margin-top:14px;padding:14px;border-radius:14px}
+.dt-ask-t{font-size:var(--fs-aux);color:var(--t1);font-weight:600;margin-bottom:8px}
+.dt-ask-row{display:flex;gap:8px}
+.dt-ask-row input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--fill);border-radius:10px;background:transparent;color:var(--t1);font-size:var(--fs-aux)}
+.dt-ask-row button{padding:9px 16px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:var(--fs-aux)}
+.dt-ask-out{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--fill);font-size:var(--fs-aux);color:var(--t1);line-height:1.6}
+.dt-adv{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--fill)}
+.dt-adv:first-of-type{border-top:none}
+.dt-adv b{font-size:var(--fs-aux);color:var(--t1)}
+.dt-adv span{font-size:var(--fs-small);color:var(--t2);line-height:1.6}
+.dt-fix{align-self:flex-start;padding:6px 12px;border:none;border-radius:9px;background:var(--primary);color:#fff;font-size:var(--fs-small)}
+.dt-empty{padding:30px 0;text-align:center;color:var(--t3)}
+.dt-dcard{padding:18px}
+.dt-dhead{display:flex;align-items:center}
+.dt-dhead b{flex:1;font-size:16px;color:var(--t1)}
+.dt-x{border:none;background:transparent;color:var(--t3);font-size:16px}
+.dt-dsum{display:flex;gap:16px;margin:10px 0 6px;font-size:var(--fs-aux);color:var(--t2)}
+.dt-dsum b{color:var(--t1)}
+.dt-dhard{font-size:var(--fs-small);color:var(--t3);line-height:1.6;margin-bottom:10px}
+.dt-subs{display:flex;flex-direction:column;gap:12px;max-height:46vh;overflow:auto}
+.dt-sub-t{display:flex;font-size:var(--fs-aux);color:var(--t1);margin-bottom:5px}
+.dt-sub-t span{flex:1}
+.dt-sub small{display:block;margin-top:5px;font-size:var(--fs-small);color:var(--t3)}
+.dt-dadv{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--fill);font-size:var(--fs-aux);color:var(--t1);line-height:1.6}
+.dt-dbtns{display:flex;gap:10px;margin-top:14px}
+.dt-dbtns button{flex:1;padding:11px 0;border:none;border-radius:11px;background:var(--fill);color:var(--t1);font-size:var(--fs-aux)}
+.dt-dbtns .dt-ok{background:var(--primary);color:#fff}
 </style>
 </head>
 <body>
@@ -3877,6 +3958,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="cell-chatbg"><span class="cell-icon"><i data-icon="image" data-size="18"></i></span><span class="cell-text">聊天背景</span><span class="chevron">›</span></button>
         <input type="file" id="globalbg-input" accept="image/*" hidden>
         <button class="cell" id="cell-storage"><span class="cell-icon"><i data-icon="database" data-size="18"></i></span><span class="cell-text">存储管理</span><span class="chevron">›</span></button>
+        <button class="cell" id="cell-detect"><span class="cell-icon"><i data-icon="pulse" data-size="18"></i></span><span class="cell-text">检测中心</span><span class="cell-ext">看 TA 掌握得怎么样</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-data"><span class="cell-icon"><i data-icon="download"></i></span><span class="cell-text">数据管理</span><span class="chevron">›</span></button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
@@ -3889,6 +3971,19 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="cell-lkrelay"><span class="cell-icon"><i data-icon="link" data-size="18"></i></span><span class="cell-text">分享封面中转</span><span class="cell-ext" id="lkrelay-state">未接</span><span class="chevron">›</span></button>
       </div>
       <p class="foot-note">所有数据仅保存在本机浏览器中，卸载或清缓存前记得导出备份</p>
+    </div>
+  </section>
+
+  <!-- ===== 页面：检测中心（她 10-12 16:52 口述：看某个联系人对全站功能的掌握度与挑战度） ===== -->
+  <section class="page" id="page-detect">
+    <header class="navbar">
+      <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
+      <div class="navbar-title">检测中心</div>
+    </header>
+    <div class="page-body">
+      <div class="card dt-head" id="dt-head"></div>
+      <div class="dt-list" id="dt-list"></div>
+      <div id="dt-foot"></div>
     </div>
   </section>
 
@@ -3921,6 +4016,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
       <div class="cmp-pages" id="cmp-pages">
       <div class="cmp-page">
       <button class="more-tile" data-more="album"><span class="tile-ico"><i data-icon="image" data-size="20"></i></span><span>相册</span></button>
+      <button class="more-tile" data-more="camera"><span class="tile-ico"><i data-icon="camera" data-size="20"></i></span><span>拍照</span></button>
       <button class="more-tile" data-more="video"><span class="tile-ico"><i data-icon="video" data-size="20"></i></span><span>视频通话</span></button>
       <button class="more-tile" data-more="files"><span class="tile-ico"><i data-icon="folder" data-size="20"></i></span><span>文件管理</span></button>
       <button class="more-tile" data-more="letter"><span class="tile-ico"><i data-icon="mail" data-size="20"></i></span><span>写信</span></button>
@@ -4183,7 +4279,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <header class="navbar">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
       <div class="navbar-title">商城</div>
-      <button class="mall-navact" id="mall-ta-eye-btn" title="TA 的购买记录"><i data-icon="eye" data-size="18"></i></button>
       <button class="mall-navact" id="mall-orders-btn" title="我的订单"><i data-icon="box" data-size="18"></i></button>
       <button class="mall-navact" id="mall-cart-btn" title="购物车"><i data-icon="cart" data-size="18"></i><i class="mall-cart-dot" id="mall-cart-dot" hidden></i></button>
     </header>
@@ -4243,6 +4338,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 <div id="toast-layer"></div>
 <div id="dialog-layer"></div>
 <input type="file" id="chat-img-input" accept="image/*,video/*" hidden>
+<input type="file" id="chat-cam-input" accept="image/*" capture="environment" hidden>
 
 <script>
 "use strict";
@@ -4296,6 +4392,8 @@ const DB = (function () {
         moods: ['心情愉悦', '有点难过', '有点暴躁', '很平静', '超级开心', '好累啊']
       },
       quizLib: { groups: [], questions: [] },   // P34 灵魂拷问题库：groups[{id,name}]；questions[{id,gid,type:'single'|'multi'|'sort'|'rate'|'text',title,options[],ts}]
+      doodleDrafts: {},                // 她 10-12：TA 涂鸦草稿 convId->{ts}（画一半收笔，下次自由选择恢复/弃稿；不在 defaults 会被 deepMerge 剥掉）
+      drawDraft: null,                 // 她 10-12：她的画板草稿 {ts,strokes[]}（画一半退出原画保留；同上必须在 defaults）
       quizzes: [],                     // P34 试卷：[{id,title,mode:'normal'|'duet',qids[],targets[],delayMin,status,pending[],answers{},rating,ts}]
       quizTpls: [],                    // P34 出卷模板（V3）：结构同 quizzes 去 answers/status
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
@@ -10174,12 +10272,39 @@ const Chat = (function () {
       bub.appendChild(im);
       }
     } else if (m.type === 'video' && m.vid) {
-      /* 相册发视频（她 10-02）：本体在 IndexedDB（MediaStore），气泡内联播放，不占 localStorage 配额 */
+      /* 相册发视频（她 10-02）：本体在 IndexedDB（MediaStore），气泡内联播放，不占 localStorage 配额
+         她 10-12：动图/小视频气泡封面别再是黑块大播放键——≤15s 按动图放（无声循环自动播，点一下出声出控制），
+         长视频保持原样，只是封面停首帧不黑屏 */
       bub.classList.add('bubble-video');
-      bub.innerHTML = '<video class="msg-video" controls playsinline preload="metadata"></video>';
+      const v = document.createElement('video');
+      v.className = 'msg-video';
+      v.playsInline = true;
+      v.preload = 'metadata';
+      v.controls = true;
+      bub.appendChild(v);
       MediaStore.src(m.vid).then(u => {
-        const v = bub.querySelector('video');
-        if (v && u) v.src = u;
+        if (!v || !u) return;
+        v.src = u;
+        v.addEventListener('loadedmetadata', () => {
+          if (videoGifMode(v.duration)) {
+            v.muted = true;
+            v.loop = true;
+            v.autoplay = true;
+            v.removeAttribute('controls');
+            bub.classList.add('bubble-gif');
+            const p = v.play();
+            if (p && p.catch) p.catch(() => { /* 自动播放被掳：停在首帧，点一下照常放 */ });
+            v.addEventListener('click', () => {
+              if (v.controls) return;   /* 已在手动播放态，交给原生控制条 */
+              v.controls = true;
+              v.muted = false;
+              v.loop = false;
+              v.play();
+            });
+          } else {
+            try { v.currentTime = 0.001; } catch (e) { /* 还没帧也无所谓，metadata 加载完自然有首帧 */ }
+          }
+        }, { once: true });
       });
     } else if (m.type === 'voice') {
       bub.classList.add('bubble-voice');
@@ -10670,14 +10795,16 @@ const Chat = (function () {
    * 挂 engine fireBatch 钩子链（同 quizask 条件只限单聊）。
    * 她 09:41 改口径：候选＝双方互动最近 15 条里 TA 自己发的消息，**等概率**抽一条撤；
    * 撤的若正好是最新一条，可以再重发一遍（打错重发的真实感，概率我拍 50%，可调）。
-   * 没有可撤的就静默跳过。 */
+   * 她 10-12 17:24 定：群聊也要撤，且按联系人算——群候选只在他自己发的那些里抽（senderId 对齐），
+   * 所以「谁手滑」就看谁的 revokeRate，别人的消息不会被算到他头上。没可撤的就静默跳过。 */
   const REVOKE_WINDOW = 15, REVOKE_RESEND = 0.5;
   function maybeRevoke(conv, ct) {
     const rate = Math.min(100, Math.max(0, Math.round(+((ct.params || {}).revokeRate ?? 0))));
     if (rate <= 0 || Math.random() * 100 >= rate) return;
     const arr = DB.state.msgs[conv.id] || [];
     const recent = arr.slice(-REVOKE_WINDOW);
-    const cands = recent.filter(m => m.from === 'ai' && m.type !== 'sys' && (m.text || m.img || m.vid));
+    const cands = recent.filter(m => m.from === 'ai' && m.type !== 'sys' && (m.text || m.img || m.vid)
+      && !(conv.type === 'group' && ct.id && m.senderId !== ct.id));
     if (!cands.length) return;
     const victim = cands[Math.floor(Math.random() * cands.length)];
     const isLatest = arr.length && arr[arr.length - 1].id === victim.id;
@@ -10832,6 +10959,19 @@ const Chat = (function () {
     const cv = mask.querySelector('.dp-canvas');
     const c2 = cv.getContext('2d');
     const strokes = [];
+    /* 她 10-12：画板草稿——画一半退出原画保留，再进来接着画；发出去或清空才清稿 */
+    if (DB.state.drawDraft && Array.isArray(DB.state.drawDraft.strokes)) {
+      DB.state.drawDraft.strokes.forEach(s => strokes.push(s));
+    }
+    const saveDraft = () => {
+      if (!strokes.length) {
+        if (DB.state.drawDraft) { DB.state.drawDraft = null; DB.save(); }
+        return;
+      }
+      DB.state.drawDraft = { ts: Date.now(),
+        strokes: strokes.map(s => ({ c: s.c, w: s.w, style: s.style, pts: s.pts.map(p => [Math.round(p[0]), Math.round(p[1])]) })) };
+      DB.save();
+    };
     let curStroke = null;
     let curColor = '#3A3A42';
     let curW = 6, curStyle = 'round';   /* 她 10-11 14:21：粗细三档 + 笔感三档（圆头/马克/蜡笔） */
@@ -10868,10 +11008,10 @@ const Chat = (function () {
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
     });
     cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.pts.push(pos(e)); repaint(); });
-    const endStroke = () => { if (curStroke && curStroke.pts.length) strokes.push(curStroke); curStroke = null; repaint(); };
+    const endStroke = () => { if (curStroke && curStroke.pts.length) { strokes.push(curStroke); saveDraft(); } curStroke = null; repaint(); };
     cv.addEventListener('pointerup', endStroke);
     cv.addEventListener('pointercancel', endStroke);
-    const close = () => mask.remove();
+    const close = () => { saveDraft(); mask.remove(); };   /* 关画板也存稿：画一半退出不丢 */
     /* 选色：点模板色即换笔色；调色盘 input[type=color] 自选，选中色回填到调色盘铉上 */
     const swBox = mask.querySelector('#dp-colors');
     const customSw = mask.querySelector('.dp-custom');
@@ -10898,10 +11038,11 @@ const Chat = (function () {
     });
     mask.querySelector('.dp-x').addEventListener('click', close);
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
-    mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaint(); });
-    mask.querySelector('[data-dp="clear"]').addEventListener('click', () => { strokes.length = 0; repaint(); });
+    mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaint(); saveDraft(); });
+    mask.querySelector('[data-dp="clear"]').addEventListener('click', () => { strokes.length = 0; repaint(); saveDraft(); });
     mask.querySelector('[data-dp="send"]').addEventListener('click', () => {
       if (!strokes.length) { UI.toast('还没画呢'); return; }
+      DB.state.drawDraft = null; DB.save();   /* 发出去稿子就结了 */
       close();
       sendImage(cv.toDataURL('image/png'), false, true);
       UI.toast('已发送');
@@ -12352,6 +12493,7 @@ const Chat = (function () {
       closeMorePanel();
       const k = b.dataset.more;
       if (k === 'album') document.getElementById('chat-img-input').click();
+      else if (k === 'camera') document.getElementById('chat-cam-input').click();   /* 她 10-12：相册旁补拍照（APK 壳选图器没相机口，独立 capture 输入） */
       else if (k === 'video') { if (cur) Call.start(cur); }   /* P7 接线：视频通话入口在＋号栏（清然 15:19） */
       else if (k === 'files') Library.open({ kind: 'globalCards', ctId: (cur && cur.type === 'single') ? cur.peerId : null });   /* 她 10-04：专属库默认当前联系人 */
       else if (k === 'letter') Letter.open(cur);   /* P8 接线：写信慢消息 */
@@ -12385,11 +12527,8 @@ const Chat = (function () {
     // 引用栏取消
     document.getElementById('qb-close').addEventListener('click', clearQuote);
 
-    // 相册发图：压缩后入库
-    const imgInput = document.getElementById('chat-img-input');
-    imgInput.addEventListener('change', async () => {
-      const f = imgInput.files[0];
-      imgInput.value = '';
+    // 相册/拍照发图：压缩后入库（两个入口共用同一套入库逻辑，她 10-12 加拍照口）
+    async function ingestPicked(f) {
       if (!f) return;
       try {
         if (/^video\//i.test(f.type || '')) {
@@ -12403,17 +12542,28 @@ const Chat = (function () {
           sendImage(await Media.compressImage(f));
         }
       } catch (e) { UI.toast((e && e.message) ? e.message + '，换个小点的试试' : '发送失败'); }
+    }
+    document.getElementById('chat-img-input').addEventListener('change', function () {
+      const f = this.files[0]; this.value = ''; ingestPicked(f);
+    });
+    document.getElementById('chat-cam-input').addEventListener('change', function () {
+      const f = this.files[0]; this.value = ''; ingestPicked(f);
     });
   }
 
   /* P24：Router 返回刷新钩子用 —— 保留会话上下文的全量重渲（幂等） */
   function rerender() { if (!cur) return; refreshHeader(); renderMsgs(); }
 
+  /* 她 10-12：动图/短视频封面判定——≤15s 或时长报不出（流式来源常报 Infinity）按动图放
+     （无声循环自动播，无黑块大播放键）；长视频保持控制条原样。导出给探针直测 */
+  function videoGifMode(d) { return isFinite(d) ? d <= 15 : true; }
+
   return { open, init, appendMessage, applyBg, applyBubble, refreshHeader, refreshStatus: refreshHeader,
     locateMsg, rerender, maybeRevoke, parseLink, openLink, playMomentLink, openLinkSheet, lkRelayFix, lkRelayTest, sendTo, learnFromMe,
      lkResolve, fetchLinkMeta,   /* 她 10-07：朋友圈链接大卡要用（b23 解直链 + 抓封面标题） */
     lkActCfg: LK_ACT,   /* 播放器互动全局概率（不按联系人分）；探针可临时改延时，不改概率值 */
     openDrawPad,   /* 她 10-08 17:33：画板入口也给探针用 */
+    videoGifMode,   /* 她 10-12：动图判定口，探针直测 */
     get conv() { return cur; } };
 })();
 
@@ -12862,7 +13012,9 @@ const Engine = (function () {
       /* 内层额外缓冲（她 17:54 定）：多条字卡要“组合”几秒，更像真人打长句 */
       const extra = 2000 + Math.floor(Math.random() * 2000);
       later(conv.id, extra, () => pushAi(conv, text, ct));
-      return extra;
+      /* 她 10-12：拼卡也是「真发了一轮」，行为尾巴（拍一拍/来电/撤回/购物）照走——
+         以前这里直接 return extra，整条尾巴被吞，撤回率设多高都轮不到它。 */
+      return batchTail(conv, ct, extra);
  }
 
     const count = (typeof n === 'number') ? n : pickCount(p);
@@ -12908,8 +13060,30 @@ const Engine = (function () {
          旧「排表情/图片位后面占气泡」被表情15%+图片20%+自由说话蚕食，拍 100 实际只有约45%
          （verify-1011-涂鸦蚕食.js 实证），改独立掷：掷中本条就是画，掷不中才走原链 */
       if (doodleOK && Math.random() * 100 < doodleProb) {
+        /* 她 10-12：TA 涂鸦草稿——画一半收笔存草稿不发（默认 8% 工程值待拍，参数 doodleDraftRate 可调），
+           下次抽中涂鸦时自由选择：85% 接着画完发（带续画时间），15% 弃稿重画；草稿在会话在才有效 */
+        DB.state.doodleDrafts = DB.state.doodleDrafts || {};
+        const ddP = Math.min(100, Math.max(0, p.doodleDraftRate == null ? 8 : +p.doodleDraftRate));
+        const draft = DB.state.doodleDrafts[conv.id];
+        if (draft) {
+          delete DB.state.doodleDrafts[conv.id];
+          DB.save();
+          const d2 = runSafe('doodle.make.resume', () => Doodle.make());
+          if (d2 && d2.dataUrl) {
+            const dd2 = d2.dataUrl;
+            t += (i === 0 ? 0 : rollDelay(p)) + 2500 + Math.floor(Math.random() * 3500);   /* 续画完再发 */
+            later(conv.id, t, () => pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+              from: 'ai', type: 'img', img: dd2, doodle: true, senderId: ct ? ct.id : null }));
+            continue;
+          }   /* 恢复画砸了照旧落回老链 */
+        }
         const d = runSafe('doodle.make', () => Doodle.make());
         if (d && d.dataUrl) {
+          if (Math.random() * 100 < ddP) {
+            DB.state.doodleDrafts[conv.id] = { ts: Date.now() };
+            DB.save();
+            continue;   /* 画一半收笔，本条不发声，气泡位留待下次涂鸦恢复（不硬凑别条补位） */
+          }
           const dd = d.dataUrl;
           t += (i === 0 ? 0 : rollDelay(p));
           later(conv.id, t, () => pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
@@ -12926,10 +13100,23 @@ const Engine = (function () {
       let freeExtra = 0;
       if (freeP > 0 && typeof FreeTalk !== 'undefined' && Math.random() * 100 < freeP) {
         const budget = Math.max(800, (+p.maxSec ?? 3) * 1000);
-        const res = (cards.length && Math.random() < 0.5)
-          ? FreeTalk.remakeDetailed(cards.slice(0, 2), talkCtx(ct), budget)
-          : FreeTalk.composeDetailed(talkCtx(ct), budget);
+        /* 她 10-12：键盘直接打字模式——自由说话三路之一（字卡/组话/照敲），工程值 10% 待拍：
+           掷中就不组不加工，照她的字卡原句直接敲出来（自由度拉满），打字时间照真加；
+           30% 输入法联想补一拍（FreeTalk.typeDirect 内部掷） */
+        const kbP = Math.min(100, Math.max(0, Math.round(p.kbFree == null ? 10 : +p.kbFree)));   /* 未设置默认 10，NaN 防护（+undefined=NaN 不是 nullish，?? 接不住） */
+        const kbHit = kbP > 0 && cards.length && Math.random() * 100 < kbP;
+        const res = kbHit
+          ? FreeTalk.typeDirect(pick(cards), talkCtx(ct))
+          : (cards.length && Math.random() < 0.5)
+            ? FreeTalk.remakeDetailed(cards.slice(0, 2), talkCtx(ct), budget)
+            : FreeTalk.composeDetailed(talkCtx(ct), budget);
         if (res) { freeLine = res.text; freeExtra = Math.min(res.extraMs, 6000); }   /* 挑词打字真加进间隔，封顶 6s 防极端 */
+        /* 她 10-12：TA 自由组出来的句子按概率存荟萃「自由组句」分组（默认 20% 工程值待拍，参数 ftSave 可调；
+           键盘照敲的是她的话，不算组句不入账） */
+        const ftP = Math.min(100, Math.max(0, p.ftSave == null ? 20 : +p.ftSave));
+        if (freeLine && !kbHit && typeof Library !== 'undefined' && Library.ftAdd && Math.random() * 100 < ftP) {
+          runSafe('ft.save', () => Library.ftAdd(ct ? ct.id : null, freeLine));
+        }
       }
       t += (i === 0 ? 0 : rollDelay(p)) + freeExtra;   /* 她 09:41：间隔吃回复设置的延迟区间；P68 起另加挑词打字时间 */
       /* 亲属卡主动赠送不再挂回复链（她 08-28 晚定）：改 Kinship.settleMonthly 月度一次，
@@ -12980,6 +13167,13 @@ const Engine = (function () {
       later(conv.id, t, () => pushAiImg(conv, attachImg, ct));
     }
 
+    /* 行为尾巴（她 10-12 归位）：拍一拍/视频来电/撤回/购物都是「整批回复落库之后」的独立行为。
+       以前这段直接躺在 fireBatch 末尾——谁在中途 return 谁就把整条尾巴吞掉（拼卡命中那条路就是，
+       撤回率设多高都轮不到它）。现在收成一个口，fireBatch 每个「真发了东西」的出口都过它。 */
+    return batchTail(conv, ct, t);
+  }
+
+  function batchTail(conv, ct, t) {
     /* AI主动拍一拍（策划 736-739）：固定7%（#39p 撤用户可调） */
     const patProb = 7;
     if (patProb > 0 && Math.random() * 100 < patProb) {
@@ -12995,10 +13189,9 @@ const Engine = (function () {
       laterKeep(conv.id, t, () => Call.incoming(conv, ct));
     }
 
-    /* 撤回（二期P35，她 20:17 定）：params.revokeRate 开启后 TA 偶尔手滑撤回自己最近的消息。
-       挂整批回复之后（同拍一拍层级）：本批气泡已全部落库，「最近七条」才含刚发的话；
-       maybeRevoke 内部另有 1.2~3.5s “反应过来”延迟 */
-    if (conv.type === 'single' && typeof Chat !== 'undefined' && Chat.maybeRevoke) {
+    /* 撤回（二期P35，她 20:17 定）；她 10-12 17:24 定：群聊也要撤，且按联系人算——
+       群里每轮每个成员各自过这条尾巴，各自用自己 ct.params.revokeRate，抽的也是他自己发的消息 */
+    if (typeof Chat !== 'undefined' && Chat.maybeRevoke) {
       const revokeAt = t + rand(800, 2200);
       laterKeep(conv.id, revokeAt, () => runSafe('chat.revoke', () => Chat.maybeRevoke(conv, ct)));
     }
@@ -13900,6 +14093,140 @@ const FreeTalk = (function () {
       ['想你了', '想你啦', '惦记你了']
     ]
   };
+  /* 她 10-12：词典搜索层——TA 选词也会在词典里「搜」：模糊匹配、同音容错、拼音检索主题词卡。
+     纯引擎层，不上屏不进界面；搜词时间随打字时间一起算进间隔（deliberate/strokeTime） */
+  let SYL_OF = null;
+  /* 她 10-12：拼音检索层补充音节表——同音字表（HOMO_SYL）只为打字选错层服务、收得窄；
+     搜词的拼音层要能覆盖词典里的常用字，缺的音节在这补（只进检索，不进同音别字/打字计时）；
+     依旧不硬编真正的生僻字，查无此音返回 null 走汉字路径 */
+  const PY_EXTRA = {
+    'huo': ['火', '活', '货', '伙', '或', '豁'], 'dong': ['东', '冬', '懂', '动', '冻', '洞'],
+    'zi': ['自', '字', '子', '紫'], 'ji': ['几', '机', '级', '记', '急'],
+    'jian': ['见', '间', '件', '健', '简'], 'jiang': ['讲', '江', '奖', '僵'],
+    'jing': ['静', '净', '惊', '睛', '境'], 'ju': ['句', '具', '局', '剧', '举'],
+    'jue': ['觉', '决', '绝', '掘'], 'jun': ['军', '均', '俊'],
+    'zhou': ['周', '州', '粥', '皱'], 'zhao': ['找', '照', '招', '罩'],
+    'zhang': ['张', '章', '长', '涨'], 'zhan': ['站', '占', '战', '沾'],
+    'zheng': ['正', '整', '争', '证'], 'zhuo': ['桌', '捉', '浊'],
+    'ying': ['应', '影', '赢', '迎'], 'yin': ['因', '音', '引', '银'],
+    'yong': ['用', '永', '勇'], 'yu': ['于', '鱼', '雨', '语', '玉'],
+    'yuan': ['元', '圆', '员', '院', '愿'], 'yue': ['月', '越', '约', '乐'],
+    'yun': ['云', '运', '晕'], 'xian': ['先', '现', '线', '闲'],
+    'xiu': ['修', '休', '秀'], 'xu': ['需', '许', '序', '续'],
+    'xuan': ['选', '悬', '旋'], 'xun': ['寻', '训', '询'],
+    'xiong': ['兄', '胸', '熊'], 'wu': ['五', '午', '屋', '雾'],
+    'wei': ['为', '位', '未', '味'], 'weng': ['翁', '嗡'],
+    'wai': ['外', '歪'], 'wa': ['娃', '瓦', '袜'],
+    'tuo': ['脱', '拖', '妥'], 'tui': ['退', '腿', '推'],
+    'tu': ['图', '涂', '吐', '途'], 'tou': ['头', '偷', '透'],
+    'tong': ['同', '通', '痛', '桶'], 'tiao': ['跳', '条', '挑'],
+    'tie': ['贴', '铁'], 'tang': ['糖', '躺', '汤'],
+    'tan': ['谈', '探', '坛'], 'tao': ['套', '逃', '桃'],
+    'sui': ['随', '岁', '碎'], 'suo': ['所', '锁', '索'],
+    'shun': ['顺', '瞬'], 'she': ['蛇', '舍', '设'],
+    'sha': ['啥', '沙', '傻'], 'shan': ['山', '闪', '扇'],
+    'se': ['色', '涩'], 'reng': ['扔', '仍'],
+    'ran': ['然', '染', '燃'], 'qie': ['切', '且', '茄'],
+    'qiang': ['强', '墙', '抢'], 'ping': ['平', '评', '瓶'],
+    'pao': ['跑', '炮', '泡'], 'pan': ['盘', '盼', '判'],
+    'pai': ['排', '牌', '派'], 'pou': ['剖'],
+    'peng': ['朋', '碰', '棚'], 'pen': ['盆', '喷'],
+    'nong': ['农', '浓', '弄'], 'niu': ['牛', '扭', '纽'],
+    'nian': ['年', '念'], 'nin': ['您'], 'nen': ['嫩'],
+    'mu': ['木', '目', '母', '幕'], 'mo': ['莫', '摸', '末'],
+    'mian': ['面', '免', '棉'], 'miao': ['秒', '苗', '庙'],
+    'men': ['们', '门', '闷'], 'me': ['么'],
+    'mao': ['猫', '毛', '帽'], 'mai': ['买', '卖', '麦'],
+    'man': ['慢', '满'], 'lv': ['绿', '旅', '驴'],
+    'lun': ['论', '轮'], 'luo': ['落', '罗', '络'],
+    'lou': ['楼', '漏'], 'long': ['龙', '笼', '隆'],
+    'lin': ['林', '淋', '邻'], 'ling': ['零', '铃', '领'],
+    'lie': ['列', '烈', '猎'], 'liao': ['聊', '料', '疗'],
+    'lian': ['连', '脸', '练'], 'li': ['里', '力', '理', '离'],
+    'lao': ['老', '劳', '牢'], 'lan': ['蓝', '篮', '拦'],
+    'kuo': ['阔', '括'], 'kun': ['困', '昆', '捆'],
+    'kui': ['亏', '愧'], 'kuang': ['况', '矿', '狂'],
+    'kou': ['口', '扣'], 'kong': ['空', '恐', '孔'],
+    'ken': ['肯', '恳'], 'ke': ['可', '课', '刻', '客'],
+    'gu': ['古', '故', '顾', '瓜'], 'gui': ['贵', '归', '鬼'],
+    'gun': ['滚', '棍'], 'gou': ['狗', '够', '沟'],
+    'gao': ['高', '告', '糕'], 'gang': ['刚', '钢', '港'],
+    'geng': ['更', '耕'], 'gen': ['跟', '根'],
+    'gai': ['该', '改', '盖'], 'ga': ['尬', '嘎'],
+    'huan': ['换', '环', '还'], 'huang': ['黄', '荒', '晃'],
+    'heng': ['横', '衡'], 'hu': ['湖', '虎', '糊', '户'],
+    'ka': ['卡', '咖']
+  };
+  function sylIndex() {           /* HOMO_SYL 声明在后面，惰性建索引防 TDZ */
+    if (!SYL_OF) {
+      SYL_OF = {};
+      Object.keys(HOMO_SYL).forEach(sy => HOMO_SYL[sy].forEach(c => { if (!(c in SYL_OF)) SYL_OF[c] = sy; }));
+      Object.keys(PY_EXTRA).forEach(sy => {
+        const cs = PY_EXTRA[sy];
+        if (Array.isArray(cs)) cs.forEach(c => { if (!(c in SYL_OF)) SYL_OF[c] = sy; });
+      });
+    }
+    return SYL_OF;
+  }
+  /* 词的拼音（逐字音节）；词典没覆盖的字返 null（不硬编生僻字） */
+  function pinyinOf(word) {
+    const idx = sylIndex();
+    const out = [];
+    for (const c of String(word || '')) {
+      if (!(c in idx)) return null;
+      out.push(idx[c]);
+    }
+    return out.length ? out : null;
+  }
+  /* dicSearch(q)：q 可以是汉字串（模糊/同音容错）或拼音串（xiangchi / xiang chi）。
+     how：0=直中（全拼全中/词含整串） 1=全字命中（含同音展开） 2=音节前缀/部分字模糊 3=相邻同音。
+     返回按命中质序排的 [{t,tag,how}]；搜不到返回 []。供组话检索选词与探针用 */
+  function dicSearch(q) {
+    const s = String(q || '').trim().toLowerCase();
+    if (!s) return [];
+    const hasHan = /[\u4e00-\u9fa5]/.test(s);
+    const isPy = !hasHan && /^[a-z\s']+$/.test(s);
+    const qj = s.replace(/[\s']+/g, '');
+    const qSyls = isPy ? qj.length ? s.split(/[\s']+/).filter(Boolean) : [] : [];
+    /* 同音展开集：真机搜字最常见路径——搜「羊」也能捎出「阳/杨/洋」 */
+    const idx = sylIndex();
+    const expand = c => {
+      const set = [c];
+      Object.keys(idx).forEach(sy => {
+        if (idx[sy].indexOf(c) >= 0) idx[sy].forEach(x => { if (x !== c && set.indexOf(x) < 0) set.push(x); });
+      });
+      return set;
+    };
+    const out = [];
+    const seen = {};
+    const push = (t, tag, how) => {
+      if (seen[t]) { if (how < seen[t].how) seen[t].how = how; return; }
+      seen[t] = { t, tag, how };
+      out.push(seen[t]);
+    };
+    DIC.noun.forEach(n => {
+      if (!n.t) return;
+      if (hasHan) {
+        if (n.t.indexOf(qj) >= 0) return push(n.t, n.tag, 0);
+        let exact = 0, homo = 0;
+        qj.split('').forEach(c => {
+          if (n.t.indexOf(c) >= 0) { exact++; return; }
+          if (expand(c).some(x => n.t.indexOf(x) >= 0)) homo++;
+        });
+        if (exact + homo === qj.length) return push(n.t, n.tag, homo ? 1 : 0);
+        if (exact + homo > 0) push(n.t, n.tag, exact ? 2 : 3);   /* 部分字沾边也算搜到，质序靠后 */
+      } else if (isPy) {
+        const py = pinyinOf(n.t);
+        if (!py) return;
+        if (py.join('') === qj) return push(n.t, n.tag, 0);           /* 全拼全中 */
+        if (py.length === qSyls.length && qSyls.length &&
+            py.every((p, i) => p.indexOf(qSyls[i]) === 0)) return push(n.t, n.tag, 1);   /* 少打字母也搜到 */
+        if (qj.length >= 2 && py.join('').indexOf(qj) === 0) push(n.t, n.tag, 2);        /* 连打前缀 */
+      }
+    });
+    return out.sort((a, b) => a.how - b.how);
+  }
+
   const DIC_CAP = 160;          // 每词类条目上限：防历史消息把词典撑成垃圾场
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -14016,6 +14343,20 @@ const FreeTalk = (function () {
       } },
     /* 她 10-10 14:27：不及物动词能独立成谓（在散步/睡不着），带时间/地点状语也行 */
     { id: 'svi', make() { const vs = DIC.verb.filter(v => v.tr === 0); return vs.length ? '我' + pick(vs).t : null; } },
+    /* 她 10-12：检索选词——TA 先想主题，在词典里搜出词卡（汉字/拼音都行，含模糊同音容错）再组句 */
+    { id: 'srch', make() {
+      const pool = DIC.noun.filter(n => n.t && n.tag);
+      if (!pool.length) return null;
+      const target = pick(pool);
+      const usePy = Math.random() < 0.5;                     /* 一半时候用拼音检索（真机输入习惯） */
+      const py = usePy ? pinyinOf(target.t) : null;
+      const q = py ? py.join(' ') : target.t;
+      const hits = dicSearch(q);
+      const w = (hits.length && hits[0].how <= 1) ? hits[0].t : target.t;   /* 搜出高质量命中就用，否则照用原词 */
+      const vs = DIC.verb.filter(v => v.tr !== 0 && (v.obj || []).indexOf(target.tag) >= 0 && !v.suffix);
+      if (!vs.length) return null;
+      return (Math.random() < 0.45 ? '我' : '') + pick(vs).t + w + (Math.random() < 0.3 ? pick(DIC.tail) : '');
+    } },
     { id: 'sviT', make() { const vs = DIC.verb.filter(v => v.tr === 0); return vs.length ? pick(DIC.advT) + pick(vs).t + (Math.random() < 0.3 ? pick(DIC.tail) : '') : null; } },
     /* 修辞层：比喻/拟人（{a} 从形容/感觉词里填，填不进就弃整句） */
     { id: 'metaph', make() { const m = pick(DIC.metaphor); const a = pick(DIC.adj); const out = m.replace('{a}', a); return out.indexOf('{a}') < 0 && /[累困冷热饿]/.test(a) ? out : null; } },
@@ -14231,6 +14572,10 @@ const FreeTalk = (function () {
         : t.split(/[，,]/).pop() },
     { p: 0.12, ok: t => DIC.verb.some(v => t.indexOf(v.t) === 0), go: t => '我' + t },
     { p: 0.10, ok: t => t.indexOf('我') === 0 && t.length > 3 && !/^我们/.test(t), go: t => t.replace('我', '人家') },   /* 「我们」不进换说（会变人家们） */
+    /* 她 10-12：句中插入——字卡追加不只在首尾，能在句子中间插词（在句中某个词前插联想词） */
+    { p: 0.12, ok: t => DIC.noun.some(n => n.t && t.indexOf(n.t) > 0),
+      go: t => { const ns = DIC.noun.filter(n => n.t && t.indexOf(n.t) > 0); const n = pick(ns); const i = t.indexOf(n.t);
+        const ins = pick(DIC.advT.concat(['超', '好', '特别'])); return t.slice(0, i) + ins + t.slice(i); } },
     { p: 0.10, ok: () => true, go: t => pick(DIC.sigh) + '，' + t },
     { p: 0.10, ok: t => WT_REDUP.test(t) && !/(.)\1/.test(t), go: t => t.replace(WT_REDUP, '$&$&') },
     { p: 0.10, ok: t => /^(我们|我|你|他|她)/.test(t) && t.length > 5, go: t => t.replace(/^(我们|我|你|他|她)/, m => m + pick(['就', '还', '又', '才', '都'])) }
@@ -14291,13 +14636,35 @@ const FreeTalk = (function () {
            打字/选词时间真加进发送间隔（打不完不算组词失败）；
            她 10-10 14:27：近义换说也是挑选过程的一步 */
         const syn = synonymize(line);
-        if (syn) return { text: syn.text, extraMs: Math.round(strokeTime(syn.text) + deliberate(syn.text) + syn.extraMs) };
+        const fin = (t0, baseMs) => {
+          /* 她 10-12：复查再编辑——组完先检查一遍，8%（工程值待拍）再改一次，检查本身也带时间 */
+          let tt = t0, chkMs = 0;
+          if (Math.random() < 0.08) {
+            chkMs += 300 + Math.random() * 500;
+            const re = wordTransform(tt, ctx);
+            if (re) tt = re.text;
+          }
+          return { text: tt, extraMs: Math.round(strokeTime(tt) + deliberate(tt) + baseMs + chkMs) };
+        };
+        if (syn) return fin(syn.text, syn.extraMs);
         const wt = (Math.random() < 0.35) ? wordTransform(line, ctx) : null;   /* 她 11:39 要多多：0.3→0.35 */
-        if (wt) return { text: wt.text, extraMs: Math.round(strokeTime(wt.text) + deliberate(wt.text) + wt.extraMs) };
-        return { text: line, extraMs: Math.round(strokeTime(line) + deliberate(line)) };
+        if (wt) return fin(wt.text, wt.extraMs);
+        return fin(line, 0);
       }
     }
     return null;
+  }
+  /* 她 10-12：键盘直接打字模式——不组不加工，照着她的字卡原句直接敲出来（自由度拉满）；
+     30% 输入法联想补一拍（尾追一个联想词，带真打字时间）。返回 {text, extraMs} 或 null */
+  function typeDirect(text, ctx) {
+    const t0 = String(text || '').trim();
+    if (!t0 || t0.length > 60) return null;
+    if (Math.random() < 0.3) {
+      const lian = pick(DIC.emo.concat(DIC.short.map(x => x.t)));
+      const t1 = t0 + (/[，。！？~…]$/.test(t0) ? '' : '，') + lian;
+      if (t1.length <= 60) return { text: t1, extraMs: Math.round(strokeTime(t1) + 200 + Math.random() * 400) };
+    }
+    return { text: t0, extraMs: Math.round(strokeTime(t0)) };
   }
   /* 兼容旧调用（日记/朋友圈/测一测）：给个宽限窗，返回纯文本 */
   function compose(ctx, budgetMs) {
@@ -14414,7 +14781,7 @@ const FreeTalk = (function () {
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序 */
+  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample, dicSearch, pinyinOf, typeDirect };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序；10-12 加词典检索/拼音/键盘打字口 */
   /* 单字在同音候选里的位次（0=最高频）与该音节候选总数，只读，不上屏 */
   function homoRank(c) { const e = CHAR_SYL[c]; return e ? { rank: e.rank, n: e.n } : null; }
   /* long2/long3 的连接方式多样化探针口：抽一句长句给探针统计连接符 */
@@ -15510,8 +15877,20 @@ const Library = (function () {
     UI.toast('TA 拒绝了删除——可以发理由再问问');
   }
 
+  /* 她 10-12：TA 自由组句按概率存荟萃——单独「自由组句」分组，跟收集来的话分开；同文本查重 */
+  function ftAdd(ctId, t) {
+    const key = norm(t);
+    if (!key || key.length < 2 || ctId === 'me') return false;
+    const lib = learnedLib(ctId);
+    if (lib.items.some(x => x.text === key)) return false;
+    let g = lib.groups.find(g => g.name === '自由组句');
+    if (!g) { g = { id: gid(), name: '自由组句', blocked: false }; lib.groups.push(g); }
+    lib.items.push({ id: iid(), text: key, groupId: g.id });
+    return true;
+  }
+
   return { open, init, usableCardPool, usableVoicePool, usableStickerPool, renameGroupForm, newGroupForm, newGroupId,
-    learnAdd, learnAddSticker, learnedTexts, learnedCount, inAnyCardLib, inAnyStickerLib };
+    learnAdd, learnAddSticker, learnedTexts, learnedCount, inAnyCardLib, inAnyStickerLib, ftAdd };
 })();
 
 /* =====================================================
@@ -17452,61 +17831,6 @@ const Mall = (function () {
     { key: 'done',     label: '已送达',   min: 30, max: 90 }    // 分钟（派送开始后再走一程）
   ];
 
-  /* 她 10-11 12:00：聊天页眼睛——切到 TA 视角看 TA 的全部购买记录（含 TA 给自己买的） */
-  function openTaOrders(contactId) {
-    const c = Home.contactById(contactId);
-    if (!c) return;
-    const name = Home.displayName(c) || 'TA';
-    const sh = sheet(name + ' 的购买记录', { tall: true });
-    const list = st().orders.filter(o => o.buyerUid === contactId || o.toUid === contactId)
-      .sort((a, b) => ((b.timeline[b.timeline.length - 1] || {}).ts || 0) - ((a.timeline[a.timeline.length - 1] || {}).ts || 0));
-    if (!list.length) {
-      sh.body.innerHTML = '<p class="foot-note" style="text-align:center;padding:30px 0">还没有购买记录</p>';
-      return;
-    }
-    sh.body.innerHTML = '<div>' + list.map(o => {
-      const it = itemMain(o);
-      const self = o.buyerUid === contactId && o.toUid === contactId;
-      const who = o.buyerUid === 'me' ? '你下单' : (self ? name + '自己买' : name + '买');
-      const to = self ? '自己用' : (o.toUid === contactId ? '送到 TA 那里' : '送到你那里');
-      return '<div class="taord" data-order="' + o.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer">' +
-        thumbHtml(productById(it.pid), 'moc-thumb') +
-        '<div class="moc-mid" style="flex:1"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b>' +
-        '<small style="display:block">' + esc(who) + ' · ' + to + ' · ' + fmtMDHM((o.timeline[0] || {}).ts || Date.now()) + '</small></div>' +
-        '<b style="flex:none">¥' + Wallet.yuan(o.totalFen) + '</b></div>';
-    }).join('') + '</div>';
-    sh.body.querySelectorAll('.taord').forEach(el => {
-      el.addEventListener('click', () => { sh.close(); openOrderDetail(el.dataset.order); });
-    });
-  }
-
-  /* 她 10-11 13:28 定：眼睛在商城页——点开看全部 TA 的购买记录（含 TA 自己买的），每行带名字 */
-  function openTaOrders() {
-    const sh = sheet('TA 的购买记录', { tall: true });
-    const list = st().orders.filter(o => o.buyerUid !== 'me' || o.toUid !== 'me')
-      .sort((a, b) => ((b.timeline[b.timeline.length - 1] || {}).ts || 0) - ((a.timeline[a.timeline.length - 1] || {}).ts || 0));
-    if (!list.length) {
-      sh.body.innerHTML = '<p class="foot-note" style="text-align:center;padding:30px 0">还没有购买记录</p>';
-      return;
-    }
-    sh.body.innerHTML = '<div>' + list.map(o => {
-      const it = itemMain(o);
-      const self = o.buyerUid !== 'me' && o.toUid !== 'me' && o.buyerUid === o.toUid;
-      const nm = (o.buyerUid !== 'me' && Home.contactById(o.buyerUid)) ? Home.displayName(Home.contactById(o.buyerUid)) : 'TA';
-      const who = o.buyerUid === 'me' ? '你下单' : (self ? nm + ' 自己买' : nm + ' 买');
-      const toWho = (o.toUid !== 'me' && Home.contactById(o.toUid)) ? Home.displayName(Home.contactById(o.toUid)) : null;
-      const to = o.toUid === 'me' ? '送到你这里' : (self ? '自己用' : '送到 ' + (toWho || 'TA') + ' 那里');
-      return '<div class="taord" data-order="' + o.id + '" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer">' +
-        thumbHtml(productById(it.pid), 'moc-thumb') +
-        '<div class="moc-mid" style="flex:1"><b>' + esc(it.name) + (it.qty > 1 ? ' ×' + it.qty : '') + '</b>' +
-        '<small style="display:block">' + esc(who) + ' · ' + esc(to) + ' · ' + fmtMDHM((o.timeline[0] || {}).ts || Date.now()) + '</small></div>' +
-        '<b style="flex:none">¥' + Wallet.yuan(o.totalFen) + '</b></div>';
-    }).join('') + '</div>';
-    sh.body.querySelectorAll('.taord').forEach(el => {
-      el.addEventListener('click', () => { sh.close(); openOrderDetail(el.dataset.order); });
-    });
-  }
-
   function st() {
     const s = DB.state;
     if (!s.mall) s.mall = { custom: [], orders: [], cart: [], addr: { me: [], byContact: {} }, hidden: [], overrides: {}, coupons: [], sales: {}, customCats: [], income: {}, customSubs: {} };
@@ -18244,18 +18568,23 @@ const Mall = (function () {
     mountIcons(sh.body);
   }
 
-  /* ---------- 订单列表 / 详情 ---------- */
-  function openOrders() {
-    const sh = sheet('我的订单', { tall: true });
+  /* ---------- 订单列表 / 详情 ----------
+     她 10-11 20:31 定：眼睛下架；打开“我的订单”后双击标题，选一位联系人切到 TA 的订单页——
+     档位、行样式、详情全部照标“我的订单”，只是视角换成对方（收货/评价状态都按对方算）。 */
+  function openOrders(ownerUid) {
+    const owner = ownerUid || 'me';
+    const ct = owner === 'me' ? null : Home.contactById(owner);
+    const sh = sheet(owner === 'me' ? '我的订单' : (Home.displayName(ct) || 'TA') + ' 的订单', { tall: true });
     let f = 'all';   // all | going | review | done | after
+    const hasOwnReview = o => owner === 'me' ? !!o.myReview : !!o.review;
     function filtered() {
-      /* 她 10-10：TA 自己给自己买的单不进她的订单列表；取消单保留、只在“全部”里可见 */
-      const mine = st().orders.filter(o => o.buyerUid === 'me' || o.toUid === 'me');
+      /* 她 10-10：TA 自己给自己买的单不进订单列表；取消单保留、只在“全部”里可见 */
+      const mine = st().orders.filter(o => o.buyerUid === owner || o.toUid === owner);
       return mine.slice().sort((a, b) => b.createdAt - a.createdAt).filter(o => {
         if (o.cancelled) return f === 'all';
         const s = statusOf(o);
         if (f === 'going') return !s.done;
-        if (f === 'review') return o.signed && o.toUid === 'me' && !o.myReview && !(o.after);
+        if (f === 'review') return o.signed && o.toUid === owner && !hasOwnReview(o) && !(o.after);
         if (f === 'done') return o.signed && !o.after;
         if (f === 'after') return !!o.after;
         return true;
@@ -18271,7 +18600,7 @@ const Mall = (function () {
           const p = productById(it.pid);
           const state = o.cancelled ? '已取消'
             : o.after ? (o.after.type === 'refund' ? '已退款' : '已婉拒')
-            : (() => { const s = statusOf(o); return !s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? (o.myReview ? '已完成' : '待评价') : '待签收'); })();
+            : (() => { const s = statusOf(o); return !s.done ? (o.kind === 'takeout' ? '配送中' : '待收货') : (o.signed ? (hasOwnReview(o) ? '已完成' : '待评价') : '待签收'); })();
           return '<button class="mo-row" data-oid="' + o.id + '">' +
             '<span class="mo-row-state ' + (o.cancelled || o.after ? 'ok' : '') + '">' + state + '</span>' +
             thumbHtml(p, 'cart-thumb') +
@@ -18283,7 +18612,31 @@ const Mall = (function () {
       sh.body.querySelectorAll('[data-oid]').forEach(b => b.addEventListener('click', () => { sh.close(); openOrderDetail(b.dataset.oid); }));
       mountIcons(sh.body);
     }
+    /* 双击标题→选人弹层；0.4s 内两次点按算双击（手机上 dblclick 不可靠，手拌计时） */
+    const titleEl = sh.el.querySelector('.ms-head b');
+    let lastTap = 0;
+    titleEl.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastTap < 400) { lastTap = 0; pickOrdersOwner(); }
+      else lastTap = now;
+    });
     render();
+  }
+
+  /* 她 10-11 20:31：双击订单标题后选人；联系人视角就是完整订单页，一切照标我的订单 */
+  function pickOrdersOwner() {
+    const sh = sheet('看谁的订单', {});
+    const contacts = (DB.state.contacts || []).filter(c => !c.isGroup);
+    sh.body.innerHTML = contacts.length
+      ? contacts.map(c =>
+        '<button class="mo-row" data-uid="' + c.id + '">' +
+        '<span class="mo-row-ava">' + Home.avaInner(c.id) + '</span>' +
+        '<span class="mo-row-mid"><b>' + esc(Home.displayName(c)) + '</b></span></button>').join('')
+      : '<div class="empty-state"><div class="empty-text">还没有联系人</div></div>';
+    sh.body.querySelectorAll('[data-uid]').forEach(b => b.addEventListener('click', () => {
+      sh.close(); openOrders(b.dataset.uid);
+    }));
+    mountIcons(sh.body);
   }
 
   function openOrderDetail(oid) {
@@ -18742,9 +19095,7 @@ const Mall = (function () {
     const cartBtn = document.getElementById('mall-cart-btn');
     const ordersBtn = document.getElementById('mall-orders-btn');
     if (cartBtn) cartBtn.addEventListener('click', openCart);
-    if (ordersBtn) ordersBtn.addEventListener('click', openOrders);
-    const eyeBtn = document.getElementById('mall-ta-eye-btn');
-    if (eyeBtn) eyeBtn.addEventListener('click', openTaOrders);   /* 她 10-11 13:28：眼睛在商城页 */
+    if (ordersBtn) ordersBtn.addEventListener('click', () => openOrders());   /* 默认我的视角；她 10-11 20:31：眼睛下架，双击订单标题换人 */
     const tabs = document.getElementById('mall-tabs');
     if (tabs) tabs.querySelectorAll('[data-mtab]').forEach(b => b.addEventListener('click', () => {
       tab = b.dataset.mtab; cat = 'all'; sub = 'all';   /* 她 10-08 16:42：子标签随类目一起重置 */
@@ -18759,7 +19110,7 @@ const Mall = (function () {
 
   return { init, open, renderPage, maybeGift, orderById, cardHtml, settleAll, openOrders, products, productById,
     openProduct, openCart, openCheckout, openOrderDetail, openAddr, openForm, openCoupons, tickIncome,
-    openAddSub, subsOf, openTaOrders };   /* P68 她 10-08 16:42：子标签自加入口/清单，探针与资料卡共用；眼睛视角她 10-11 12:00 加 */
+    openAddSub, subsOf };   /* P68 她 10-08 16:42：子标签自加入口/清单，探针与资料卡共用；眼睛下架她 10-11 20:31 */
 })();
 
 /* =====================================================
@@ -28584,6 +28935,15 @@ const Profile = (function () {
      现在这六格没人管 -> 没填过 = 不存在 -> 引擎当 0（不开）；要开去报备页「库与设置」。 */
   const PFORM_DEF = { callLo: '', callHi: '', callUnit: 'min', letterRate: 0, ltrMinH: 1, ltrMaxH: 24, proMin: 0, proMax: 0 };
 
+  /* 「没填过就不存在」的唯一口径（她 10-12 报「改一格把别的格子按显示默认值写进档」）。
+     以前这三行守卫是逐行手抄的（emotionRate/doodleRate/shopRate），抄一行漏一行；
+     新接线的五格（学我说话/自由说话/删朋友圈/朋友圈拼卡/朋友圈配图）一并归这里。
+     p 里此刻已被表单按显示值写满，所以：这次不是在改这一格、且档案里本来就没这一键 → 删掉不写。 */
+  function keepOnlyOwned(p, c, key, ownId, triggerId) {
+    if (triggerId === ownId) return;
+    if (!Object.prototype.hasOwnProperty.call(c.params || {}, key)) delete p[key];
+  }
+
   function open(contactId) {
     const c = Home.contactById(contactId);
     if (!c) return;
@@ -28827,7 +29187,7 @@ const Profile = (function () {
     });
 
     /* 图片回复三模式 + 概率 + 来信参数 + 通话时长（#39p：拍一拍7%/视频3%固定，写信默认概率0） */
-    ['pf-imgmode', 'pf-imgprob', 'pf-doodlerate', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
+    ['pf-imgmode', 'pf-imgprob', 'pf-doodlerate', 'pf-emotionrate', 'pf-letterrate', 'pf-ltr-min', 'pf-ltr-max', 'pf-calllo', 'pf-callhi', 'pf-callunit', 'pf-comboprob', 'pf-comin', 'pf-comax', 'pf-readnr', 'pf-revoke', 'pf-tadel', 'pf-learn', 'pf-free', 'pf-mocombo', 'pf-moimg', 'pf-shoprate', 'pf-mopost', 'pf-mopmin', 'pf-mopmax', 'pf-mopunit', 'pf-momutual', 'pf-promin', 'pf-promax', 'pf-redgift'].forEach(id => {
       /* 她 10-11 12:00：数字/概率格子改完直接退页不触发 change（失焦才发），最后一改会白丢——
          input 也派发同一次保存；handler 内部全是幂等操作（重排钟/清钟），高频触发无害 */
       el(id).addEventListener('input', () => el(id).dispatchEvent(new Event('change')));
@@ -28902,10 +29262,15 @@ const Profile = (function () {
         if (oldLetterRate !== p.letterRate || oldLtrMin !== p.ltrMinH || oldLtrMax !== p.ltrMaxH) {
           DB.state.convs.forEach(cv => { if (cv.type === 'single' && cv.peerId === c.id) delete cv.letterNextAt; });
         }
-        /* 没动情绪概率且联系人原本没存过时，不把默认 10% 偷写成她的选择。 */
-        if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'emotionRate') && id !== 'pf-emotionrate') delete p.emotionRate;
-    if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'doodleRate') && id !== 'pf-doodlerate') delete p.doodleRate;
-        if (!Object.prototype.hasOwnProperty.call(c.params || {}, 'shopRate') && id !== 'pf-shoprate') delete p.shopRate;
+        /* 没在改这一格、档案里也没存过的 → 不把显示默认值偷写成她的选择（她：没填过=字段不存在）。 */
+        keepOnlyOwned(p, c, 'emotionRate', 'pf-emotionrate', id);
+        keepOnlyOwned(p, c, 'doodleRate', 'pf-doodlerate', id);
+        keepOnlyOwned(p, c, 'shopRate', 'pf-shoprate', id);
+        keepOnlyOwned(p, c, 'learnRate', 'pf-learn', id);
+        keepOnlyOwned(p, c, 'gaFree', 'pf-free', id);
+        keepOnlyOwned(p, c, 'taDelRate', 'pf-tadel', id);
+        keepOnlyOwned(p, c, 'moComboProb', 'pf-mocombo', id);
+        keepOnlyOwned(p, c, 'moImgProb', 'pf-moimg', id);
         c.params = p;
         el('pf-calllo').value = p.callLo;
         el('pf-callhi').value = p.callHi;
@@ -30959,6 +31324,706 @@ const Schedule = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · detect.js —— 检测中心（她 10-12 16:52 口述）
+   位置：个人中心 → 检测中心
+   做什么：对某个联系人（或某个群）在全站各功能上的「掌握度」「挑战度」给量化观测，
+           可下钻到子板块看具体是哪一格不熟，对不熟的地方给可执行建议，
+           也能提问「这样改行不行」——答案带参考掌握度 + 可行性。
+
+   ※ 一个数都不编（她的红线：宁可不报告，不许编）：
+     配置面 = Engine.params(ct) 里跑着的闸门值 + 各库可用池（Library 的 usable* 公开口）
+     实战面 = DB.state.msgs[convId] 里 TA 真发过的消息（按 type/标志数）
+     专项面 = games.records / mall.orders / moments.posts / letters / diary / reports / redpackets / kinship.cards
+     认不出来的一律如实说「档案里认不出」，不拿估算顶。
+   ※ 打分口径（每格都上屏显证据，看得见怎么算的）：
+     开通度 = 闸门开没开、料备没备（0~1）；实战度 = TA 真用过多少次（0~1，有封顶折算）
+     掌握度 = 40%开通度 + 60%实战度
+     挑战度 = 让 TA 做成这件事有多难（闸门越窄/等得越久/越靠运气越高），理由上屏
+   ===================================================== */
+const Detect = (function () {
+
+  let cur = null;            // 当前检测对象：{kind:'ct'|'group', id}
+
+  const el = id => document.getElementById(id);
+  const S = () => DB.state;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const pct = v => Math.max(0, Math.min(100, Math.round(v)));
+  const singleConv = ctId => S().convs.find(c => c.type === 'single' && c.peerId === ctId);
+  const msgsOf = ctId => { const cv = singleConv(ctId); return cv ? (S().msgs[cv.id] || []) : []; };
+  const libItems = k => ((S().libs[k] || {}).items) || [];
+  const nOf = k => libItems(k).filter(i => i && !i.blocked && (i.text || i.name)).length;
+  const textsOf = k => libItems(k).filter(i => i && !i.blocked && i.text).map(i => String(i.text));
+  const P = ct => Engine.params(ct);
+  const raw = (ct, k, d) => { const v = (ct.params || {})[k]; return v == null ? d : +v; };
+  /* 闸门开通度：0=关着；到 hi 算满 */
+  const open = (v, hi) => Math.min(1, Math.max(0, (+v || 0) / (hi || 30)));
+  /* 实战度：真用过 n 次，ref 次算满 */
+  const use = (n, ref) => Math.min(1, (+n || 0) / (ref || 8));
+  const mix = (o, u) => pct(100 * (0.4 * o + 0.6 * u));
+  const day = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
+
+  /* ---------- 消息面统计（只数真档案） ---------- */
+  function tally(ctId) {
+    const all = msgsOf(ctId), ai = all.filter(m => m.from === 'ai' && !m.deleted);
+    const by = f => ai.filter(f).length;
+    const kamojiSet = new Set(textsOf('kamoji')), emojiSet = new Set(textsOf('emojis'));
+    return {
+      all, ai,
+      aiText: by(m => m.type === 'text'),
+      aiImg: by(m => m.type === 'img'),
+      aiDoodle: by(m => m.type === 'img' && m.doodle),
+      aiSticker: by(m => m.type === 'img' && m.sticker),
+      aiVoice: by(m => m.type === 'voice'),
+      aiLetter: by(m => m.type === 'letter'),
+      aiRp: by(m => m.type === 'redpacket'),
+      aiKin: by(m => m.type === 'kinship'),
+      aiQuiz: by(m => m.type === 'quiz' || m.type === 'quizask'),
+      aiGame: by(m => m.type === 'game'),
+      aiMall: by(m => m.type === 'mall'),
+      aiLink: by(m => m.type === 'link'),
+      aiVideo: by(m => m.type === 'video'),
+      aiEmotion: by(m => m.emotion),
+      aiKamoji: by(m => m.type === 'text' && kamojiSet.has(String(m.text))),
+      aiEmoji: by(m => m.type === 'text' && emojiSet.has(String(m.text))),
+      revoke: all.filter(m => m.type === 'sys' && /撤回了一条消息/.test(String(m.text || ''))).length,
+      pat: all.filter(m => m.type === 'sys' && /拍了拍/.test(String(m.text || ''))).length,
+      call: all.filter(m => m.type === 'call' || (m.type === 'sys' && /通话|来电/.test(String(m.text || '')))).length,
+      myText: all.filter(m => m.from === 'me' && m.type === 'text').length,
+      recentTs: ai.length ? Math.max(...ai.map(m => m.ts || 0)) : 0
+    };
+  }
+
+  /* ================= 每个功能的观测（配置面 + 实战面 + 子项 + 建议） ================= */
+  /* 子项统一结构 {n:名字, v:证据文字, p:子掌握度0~100} */
+  function buildCt(ct) {
+    const t = tally(ct.id), p = P(ct), rows = [];
+    const cards = (typeof Library !== 'undefined' && Library.usableCardPool) ? Library.usableCardPool(ct.id) || [] : [];
+    const stk = (typeof Library !== 'undefined' && Library.usableStickerPool) ? Library.usableStickerPool(ct) || [] : [];
+    const voice = (typeof Library !== 'undefined' && Library.usableVoicePool) ? Library.usableVoicePool(ct.id) || [] : [];
+    const learnedN = (typeof Library !== 'undefined' && Library.learnedCount) ? Library.learnedCount(ct.id) : 0;
+    const push = (r) => { r.score = mix(r.o, r.u); r.challenge = pct(r.chal); rows.push(r); };
+
+    /* ---- 字卡 ---- */
+    {
+      const o = (use(cards.length, 30) + open(p.cardComboProb, 20)) / 2;
+      const u = use(t.aiText - t.aiKamoji - t.aiEmoji, 40);
+      push({ key: 'cards', name: '字卡', icon: 'book', o, u,
+        chal: 70 * (1 - open(p.cardComboProb, 20)) + 30 * (1 - use(cards.length, 30)),
+        hard: (p.cardComboProb || 0) <= 0 ? '拼字卡是关着的，TA 只会一句一句单发' : '拼卡概率 ' + p.cardComboProb + '%，一次拼 ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条',
+        subs: [
+          { n: '字卡库里有多少话给 TA', v: cards.length + ' 条可用', p: pct(100 * use(cards.length, 30)) },
+          { n: '拼字卡（多条拼一句）', v: (p.cardComboProb || 0) + '% · ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条', p: pct(100 * open(p.cardComboProb, 20)) },
+          { n: 'TA 真发过多少条文字', v: (t.aiText - t.aiKamoji - t.aiEmoji) + ' 条', p: pct(100 * use(t.aiText - t.aiKamoji - t.aiEmoji, 40)) },
+          { n: '句子里插词（组话时在句中补词）', v: '内在机制，跟着自由说话走', p: pct(100 * open(p.gaFree, 30)) }
+        ],
+        adv: cards.length < 5 ? '字卡库只剩 ' + cards.length + ' 条，TA 能说的话就那几句——去字卡库补 10 条以上'
+          : (p.cardComboProb || 0) <= 0 ? '拼字卡关着：开到 10% 左右，TA 说话就不会总是一句一句孤零零的'
+          : (t.aiText < 5 ? 'TA 还没怎么说过话，先聊几句让它跑起来' : ''),
+        fix: [cards.length < 5 ? { id: 'lib', label: '去字卡库' } : null, (p.cardComboProb || 0) <= 0 ? { key: 'cardComboProb', label: '拼卡开到 10%', val: 10 } : null].filter(Boolean)
+      });
+    }
+
+    /* ---- 颜文字 / EMOJI ---- */
+    [['kamoji', '颜文字', 'kaomoji', nOf('kamoji'), t.aiKamoji], ['emojis', 'EMOJI', 'smile', nOf('emojis'), t.aiEmoji]].forEach(([k, nm, ic, n, used]) => {
+      push({ key: k, name: nm, icon: ic, o: use(n, 12), u: use(used, 8),
+        chal: 100 * (1 - use(n, 12)),
+        hard: n ? (n + ' 条备着，聊到兴头上自己会冒出来') : '一条都没有，TA 想发也发不出来',
+        subs: [
+          { n: '库里备了多少', v: n + ' 条', p: pct(100 * use(n, 12)) },
+          { n: 'TA 单独发过几次', v: (used || 0) + ' 次', p: pct(100 * use(used, 8)) }
+        ],
+        adv: n < 3 ? nm + '库太空，补几条（聊天里一句' + nm + '算一条）' : (used ? '' : '备着 ' + n + ' 条但一次没发过——多半是聊天量太少'),
+        fix: n < 3 ? [{ id: 'lib-' + k, label: '去' + nm + '库' }] : [] });
+    });
+
+    /* ---- 表情包图片 ---- */
+    push({ key: 'stickers', name: '表情包图片', icon: 'image',
+      o: (use(stk.length, 10) + open(p.imgProb, 20)) / 2, u: use(t.aiSticker || t.aiImg, 12),
+      chal: 60 * (1 - open(p.imgProb, 20)) + 40 * (1 - use(stk.length, 10)),
+      hard: '图片概率 ' + (p.imgProb || 0) + '% · 模式「' + ({ single: '单独发', attach: '文字后附带', mix: '混合发' }[p.imgMode || 'single']) + '」',
+      subs: [
+        { n: 'TA 能用的表情图', v: stk.length + ' 张', p: pct(100 * use(stk.length, 10)) },
+        { n: '图片概率', v: (p.imgProb || 0) + '%', p: pct(100 * open(p.imgProb, 20)) },
+        { n: 'TA 真发过多少张图', v: (t.aiSticker || t.aiImg) + ' 条', p: pct(100 * use(t.aiSticker || t.aiImg, 12)) }
+      ],
+      adv: stk.length === 0 ? '一张图都没给 TA——去表情库放几张' : ((p.imgProb || 0) === 0 ? '图片概率是 0，TA 永远不会发图' : ''),
+      fix: [stk.length === 0 ? { id: 'lib-stickers', label: '去表情库' } : null, (p.imgProb || 0) === 0 ? { key: 'imgProb', label: '图片概率开到 20%', val: 20 } : null].filter(Boolean) });
+
+    /* ---- 学我说话 ---- */
+    {
+      const lr = p.learnRate || 0;
+      push({ key: 'learn', name: '学我说话', icon: 'chat',
+        o: (open(lr, 20) + use(learnedN, 20)) / 2, u: use(learnedN, 20),
+        chal: 100 * (1 - open(lr, 20)),
+        hard: lr ? ('我发的每句话有 ' + lr + '% 被收走') : '收集概率是 0，TA 一句都学不到',
+        subs: [
+          { n: '收集概率', v: lr + '%', p: pct(100 * open(lr, 20)) },
+          { n: '已经在荟萃里的', v: learnedN + ' 条', p: pct(100 * use(learnedN, 20)) },
+          { n: '我给 TA 的语料（我说过的话）', v: t.myText + ' 条', p: pct(100 * use(t.myText, 40)) },
+          { n: '学到的怎么用', v: '混进字卡池等概率用，不单独掷', p: pct(100 * (learnedN ? 1 : 0)) }
+        ],
+        adv: lr === 0 ? '收集概率是 0——想让 TA 说话像我，先开到 10%' : (learnedN === 0 ? '开着 ' + lr + '% 但还没收到话：多说几句带情绪的话给它学' : ''),
+        fix: [lr === 0 ? { key: 'learnRate', label: '收集开到 10%', val: 10 } : null, { id: 'lib-learned', label: '去荟萃看' }].filter(Boolean) });
+    }
+
+    /* ---- 自由说话 ---- */
+    {
+      const gf = p.gaFree || 0;
+      let canCompose = false, sample = '';
+      try { if (typeof FreeTalk !== 'undefined' && FreeTalk.compose) { sample = FreeTalk.compose() || ''; canCompose = !!sample; } } catch (e) { /* 检测只读：组话口不可用就按「不能组」计，不拖身 */ }
+      push({ key: 'free', name: '自由说话', icon: 'pencil',
+        o: (open(gf, 30) + (canCompose ? 1 : 0) + open(p.ftSave == null ? 20 : p.ftSave, 20)) / 3,
+        u: use((t.aiText - t.aiKamoji - t.aiEmoji), 40),
+        chal: 100 * (1 - open(gf, 30)),
+        hard: '概率 ' + gf + '% · ' + (canCompose ? ('现在当场就能组出话：「' + sample + '」') : '现在组不出话（词典不够用）'),
+        subs: [
+          { n: '自由说话概率', v: gf + '%', p: pct(100 * open(gf, 30)) },
+          { n: '拼音适配（能按音节挑字）', v: '词典带音节表，检索时按同音展开', p: 100 },
+          { n: '同音字（写错音也能挑对字）', v: '组话过程本身，无需开关', p: 100 },
+          { n: '组句节奏（按键数算打字时间）', v: '跟着拼音键数走，长短句时间不一样', p: 100 },
+          { n: '自由度（一句里能换多少词）', v: canCompose ? '当场试了一句，能组' : '组不出，词不够', p: canCompose ? 100 : 30 },
+          { n: '组出来的句子存进荟萃', v: (p.ftSave == null ? 20 : p.ftSave) + '%', p: pct(100 * open(p.ftSave == null ? 20 : p.ftSave, 20)) }
+        ],
+        adv: gf === 0 ? '自由说话是 0%——TA 只会念字卡，开到 30% 它会自己组话' : (!canCompose ? '组不出话：多喂点我的话给它，词典薄' : ''),
+        fix: [gf === 0 ? { key: 'gaFree', label: '开到 30%', val: 30 } : null].filter(Boolean) });
+    }
+
+    /* ---- 语音 ---- */
+    push({ key: 'voice', name: '语音', icon: 'mic', o: use(voice.length, 5), u: use(t.aiVoice, 6),
+      chal: 100 * (1 - use(voice.length, 5)),
+      hard: voice.length ? '语音库 ' + voice.length + ' 条 · 每句话 6% 概率用语音回' : '语音库是空的，TA 想发语音也没料',
+      subs: [
+        { n: 'TA 能用的语音', v: voice.length + ' 条', p: pct(100 * use(voice.length, 5)) },
+        { n: 'TA 发过几条语音', v: t.aiVoice + ' 条', p: pct(100 * use(t.aiVoice, 6)) }
+      ],
+      adv: voice.length === 0 ? '给 TA 录/导几条语音，它才有语音可发' : '',
+      fix: voice.length === 0 ? [{ id: 'lib-voice', label: '去语音库' }] : [] });
+
+    /* ---- 情绪标记 ---- */
+    push({ key: 'emotion', name: '情绪标记', icon: 'heart', o: open(p.emotionRate, 20), u: use(t.aiEmotion, 25),
+      chal: 100 * (1 - open(p.emotionRate, 20)),
+      hard: '概率 ' + (p.emotionRate || 0) + '%（每条文字独立掷）',
+      subs: [
+        { n: '标记概率', v: (p.emotionRate || 0) + '%', p: pct(100 * open(p.emotionRate, 20)) },
+        { n: '带标记的气泡', v: t.aiEmotion + ' 条', p: pct(100 * use(t.aiEmotion, 25)) }
+      ],
+      adv: (p.emotionRate || 0) === 0 ? '情绪标记关着——开了 TA 的话会带上心情小标，看着更活' : '' });
+
+    /* ---- 朋友圈 ---- */
+    {
+      const posts = (S().moments.posts || []), mine = posts.filter(x => x.uid === ct.id);
+      const myCmts = mine.reduce((s, x) => s + ((x.comments || []).filter(c => c.uid !== ct.id).length), 0);
+      const likes = mine.reduce((s, x) => s + ((x.likes || []).length), 0);
+      push({ key: 'moments', name: '朋友圈', icon: 'camera',
+        o: (open(p.moPostRate, 30) + open(p.moImgProb, 70) + open(p.moComboProb, 80) + (p.moMutual ? 1 : 0)) / 4,
+        u: use(mine.length, 6),
+        chal: 100 * (1 - open(p.moPostRate, 30)),
+        hard: '发帖 ' + (p.moPostRate || 0) + '% · 间隔 ' + (p.moPostMin || 0) + '~' + (p.moPostMax || 0) + ({ hour: ' 小时', min: ' 分钟' }[p.moPostUnit || 'hour']) + '/次',
+        subs: [
+          { n: '发帖概率', v: (p.moPostRate || 0) + '%', p: pct(100 * open(p.moPostRate, 30)) },
+          { n: '配图率', v: (p.moImgProb || 0) + '%', p: pct(100 * open(p.moImgProb, 70)) },
+          { n: '拼字卡率', v: (p.moComboProb || 0) + '%', p: pct(100 * open(p.moComboProb, 80)) },
+          { n: '互评（其他联系人能不能来评）', v: p.moMutual ? '开着' : '只有我能评', p: p.moMutual ? 100 : 0 },
+          { n: 'TA 发过的帖', v: mine.length + ' 条' + (mine.length ? '，最近 ' + day(Math.max(...mine.map(x => x.ts || 0))) : ''), p: pct(100 * use(mine.length, 6)) },
+          { n: 'TA 收到的赞/评', v: likes + ' 赞 · ' + myCmts + ' 评', p: pct(100 * use(likes + myCmts, 20)) },
+          { n: '删自己帖的概率', v: (p.taDelRate || 0) + '%', p: pct(100 * open(p.taDelRate, 20)) }
+        ],
+        adv: (p.moPostRate || 0) === 0 ? '发帖概率是 0，朋友圈不会动——开到 30% 看看' : (mine.length === 0 ? '开着但还没发过：等等看，或者把间隔收窄到 2~6 小时' : ''),
+        fix: [(p.moPostRate || 0) === 0 ? { key: 'moPostRate', label: '发帖开到 30%', val: 30 } : null].filter(Boolean) });
+    }
+
+    /* ---- 信 ---- */
+    push({ key: 'letter', name: '信', icon: 'mail',
+      o: (open(p.letterRate, 30) + (raw(ct, 'ltrMinH', 1) > 0 ? 1 : 0)) / 2, u: use(t.aiLetter, 3),
+      chal: 100 * (1 - open(p.letterRate, 30)),
+      hard: (p.letterRate || 0) + '% · 间隔 ' + raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时',
+      subs: [
+        { n: '来信概率', v: (p.letterRate || 0) + '%', p: pct(100 * open(p.letterRate, 30)) },
+        { n: '间隔', v: raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时', p: 100 },
+        { n: '往来信件', v: t.aiLetter + ' 封', p: pct(100 * use(t.aiLetter, 3)) }
+      ],
+      adv: (p.letterRate || 0) === 0 ? '来信概率是 0——想收信就开 20% 左右' : '',
+      fix: [(p.letterRate || 0) === 0 ? { key: 'letterRate', label: '来信开到 20%', val: 20 } : null].filter(Boolean) });
+
+    /* ---- 游戏（按真战绩逐项） ---- */
+    {
+      const recs = ((S().games || {}).records) || [];
+      const mine = recs.filter(r => (r.players || []).indexOf(ct.id) >= 0);
+      const names = { uno: 'UNO', doudizhu: '斗地主', billiards: '台球', gomoku: '五子棋', ludo: '飞行棋', mono: '大富翁', mine: '扫雷', wheel: '转盘' };
+      const keys = Object.keys(names);
+      const mc = (((S().games || {}).mineCfg) || { size: 16, mines: 40 });
+      const subs = keys.map(k => {
+        const rr = mine.filter(r => r.game === k), w = rr.filter(r => r.winner === ct.id).length;
+        /* 扫雷不落战绩（只存在棋局配置里）——如实标，不拿别的局的数顶 */
+        if (k === 'mine') {
+          return { n: names[k], v: rr.length ? ('玩过 ' + rr.length + ' 局 · 赢 ' + w + ' 局') : ('棋盘 ' + mc.size + '×' + mc.size + ' · ' + mc.mines + ' 颗雷（扫雷不留战绩）'), p: rr.length ? pct(60 + 40 * Math.min(1, rr.length / 5)) : 40, diff: 45 };
+        }
+        return { n: names[k], v: rr.length ? ('玩过 ' + rr.length + ' 局 · 赢 ' + w + ' 局') : '没一起玩过', p: rr.length ? pct(60 + 40 * Math.min(1, rr.length / 5)) : pct(100 * Math.min(1, rr.length / 5)), diff: { uno: 55, doudizhu: 70, billiards: 65, gomoku: 50, ludo: 35, mono: 60, wheel: 15 }[k] };
+      });
+      /* 带规则复杂度的子项：用它单独算挑战度 */
+      const played = keys.filter((k, i) => subs[i].v !== '没一起玩过');
+      const avgDiff = played.length ? played.reduce((s, k) => s + ({ uno: 55, doudizhu: 70, billiards: 65, gomoku: 50, ludo: 35, mono: 60, mine: 45, wheel: 15 }[k]), 0) / played.length : 60;
+      push({ key: 'games', name: '游戏', icon: 'dice',
+        o: use(mine.length, 8), u: use(mine.length, 8),
+        chal: pct(avgDiff),
+        hard: mine.length ? ('一起玩过 ' + mine.length + ' 局 · 邀我 ' + t.aiGame + ' 次 · 最常玩 ' + (names[(mine.map(r => r.game).sort((a, b) => mine.filter(x => x.game === b).length - mine.filter(x => x.game === a).length)[0])] || '未知')) : '一局都没开过——TA 有 1% 概率邀你玩',
+        subs: subs.map(s => ({ n: s.n, v: s.v, p: s.p })),
+        adv: mine.length === 0 ? '还没一起玩过：找 TA 开一局，或者等它 1% 概率来邀你' : '',
+        fix: [{ id: 'game', label: '去游戏大厅' }] });
+
+      /* ---- 决策（她 10-12 17:10 亲口定：决策就是灵魂拷问） ---- */
+      const qlib = S().quizLib || { groups: [], questions: [] };
+      let pool = 0;
+      try { if (typeof Quiz !== 'undefined' && Quiz.askPool) pool = (Quiz.askPool(ct.id) || []).length; } catch (e) { /* 检测只读：题库口不在就按 0 道题算 */ }
+      const papers = (S().quizzes || []).filter(z => !z.targets || z.targets.indexOf(ct.id) >= 0 || z.targets.indexOf('all') >= 0);
+      push({ key: 'quiz', name: '决策（灵魂拷问）', icon: 'quiz',
+        o: (open(p.quizRate, 20) + Math.min(1, (qlib.questions || []).length / 20)) / 2, u: use(t.aiQuiz, 3),
+        chal: pct(100 * (1 - open(p.quizRate, 20)) + ((qlib.questions || []).length ? 0 : 20)),
+        hard: (p.quizRate || 0) + '% · 题库 ' + (qlib.questions || []).length + ' 题' + (pool ? ('，现在能抽到 ' + pool + ' 题') : '，抽不到题'),
+        subs: [
+          { n: '聊天里突然考你的概率', v: (p.quizRate || 0) + '%', p: pct(100 * open(p.quizRate, 20)) },
+          { n: '题库有多少题', v: (qlib.questions || []).length + ' 题 · ' + (qlib.groups || []).length + ' 个分组', p: pct(100 * Math.min(1, (qlib.questions || []).length / 20)) },
+          { n: 'TA 现在能抽到几题', v: pool + ' 题', p: pct(100 * Math.min(1, pool / 10)) },
+          { n: '出过的卷子', v: papers.length + ' 份', p: pct(100 * use(papers.length, 3)) },
+          { n: 'TA 真考过你几次', v: t.aiQuiz + ' 次', p: pct(100 * use(t.aiQuiz, 3)) }
+        ],
+        adv: (p.quizRate || 0) === 0 ? '拷问概率是 0（默认关）——开了 TA 会聊着聊着甩你一道题'
+          : (!(qlib.questions || []).length ? '题库里没题，抽也抽不出来——先去题库加题'
+          : (t.aiQuiz === 0 ? '开着但还没考过：多聊几轮' : '')),
+        fix: [(p.quizRate || 0) === 0 ? { key: 'quizRate', label: '拷问开到 10%', val: 10 } : null, { id: 'quiz', label: '去题库' }].filter(Boolean) });
+    }
+
+    /* ---- 商城 ---- */
+    {
+      const orders = ((S().mall || {}).orders) || [];
+      const gift = orders.filter(o => o.buyerUid === ct.id && o.toUid === 'me');
+      const self = orders.filter(o => o.buyerUid === ct.id && o.toUid !== 'me' && o.toUid !== undefined);
+      const ibought = orders.filter(o => o.buyerUid === 'me' && o.toUid === ct.id);
+      const addr = (((S().mall || {}).addr || {}).byContact || {})[ct.id];
+      push({ key: 'mall', name: '商城', icon: 'box',
+        o: (open(p.shopRate, 10) + (gift.length ? 1 : 0)) / 2, u: use(gift.length, 3),
+        chal: 100 * (1 - open(p.shopRate, 10)),
+        hard: '购物率 ' + (p.shopRate || 0) + '%（每轮聊天掷一次，2 小时防抖）',
+        subs: [
+          { n: '给我购物', v: gift.length + ' 单', p: pct(100 * use(gift.length, 3)) },
+          { n: '给自己下单', v: self.length + ' 单', p: pct(100 * use(self.length, 3)) },
+          { n: '我买给 TA', v: ibought.length + ' 单', p: pct(100 * use(ibought.length, 3)) },
+          { n: '购物率', v: (p.shopRate || 0) + '%', p: pct(100 * open(p.shopRate, 10)) },
+          { n: 'TA 的收货地址', v: addr ? '填过了' : '没填（要用我的）', p: addr ? 100 : 40 }
+        ],
+        adv: (p.shopRate || 0) === 0 ? '购物率是 0——TA 不会给你买东西/点外卖' : (gift.length === 0 ? '开着但还没买过：多聊几轮（2 小时防抖）' : ''),
+        fix: [(p.shopRate || 0) === 0 ? { key: 'shopRate', label: '购物率开到 5%', val: 5 } : null, { id: 'mall', label: '去商城' }].filter(Boolean) });
+    }
+
+    /* ---- 绘画 ---- */
+    push({ key: 'doodle', name: '绘画', icon: 'brush',
+      o: open(p.doodleRate, 10), u: use(t.aiDoodle, 5),
+      chal: 100 * (1 - open(p.doodleRate, 10)),
+      hard: '涂鸦率 ' + (p.doodleRate || 0) + '%（画的东西是现画的，不重样）',
+      subs: [
+        { n: '涂鸦率', v: (p.doodleRate || 0) + '%', p: pct(100 * open(p.doodleRate, 10)) },
+        { n: 'TA 画给你的', v: t.aiDoodle + ' 张', p: pct(100 * use(t.aiDoodle, 5)) },
+        { n: 'TA 的涂鸦草稿', v: Object.keys((S().libs.doodleDrafts) || (S().doodleDrafts || {})).length ? '有画一半放着的' : '没有', p: 100 },
+        { n: '能画的题材', v: (typeof Doodle !== 'undefined' ? Doodle.count : 0) + ' 种', p: 100 }
+      ],
+      adv: (p.doodleRate || 0) === 0 ? '涂鸦率是 0——TA 不会给你画小纸片' : '',
+      fix: [(p.doodleRate || 0) === 0 ? { key: 'doodleRate', label: '涂鸦开到 1%', val: 1 } : null].filter(Boolean) });
+
+    /* ---- 报备 ---- */
+    {
+      const recs = ((S().reports || {})[ct.id]) || [];
+      const rp = raw(ct, 'repRate', 0), ck = raw(ct, 'chkRate', 0);
+      push({ key: 'report', name: '报备', icon: 'compass',
+        o: (open(rp, 80) + open(ck, 80)) / 2, u: use(recs.length, 4),
+        chal: 100 * (1 - (open(rp, 80) + open(ck, 80)) / 2),
+        hard: rp || ck ? ('自动报备 ' + rp + '% · 来查岗 ' + ck + '%') : '两个都是关着的',
+        subs: [
+          { n: 'TA 自动报备', v: rp + '%', p: pct(100 * open(rp, 80)) },
+          { n: 'TA 来查岗', v: ck + '%', p: pct(100 * open(ck, 80)) },
+          { n: '记录条数', v: recs.length + ' 条', p: pct(100 * use(recs.length, 4)) }
+        ],
+        adv: (!rp && !ck) ? '报备是关的——去报备页的开，TA 会自己报行踪、偶尔来查岗' : '' });
+    }
+
+    /* ---- 心事簿 ---- */
+    {
+      const bk = (S().diary || {})[ct.id] || { days: {}, visits: [] };
+      const days = Object.keys(bk.days || {}).length;
+      const visits = (bk.visits || []).length;
+      const dr = ((S().settings || {}).diaryRates) || {};
+      push({ key: 'diary', name: '心事簿', icon: 'book',
+        o: open(dr.diary, 80), u: use(days, 7),
+        chal: 100 * (1 - open(dr.diary, 80)),
+        hard: '全局概率：写心事 ' + (dr.diary || 0) + '% · 评论 ' + (dr.comment || 0) + '% · 回复 ' + (dr.reply || 0) + '%（这项是全局的，不按人）',
+        subs: [
+          { n: 'TA 写心事概率', v: (dr.diary || 0) + '%（全局）', p: pct(100 * open(dr.diary, 80)) },
+          { n: '写过的天数', v: days + ' 天', p: pct(100 * use(days, 7)) },
+          { n: '来看过我几次', v: visits + ' 次', p: pct(100 * use(visits, 6)) }
+        ],
+        adv: (dr.diary || 0) === 0 ? '心事簿概率是 0（个人中心那边可调）' : (days === 0 ? '还没写过：进心事簿留一页，TA 会跟上' : '') });
+    }
+
+    /* ---- 红包 ---- */
+    {
+      const rps = Object.values(S().redpackets || {}).filter(r => r.fromUid === ct.id);
+      push({ key: 'redpacket', name: '红包', icon: 'hongbao',
+        o: open(p.giftRedRate, 4), u: use(rps.length, 3),
+        chal: 100 * (1 - open(p.giftRedRate, 4)),
+        hard: '主动发红包 ' + (p.giftRedRate || 0) + '% · 备注库 ' + nOf('redNotes') + ' 条',
+        subs: [
+          { n: '主动发红包概率', v: (p.giftRedRate || 0) + '%', p: pct(100 * open(p.giftRedRate, 4)) },
+          { n: 'TA 发过的红包', v: rps.length + ' 个', p: pct(100 * use(rps.length, 3)) },
+          { n: '红包备注库', v: nOf('redNotes') + ' 条', p: pct(100 * Math.min(1, nOf('redNotes') / 5)) }
+        ],
+        adv: (p.giftRedRate || 0) === 0 ? '主动发红包关着（默认 2%），开了 TA 会偶尔塞个红包' : '' });
+    }
+
+    /* ---- 视频通话 ---- */
+    push({ key: 'call', name: '视频通话', icon: 'video',
+      o: raw(ct, 'callLo', '') !== '' ? 1 : 0.5, u: use(t.call, 3),
+      chal: 70,
+      hard: '聊天里 3% 概率打过来 · 时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
+      subs: [
+        { n: '通话时长设置', v: raw(ct, 'callLo', '') === '' ? '没设，按默认 20~90 秒' : '设过了', p: raw(ct, 'callLo', '') === '' ? 50 : 100 },
+        { n: '打过来过几次', v: t.call + ' 次', p: pct(100 * use(t.call, 3)) }
+      ],
+      adv: t.call === 0 ? '还没通过话：这个 3% 是固定的，多聊几轮' : '' });
+
+    /* ---- 状态 ---- */
+    {
+      const st = (typeof StatusEngine !== 'undefined' && StatusEngine.statusOf) ? StatusEngine.statusOf(ct) : null;
+      const rot = ct.rot || null;
+      push({ key: 'status', name: '状态', icon: 'pulse',
+        o: rot && rot.rate > 0 ? 1 : 0.2, u: use(nOf('aiStatus'), 6),
+        chal: rot && rot.rate > 0 ? 30 : 90,
+        hard: rot && rot.rate > 0 ? ('每 ' + rot.minH + '~' + rot.maxH + ' 小时换一次，概率 ' + rot.rate + '%') : '状态轮换没开',
+        subs: [
+          { n: '当前状态', v: st ? st.name : '—', p: 100 },
+          { n: '轮换', v: rot && rot.rate > 0 ? ('开着 · ' + rot.rate + '%') : '关着', p: rot && rot.rate > 0 ? 100 : 0 },
+          { n: '状态库', v: nOf('aiStatus') + ' 条', p: pct(100 * Math.min(1, nOf('aiStatus') / 6)) }
+        ],
+        adv: !(rot && rot.rate > 0) ? '状态轮换关着，TA 会一直挂同一个状态' : '' });
+    }
+
+    /* ---- 撤回 ---- */
+    push({ key: 'revoke', name: '撤回', icon: 'x',
+      o: open(p.revokeRate, 50), u: use(t.revoke, 3),
+      chal: 100 * (1 - open(p.revokeRate, 50)),
+      hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算',
+      subs: [
+        { n: '撤回概率', v: (p.revokeRate || 0) + '%', p: pct(100 * open(p.revokeRate, 50)) },
+        { n: '真撤回过几次', v: t.revoke + ' 次', p: pct(100 * use(t.revoke, 3)) }
+      ],
+      adv: (p.revokeRate || 0) === 0 ? '撤回关着（默认 0）——开了 TA 会偶尔手滑撤回刚发的' : (t.revoke === 0 ? '开着但还没撤过：多来几轮' : '') });
+
+    /* ---- 回复设置（整体） ---- */
+    {
+      const rnr = p.readNoReply || 0;
+      const lo = p.minSec || 0, hi = p.maxSec || 0, mc = p.minCount || 0, mx = p.maxCount || 0;
+      const chal = pct(45 * Math.min(1, hi / 60) + 35 * Math.min(1, rnr / 50) + 20 * Math.min(1, mc / 4));
+      const bad = [];
+      if (rnr >= 50) bad.push('已读不回 ' + rnr + '% 偏高，TA 一半的话都不回你了');
+      if (hi >= 60) bad.push('最慢要等 ' + hi + ' 秒才回，聊起来会像断线');
+      if (mc >= 4) bad.push('一轮至少 ' + mc + ' 条，容易刷屏');
+      if (hi && lo && hi - lo > 45) bad.push('快慢差太大（' + lo + '~' + hi + ' 秒），节奏忽快忽慢');
+      push({ key: 'reply', name: '回复', icon: 'chat',
+        o: (use(hi, 60) + open(rnr, 50)) / 2, u: use(t.aiText, 40),
+        chal,
+        hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%',
+        subs: [
+          { n: '回复延迟', v: lo + '~' + hi + ' 秒', p: pct(100 * Math.min(1, hi / 60)) },
+          { n: '一轮几条', v: mc + '~' + mx + ' 条', p: pct(100 * Math.min(1, mc / 4)) },
+          { n: '已读不回', v: rnr + '%', p: pct(100 * open(rnr, 50)) },
+          { n: '引用最近的话（固定 20%）', v: '每条批次掷一次', p: 60 },
+          { n: '拍一拍（固定 7%）', v: '真拍到 ' + t.pat + ' 次', p: pct(100 * use(t.pat, 3)) }
+        ],
+        adv: bad.length ? bad.join('；') : '这套回复参数挺顺，不用动' });
+    }
+
+    return rows;
+  }
+
+  /* ================= 群聊观测 ================= */
+  function buildGroup(g) {
+    const conv = g;                       // 群就是 conv 本体
+    const members = (conv.memberIds || []).filter(id => id !== 'me' && Home.contactById(id));
+    const arr = S().msgs[conv.id] || [];
+    const speaker = {};
+    arr.forEach(m => { if (m.from === 'ai' && m.senderId) speaker[m.senderId] = (speaker[m.senderId] || 0) + 1; });
+    const spoke = members.filter(id => speaker[id]);
+    const rows = [];
+    const push = r => { r.score = mix(r.o, r.u); r.challenge = pct(r.chal); rows.push(r); };
+
+    push({ key: 'g-members', name: '成员活跃', icon: 'user',
+      o: use(members.length, 5), u: use(spoke.length, 5),
+      chal: pct(100 * (1 - use(spoke.length, Math.max(1, members.length)))),
+      hard: members.length + ' 位成员，其中 ' + spoke.length + ' 位说过话',
+      subs: members.map(id => {
+        const c = Home.contactById(id);
+        const a = arr.filter(m => m.from === 'ai' && m.senderId === id).length;
+        const ma = arr.filter(m => m.from === 'me' && m.senderId === id).length;
+        return { n: Home.displayName(c), v: a + ' 条发言 · 被点名 ' + ma + ' 次', p: pct(100 * use(a, 15)) };
+      }),
+      adv: members.length > spoke.length ? '有 ' + (members.length - spoke.length) + ' 位成员一直没说话——群里发言是抢名额的，人越多越难轮到' : '' });
+
+    push({ key: 'g-limit', name: '每轮名额', icon: 'chat',
+      o: Math.min(1, (conv.groupMaxCount || 0) / 8), u: use(arr.filter(m => m.from === 'ai').length, 40),
+      chal: pct(100 * (1 - Math.min(1, (conv.groupMaxCount || 0) / 8))),
+      hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分',
+      subs: [
+        { n: '每轮条数上限', v: (conv.groupMaxCount || 0) + ' 条', p: pct(100 * Math.min(1, (conv.groupMaxCount || 0) / 8)) },
+        { n: '群里 AI 发言总数', v: arr.filter(m => m.from === 'ai').length + ' 条', p: pct(100 * use(arr.filter(m => m.from === 'ai').length, 40)) }
+      ],
+      adv: (conv.groupMaxCount || 0) <= 2 && members.length >= 4 ? '人多条少，每轮就一两条：把上限提到 5 左右更像群聊' : '' });
+
+    const commish = (S().mall.orders || []).filter(o => o.convId === conv.id || (o.buyerUid !== 'me' && members.indexOf(o.buyerUid) >= 0));
+    push({ key: 'g-behave', name: '群内行为', icon: 'dice',
+      o: ((conv.autoMuteProb || 0) > 0 ? 1 : 0.4), u: use(arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length, 6),
+      chal: 55,
+      hard: '自动禁言 ' + (conv.autoMuteProb || 0) + '% · 管理员 ' + ((conv.adminIds || []).length) + ' 位',
+      subs: [
+        { n: '群红包/拷问/订单/链接', v: arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length + ' 条', p: pct(100 * use(arr.filter(m => m.type === 'redpacket' || m.type === 'quiz' || m.type === 'mall' || m.type === 'link').length, 6)) },
+        { n: '管理员自动禁言', v: (conv.autoMuteProb || 0) + '%', p: pct(100 * Math.min(1, (conv.autoMuteProb || 0) / 20)) },
+        { n: '群收款/账单', v: '在钱包账单里按群收款看', p: 60 },
+        { n: '群内订单', v: commish.length + ' 单', p: pct(100 * use(commish.length, 3)) }
+      ],
+      adv: (conv.autoMuteProb || 0) === 0 ? '管理员不会自己禁言——想让群有点秩序，开 10% 左右' : '' });
+
+    push({ key: 'g-memberscore', name: '成员能力均分', icon: 'pulse',
+      o: 1, u: members.length ? use(members.reduce((s, id) => { const c = Home.contactById(id); return s + (c ? Math.min(1, tally(id).aiText / 30) : 0); }, 0) / members.length, 1) : 0,
+      chal: pct(100 * (1 - Math.min(1, members.length / 5))),
+      hard: '每位成员各带自己那份回复设置，群里互不干扰',
+      subs: members.map(id => {
+        const c = Home.contactById(id);
+        const tt = tally(id);
+        return { n: Home.displayName(c), v: '单聊里说过 ' + tt.aiText + ' 条', p: pct(100 * Math.min(1, tt.aiText / 30)) };
+      }),
+      adv: '' });
+
+    return rows;
+  }
+
+  /* ================= 建议与提问 ================= */
+  /* 提问：从这句话里找功能 + 数字，给参考掌握度和可行性（规则算的，不是玄学） */
+  const ALIAS = [
+    ['字卡', ['字卡', '拼卡', '拼字卡', '卡片']],
+    ['kamoji', ['颜文字', '表情符号']],
+    ['emojis', ['emoji', '表情', '小黄脸']],
+    ['stickers', ['表情包', '图片', '图']],
+    ['learn', ['学我说话', '学舌', '荟萃', '收集']],
+    ['free', ['自由说话', '组话', '自由组话', '组句', '拼音', '同音字']],
+    ['voice', ['语音']],
+    ['emotion', ['情绪', '标记', '心情']],
+    ['moments', ['朋友圈', '发帖', '动态']],
+    ['letter', ['信', '写信', '来信']],
+    ['games', ['游戏', 'uno', '斗地主', '台球', '五子棋', '飞行棋', '大富翁', '扫雷']],
+    ['quiz', ['决策', '灵魂拷问', '拷问', '出卷', '试卷']],
+    ['mall', ['商城', '购物', '买东西', '外卖', '订单']],
+    ['doodle', ['绘画', '涂鸦', '画画']],
+    ['report', ['报备', '查岗']],
+    ['diary', ['心事簿', '心事']],
+    ['redpacket', ['红包']],
+    ['call', ['视频', '通话', '打电话']],
+    ['status', ['状态']],
+    ['revoke', ['撤回']],
+    ['reply', ['回复', '已读不回', '延迟', '条数', '节奏']]
+  ];
+  /* 每个功能在提问里能"改"的那一格（改完重算掌握度用） */
+  const KNOB = {
+    cards: ['cardComboProb', '拼字卡概率'], kamoji: null, emojis: null, stickers: ['imgProb', '图片概率'],
+    learn: ['learnRate', '学我说话收集概率'], free: ['gaFree', '自由说话概率'], voice: null,
+    emotion: ['emotionRate', '情绪标记概率'], moments: ['moPostRate', '朋友圈发帖概率'], letter: ['letterRate', '来信概率'],
+    games: null, quiz: ['quizRate', '拷问概率'], decision: ['quizRate', '拷问概率'], mall: ['shopRate', '购物率'], doodle: ['doodleRate', '涂鸦率'],
+    report: null, diary: null, redpacket: ['giftRedRate', '主动发红包概率'], call: null, status: null,
+    revoke: ['revokeRate', '撤回概率'], reply: ['readNoReply', '已读不回概率']
+  };
+  function askAnswer(q) {
+    const s = String(q || '').trim();
+    if (!s) return '先写一句要问的，比如「把自由说话概率改成 60 行不行」。';
+    const ct = curObj();
+    if (!ct) return '先在顶上选一个联系人。';
+    let key = null;
+    for (const [k, ws] of ALIAS) { if (ws.some(w => s.toLowerCase().indexOf(w) >= 0)) { key = k; break; } }
+    if (!key) return '这句我没听出是哪个功能——写上功能名再问一次，比如「商城购物率改成 10% 行不行」。';
+    const row = buildCt(ct).find(r => r.key === key);
+    if (!row) return '这个功能在 TA 身上没找到。';
+    const curTxt = '现在「' + row.name + '」掌握度 ' + row.score + '%，挑战度 ' + row.challenge + '%。';
+    const knob = KNOB[key];
+    const num = (s.match(/(\d+(?:\.\d+)?)\s*%?/) || [])[1];
+    if (!knob) return curTxt + '这一格没有单独的概率可调——它靠库里的料和别的功能带着走（' + (row.hard || '') + '）。' + (row.adv ? '我的建议：' + row.adv : '');
+    const p = P(ct);
+    const now = +((ct.params || {})[knob[0]] != null ? (ct.params || {})[knob[0]] : (p[knob[0]] || 0));
+    if (num == null) return curTxt + '「' + knob[1] + '」现在是 ' + now + '%。想改直接说个数，我给你算改完的样子。';
+    const val = Math.max(0, Math.min(100, Math.round(+num)));
+    const saved = (ct.params || {})[knob[0]];
+    ct.params = ct.params || {};
+    ct.params[knob[0]] = val;                     // 试算：只在内存里，问完就还原
+    const after = buildCt(ct).find(r => r.key === key);
+    if (saved == null) delete ct.params[knob[0]]; else ct.params[knob[0]] = saved;
+    const delta = after.score - row.score;
+    const verdict = val === 0 ? '⚠ 设成 0 就是关掉这个功能，掌握度会掉到 ' + after.score + '%。'
+      : delta >= 5 ? '可行，而且明显有提升：' + row.score + '% → ' + after.score + '%。'
+      : delta <= -5 ? '不建议：掌握度会从 ' + row.score + '% 掉到 ' + after.score + '%。'
+      : '可行，但变化不大：' + row.score + '% → ' + after.score + '%（' + knob[1] + '不是这件事最卡的那一格）。';
+    return curTxt + '把「' + knob[1] + '」从 ' + now + '% 改成 ' + val + '% 的话：' + verdict
+      + (row.adv ? '　我的建议还是：' + row.adv : '');
+  }
+  /* 不落档的试算：只改内存再还原（上面 askAnswer 用的就是这套） */
+
+  /* ================= 渲染 ================= */
+  const GAMES_CACHE = {};
+  /* 对象选择器 */
+  function curObj() {
+    if (!cur) return null;
+    if (cur.kind === 'ct') return Home.contactById(cur.id);
+    return S().convs.find(c => c.id === cur.id) || null;
+  }
+  function curName() {
+    const o = curObj();
+    if (!o) return '（对象没了）';
+    return cur.kind === 'ct' ? Home.displayName(o) : (o.name || '群聊');
+  }
+  function rows() {
+    const o = curObj();
+    if (!o) return [];
+    return cur.kind === 'ct' ? buildCt(o) : buildGroup(o);
+  }
+  function overall(rs) {
+    if (!rs.length) return { m: 0, c: 0 };
+    return {
+      m: pct(rs.reduce((s, r) => s + r.score, 0) / rs.length),
+      c: pct(rs.reduce((s, r) => s + r.challenge, 0) / rs.length)
+    };
+  }
+  function bar(v, cls) {
+    return '<span class="dt-bar ' + (cls || '') + '"><i style="width:' + pct(v) + '%"></i></span>';
+  }
+  function render() {
+    const rs = rows(), all = overall(rs);
+    const head = el('dt-head'), list = el('dt-list'), foot = el('dt-foot');
+    if (!head) return;
+    if (!curObj()) {
+      head.innerHTML = '<div class="dt-empty">选一个要检测的对象</div>';
+      list.innerHTML = ''; foot.innerHTML = '';
+      return;
+    }
+    head.innerHTML =
+      '<button class="dt-who" id="dt-who"><i data-icon="user" data-size="15"></i><span>' + esc(curName()) + '</span><em>切换 ›</em></button>' +
+      '<div class="dt-total">' +
+        '<div class="dt-total-b"><b>' + all.m + '%</b><small>总体掌握度</small>' + bar(all.m, 'ok') + '</div>' +
+        '<div class="dt-total-b"><b>' + all.c + '%</b><small>总体挑战度</small>' + bar(all.c, 'warn') + '</div>' +
+      '</div>' +
+      '<div class="dt-tip">掌握度＝开通没开通 + 真用过多少次；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
+
+    list.innerHTML = rs.map((r, i) =>
+      '<button class="dt-row card" data-i="' + i + '">' +
+        '<span class="dt-ic"><i data-icon="' + r.icon + '" data-size="18"></i></span>' +
+        '<span class="dt-main"><b>' + esc(r.name) + '</b>' + bar(r.score, r.score >= 60 ? 'ok' : (r.score >= 30 ? '' : 'bad')) +
+        '<small>' + esc(String(r.hard || '').slice(0, 46)) + '</small></span>' +
+        '<span class="dt-num"><b>' + r.score + '%</b><small>挑战 ' + r.challenge + '%</small></span>' +
+      '</button>').join('');
+
+    const advs = rs.filter(r => r.adv).sort((a, b) => a.score - b.score).slice(0, 4);
+    foot.innerHTML =
+      '<div class="dt-ask card">' +
+        '<div class="dt-ask-t">问问 TA 这样改行不行</div>' +
+        '<div class="dt-ask-row"><input id="dt-q" placeholder="例：把自由说话概率改成 60 行不行"><button id="dt-ask-go">问</button></div>' +
+        '<div class="dt-ask-out" id="dt-ask-out" hidden></div>' +
+      '</div>' +
+      (advs.length ? '<div class="dt-advs card"><div class="dt-ask-t">' + esc(curName()) + ' 的建议</div>' +
+        advs.map(a => '<div class="dt-adv"><b>' + esc(a.name) + '</b><span>' + esc(a.adv) + '</span>' +
+          (a.fix || []).filter(f => f.key).map(f => '<button class="dt-fix" data-key="' + f.key + '" data-val="' + f.val + '">' + esc(f.label) + '</button>').join('') +
+          '</div>').join('') + '</div>' : '');
+
+    Array.prototype.forEach.call(list.querySelectorAll('.dt-row'), b =>
+      b.addEventListener('click', () => openDetail(+b.dataset.i)));
+    const who = el('dt-who'); if (who) who.addEventListener('click', pickWho);
+    const go = el('dt-ask-go'); if (go) go.addEventListener('click', () => {
+      const out = el('dt-ask-out');
+      out.hidden = false;
+      try { out.textContent = askAnswer(el('dt-q').value); }
+      catch (e) { out.textContent = '这句没算出来（' + ((e && e.message) || e) + '），换个说法再问一次。'; }
+    });
+    Array.prototype.forEach.call(foot.querySelectorAll('.dt-fix'), b =>
+      b.addEventListener('click', () => applyFix(b.dataset.key, +b.dataset.val)));
+    /* 图标：模板注入的 svg 图标是启动时统一渲染的，这里的新节点补一轮 */
+    if (typeof mountIcons === 'function') { try { mountIcons(list); } catch (e) { /* 图标只是装饰，挂不上不拦检测页 */ } }
+  }
+
+  /* 照建议调一格（只动这一格，别的键一个不碰） */
+  function applyFix(key, val) {
+    const ct = curObj(); if (!ct || cur.kind !== 'ct') return;
+    ct.params = ct.params || {};
+    ct.params[key] = val;
+    DB.save();
+    UI.toast('已按建议改成 ' + val + '%');
+    render();
+  }
+
+  function pickWho() {
+    const items = S().contacts.map(c => ({ key: 'ct:' + c.id, label: Home.displayName(c) + '（单聊）' }));
+    S().convs.filter(c => c.type === 'group').forEach(c => items.push({ key: 'gp:' + c.id, label: (c.name || '群聊') + '（群）' }));
+    UI.actionSheet('检测对象', items).then(k => {
+      if (!k) return;
+      const [kind, id] = k.split(':');
+      cur = { kind: kind === 'gp' ? 'group' : 'ct', id };
+      render();
+    });
+  }
+
+  function openDetail(i) {
+    const rs = rows(); const r = rs[i]; if (!r) return;
+    const ct = curObj();
+    const lines = (r.subs || []).map(s =>
+      '<div class="dt-sub"><div class="dt-sub-t"><span>' + esc(s.n) + '</span><b>' + s.p + '%</b></div>' +
+      bar(s.p, s.p >= 60 ? 'ok' : (s.p >= 30 ? '' : 'bad')) +
+      '<small>' + esc(s.v) + '</small></div>').join('');
+    const mask = document.createElement('div');
+    mask.className = 'dialog-mask show dt-detail';
+    mask.innerHTML = '<div class="dialog-card dt-dcard">' +
+      '<div class="dt-dhead"><b>' + esc(r.name) + '</b><button class="dt-x" data-x="1">✕</button></div>' +
+      '<div class="dt-dsum"><span>掌握度 <b>' + r.score + '%</b></span><span>挑战度 <b>' + r.challenge + '%</b></span></div>' +
+      '<div class="dt-dhard">' + esc(r.hard || '') + '</div>' +
+      '<div class="dt-subs">' + lines + '</div>' +
+      (r.adv ? '<div class="dt-dadv">建议：' + esc(r.adv) + '</div>' : '') +
+      '<div class="dt-dbtns">' +
+        (cur.kind === 'ct' ? '<button data-go="profile">去改 TA 的设置</button>' : '') +
+        '<button class="dt-ok" data-x="1">知道了</button>' +
+      '</div></div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', e => {
+      if (e.target === mask || e.target.closest('[data-x]')) { mask.remove(); return; }
+      if (e.target.closest('[data-go=profile]')) { mask.remove(); Profile.open(cur.id); }
+    });
+  }
+
+  function init() {
+    const cell = el('cell-detect');
+    if (cell) cell.addEventListener('click', () => {
+      if (!cur) {
+        const first = S().contacts[0];
+        cur = first ? { kind: 'ct', id: first.id } : null;
+      }
+      render();
+      Router.go('detect');
+    });
+  }
+  function openFor(contactId) {
+    cur = { kind: 'ct', id: contactId };
+    render();
+    Router.go('detect');
+  }
+  function openGroup(convId) {
+    cur = { kind: 'group', id: convId };
+    render();
+    Router.go('detect');
+  }
+
+  return { init, open: openFor, openGroup, render, askAnswer };
+})();
+
+/* =====================================================
    LOVE♡X · app.js —— 启动入口 + 页面交互装配
    P1 范围：主题切换、我的主页基础信息、全站导出导入
    ===================================================== */
@@ -31123,6 +32188,7 @@ Router.register('report', () => Report.render());   /* P25 */
   runSafe('init.library', () => Library.init());    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
   runSafe('init.games', () => Games.init());    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
   runSafe('init.schedule', () => Schedule.init()); /* 排班表（她 10-03）：页面事件绑定 */
+runSafe('init.detect', () => Detect.init()); /* 检测中心（她 10-12 16:52）：个人中心入口 */
   runSafe('init.mall', () => Mall.init());     /* P64 商城与外卖：页面事件绑定 + 20s 心跳（节点推进/ETA 刷新） */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
   /* 她 10-06：主题美化（全局 CSS / 气泡样式 / 头像框）开机就套上 */
