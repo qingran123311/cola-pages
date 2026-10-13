@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261013-101733 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261013-114031 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -5225,7 +5225,21 @@ const DB = (function () {
       if (!V) { try { snapMsgs(); } catch (e) {} return true; }
       const safe = bootSafe();
       if (safe && typeof logErr === 'function') logErr('上次启动没走完（多半是媒体铺太多把内存顶爆了），这一次先用省内存的方式起来：图会少一些，记录一个没动');
-      try { await V.unpack(state, safe ? 0 : undefined); } catch (e) {}
+      /* 铺的顺序按「她先看得到的地方」来（她 10-13 11:13：照存档字段顺序铺，额度被前面那些老会话吃光，
+         她打开自己正在看的会话时图一张没轮到，看起来就像图全丢了）：头像 → 会话列表 → 最近几个会话 → 朋友圈。
+         其余一律留白，等打开对应会话再补（DB.unpackConv）——不铺不等于丢，引用串原样留着。 */
+      const MB = 1024 * 1024;
+      try {
+        if (!safe) {
+          await V.unpack(state.contacts, 3 * MB);
+          await V.unpack(state.convs, 1 * MB);
+          const order = (state.convs || []).slice()
+            .sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0))
+            .map(c => c && c.id).filter(Boolean);
+          for (const cid of order.slice(0, 3)) await V.unpack(state.msgs && state.msgs[cid], 4 * MB);
+          await V.unpack(state.moments, 2 * MB);
+        }
+      } catch (e) { if (typeof logErr === 'function') logErr('按需铺媒体失败：' + ((e && e.message) || e)); }
       /* 她 10-10：媒体本体搬进原生私有文件——IDB 只当缓存，系统清/坏 IDB 也清不到应用私有文件。
          幂等，每次启动扫一遍；壳没桥时这里空转。
          不堵启动链：搬家不急，和清扫一样挂空闲档（stub/慢 IDB 环境卡住也不能拖 boot） */
@@ -5349,6 +5363,16 @@ const DB = (function () {
     return true;
   }
 
+  /* 打开某个会话时把它的媒体补上（她 10-13 11:13：看不到图会以为丢了） */
+  async function unpackConv(convId, cap) {
+    const V = vault();
+    if (!V || !convId) return { found: 0, missing: 0, left: 0 };
+    const arr = state.msgs && state.msgs[convId];
+    if (!arr || !arr.length) return { found: 0, missing: 0, left: 0 };
+    try { return await V.unpack(arr, cap || 6 * 1024 * 1024); }
+    catch (e) { return { found: 0, missing: 0, left: 0, err: String((e && e.message) || e) }; }
+  }
+
   /* 界面上的「加载更多图片」：接着放下一批（还是那个字节预算），放完 left 归零 */
   async function unpackMore(cap) {
     const V = vault();
@@ -5363,6 +5387,7 @@ const DB = (function () {
     bootOk,
     bootSafe,
     unpackMore,
+    unpackConv,
     unpackLeft: () => { const V = vault(); try { return V ? (V.stats().left || 0) : 0; } catch (e) { return 0; } },
     purgeContact,
     dropConv,
@@ -10156,6 +10181,16 @@ const Chat = (function () {
     applyBubble();
     renderMsgs();
     updatePokeDot();   // P22 戳戳亮点：加号按钮+心事簿入口（清然 14:41）
+    /* 她 10-13 11:13：媒体不再全量预铺（那台机器的内存吃不下会直接闪退），所以先画一遍
+       （没铺到的先显示占位），再把【这个会话】的媒体补上，补完重画一次——
+       进哪个聊天就能看到哪个聊天的图。 */
+    try {
+      if (DB.unpackConv) {
+        DB.unpackConv(convId).then(r => {
+          if (r && (r.found || r.missing) && cur && cur.id === convId) renderMsgs();
+        }).catch(() => { /* 补铺失败不改界面：占位还在，记录没动 */ });
+      }
+    } catch (e) { /* 补铺本身报错也不能拦打开会话：没铺的会继续显示占位，记录一个没动 */ }
   }
 
   /* 心事簿入口亮点（一颗点、两个触发源，UI 只有一个点不堆装饰）：
@@ -13508,7 +13543,8 @@ const Doodle = (function () {
   const INK = '#3A3A42';
   const PAPER = '#FFFEF8';
   /* 马克笔色板：内容色，她说颜色各种丰富——不套 UI 四色禁令（那是界面口径） */
-  const PAL = ['#D96A5B', '#E8A33D', '#E5C95C', '#7FA86B', '#5E8FB8', '#8F7BB8', '#D886AE', '#8A6F5C', '#5FA8A0'];
+  const PAL = ['#D96A5B', '#E8A33D', '#E5C95C', '#7FA86B', '#5E8FB8', '#8F7BB8', '#D886AE', '#8A6F5C', '#5FA8A0',
+      '#C25B8A', '#4F7A5B', '#E07B39', '#6C8EBF', '#A35FBF', '#3F9E8F'];
 
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -13782,8 +13818,10 @@ const Doodle = (function () {
        画笔色 = 这一张用的马克笔；填涂色 = 另外单独掷一次，可能一支都不填、也可能填好几块 */
     /* 画笔色：这一张用哪几支彩笔（她 10-13 08:48「不同颜色的彩线咋这么少」：原来只给 2~3 支、
        且所有零件都往同一支上取，整张画就只剩一种颜色） */
-    const strokeA = shuffle(PAL).slice(0, 3 + Math.floor(Math.random() * 3));   // 3~5 支
-    const fillA = shuffle(PAL).slice(0, Math.random() < 0.3 ? 0 : (Math.random() < 0.6 ? 1 : 3));
+    /* 她 10-13 11:16：「每张画就是 1~6 色就差不多」——一张画里的颜色总数就定在 1~6。
+       她 11:13 要的「画笔色多一些」指的是可选色本身：色盘从 9 支扩到 15 支。 */
+    const strokeA = shuffle(PAL).slice(0, 1 + Math.floor(Math.random() * 6));   // 1~6 支
+    const fillA = strokeA.length > 1 ? shuffle(strokeA).slice(0, Math.random() < 0.3 ? 0 : (Math.random() < 0.6 ? 1 : Math.min(3, strokeA.length))) : [];
     const A = { a: strokeA };
 
     /* 构图：大面积留白 ↔ 画满，随机切换；元素数量跟着走，硬上限 8（她定的） */
@@ -32480,31 +32518,22 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     try { bindLeftMore(); } catch (e) { /* 加载条是附加口子，装不上也不能拦启动 */ }
   }
 
-  /* 「加载更多图片」（她 10-13 09:21 闪退根治的配套口子）：启动是按字节预算铺的媒体，
-     没铺到的先显示占位；这里接着一批批铺，铺完重渲染图就出来。记录一个字节都没动过。 */
+  /* 媒体没排上加载时的提示（她 10-13 11:13：看不到图会以为丢了——她那句「图片全部丢失」就是这么看出来的）。
+     不再摆「加载更多图片」按钮了：她 11:13「一点击加载更多图片就死机卡掉线」，那一下又是一整批进内存，
+     这台机器吃不下。改成打开哪个会话/朋友圈就自动补哪个（DB.unpackConv）。 */
   function bindLeftMore() {
     const box = document.getElementById('lx-leftmore');
     if (!box) return;
     const txt = document.getElementById('lx-lm-txt');
-    const btn = document.getElementById('lx-lm-btn');
     const x = document.getElementById('lx-lm-x');
     const refresh = () => {
-      let left = 0; try { left = DB.unpackLeft(); } catch (e) { /* 数不出来就当没剩余，最多是不摆加载条 */ }
+      let left = 0; try { left = DB.unpackLeft(); } catch (e) { /* 数不出来就当没剩余，最多是不摆提示 */ }
       if (!left) { box.hidden = true; return; }
-      txt.textContent = '还有 ' + left + ' 个图片/视频这次没加载（没丢，都还在手机里）';
+      txt.textContent = '还有 ' + left + ' 张图/视频没排上加载（一张没丢，都还在手机里）；进对应聊天或朋友圈会自动加载';
       box.hidden = false;
     };
     (async function () { try { await DB.ready; } catch (e) { /* 启动那趟有问题也得把条子刷一遍（无桥/慢库环境常见） */ } refresh(); })();
     if (x) x.addEventListener('click', () => { box.hidden = true; });
-    if (btn) btn.addEventListener('click', async () => {
-      btn.disabled = true; btn.textContent = '加载中…';
-      try { await DB.unpackMore(); } catch (e) { /* 这一批铺不动就停手：剩余数照旧，再点还会重试 */ }
-      btn.disabled = false; btn.textContent = '加载更多图片';
-      try { if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender(); } catch (e) { /* 当前不在聊天页也重画一次，失败不影响已铺的图 */ }
-      try { if (typeof Home !== 'undefined' && Home.render) Home.render(); } catch (e) { /* 同上，首页重画失败不算错 */ }
-      try { if (typeof Moments !== 'undefined' && Moments.render) Moments.render(); } catch (e) { /* 同上，朋友圈重画失败不算错 */ }
-      refresh();
-    });
   }
 
   /* ---------------- 底部页签 ---------------- */
@@ -33603,12 +33632,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
 })();
 
 </script>
-<!-- 媒体按需加载条（她 10-13 09:21「导入后闪退、怎么也进不去」的根治配套）：
-     启动按字节预算铺媒体，没铺到的先显示占位，这里给一个「加载更多」的口子 -->
+<!-- 媒体没排上加载时的提示（她 10-13 11:13：看不到图会以为丢了）——
+     不摆「加载更多」按钮：一点就是整批进内存，她那台机器会直接卡掉线；改成进对应聊天/朋友圈自动补 -->
 <div id="lx-leftmore" hidden>
   <span id="lx-lm-txt"></span>
-  <button id="lx-lm-btn">加载更多图片</button>
-  <button id="lx-lm-x" title="先不加载">×</button>
+  <button id="lx-lm-x" title="先不提示">×</button>
 </div>
 <style>
   #lx-leftmore{position:fixed;left:0;right:0;bottom:0;z-index:9000;display:flex;align-items:center;gap:8px;padding:9px 12px;background:#FFF6E5;border-top:1px solid #F0E2C8;font-size:12px;line-height:1.4;color:#6B5B3E}
