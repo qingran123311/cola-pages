@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261013-005834 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261013-101733 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -23,8 +23,13 @@
      ① 先只打包数据（不含媒体本体）——小、快、必定成功，先让她手里有一份；
      ② 再走 DB.exportBundle（10-09 已修的串行取本、每 6 个让一拍）打全量含媒体。
      他不在（应用真坏了）就停在第①步，绝不拿并打包把页面再拖死一次。 */
-  function deliver(text, name, done){
-    var blob = new Blob([text], { type: 'application/json' });
+  /* 她 10-13 09:17：「线上备份卡住的时候要全部导出，媒体也要」——
+     全量那份以前是「所有媒体读进内存 → 转 base64 → 拼一个巨大字符串」，
+     页面正卡着的时候这就是内存峰值最高的一下，一爆整页冻死、等于导不出来。
+     现在：①数据那份（不含媒体）先单独存好；②全量那份走 DB.exportBundleBlob
+     （低内存：每块直接进 Blob 分片，不把整份拼进一个 JS 字符串）。
+     全量那份没成的话再点一次就只补它，数据那份不会重复存。 */
+  function deliverBlob(blob, name, done){
     try {
       if (window.LovexNative && typeof window.LovexNative.saveFile === 'function'){
         var fr = new FileReader();
@@ -47,15 +52,38 @@
       try { window.open(URL.createObjectURL(blob), '_blank'); done(true, '新开一页，长按保存'); } catch(e3){ done(false, ''); }
     }
   }
+  function deliver(text, name, done){ deliverBlob(new Blob([text], { type: 'application/json' }), name, done); }
+  var escDay = '', escDataDone = false;
   function escExport(){
+    var btn = document.getElementById('lx-exp-btn');
+    /* 注意：DB 是全局词法绑定，不在 window 上（window.DB 取不到）——按名字取 */
+    var dbo = (typeof DB !== 'undefined') ? DB : null;
+    function packMedia(){
+      if (!dbo || typeof dbo.exportBundleBlob !== 'function' || !dbo.state){
+        if (btn){ btn.disabled = false; btn.textContent = '数据已存好（这份环境没有图片视频可打包）'; }
+        return;
+      }
+      if (btn){ btn.disabled = true; btn.textContent = '正在打包图片视频（低内存模式，别刷新）…'; }
+      Promise.resolve().then(function(){ return dbo.exportBundleBlob(dbo.state, 'all'); }).then(function(blob){
+        deliverBlob(blob, 'LOVEX紧急导出-' + escDay + '.json', function(ok2, where2){
+          escDataDone = true;
+          if (btn){
+            btn.disabled = false;
+            btn.textContent = ok2 ? ('全量（含图/视频）也存好了：' + where2) : '图片视频那份没打包成——再点一次（低内存模式，第二次一般就成）';
+          }
+        });
+      })['catch'](function(){
+        if (btn){ btn.disabled = false; btn.textContent = '图片视频那份打包失败——再点一次'; }
+      });
+    }
+    if (escDataDone){ packMedia(); return; }        /* 数据那份已经存过：这一下只补媒体 */
     var raw = null;
     try { raw = localStorage.getItem('LOVEX_DB_V1') || localStorage.getItem('LOVEX_DB_BAK'); } catch(e){}
     if (!raw){ alert('这台机器上没找到 LOVE♡X 的旧数据'); return; }
     var state;
     try { state = JSON.parse(raw); } catch(e){ alert('旧数据读不完整，稍后再试一次'); return; }
-    var btn = document.getElementById('lx-exp-btn');
     if (btn){ btn.disabled = true; btn.textContent = '正在存数据…（别刷新）'; }
-    var day = new Date().toISOString().slice(0, 10);
+    escDay = new Date().toISOString().slice(0, 10);
     var dataText;
     try {
       dataText = JSON.stringify({ app:'LOVEX-BUNDLE', version:2, kind:'all', exportedAt:new Date().toISOString(), data:state, media:[] });
@@ -64,28 +92,14 @@
       if (btn){ btn.disabled = false; btn.textContent = '把全部备份存到手机'; }
       return;
     }
-    deliver(dataText, 'LOVEX紧急导出-' + day + '-数据.json', function(ok, where){
+    deliver(dataText, 'LOVEX紧急导出-' + escDay + '-数据.json', function(ok, where){
       if (!ok){
         if (btn){ btn.disabled = false; btn.textContent = '数据没存下来，再点一次（换个浏览器更稳）'; }
         return;
       }
-      if (btn) btn.textContent = '数据已存（' + where + '），正在打包图片视频…';
-      /* 注意：DB 是全局词法绑定，不在 window 上（window.DB 取不到）——按名字取 */
-      var dbo = (typeof DB !== 'undefined') ? DB : null;
-      if (!dbo || typeof dbo.exportBundle !== 'function' || !dbo.state){
-        if (btn){ btn.disabled = false; btn.textContent = '数据已存到「' + where + '」（媒体这次没打包）'; }
-        return;
-      }
-      Promise.resolve().then(function(){ return dbo.exportBundle(dbo.state, 'all'); }).then(function(txt){
-        deliver(txt, 'LOVEX紧急导出-' + day + '.json', function(ok2, where2){
-          if (btn){
-            btn.disabled = false;
-            btn.textContent = ok2 ? ('全量（含图/视频）也存好了：' + where2) : '数据已存好；全量那份没存下来，先别卸载';
-          }
-        });
-      })['catch'](function(){
-        if (btn){ btn.disabled = false; btn.textContent = '数据已存好；图片视频那份打包失败，先别卸载'; }
-      });
+      escDataDone = true;
+      if (btn) btn.textContent = '数据已存（' + where + '），接着打包图片视频…';
+      packMedia();
     });
   }
   window.__LX_ESC_EXPORT = escExport;
@@ -3718,7 +3732,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .moc-bar i{display:block;height:100%;background:var(--primary);border-radius:2px}
 .moc-eta{font-size:var(--fs-small);color:var(--t2)}
 
-/* ===== 检测中心（她 10-12 16:52 口述）：量化掌握度 / 挑战度，可下钻可提问 ===== */
+/* ===== 检测中心（她 10-12 16:52 口述 / 10-13 08:40 定口径）：两个角色主观感受——掌握感 / 操作负担 ===== */
+/* 右上角【重置感受】（她 10-13 08:40）：清空这套感受、重新随机一套初始值 */
+.dt-reset{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 11px;
+  border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--t2);
+  font:inherit;font-size:var(--fs-small);cursor:pointer}
+.dt-reset:active{background:var(--fill)}
 .dt-head{padding:14px}
 .dt-who{display:flex;align-items:center;gap:6px;width:100%;padding:9px 12px;border:none;border-radius:12px;background:var(--fill);color:var(--t1);font-size:var(--fs-aux)}
 .dt-who span{flex:1;text-align:left;font-weight:600}
@@ -3987,6 +4006,8 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
     <header class="navbar">
       <button class="nav-back" data-back><i data-icon="chevron-left" data-size="22"></i></button>
       <div class="navbar-title">检测中心</div>
+      <!-- 她 10-13 08:40：右上角【重置感受】——清空这套主观感受、重新随机一套全新初始值 -->
+      <button class="dt-reset" id="dt-reset">重置感受</button>
     </header>
     <div class="page-body">
       <div class="card dt-head" id="dt-head"></div>
@@ -4403,6 +4424,7 @@ const DB = (function () {
       quizLib: { groups: [], questions: [] },   // P34 灵魂拷问题库：groups[{id,name}]；questions[{id,gid,type:'single'|'multi'|'sort'|'rate'|'text',title,options[],ts}]
       doodleDrafts: {},                // 她 10-12：TA 涂鸦草稿 convId->{ts}（画一半收笔，下次自由选择恢复/弃稿；不在 defaults 会被 deepMerge 剥掉）
       drawDraft: null,                 // 她 10-12：她的画板草稿 {ts,strokes[]}（画一半退出原画保留；同上必须在 defaults）
+      feel: {},                        // 她 10-13 08:40：检测中心那套「掌握感 / 操作负担」（角色主观感受，会自己起伏；键=对象id|板块 —— 不在 defaults 会被 deepMerge 剥掉）
       quizzes: [],                     // P34 试卷：[{id,title,mode:'normal'|'duet',qids[],targets[],delayMin,status,pending[],answers{},rating,ts}]
       quizTpls: [],                    // P34 出卷模板（V3）：结构同 quizzes 去 answers/status
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
@@ -5092,6 +5114,35 @@ const DB = (function () {
     return JSON.stringify({ app: 'LOVEX-BUNDLE', version: 2, kind: kind || 'all',
       exportedAt: new Date().toISOString(), data: doc, media });
   }
+  /* 低内存版全量导出（她 10-13 09:17：「线上备份卡住的时候要全部导出，媒体也要」）。
+     顶配那份 exportBundle 末尾是「拼一个巨大字符串」——媒体一多、页面正卡着的时候，
+     这一下就是内存峰值，一爆整页就冻死＝等于导不出来。
+     这里产物结构与导入口认的格式完全一致，但把每块直接塞进 Blob 分片：
+     不把整份拼进一个 JS 字符串，峰值只留「当前这一块」。 */
+  async function exportBundleBlob(root, kind) {
+    const tick = () => new Promise(r => setTimeout(r, 0));
+    await tick();
+    const doc = JSON.parse(JSON.stringify(root));
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    const parts = [];
+    parts.push('{"app":"LOVEX-BUNDLE","version":2,"kind":' + JSON.stringify(kind || 'all') +
+      ',"exportedAt":' + JSON.stringify(new Date().toISOString()) + ',"data":' + JSON.stringify(doc) + ',"media":[');
+    let taken = 0, first = true;
+    if (MS) {
+      for (const k of idbRefsIn(doc)) {
+        try {
+          const b = await MS.get(k);
+          if (b == null) continue;                              // 本体本来就没：引用照旧带走
+          const item = (typeof b === 'string') ? { k, v: b } : { k, v: await blobToDataUrl(b), b: 1 };
+          parts.push((first ? '' : ',') + JSON.stringify(item));
+          first = false;
+        } catch (e) { /* 单个媒体读不出来不拦整份（和 exportBundle 同一口径） */ }
+        if (++taken % 6 === 0) await tick();                    // 每 6 个让一拍，UI 不僵
+      }
+    }
+    parts.push(']}');
+    return new Blob(parts, { type: 'application/json' });
+  }
   /* 解析导入文件 + 把媒体本体放回 IDB（不动 state，合并由调用方按 kind 做）。
      返回 {kind, data, media}；kind: 'all' | 'contact' | 'msgs'。 */
   async function importBundleText(jsonText) {
@@ -5117,11 +5168,11 @@ const DB = (function () {
     }
     return { kind, data, media: n };
   }
-  /* 整档换血 + 引用串当场换回真数据（本体刚放回 IDB），界面立刻能看 */
+  /* 整档换血。她 10-13 09:21：这里当场把全档媒体铺进内存，导完又 reload 再铺一遍，
+     媒体一多的档直接把 WebView 内存顶爆（「导入备份和贴图后直接闪退，怎么也进不去」）。
+     现在这里只落盘，铺的事交给启动链按预算做。 */
   async function importAllBundle(data) {
     applyImportedState(data);
-    const V = vault();
-    if (V) { try { await V.unpack(state); } catch (e) {} }
     return true;
   }
 
@@ -5152,13 +5203,29 @@ const DB = (function () {
   /* 装载后要做的事（引用串换回真数据 / 快照 / 影子顶上）：lazy 起，
      等 app.js 在 DOMContentLoaded 里读 DB.ready 时 media.js 已经执行完了。 */
   let readyP = null;
+
+  /* 启动保险（她 10-13 09:21「怎么也进不去」）：闸门开之前先落一个「本次启动」标记，
+     界面真起来了（app.js 立 __LX_BOOT_DONE）就抹掉。下次启动若这个标记还在＝上次没走完
+     （多半是媒体铺太多把内存顶爆）——这一趟就一个媒体都不铺，先让她进得去；
+     图显示占位、记录一个不动，进去第一件事就能导全量备份。 */
+  const BOOT_TRY = 'LOVEX_BOOT_TRY';
+  function bootSafe() {
+    let prev = 0;
+    try { prev = +(localStorage.getItem(BOOT_TRY) || 0); } catch (e) { /* 读不到就当没标记：宁可正常启动，不要无故降级 */ }
+    try { localStorage.setItem(BOOT_TRY, String(Date.now())); } catch (e) { /* 写不进标记=下次判不出上次没走完，只是少一层保险，不影响本次启动 */ }
+    return prev ? 1 : 0;
+  }
+  function bootOk() { try { localStorage.removeItem(BOOT_TRY); } catch (e) { /* 抹不掉只会让下次保守一趟，绝不拦启动 */ } }
+
   function startReady() {
     if (readyP) return readyP;
     readyP = (async function () {
       try { await askPersist(); } catch (e) {}
       const V = vault();
       if (!V) { try { snapMsgs(); } catch (e) {} return true; }
-      try { await V.unpack(state); } catch (e) {}
+      const safe = bootSafe();
+      if (safe && typeof logErr === 'function') logErr('上次启动没走完（多半是媒体铺太多把内存顶爆了），这一次先用省内存的方式起来：图会少一些，记录一个没动');
+      try { await V.unpack(state, safe ? 0 : undefined); } catch (e) {}
       /* 她 10-10：媒体本体搬进原生私有文件——IDB 只当缓存，系统清/坏 IDB 也清不到应用私有文件。
          幂等，每次启动扫一遍；壳没桥时这里空转。
          不堵启动链：搬家不急，和清扫一样挂空闲档（stub/慢 IDB 环境卡住也不能拖 boot） */
@@ -5282,15 +5349,28 @@ const DB = (function () {
     return true;
   }
 
+  /* 界面上的「加载更多图片」：接着放下一批（还是那个字节预算），放完 left 归零 */
+  async function unpackMore(cap) {
+    const V = vault();
+    if (!V) return { found: 0, missing: 0, left: 0 };
+    try { return await V.unpack(state, cap || undefined); }
+    catch (e) { return { found: 0, missing: 0, left: 0, err: String((e && e.message) || e) }; }
+  }
+
   return {
     get state() { return state; },
     get ready() { return startReady(); },
+    bootOk,
+    bootSafe,
+    unpackMore,
+    unpackLeft: () => { const V = vault(); try { return V ? (V.stats().left || 0) : 0; } catch (e) { return 0; } },
     purgeContact,
     dropConv,
     sweepOrphans,
     save,
     flushSave: writeNow,
     exportBundle,
+    exportBundleBlob,
     importAll,
     importBundleText,
     importAllBundle,
@@ -9137,7 +9217,12 @@ const MediaVault = (function () {
   const MIN = 4096;                // 小于 4KB 的 data: 串不值得搬，留在主档
   let off = !(window.indexedDB);
   const armed = new Map();         // ref -> 1：本会话已确认在库里，不重复写
-  const st = { packed: 0, bytes: 0, missing: 0, refs: 0, flushErr: 0, missingLogged: 0 };
+  const st = { packed: 0, bytes: 0, missing: 0, refs: 0, flushErr: 0, missingLogged: 0, left: 0, safe: 0 };
+
+  /* 一次启动最多把多少字节的媒体本体铺进内存（dataURL 字符数）。超出的保留引用串原样不动，
+     界面照常进得去、那些图先显示占位；再点「加载更多图片」就接着放下一批。
+     数值不写死在界面里，也不允许它变回「无上限」。 */
+  const UNPACK_CAP = 24 * 1024 * 1024;
 
   function hash(s) {
     let h1 = 0x811c9dc5, h2 = 0x9e3779b9;
@@ -9200,19 +9285,22 @@ const MediaVault = (function () {
     return n;                      // 落库后的补写交给 db.js 的 commit，不在这里绕 save
   }
 
-  /* 装载后：引用串就地换回 dataURL */
-  async function unpack(node) {
-    if (off || !node) return { found: 0, missing: 0 };
+  /* 装载后：引用串就地换回 dataURL。
+     她 10-13 09:21：「导入备份和贴图后直接闪退，怎么也进不去」。
+     根因：老写法把全档引用一次性全取回内存（几百个 IDB 读并发 + 所有 dataURL 常驻），
+     档里媒体一多，WebView 内存直接爆；而这步挂在启动链上，所以每次开机都崩在同一个地方。
+     现在按字节预算串行展开：够用就停，没轮上的引用串原样保留（渲染层本来就把没展开的当断链画占位），
+     宁可这一次少铺几张图，也必须让界面进得去——一个字节的记录都不动。 */
+  async function unpack(node, budget) {
+    if (off || !node) return { found: 0, missing: 0, left: 0 };
+    const cap = (typeof budget === 'number') ? budget : UNPACK_CAP;
     const jobs = [];
     let found = 0, missing = 0;
     const take = (parent, key) => {
       const v = parent[key];
       if (typeof v !== 'string' || !isRef(v)) return false;
       st.refs++;
-      jobs.push(MediaStore.get(v).then(text => {
-        if (text == null) { missing++; st.missing++; return; }   // 实体没了：保留引用串，界面上报，不静默抹掉
-        armed.set(v, 1); parent[key] = text; found++;
-      }).catch(() => { missing++; st.missing++; }));
+      jobs.push([parent, key, v]);
       return true;
     };
     const walk = v => {
@@ -9222,7 +9310,23 @@ const MediaVault = (function () {
       }
     };
     walk(node);
-    await Promise.all(jobs);
+    let bytes = 0, i = 0;
+    for (; i < jobs.length; i++) {
+      if (bytes >= cap) break;                                  // 到预算了：后面的一律保留引用串
+      const [parent, key, v] = jobs[i];
+      try {
+        const text = await MediaStore.get(v);
+        if (text == null) { missing++; st.missing++; continue; }  // 实体没了：保留引用串，界面上报，不静默抹掉
+        armed.set(v, 1); parent[key] = text; bytes += text.length; found++;
+      } catch (e) { missing++; st.missing++; }
+    }
+    const left = jobs.length - i;
+    st.left = left;
+    if (left && typeof logErr === 'function' && !st.leftLogged) {
+      st.leftLogged = 1;
+      logErr('这次启动省着内存装的：已铺 ' + found + ' 个媒体（约 ' + Math.round(bytes / 1048576) + 'MB），'
+        + '另有 ' + left + ' 个先留在库里没铺（图会显示占位，没丢）——点界面上的「加载更多图片」继续，或直接导全量备份');
+    }
     if (missing && typeof logErr === 'function' && !st.missingLogged) {
       st.missingLogged = 1;
       /* 她 10-10 16:39 骨刀：这句文案在 APK 里是胡说——数据在应用沙箱，不存什么浏览器。
@@ -9234,7 +9338,7 @@ const MediaVault = (function () {
         try { DB.dailySnap(true); } catch (e) { /* 体检触发的自动备份失败不在这里记：dailySnap 内部自己有失败记账+15 分钟重试 */ }
       }
     }
-    return { found, missing };
+    return { found, missing, left };
   }
 
   /* 孤儿回收：主档/备份/快照都不引用的 '@mv' 键才删（启动空闲时跑一次）
@@ -9399,7 +9503,7 @@ const MediaVault = (function () {
     hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs,
     shadow, readShadow, snap, listSnaps, readSnap,
     snapFull, listFull, readFull, harvest,
-    stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing }; },
+    stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing, left: st.left }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
     broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); },
     /* 她 10-10：媒体本体搬原生，透传 MediaStore 的搬家器给启动链；mediaStore 供探针验双写 */
@@ -13380,23 +13484,35 @@ const Engine = (function () {
 })();
 
 /* =====================================================
-   LOVE♡X · doodle.js —— TA 的随手涂鸦（她 10-08 00:58 定）
+   LOVE♡X · doodle.js —— TA 的随手涂鸦（她 10-08 00:58 定；10-13 08:28 按她的方案重写）
    · 聊天气泡位独立掷「涂鸦率」（默认 1% 她拍的），掷中发一张 TA 现画的小画
-   · 种类要丰富（她："什么各种图案，种类，生物不同的，物品啥的都可以，颜色也都可以，各种丰富"）：
-     五大主题库 52 种 + 随机抖动线稿 + 马克笔配色 + 角落小装饰，同一主题每次画出来都不重样
-   · 画法：程序手绘——点位全部过一遍随机抖动再二次贝塞尔连笔（圆头笔帽），
-     纸底奶白 + 墨线，像拍照发群里的一张手绘小纸片；不碰网络、不占媒体库（单张 2~4KB 内联）
+   · 她 10-13 08:28 的方案（本人原文要点，照着做，不自己发明）：
+     1) 素材池里放的是【独立简笔基础单元】——线条小元素、零件，不是整张成品图；
+        分五类：人物部件 / 生物部件 / 景物部件 / 装饰线条 / 基础画笔。
+     2) AI 自主随机挑元素、随机数量、无强制搭配；每个元素随机缩放、镜像、旋转、平移、轻微扭曲；
+        画笔粗细与颜色随机幅度变化，线条粗细随机浮动，画笔类型随机；
+        摆放位置每次随机、不固定排版；【图层顺序随机】——谁在前谁在后每次不一样。
+     3) 实时拼接、一笔一笔渲染出涂鸦；每次构图都不一样。
+     4) 填涂颜色随机（可能多可能少），【填涂和画笔颜色是两码事】，不会一个做一个不做。
+     5) 局部擦除：随机对部分元素做「擦除」，画面有残缺感，不是完整干净轮廓。
+     6) 多层叠加：允许半透明元素互相重叠、颜色混合。
+     7) 留白控制：可以大面积留白只画一点点，也可以画满画布，两种风格随机切换。
+     8) 画风每次随机。
+     · 她定的元素上限：8 个（原文「上限一定要有的话就 8 个」）。
+     · 不读对话文本、不做关键词识别——AI 自己随性画（她原话「无关键词识别」）。
    · 渲染全走既有图片管道（m.type='img' + m.doodle 标记）：撤回/长按/引用/摘要一条不漏；
-     摘要显示「[涂鸦]」不冒充图片
+     摘要显示「[涂鸦]」不冒充图片。纸底奶白 + 墨线，单张 2~6KB 内联，不碰网络、不占媒体库。
    ===================================================== */
 const Doodle = (function () {
 
   const INK = '#3A3A42';
+  const PAPER = '#FFFEF8';
   /* 马克笔色板：内容色，她说颜色各种丰富——不套 UI 四色禁令（那是界面口径） */
   const PAL = ['#D96A5B', '#E8A33D', '#E5C95C', '#7FA86B', '#5E8FB8', '#8F7BB8', '#D886AE', '#8A6F5C', '#5FA8A0'];
 
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
   /* ---------- 手绘工具 ---------- */
   /* 点位抖动：每个点随机偏移，出来就是「手不稳」的味道（amp 不给就用默认 1.2，别出 NaN） */
@@ -13415,6 +13531,7 @@ const Doodle = (function () {
   }
   /* 二次贝塞尔连笔（过中点），圆头笔帽下零长线就是圆点 */
   function smooth(pts) {
+    if (!pts || !pts.length) return 'M0 0';
     if (pts.length < 2) return 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
     let d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
     for (let i = 1; i < pts.length - 1; i++) {
@@ -13426,389 +13543,6 @@ const Doodle = (function () {
     return d;
   }
   const dot = (x, y) => [[x, y], [x + 0.01, y]];
-
-  /* ---------- 主题库：52 种 ---------- */
-  /* 每个主题 = f(A) → 笔画数组；A={ink, a:[三个马克笔色]}；笔画={pts, c:'ink'|0|1|2, w} */
-  const CATS = ['生物', '食物', '物品', '自然', '图案', '随笔'];
-  const SUBJECTS = [
-    /* ===== 生物 ===== */
-    { n: '小猫', cat: 0, f: A => [
-      { pts: J(E(50, 52, 20, 17), 1.2), c: 'ink' },
-      { pts: J([[34, 40], [28, 22], [44, 33]]), c: 'ink' },
-      { pts: J([[66, 40], [72, 22], [56, 33]]), c: 'ink' },
-      { pts: dot(43, 50), c: 'ink', w: 3.4 }, { pts: dot(57, 50), c: 'ink', w: 3.4 },
-      { pts: J(E(50, 58, 4, 3), 0.5), c: A.a[0] },
-      { pts: J([[46, 63], [50, 66], [54, 63]]), c: 'ink' },
-      { pts: J([[30, 54], [22, 52]]), c: 'ink' }, { pts: J([[30, 58], [22, 59]]), c: 'ink' },
-      { pts: J([[70, 54], [78, 52]]), c: 'ink' }, { pts: J([[70, 58], [78, 59]]), c: 'ink' }
-    ] },
-    { n: '小狗', cat: 0, f: A => [
-      { pts: J(E(50, 52, 19, 17), 1.2), c: 'ink' },
-      { pts: J(E(30, 44, 8, 14, false, Math.PI * 0.7, Math.PI * 1.5)), c: A.a[0] },
-      { pts: J(E(70, 44, 8, 14, false, Math.PI * 1.5, Math.PI * 2.3)), c: A.a[0] },
-      { pts: dot(44, 49), c: 'ink', w: 3 }, { pts: dot(56, 49), c: 'ink', w: 3 },
-      { pts: J(E(50, 59, 5, 4), 0.5), c: 'ink' },
-      { pts: J([[47, 64], [50, 70], [53, 64]]), c: A.a[1] }
-    ] },
-    { n: '兔子', cat: 0, f: A => [
-      { pts: J(E(50, 60, 18, 16), 1.2), c: 'ink' },
-      { pts: J(E(42, 26, 5, 14)), c: A.a[0] },
-      { pts: J(E(58, 26, 5, 14)), c: A.a[0] },
-      { pts: dot(44, 57), c: 'ink', w: 3 }, { pts: dot(56, 57), c: 'ink', w: 3 },
-      { pts: dot(50, 64), c: A.a[1], w: 2.6 },
-      { pts: J([[36, 74], [50, 70], [64, 74]]), c: 'ink' }
-    ] },
-    { n: '小熊', cat: 0, f: A => [
-      { pts: J(E(50, 54, 20, 18), 1.2), c: A.a[0] },
-      { pts: J(E(34, 36, 7, 7)), c: A.a[0] },
-      { pts: J(E(66, 36, 7, 7)), c: A.a[0] },
-      { pts: J(E(50, 61, 8, 6), 0.8), c: 'ink' },
-      { pts: dot(50, 58), c: 'ink', w: 3.2 },
-      { pts: dot(43, 50), c: 'ink', w: 3 }, { pts: dot(57, 50), c: 'ink', w: 3 }
-    ] },
-    { n: '小鸟', cat: 0, f: A => [
-      { pts: J(E(48, 52, 16, 13), 1.2), c: A.a[0] },
-      { pts: J(E(48, 50, 9, 7, false, -Math.PI * 0.2, Math.PI * 0.8)), c: 'ink' },
-      { pts: J([[64, 50], [74, 54], [64, 56]]), c: A.a[1] },
-      { pts: dot(56, 46), c: 'ink', w: 3 },
-      { pts: J([[44, 65], [44, 74]]), c: 'ink' }, { pts: J([[54, 65], [54, 74]]), c: 'ink' }
-    ] },
-    { n: '小鱼', cat: 0, f: A => [
-      { pts: J(E(46, 52, 20, 12), 1.1), c: A.a[0] },
-      { pts: J([[66, 52], [82, 42], [82, 62], [66, 52]]), c: A.a[0] },
-      { pts: dot(36, 49), c: 'ink', w: 3 },
-      { pts: J(E(46, 52, 8, 5, false, Math.PI, Math.PI * 2)), c: 'ink' },
-      { pts: J([[24, 38], [21, 34]]), c: 'ink' }, { pts: J([[30, 34], [28, 29]]), c: 'ink' }
-    ] },
-    { n: '蝴蝶', cat: 0, f: A => [
-      { pts: J([[50, 34], [50, 66]]), c: 'ink' },
-      { pts: J(E(34, 44, 14, 11)), c: A.a[0] },
-      { pts: J(E(66, 44, 14, 11)), c: A.a[0] },
-      { pts: J(E(38, 62, 10, 8)), c: A.a[1] },
-      { pts: J(E(62, 62, 10, 8)), c: A.a[1] },
-      { pts: J([[46, 34], [40, 24]]), c: 'ink' }, { pts: J([[54, 34], [60, 24]]), c: 'ink' },
-      { pts: dot(40, 24), c: 'ink', w: 2.4 }, { pts: dot(60, 24), c: 'ink', w: 2.4 }
-    ] },
-    { n: '乌龟', cat: 0, f: A => [
-      { pts: J(E(50, 54, 20, 14, false, Math.PI, Math.PI * 2)), c: A.a[0] },
-      { pts: J([[30, 54], [70, 54]]), c: A.a[0] },
-      { pts: J(E(50, 44, 9, 7)), c: 'ink' },
-      { pts: J(E(78, 52, 6, 5)), c: 'ink' },
-      { pts: J([[36, 68], [36, 74]]), c: 'ink' }, { pts: J([[62, 68], [62, 74]]), c: 'ink' }
-    ] },
-    { n: '恐龙', cat: 0, f: A => [
-      { pts: J(E(44, 56, 16, 12), 1.1), c: A.a[0] },
-      { pts: J([[58, 56], [58, 40], [66, 40]]), c: A.a[0] },
-      { pts: J([[28, 56], [14, 48], [20, 60]]), c: A.a[0] },
-      { pts: J([[40, 68], [40, 76]]), c: 'ink' }, { pts: J([[54, 68], [54, 76]]), c: 'ink' },
-      { pts: J([[44, 38], [50, 30], [56, 38]]), c: 'ink' },
-      { pts: dot(62, 44), c: 'ink', w: 2.8 }
-    ] },
-    { n: '青蛙', cat: 0, f: A => [
-      { pts: J(E(50, 58, 20, 15), 1.2), c: A.a[0] },
-      { pts: J(E(41, 40, 7, 7)), c: A.a[0] },
-      { pts: J(E(59, 40, 7, 7)), c: A.a[0] },
-      { pts: dot(41, 40), c: 'ink', w: 2.8 }, { pts: dot(59, 40), c: 'ink', w: 2.8 },
-      { pts: J([[38, 62], [50, 66], [62, 62]]), c: 'ink' }
-    ] },
-    { n: '章鱼', cat: 0, f: A => [
-      { pts: J(E(50, 44, 18, 15), 1.2), c: A.a[0] },
-      { pts: J([[38, 56], [34, 70], [40, 74]]), c: A.a[0] },
-      { pts: J([[46, 58], [45, 74], [51, 76]]), c: A.a[0] },
-      { pts: J([[56, 57], [60, 72], [56, 77]]), c: A.a[0] },
-      { pts: J([[64, 54], [70, 68], [66, 73]]), c: A.a[0] },
-      { pts: dot(44, 42), c: 'ink', w: 3 }, { pts: dot(56, 42), c: 'ink', w: 3 },
-      { pts: J([[46, 50], [50, 53], [54, 50]]), c: 'ink' }
-    ] },
-    { n: '企鹅', cat: 0, f: A => [
-      { pts: J(E(50, 54, 16, 20), 1.2), c: 'ink' },
-      { pts: J(E(50, 58, 9, 13), 0.8), c: A.a[0] },
-      { pts: dot(45, 46), c: 'ink', w: 2.8 }, { pts: dot(55, 46), c: 'ink', w: 2.8 },
-      { pts: J([[48, 52], [52, 52], [50, 56], [48, 52]]), c: A.a[1] },
-      { pts: J([[44, 74], [42, 78]]), c: A.a[1] }, { pts: J([[56, 74], [58, 78]]), c: A.a[1] }
-    ] },
-    { n: '猫头鹰', cat: 0, f: A => [
-      { pts: J(E(50, 54, 17, 19), 1.2), c: A.a[0] },
-      { pts: J(E(43, 46, 7, 7)), c: 'ink' },
-      { pts: J(E(57, 46, 7, 7)), c: 'ink' },
-      { pts: dot(43, 46), c: 'ink', w: 2.8 }, { pts: dot(57, 46), c: 'ink', w: 2.8 },
-      { pts: J([[48, 52], [52, 52], [50, 56], [48, 52]]), c: A.a[1] },
-      { pts: J([[36, 36], [32, 28]]), c: 'ink' }, { pts: J([[64, 36], [68, 28]]), c: 'ink' },
-      { pts: J([[42, 66], [58, 66]]), c: 'ink' }
-    ] },
-    { n: '刺猬', cat: 0, f: A => [
-      { pts: J(E(56, 58, 16, 12, false, -Math.PI, 0)), c: 'ink' },
-      { pts: J([[40, 58], [34, 46], [42, 50], [40, 38], [48, 46], [50, 34], [56, 44], [62, 36], [62, 48], [70, 42], [68, 54], [76, 54]]), c: A.a[0] },
-      { pts: dot(72, 60), c: 'ink', w: 2.8 },
-      { pts: dot(64, 57), c: 'ink', w: 2.6 }
-    ] },
-
-    /* ===== 食物 ===== */
-    { n: '蛋糕', cat: 1, f: A => [
-      { pts: J([[28, 72], [28, 56], [72, 56], [72, 72], [28, 72]]), c: A.a[0] },
-      { pts: J([[32, 56], [32, 44], [68, 44], [68, 56]]), c: A.a[1] },
-      { pts: J([[48, 44], [48, 32]]), c: 'ink' }, { pts: J([[58, 44], [58, 34]]), c: 'ink' },
-      { pts: J(E(48, 28, 2.4, 3.4)), c: A.a[2] }, { pts: J(E(58, 30, 2.4, 3.4)), c: A.a[2] },
-      { pts: J([[28, 72], [72, 72]]), c: 'ink' }
-    ] },
-    { n: '冰淇淋', cat: 1, f: A => [
-      { pts: J([[38, 52], [50, 82], [62, 52]]), c: A.a[0] },
-      { pts: J([[38, 52], [62, 52]]), c: A.a[0] },
-      { pts: J(E(50, 42, 13, 11)), c: A.a[1] },
-      { pts: J(E(44, 32, 8, 7)), c: A.a[2] },
-      { pts: dot(46, 60), c: 'ink', w: 1.8 }, { pts: dot(54, 68), c: 'ink', w: 1.8 }
-    ] },
-    { n: '甜甜圈', cat: 1, f: A => [
-      { pts: J(E(50, 52, 22, 19)), c: A.a[0] },
-      { pts: J(E(50, 52, 8, 6.5)), c: 'ink' },
-      { pts: J([[38, 40], [42, 36]]), c: A.a[1] }, { pts: J([[58, 38], [62, 42]]), c: A.a[2] },
-      { pts: J([[36, 60], [40, 64]]), c: A.a[2] }, { pts: J([[60, 60], [64, 56]]), c: A.a[1] }
-    ] },
-    { n: '草莓', cat: 1, f: A => [
-      { pts: J(E(50, 56, 15, 17, false, Math.PI * 0.15, Math.PI * 0.85)), c: A.a[0] },
-      { pts: J(E(50, 56, 15, 17, false, Math.PI * 1.15, Math.PI * 1.85)), c: A.a[0] },
-      { pts: J(E(50, 40, 10, 4.5)), c: A.a[1] },
-      { pts: J([[50, 40], [50, 30]]), c: A.a[1] },
-      { pts: dot(44, 56), c: 'ink', w: 1.6 }, { pts: dot(56, 56), c: 'ink', w: 1.6 }, { pts: dot(50, 66), c: 'ink', w: 1.6 }
-    ] },
-    { n: '西瓜', cat: 1, f: A => [
-      { pts: J(E(50, 46, 24, 22, false, 0, Math.PI)), c: A.a[0] },
-      { pts: J(E(50, 46, 20, 18, false, 0.15, Math.PI - 0.15)), c: A.a[1] },
-      { pts: dot(42, 56), c: 'ink', w: 2 }, { pts: dot(52, 60), c: 'ink', w: 2 }, { pts: dot(60, 54), c: 'ink', w: 2 },
-      { pts: J([[26, 46], [74, 46]]), c: 'ink' }
-    ] },
-    { n: '奶茶', cat: 1, f: A => [
-      { pts: J([[36, 34], [40, 76], [60, 76], [64, 34]]), c: 'ink' },
-      { pts: J([[34, 34], [66, 34]]), c: A.a[0] },
-      { pts: J([[56, 12], [50, 34]]), c: A.a[1] },
-      { pts: dot(46, 70), c: A.a[2], w: 3.4 }, { pts: dot(54, 72), c: A.a[2], w: 3.4 }, { pts: dot(50, 66), c: A.a[2], w: 3.4 }
-    ] },
-    { n: '糖葫芦', cat: 1, f: A => [
-      { pts: J([[50, 20], [50, 84]]), c: A.a[0] },
-      { pts: J(E(50, 32, 9, 9)), c: A.a[1] },
-      { pts: J(E(50, 50, 9, 9)), c: A.a[1] },
-      { pts: J(E(50, 68, 9, 9)), c: A.a[1] }
-    ] },
-    { n: '汉堡', cat: 1, f: A => [
-      { pts: J(E(50, 42, 22, 12, false, Math.PI, Math.PI * 2)), c: A.a[0] },
-      { pts: J([[28, 54], [72, 54]]), c: A.a[1] },
-      { pts: J([[28, 60], [72, 60]]), c: A.a[2] },
-      { pts: J([[28, 60], [28, 66], [72, 66], [72, 60]]), c: A.a[0] },
-      { pts: dot(42, 36), c: 'ink', w: 1.6 }, { pts: dot(54, 34), c: 'ink', w: 1.6 }
-    ] },
-
-    /* ===== 物品 ===== */
-    { n: '咖啡杯', cat: 2, f: A => [
-      { pts: J([[34, 42], [38, 74], [62, 74], [66, 42]]), c: 'ink' },
-      { pts: J([[32, 42], [68, 42]]), c: A.a[0] },
-      { pts: J(E(68, 54, 7, 8, false, -Math.PI * 0.5, Math.PI * 0.5)), c: 'ink' },
-      { pts: J([[44, 20], [42, 30]]), c: A.a[1] },
-      { pts: J([[54, 18], [52, 30]]), c: A.a[1] }
-    ] },
-    { n: '礼物盒', cat: 2, f: A => [
-      { pts: J([[28, 48], [28, 76], [72, 76], [72, 48], [28, 48]]), c: A.a[0] },
-      { pts: J([[50, 48], [50, 76]]), c: A.a[1] },
-      { pts: J([[28, 48], [24, 40], [76, 40], [72, 48]]), c: A.a[0] },
-      { pts: J(E(43, 34, 6, 5)), c: A.a[1] }, { pts: J(E(57, 34, 6, 5)), c: A.a[1] }
-    ] },
-    { n: '雨伞', cat: 2, f: A => [
-      { pts: J(E(50, 46, 26, 22, false, Math.PI, Math.PI * 2)), c: A.a[0] },
-      { pts: J([[50, 24], [50, 76]]), c: 'ink' },
-      { pts: J(E(50, 70, 6, 6, false, 0, Math.PI)), c: 'ink' },
-      { pts: J([[24, 46], [76, 46]]), c: 'ink' }
-    ] },
-    { n: '吉他', cat: 2, f: A => [
-      { pts: J(E(46, 64, 16, 13)), c: A.a[0] },
-      { pts: J(E(46, 64, 6, 5)), c: 'ink' },
-      { pts: J([[52, 52], [62, 22]]), c: A.a[1] },
-      { pts: J([[60, 20], [68, 26]]), c: A.a[1] },
-      { pts: J([[50, 48], [58, 20]]), c: 'ink' }
-    ] },
-    { n: '一本书', cat: 2, f: A => [
-      { pts: J([[50, 34], [50, 72]]), c: 'ink' },
-      { pts: J(E(50, 34, 24, 6, false, Math.PI, Math.PI * 2)), c: A.a[0] },
-      { pts: J([[26, 34], [26, 70], [50, 72]]), c: A.a[0] },
-      { pts: J([[74, 34], [74, 70], [50, 72]]), c: A.a[0] }
-    ] },
-    { n: '灯泡', cat: 2, f: A => [
-      { pts: J(E(50, 42, 16, 16)), c: A.a[0] },
-      { pts: J([[44, 58], [44, 68], [56, 68], [56, 58]]), c: 'ink' },
-      { pts: J([[44, 72], [56, 72]]), c: 'ink' },
-      { pts: J([[46, 42], [50, 50], [54, 42]]), c: A.a[1] },
-      { pts: J([[50, 14], [50, 20]]), c: 'ink' }, { pts: J([[26, 42], [32, 42]]), c: 'ink' },
-      { pts: J([[68, 42], [74, 42]]), c: 'ink' }
-    ] },
-    { n: '气球', cat: 2, f: A => [
-      { pts: J(E(50, 38, 15, 18)), c: A.a[0] },
-      { pts: J([[48, 56], [50, 60], [52, 56]]), c: A.a[0] },
-      { pts: J([[50, 60], [46, 70], [52, 78], [48, 86]]), c: 'ink' }
-    ] },
-    { n: '自行车', cat: 2, f: A => [
-      { pts: J(E(30, 62, 12, 12)), c: 'ink' },
-      { pts: J(E(70, 62, 12, 12)), c: 'ink' },
-      { pts: J([[30, 62], [44, 40], [62, 40], [70, 62]]), c: A.a[0] },
-      { pts: J([[30, 62], [50, 62], [70, 62]]), c: A.a[0] },
-      { pts: J([[44, 40], [40, 34], [48, 34]]), c: 'ink' },
-      { pts: J([[62, 40], [58, 34]]), c: 'ink' }
-    ] },
-    { n: '信封', cat: 2, f: A => [
-      { pts: J([[24, 36], [24, 70], [76, 70], [76, 36], [24, 36]]), c: 'ink' },
-      { pts: J([[24, 36], [50, 56], [76, 36]]), c: A.a[0] },
-      { pts: J(E(74, 26, 2.4, 2.4)), c: A.a[1] }
-    ] },
-    { n: '相机', cat: 2, f: A => [
-      { pts: J([[26, 40], [26, 70], [74, 70], [74, 40], [26, 40]]), c: 'ink' },
-      { pts: J([[40, 40], [44, 32], [56, 32], [60, 40]]), c: 'ink' },
-      { pts: J(E(50, 55, 11, 10)), c: A.a[0] },
-      { pts: J(E(50, 55, 5, 4.5)), c: A.a[1] },
-      { pts: dot(68, 46), c: A.a[2], w: 2.6 }
-    ] },
-    { n: '花盆', cat: 2, f: A => [
-      { pts: J([[38, 60], [42, 78], [58, 78], [62, 60]]), c: A.a[0] },
-      { pts: J([[50, 60], [50, 40]]), c: A.a[1] },
-      { pts: J(E(50, 34, 8, 8)), c: A.a[2] },
-      { pts: J(E(40, 30, 6, 6)), c: A.a[2] }, { pts: J(E(60, 30, 6, 6)), c: A.a[2] },
-      { pts: J(E(45, 40, 6, 6)), c: A.a[2] }, { pts: J(E(55, 40, 6, 6)), c: A.a[2] }
-    ] },
-    { n: '眼镜', cat: 2, f: A => [
-      { pts: J(E(36, 52, 12, 10)), c: A.a[0] },
-      { pts: J(E(64, 52, 12, 10)), c: A.a[0] },
-      { pts: J([[48, 52], [52, 52]]), c: 'ink' },
-      { pts: J([[24, 52], [16, 48]]), c: 'ink' }, { pts: J([[76, 52], [84, 48]]), c: 'ink' }
-    ] },
-    { n: '时钟', cat: 2, f: A => [
-      { pts: J(E(50, 52, 22, 22)), c: 'ink' },
-      { pts: J([[50, 52], [50, 38]]), c: A.a[0] },
-      { pts: J([[50, 52], [60, 58]]), c: A.a[1] },
-      { pts: dot(50, 34), c: 'ink', w: 1.6 }, { pts: dot(68, 52), c: 'ink', w: 1.6 },
-      { pts: dot(50, 70), c: 'ink', w: 1.6 }, { pts: dot(32, 52), c: 'ink', w: 1.6 }
-    ] },
-    { n: '手机', cat: 2, f: A => [
-      { pts: J([[38, 22], [38, 80], [62, 80], [62, 22], [38, 22]]), c: 'ink' },
-      { pts: J([[42, 30], [42, 70], [58, 70], [58, 30], [42, 30]]), c: A.a[0] },
-      { pts: dot(50, 75), c: 'ink', w: 2.2 }
-    ] },
-
-    /* ===== 自然 ===== */
-    { n: '太阳', cat: 3, f: A => [
-      { pts: J(E(50, 50, 14, 14)), c: A.a[0] },
-      { pts: J([[50, 22], [50, 14]]), c: A.a[0] }, { pts: J([[50, 78], [50, 86]]), c: A.a[0] },
-      { pts: J([[22, 50], [14, 50]]), c: A.a[0] }, { pts: J([[78, 50], [86, 50]]), c: A.a[0] },
-      { pts: J([[31, 31], [25, 25]]), c: A.a[0] }, { pts: J([[69, 69], [75, 75]]), c: A.a[0] },
-      { pts: J([[69, 31], [75, 25]]), c: A.a[0] }, { pts: J([[31, 69], [25, 75]]), c: A.a[0] }
-    ] },
-    { n: '月亮', cat: 3, f: A => [
-      { pts: J(E(48, 50, 20, 20, false, Math.PI * 0.42, Math.PI * 1.58)), c: A.a[0] },
-      { pts: J(E(30, 50, 24, 20, false, Math.PI * 1.55, Math.PI * 2.45)), c: A.a[0] },
-      { pts: dot(66, 30), c: 'ink', w: 2 }, { pts: dot(74, 42), c: 'ink', w: 1.6 },
-      { pts: dot(70, 56), c: 'ink', w: 1.6 }
-    ] },
-    { n: '星星', cat: 3, f: A => [
-      { pts: J([[50, 20], [58, 42], [82, 42], [63, 56], [70, 78], [50, 64], [30, 78], [37, 56], [18, 42], [42, 42], [50, 20]]), c: A.a[0] }
-    ] },
-    { n: '云朵', cat: 3, f: A => [
-      { pts: J(E(38, 54, 12, 11, false, Math.PI * 0.5, Math.PI * 1.5)), c: A.a[0] },
-      { pts: J(E(50, 44, 13, 12, false, Math.PI, Math.PI * 1.9)), c: A.a[0] },
-      { pts: J(E(62, 54, 12, 11, false, Math.PI * 1.5, Math.PI * 0.5)), c: A.a[0] },
-      { pts: J([[38, 65], [62, 65]]), c: A.a[0] }
-    ] },
-    { n: '彩虹', cat: 3, f: A => [
-      { pts: J(E(50, 68, 30, 30, false, Math.PI, Math.PI * 2)), c: A.a[0] },
-      { pts: J(E(50, 68, 23, 23, false, Math.PI, Math.PI * 2)), c: A.a[1] },
-      { pts: J(E(50, 68, 16, 16, false, Math.PI, Math.PI * 2)), c: A.a[2] },
-      { pts: dot(28, 70), c: 'ink', w: 2.4 }, { pts: dot(72, 70), c: 'ink', w: 2.4 }
-    ] },
-    { n: '大树', cat: 3, f: A => [
-      { pts: J([[46, 60], [46, 80]]), c: A.a[0] }, { pts: J([[54, 60], [54, 80]]), c: A.a[0] },
-      { pts: J(E(50, 44, 20, 18)), c: A.a[1] },
-      { pts: J(E(36, 52, 10, 9)), c: A.a[1] }, { pts: J(E(64, 52, 10, 9)), c: A.a[1] }
-    ] },
-    { n: '小花', cat: 3, f: A => [
-      { pts: J(E(50, 36, 7, 7)), c: A.a[0] },
-      { pts: J(E(38, 30, 7, 7)), c: A.a[1] }, { pts: J(E(62, 30, 7, 7)), c: A.a[1] },
-      { pts: J(E(42, 44, 7, 7)), c: A.a[1] }, { pts: J(E(58, 44, 7, 7)), c: A.a[1] },
-      { pts: J([[50, 50], [50, 78]]), c: A.a[2] },
-      { pts: J([[50, 62], [40, 56]]), c: A.a[2] }, { pts: J([[50, 70], [60, 64]]), c: A.a[2] }
-    ] },
-    { n: '小山', cat: 3, f: A => [
-      { pts: J([[16, 74], [42, 34], [60, 60]]), c: A.a[0] },
-      { pts: J([[52, 74], [70, 46], [86, 74]]), c: A.a[1] },
-      { pts: J([[36, 42], [42, 34], [48, 42]]), c: 'ink' },
-      { pts: J([[14, 74], [88, 74]]), c: 'ink' }
-    ] },
-    { n: '雪人', cat: 3, f: A => [
-      { pts: J(E(50, 68, 17, 13)), c: 'ink' },
-      { pts: J(E(50, 44, 12, 11)), c: 'ink' },
-      { pts: dot(46, 42), c: 'ink', w: 2.4 }, { pts: dot(54, 42), c: 'ink', w: 2.4 },
-      { pts: J(E(50, 48, 3, 2.4)), c: A.a[0] },
-      { pts: J([[38, 56], [62, 56]]), c: A.a[1] },
-      { pts: J([[33, 66], [22, 58]]), c: A.a[2] }, { pts: J([[67, 66], [78, 58]]), c: A.a[2] }
-    ] },
-    { n: '叶子', cat: 3, f: A => [
-      { pts: J(E(50, 50, 12, 22, false, -Math.PI * 0.5, Math.PI * 1.5)), c: A.a[0] },
-      { pts: J([[50, 28], [50, 72]]), c: A.a[0] },
-      { pts: J([[50, 44], [40, 40]]), c: 'ink' }, { pts: J([[50, 56], [60, 52]]), c: 'ink' },
-      { pts: J([[50, 64], [42, 62]]), c: 'ink' }
-    ] },
-
-    /* ===== 图案 ===== */
-    { n: '爱心', cat: 4, f: A => [
-      { pts: J(E(41, 40, 12, 11, false, Math.PI * 0.8, Math.PI * 2.2)), c: A.a[0] },
-      { pts: J(E(59, 40, 12, 11, false, Math.PI * 0.8, Math.PI * 2.2)), c: A.a[0] },
-      { pts: J([[29, 46], [50, 76], [71, 46]]), c: A.a[0] }
-    ] },
-    { n: '波浪', cat: 4, f: A => [
-      { pts: J(E(50, 36, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[0] },
-      { pts: J(E(50, 50, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[1] },
-      { pts: J(E(50, 64, 28, 8, false, Math.PI * 1.1, Math.PI * 1.9)), c: A.a[2] }
-    ] },
-    { n: '蜗牛线', cat: 4, f: A => {
-      const pts = [];
-      for (let i = 0; i <= 40; i++) { const a = i * 0.32, r = 3 + i * 1.05; pts.push([50 + r * Math.cos(a), 52 + r * Math.sin(a) * 0.9]); }
-      return [{ pts: J(pts, 0.6), c: A.a[0] }];
-    } },
-    { n: '音符', cat: 4, f: A => [
-      { pts: J(E(42, 68, 8, 6, false, 0, Math.PI * 2, 10)), c: A.a[0] },
-      { pts: J([[49, 68], [49, 30]]), c: 'ink' },
-      { pts: J([[49, 30], [64, 36], [64, 46]]), c: 'ink' }
-    ] },
-    { n: '烟花', cat: 4, f: A => [
-      { pts: J([[50, 50], [50, 24]]), c: A.a[0] }, { pts: J([[50, 50], [72, 38]]), c: A.a[1] },
-      { pts: J([[50, 50], [72, 62]]), c: A.a[0] }, { pts: J([[50, 50], [50, 76]]), c: A.a[1] },
-      { pts: J([[50, 50], [28, 62]]), c: A.a[0] }, { pts: J([[50, 50], [28, 38]]), c: A.a[1] },
-      { pts: dot(50, 20), c: 'ink', w: 2.2 }, { pts: dot(76, 36), c: 'ink', w: 2.2 },
-      { pts: dot(76, 64), c: 'ink', w: 2.2 }, { pts: dot(50, 80), c: 'ink', w: 2.2 }
-    ] },
-    { n: '星座', cat: 4, f: A => [
-      { pts: dot(28, 30), c: A.a[0], w: 3.2 }, { pts: dot(50, 22), c: A.a[0], w: 3.2 },
-      { pts: dot(70, 34), c: A.a[0], w: 3.2 }, { pts: dot(62, 58), c: A.a[1], w: 3.2 },
-      { pts: dot(36, 68), c: A.a[1], w: 3.2 },
-      { pts: J([[28, 30], [50, 22], [70, 34], [62, 58], [36, 68], [28, 30]]), c: 'ink' }
-    ] },
-  /* 直线系三题（她 10-09 19:49：直线图形也进对方的涂鸦库） */
-  { n: '小房子', cat: 2, f: A => [
-    { pts: J([[28, 52], [28, 80], [72, 80], [72, 52]]), c: 'ink' },
-    { pts: J([[22, 52], [50, 28], [78, 52]]), c: A.a[0] },
-    { pts: J([[44, 80], [44, 64], [56, 64], [56, 80]]), c: A.a[1] },
-    { pts: J([[32, 58], [40, 58], [40, 66], [32, 66], [32, 58]]), c: 'ink' }
-  ] },
-  { n: '火箭', cat: 2, f: A => [
-    { pts: J([[44, 26], [56, 26], [59, 46], [59, 66], [41, 66], [41, 46], [44, 26]]), c: 'ink' },
-    { pts: J([[44, 26], [50, 12], [56, 26]]), c: A.a[0] },
-    { pts: J([[41, 52], [33, 70], [41, 66]]), c: A.a[1] },
-    { pts: J([[59, 52], [67, 70], [59, 66]]), c: A.a[1] },
-    { pts: J([[46, 66], [50, 80], [54, 66]]), c: A.a[2] || A.a[0] }
-  ] },
-  { n: '小旗', cat: 4, f: A => [
-    { pts: J([[38, 20], [38, 82]]), c: 'ink' },
-    { pts: J([[38, 24], [70, 32], [38, 44]]), c: A.a[0] }
-  ] }
-  ];
-
-  /* ---------- 她 10-12 23:18：TA 也要能「自己创作」 ----------
-     不总是从固定主题库里抽：给 TA 一手线一支笔，随手画出无规则的东西——
-     横线/竖线/斜线/波浪/锯齿/螺旋/圈圈/涂抹，还有火柴人（姿势全靠关节角度随机）。
-     这些项和固定主题同结构 {n, cat, f}，接在同一个池子里，只是抽中权重更高。 */
   function wob(x0, y0, x1, y1, amp) { return J([[x0, y0], [x1, y1]], amp == null ? 1.6 : amp); }
   /* 波浪 / 锯齿：沿一条线来回摆开 */
   function wave(x0, y0, x1, y1, amp, n, zig) {
@@ -13853,19 +13587,6 @@ const Doodle = (function () {
     pts.push(pts[0].slice());
     return J(pts, 1);
   }
-  /* 她 10-13 00:06：火柴人姿势要不定——先抽一个姿势，再按姿势给手脚角度，不是每次都站得端端正正 */
-  const STICK_POSES = [
-    { n: '站', arm: [-0.95, 0.95], leg: [0.32, 0.9], up: 0 },
-    { n: '跳', arm: [-1.5, -0.75], leg: [0.85, 1.15], up: -6 },
-    { n: '举双手', arm: [-1.62, -1.2], leg: [0.28, 0.6], up: -2 },
-    { n: '挥手', arm: [-1.75, 0.55], leg: [0.28, 0.7], up: 0 },
-    { n: '跑', arm: [-1.15, -0.35], leg: [0.85, 1.15], up: -3 },
-    { n: '坐', arm: [0.3, 0.9], leg: [1.05, 1.2], up: 7 },
-    { n: '躺', arm: [-1.35, -0.85], leg: [1.1, 1.25], up: 13 },
-    { n: '叉腰', arm: [0.5, 0.85], leg: [0.35, 0.8], up: 0 },
-    { n: '蹲', arm: [0.65, 1.1], leg: [0.95, 1.15], up: 9 },
-    { n: '歪头', arm: [-0.6, 0.5], leg: [0.45, 0.95], up: 1 }
-  ];
   /* 折线：一段一段往同一侧折（不规则线的一种） */
   function zigzag(x0, y0, x1, y1, seg, amp) {
     const pts = [], n = Math.max(2, Math.round(seg));
@@ -13879,266 +13600,311 @@ const Doodle = (function () {
     }
     return J(pts, 1);
   }
-  /* 火柴人：姿势不定——角度组合自己长出来 */
-  function stickman(A) {
-    const cx = rnd(40, 62), cy = rnd(42, 58), s = rnd(0.85, 1.15);
-    const hr = rnd(5, 6.6) * s;
+  /* 火柴人姿势（她 10-13 00:06：姿势不定，不是每次都站得端端正正） */
+  const STICK_POSES = [
+    { n: '站', arm: [-0.95, 0.95], leg: [0.32, 0.9], up: 0 },
+    { n: '跳', arm: [-1.5, -0.75], leg: [0.85, 1.15], up: -6 },
+    { n: '举双手', arm: [-1.62, -1.2], leg: [0.28, 0.6], up: -2 },
+    { n: '挥手', arm: [-1.75, 0.55], leg: [0.28, 0.7], up: 0 },
+    { n: '跑', arm: [-1.15, -0.35], leg: [0.85, 1.15], up: -3 },
+    { n: '坐', arm: [0.3, 0.9], leg: [1.05, 1.2], up: 7 },
+    { n: '躺', arm: [-1.35, -0.85], leg: [1.1, 1.25], up: 13 },
+    { n: '叉腰', arm: [0.5, 0.85], leg: [0.35, 0.8], up: 0 },
+    { n: '蹲', arm: [0.65, 1.1], leg: [0.95, 1.15], up: 9 },
+    { n: '歪头', arm: [-0.6, 0.5], leg: [0.45, 0.95], up: 1 }
+  ];
+  /* 火柴人：真的一个关节一个关节长出来（元素池里的「小人」单元） */
+  function stickman() {
     const pose = pick(STICK_POSES);
-    const up = (pose.up || 0) * s;
-    const headY = cy - 20 * s + up, hipY = cy + 2 * s + up, shY = cy - 12 * s + up;
-    const lean = rnd(-0.32, 0.32);
+    const s = rnd(0.8, 1.2);
+    const hr = rnd(4, 5.6) * s;
+    const shY = -rnd(6, 8) * s;
+    const hipY = rnd(7, 9) * s;
+    const lean = rnd(-0.3, 0.3);
     const armA = rnd(pose.arm[0], pose.arm[1]), armB = rnd(pose.arm[0], pose.arm[1]);
     const legA = rnd(pose.leg[0], pose.leg[1]), legB = rnd(pose.leg[0], pose.leg[1]);
-    const armL = rnd(9, 13) * s, legL = rnd(11, 15) * s;
-    const hipX = cx + lean * 10, shX = cx + lean * 8;
+    const armL = rnd(8, 12) * s, legL = rnd(10, 14) * s;
+    const shX = Math.sin(lean) * 3;
     const out = [];
-    out.push({ pts: J(E(hipX, headY, hr, hr), 0.8), c: 'ink' });
-    out.push({ pts: J([[cx + lean * 4, headY + hr], [hipX, hipY]], 0.9), c: 'ink' });
-    out.push({ pts: J([[shX, shY], [shX + Math.cos(Math.PI + armA) * armL, shY + Math.sin(Math.PI + armA) * armL]], 0.9), c: 'ink' });
-    out.push({ pts: J([[shX, shY], [shX + Math.cos(armB) * armL, shY + Math.sin(armB) * armL]], 0.9), c: 'ink' });
-    out.push({ pts: J([[hipX, hipY], [hipX + Math.cos(Math.PI / 2 + legA) * legL, hipY + Math.sin(Math.PI / 2 + legA) * legL]], 0.9), c: 'ink' });
-    out.push({ pts: J([[hipX, hipY], [hipX + Math.cos(Math.PI / 2 - legB) * legL, hipY + Math.sin(Math.PI / 2 - legB) * legL]], 0.9), c: 'ink' });
-    if (Math.random() < 0.5) {
-      out.push({ pts: dot(hipX - hr * 0.35, headY - 1), c: 'ink', w: 2.4 });
-      out.push({ pts: dot(hipX + hr * 0.35, headY - 1), c: 'ink', w: 2.4 });
-    }
-    /* 三成多手里拎个小东西（彩色小气球） */
-    if (Math.random() < 0.35) {
-      out.push({ pts: J(E(shX + armL * 1.05, shY - armL * 0.7, rnd(2.5, 4), rnd(2.8, 4.2)), 0.7), c: A.a[0] });
-    }
-    return out;
+    out.push({ pts: J(E(shX, shY - hr - 2 * s, hr, hr * 1.06, true)), c: 'ink', w: 2.4 });
+    out.push({ pts: J([[shX, shY - 1], [shX * 1.4, hipY - 8]], 1), c: 'ink', w: 2.4 });
+    const armDir = (ang, len) => [shX + Math.cos(ang) * len, shY - 2 + Math.sin(ang) * len];
+    const h1 = armDir(armA, armL), h2 = armDir(Math.PI - armB, armL);
+    out.push({ pts: J([[shX, shY - 2], h1], 1.1), c: 'ink', w: 2.2 });
+    out.push({ pts: J([[shX, shY - 2], h2], 1.1), c: 'ink', w: 2.2 });
+    const f1 = [Math.cos(legA) * legL * rnd(0.45, 0.7), hipY - 8 + Math.sin(legA) * legL * rnd(0.45, 0.7)];
+    const f2 = [-Math.cos(legB) * legL * rnd(0.45, 0.7), hipY - 8 + Math.sin(legB) * legL * rnd(0.45, 0.7)];
+    out.push({ pts: J([[shX * 1.4, hipY - 8], f1], 1.1), c: 'ink', w: 2.2 });
+    out.push({ pts: J([[shX * 1.4, hipY - 8], f2], 1.1), c: 'ink', w: 2.2 });
+    return out.map(o => ({ pts: o.pts.map(p => [p[0] + rnd(-1, 1), p[1] - pose.up * 0.5 + rnd(-1, 1)]), c: o.c, w: o.w }));
   }
 
-  const FREEHAND = [
-    { n: '随手画的线', cat: 5, f: A => {
-      const out = [], N = Math.round(rnd(2, 5));
-      for (let i = 0; i < N; i++) {
-        const x0 = rnd(14, 60), y0 = rnd(16, 84);
-        out.push({ pts: wob(x0, y0, x0 + rnd(12, 34), y0 + rnd(-26, 26), 1.6), c: 'ink' });
-      }
-      return out;
-    } },
-    { n: '波浪线', cat: 5, f: A => {
-      const out = [];
-      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
-        const y = rnd(24, 76);
-        out.push({ pts: wave(rnd(12, 24), y, rnd(74, 88), y + rnd(-8, 8), rnd(4, 9), Math.round(rnd(3, 6))), c: i ? A.a[1] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '锯齿线', cat: 5, f: A => [{ pts: wave(rnd(12, 20), rnd(40, 60), rnd(78, 88), rnd(40, 60), rnd(4, 8), Math.round(rnd(4, 8)), true), c: 'ink' }] },
-    { n: '螺旋', cat: 5, f: A => [{ pts: spiral(rnd(40, 60), rnd(42, 58), rnd(2, 5), rnd(16, 26), rnd(1.6, 2.8)), c: 'ink' }] },
-    { n: '圈圈', cat: 5, f: A => {
-      const out = [];
-      for (let i = 0, N = Math.round(rnd(2, 4)); i < N; i++) {
-        out.push({ pts: J(E(rnd(26, 74), rnd(26, 74), rnd(5, 14), rnd(5, 13)), 1.4), c: i % 2 ? A.a[0] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '随手涂', cat: 5, f: A => [{ pts: scribble(rnd(36, 64), rnd(36, 64), rnd(16, 30), rnd(12, 26)), c: A.a[0] }] },
-    { n: '乱画的形状', cat: 5, f: A => {
-      const out = [];
-      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
-        out.push({ pts: blob(rnd(30, 70), rnd(30, 70), rnd(8, 18)), c: i % 2 ? A.a[1] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '火柴人', cat: 5, f: A => stickman(A) },
-    /* 她 10-13：再多些无规则图形——横线、竖线、斜线、打叉、折线、乱线团、点点、箭头 */
-    { n: '横线', cat: 5, f: A => {
-      const out = [];
-      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
-        const y = rnd(20, 80);
-        out.push({ pts: J([[rnd(12, 28), y], [rnd(72, 88), y + rnd(-3, 3)]], 1.1), c: i % 2 ? A.a[0] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '竖线', cat: 5, f: A => {
-      const out = [];
-      for (let i = 0, N = Math.round(rnd(1, 3)); i < N; i++) {
-        const x = rnd(20, 80);
-        out.push({ pts: J([[x, rnd(12, 30)], [x + rnd(-3, 3), rnd(68, 88)]], 1.1), c: i % 2 ? A.a[1] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '斜线', cat: 5, f: A => {
-      const out = [], N = Math.round(rnd(1, 4));
-      for (let i = 0; i < N; i++) {
-        const x0 = rnd(14, 46), y0 = rnd(16, 60);
-        out.push({ pts: wob(x0, y0, x0 + rnd(24, 40), y0 + rnd(16, 40), 1.3), c: i % 2 ? A.a[0] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '打叉', cat: 5, f: A => {
-      const cx = rnd(30, 70), cy = rnd(32, 68), d = rnd(9, 19);
-      return [
-        { pts: J([[cx - d, cy - d], [cx + d, cy + d]], 1.3), c: 'ink' },
-        { pts: J([[cx + d, cy - d], [cx - d, cy + d]], 1.3), c: A.a[0] }
-      ];
-    } },
-    { n: '折线', cat: 5, f: A => [{ pts: zigzag(rnd(12, 26), rnd(24, 76), rnd(74, 88), rnd(24, 76), rnd(3, 7), rnd(5, 13)), c: 'ink' }] },
-    { n: '乱线团', cat: 5, f: A => {
-      const out = [], cx = rnd(34, 66), cy = rnd(34, 64);
-      for (let i = 0, N = Math.round(rnd(2, 4)); i < N; i++) {
-        out.push({ pts: scribble(cx + rnd(-8, 8), cy + rnd(-8, 8), rnd(12, 24), rnd(10, 20)), c: i ? A.a[0] : 'ink' });
-      }
-      return out;
-    } },
-    { n: '点点', cat: 5, f: A => {
-      const out = [], N = Math.round(rnd(4, 10));
-      for (let i = 0; i < N; i++) out.push({ pts: dot(rnd(16, 84), rnd(16, 84)), c: (i % 3 ? 'ink' : A.a[0]), w: rnd(2, 3.4) });
-      return out;
-    } },
-    { n: '箭头', cat: 5, f: A => {
-      const x0 = rnd(16, 40), y0 = rnd(30, 70);
-      const ang = rnd(-0.9, 0.9) + (Math.random() < 0.5 ? 0 : Math.PI);
-      const len = rnd(26, 46), x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len;
-      const hl = rnd(7, 11), a1 = ang + 2.6, a2 = ang - 2.6;
-      return [
-        { pts: J([[x0, y0], [x1, y1]], 1), c: 'ink' },
-        { pts: J([[x1, y1], [x1 + Math.cos(a1) * hl, y1 + Math.sin(a1) * hl]], 0.7), c: 'ink' },
-        { pts: J([[x1, y1], [x1 + Math.cos(a2) * hl, y1 + Math.sin(a2) * hl]], 0.7), c: 'ink' }
-      ];
-    } }
+  /* ================= 素材池：五大类「独立简笔单元」 =================
+     她 10-13 08:28：放的是零件不是成品图；每类都持续可加。
+     单元结构 { n:名字, f(A)→笔画数组 }；坐标以 (0,0) 为中心，半径 10~20；
+     A.a 是这一张的画笔色（2~3 支）；c:'ink' 走墨黑、c:0/1/2 走色板；
+     f:1 标记「闭合形状」——可以被填涂层垫色（填涂色与画笔色是两套，见 make()）。 */
+
+  /* ---- 1. 人物部件 ---- */
+  const PERSON = [
+    { n: '侧脸轮廓', f: () => [{ pts: J([[3, -17], [8, -13], [11, -7], [12, -3], [15, -1], [12, 2], [10, 5], [6, 10], [-1, 13], [-8, 12], [-13, 8], [-15, 1], [-13, -8], [-7, -14]]), c: 'ink', w: 2.6 }] },
+    { n: '正脸轮廓', f: () => [{ pts: J(E(0, 0, 11, 13, true)), c: 'ink', w: 2.6, f: 1 }] },
+    { n: '发丝', f: () => [{ pts: J(E(0, -2, 13, 11, false, Math.PI * 1.05, Math.PI * 1.95, 10)), c: 'ink', w: 2.4 }, { pts: J(wave(-11, -6, 11, -6, 3, 4)), c: 'ink', w: 2.2 }] },
+    { n: '长头发', f: () => [{ pts: J(E(0, -3, 12, 11, false, Math.PI * 1.02, Math.PI * 1.98, 10)), c: 'ink', w: 2.4 }, { pts: J([[11, -3], [13, 8], [11, 15]], 1.2), c: 'ink', w: 2.2 }, { pts: J([[-11, -3], [-13, 8], [-11, 15]], 1.2), c: 'ink', w: 2.2 }] },
+    { n: '丸子头', f: () => [{ pts: J(E(0, -14, 5, 5, true)), c: 'ink', w: 2.4, f: 1 }, { pts: J(E(0, -1, 11, 11, true)), c: 'ink', w: 2.4, f: 1 }] },
+    { n: '眼睛', f: () => [{ pts: J(E(-5, 0, 2.4, 1.7, true)), c: 'ink', w: 2.4, f: 1 }, { pts: J(E(5, 0, 2.4, 1.7, true)), c: 'ink', w: 2.4, f: 1 }, { pts: dot(-5, -0.4), c: 'ink', w: 3.4 }, { pts: dot(5, -0.4), c: 'ink', w: 3.4 }] },
+    { n: '眯眯眼', f: () => [{ pts: J(E(-5, 0, 4, 3, false, Math.PI * 1.15, Math.PI * 1.85, 8)), c: 'ink', w: 2.4 }, { pts: J(E(5, 0, 4, 3, false, Math.PI * 1.15, Math.PI * 1.85, 8)), c: 'ink', w: 2.4 }] },
+    { n: '眼睛带光', f: () => [{ pts: J(E(-5, 0, 2.6, 3, true)), c: 0, w: 2.4, f: 1 }, { pts: J(E(5, 0, 2.6, 3, true)), c: 0, w: 2.4, f: 1 }, { pts: J([[3.6, -1.6], [4.4, -2.4]], 1), c: 'ink', w: 2.6 }, { pts: J([[-6.4, -1.6], [-5.6, -2.4]], 1), c: 'ink', w: 2.6 }] },
+    { n: '眉毛', f: () => [{ pts: J(wob(-8, -3, -2, -5, 1.1)), c: 'ink', w: 2.4 }, { pts: J(wob(2, -5, 8, -3, 1.1)), c: 'ink', w: 2.4 }] },
+    { n: '嘴唇', f: () => [{ pts: J(wob(-4, 0, 4, 0, 1.4)), c: 0, w: 2.6 }, { pts: J(E(0, -1, 4.4, 3.4, false, 0, Math.PI, 10)), c: 0, w: 2.4 }] },
+    { n: '鼻子', f: () => [{ pts: J([[1, -4], [4, 1], [0, 2]], 0.7), c: 'ink', w: 2.2 }] },
+    { n: '耳朵', f: () => [{ pts: J(E(0, 0, 3.4, 5, true)), c: 'ink', w: 2.3, f: 1 }, { pts: J(E(0, 0, 1.4, 2.6, false, Math.PI * 0.6, Math.PI * 1.8, 8)), c: 'ink', w: 2 }] },
+    { n: '张开的手', f: () => { const out = [{ pts: J(E(0, 3, 6.5, 5.5, true)), c: 'ink', w: 2.4, f: 1 }]; for (let i = 0; i < 5; i++) { const a = Math.PI * (1.12 + i * 0.19); out.push({ pts: J([[0, 0], [Math.cos(a) * 13, Math.sin(a) * 13]], 1.1), c: 'ink', w: 2.2 }); } return out; } },
+    { n: '握拳', f: () => [{ pts: J(blob(0, 0, 8, 7)), c: 'ink', w: 2.5, f: 1 }, { pts: J(wob(-6, 1, 6, 1, 1.4)), c: 'ink', w: 2 }] },
+    { n: '比心手', f: A => [{ pts: J(E(-3, 0, 4.6, 4.6, false, Math.PI * 0.85, Math.PI * 1.75, 10)), c: 'ink', w: 2.4 }, { pts: J(E(3, 0, 4.6, 4.6, false, Math.PI * 1.25, Math.PI * 0.15, 10)), c: 'ink', w: 2.4 }, { pts: dot(0, -3), c: A.a[0] || 0, w: 3.4 }] },
+    { n: '肩膀', f: () => [{ pts: J([[0, -2], [-13, 6]], 1.3), c: 'ink', w: 2.6 }, { pts: J([[0, -2], [13, 6]], 1.3), c: 'ink', w: 2.6 }] },
+    { n: '身形', f: () => [{ pts: J([[0, -12], [0, 8]], 1), c: 'ink', w: 2.5 }, { pts: J([[-10, -6], [0, -12], [10, -6]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[0, 8], [-7, 18]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[0, 8], [7, 18]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[-10, -6], [-14, 4]], 1.2), c: 'ink', w: 2.3 }, { pts: J([[10, -6], [14, 4]], 1.2), c: 'ink', w: 2.3 }] },
+    { n: '小人的头肩', f: () => [{ pts: J(E(0, -7, 6, 6.6, true)), c: 'ink', w: 2.5, f: 1 }, { pts: J(wob(-10, 8, -4, 1, 1.2)), c: 'ink', w: 2.4 }, { pts: J(wob(4, 1, 10, 8, 1.2)), c: 'ink', w: 2.4 }] },
+    { n: '两只脚', f: () => [{ pts: J([[0, -4], [-3, 5], [-9, 7]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[0, -4], [3, 5], [9, 7]], 1.2), c: 'ink', w: 2.4 }] },
+    { n: '手臂线条', f: () => [{ pts: J([[0, -8], [4, 2], [10, 8]], 1.2), c: 'ink', w: 2.3 }, { pts: J([[10, 8], [12, 4]], 1), c: 'ink', w: 2.1 }] },
+    { n: '火柴人', f: () => stickman() }
   ];
 
-  /* ---------- 角落小装饰（0~2 个，随手点的） ---------- */
-  const GARNISH = [
-    A => ({ pts: J([[0, -3], [3, 0], [0, 3], [-3, 0], [0, -3]]), c: A.a[0], w: 1.6 }),          // 小星
-    A => [{ pts: J(E(0, 0, 3, 2.6, false, Math.PI * 0.9, Math.PI * 2.1)), c: A.a[1], w: 1.5 },
-          { pts: J(E(0, 0, 3, 2.6, false, Math.PI * 2.9, Math.PI * 4.1)), c: A.a[1], w: 1.5 },
-          { pts: J([[-3, 1], [0, 4], [3, 1]]), c: A.a[1], w: 1.5 }],                            // 小爱心
-    A => [{ pts: J([[-3, 0], [3, 0]]), c: 'ink', w: 1.4 }, { pts: J([[0, -3], [0, 3]]), c: 'ink', w: 1.4 }], // 十字星光
-    A => [{ pts: J([[-4, 2], [0, -2], [4, 2]]), c: A.a[2], w: 1.5 }]                             // 小勾
+  /* ---- 2. 生物部件 ---- */
+  const LIFE = [
+    { n: '猫耳', f: () => [{ pts: J([[-7, 4], [-8, -8], [0, 0]], 1), c: 'ink', w: 2.5 }, { pts: J([[-8, -8], [-2, -5]], 1), c: 'ink', w: 2.2 }] },
+    { n: '兔耳', f: () => [{ pts: J(blob(-4, -6, 4, 6)), c: 'ink', w: 2.4, f: 1 }, { pts: J(blob(4, -6, 4, 6)), c: 'ink', w: 2.4, f: 1 }, { pts: J(wob(-4, -10, -3, -2, 1)), c: 0, w: 2 }] },
+    { n: '狐狸尾巴', f: A => [{ pts: J([[0, 6], [8, 0], [11, -8], [7, -13], [2, -10], [3, -3], [-3, 2]], 1.3), c: 'ink', w: 2.5, f: 1 }, { pts: J([[7, -11], [9, -9]], 1), c: A.a[0] || 0, w: 5 }] },
+    { n: '猫尾巴', f: () => [{ pts: J([[4, 8], [-4, 4], [-8, -4], [-3, -9], [3, -7]], 1.2), c: 'ink', w: 2.5 }] },
+    { n: '飞鸟轮廓', f: () => [{ pts: J([[0, 0], [-8, -6], [-14, -5]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[0, 0], [8, -6], [14, -5]], 1.2), c: 'ink', w: 2.4 }, { pts: J([[0, 0], [0, 4]], 1), c: 'ink', w: 2.2 }] },
+    { n: '蝴蝶', f: A => [{ pts: J(E(-5, 0, 6, 9, true)), c: A.a[0] || 0, w: 2.4, f: 1 }, { pts: J(E(5, 0, 6, 9, true)), c: A.a[0] || 0, w: 2.4, f: 1 }, { pts: J([[0, -8], [0, 8]], 1), c: 'ink', w: 2.4 }, { pts: J([[-1, -9], [-4, -13]], 1), c: 'ink', w: 2 }, { pts: J([[1, -9], [4, -13]], 1), c: 'ink', w: 2 }] },
+    { n: '鹿角', f: () => [{ pts: J([[0, 6], [-3, -2], [-8, -7]], 1.2), c: 'ink', w: 2.5 }, { pts: J([[-3, -2], [-10, -1]], 1.1), c: 'ink', w: 2.2 }, { pts: J([[-5, -5], [-2, -11]], 1.1), c: 'ink', w: 2.2 }] },
+    { n: '小鱼', f: A => [{ pts: J(E(0, 0, 9, 5.5, true)), c: 'ink', w: 2.4, f: 1 }, { pts: J([[-8, 0], [-14, -6], [-14, 6]], 1.2), c: 'ink', w: 2.3, f: 1 }, { pts: dot(3, -1.4), c: A.a[0] || 0, w: 3.2 }] },
+    { n: '小草虫', f: () => { const out = []; for (let i = 0; i < 4; i++) out.push({ pts: J(E(-6 + i * 4, i % 2 ? -1.4 : 1.4, 2.4, 2.4, true)), c: 'ink', w: 2.2, f: 1 }); out.push({ pts: J([[6, 1], [10, -3]], 1), c: 'ink', w: 2 }); return out; } },
+    { n: '蜗牛', f: A => [{ pts: spiral(2, 0, 1.5, 7, 2.2), c: A.a[0] || 0, w: 2.5 }, { pts: J([[2, 7], [-9, 7]], 1.1), c: 'ink', w: 2.3 }, { pts: J([[-9, 7], [-12, 3]], 1), c: 'ink', w: 2.1 }] },
+    { n: '翅膀', f: () => [{ pts: J(E(-4, 0, 7, 12, false, Math.PI * 0.6, Math.PI * 1.5, 10)), c: 'ink', w: 2.4 }, { pts: J(wob(-4, -8, -10, 2, 1.2)), c: 'ink', w: 2 }, { pts: J(wob(-2, -4, -8, 4, 1.2)), c: 'ink', w: 2 }] },
+    { n: '羽毛', f: A => [{ pts: J([[0, -14], [2, 4], [0, 12]], 1.2), c: 'ink', w: 2.4 }, { pts: J(wob(-5, -8, 4, -10, 1)), c: A.a[0] || 0, w: 2 }, { pts: J(wob(-6, -2, 5, -4, 1)), c: A.a[0] || 0, w: 2 }, { pts: J(wob(-5, 4, 4, 2, 1)), c: A.a[0] || 0, w: 2 }] },
+    { n: '爪印', f: A => [{ pts: J(E(0, 2, 4.4, 3.6, true)), c: A.a[0] || 0, w: 2.4, f: 1 }, { pts: dot(-5, -4), c: A.a[0] || 0, w: 3 }, { pts: dot(0, -6), c: A.a[0] || 0, w: 3 }, { pts: dot(5, -4), c: A.a[0] || 0, w: 3 }] },
+    { n: '小鹿轮廓', f: () => [{ pts: J(E(0, 2, 8, 7, true)), c: 'ink', w: 2.4, f: 1 }, { pts: J([[4, -4], [8, -12]], 1.1), c: 'ink', w: 2.2 }, { pts: J([[8, -12], [13, -14]], 1.1), c: 'ink', w: 2 }, { pts: J([[-4, 8], [-4, 15]], 1.1), c: 'ink', w: 2.2 }, { pts: J([[4, 8], [4, 15]], 1.1), c: 'ink', w: 2.2 }] },
+    { n: '蛇形线', f: () => [{ pts: J(wave(-13, 0, 13, 2, 5, 5), 1.1), c: 'ink', w: 2.6 }] },
+    { n: '甲虫', f: A => [{ pts: J(E(0, 0, 7, 8.5, true)), c: 'ink', w: 2.4, f: 1 }, { pts: J([[0, -8], [0, 8]], 1), c: A.a[0] || 0, w: 2.2 }, { pts: J([[-6, -5], [-11, -9]], 1), c: 'ink', w: 2 }, { pts: J([[6, -5], [11, -9]], 1), c: 'ink', w: 2 }, { pts: J([[-6, 4], [-11, 8]], 1), c: 'ink', w: 2 }, { pts: J([[6, 4], [11, 8]], 1), c: 'ink', w: 2 }] },
+    { n: '蜘蛛', f: () => { const out = [{ pts: J(E(0, 0, 4, 4, true)), c: 'ink', w: 2.3, f: 1 }]; for (let i = 0; i < 4; i++) { const y = -4 + i * 3; out.push({ pts: J([[-3, y], [-11, y - 4], [-14, y]], 1), c: 'ink', w: 1.9 }); out.push({ pts: J([[3, y], [11, y - 4], [14, y]], 1), c: 'ink', w: 1.9 }); } return out; } },
+    { n: '小蜜蜂', f: A => [{ pts: J(E(0, 0, 6, 8, true)), c: A.a[0] || 0, w: 2.4, f: 1 }, { pts: J(wob(-5, -1, 5, -1, 1)), c: 'ink', w: 2.2 }, { pts: J(wob(-4, 4, 4, 4, 1)), c: 'ink', w: 2.2 }, { pts: J(E(-5, -10, 5, 3.4, false, Math.PI, Math.PI * 2, 8)), c: 'ink', w: 2 }, { pts: J(E(5, -10, 5, 3.4, false, Math.PI, Math.PI * 2, 8)), c: 'ink', w: 2 }] },
+    { n: '小鸡', f: A => [{ pts: J(E(0, 1, 6.5, 6.5, true)), c: A.a[0] || 0, w: 2.4, f: 1 }, { pts: J([[-2, -9], [0, -5], [2, -9]], 1), c: 'ink', w: 2.3 }, { pts: dot(-2, -1), c: 'ink', w: 3 }, { pts: dot(2, -1), c: 'ink', w: 3 }, { pts: J([[3, 3], [8, 5]], 1), c: 'ink', w: 2.2 }] },
+    { n: '恐龙背脊', f: () => { const out = []; for (let i = 0; i < 5; i++) out.push({ pts: J([[0, 0], [-3, -7 + i * 3], [2, -4 + i * 3]], 0.9), c: 'ink', w: 2.2 }); return out; } },
+    { n: '鸟爪', f: () => [{ pts: J([[0, 0], [0, 8]], 1), c: 'ink', w: 2.2 }, { pts: J([[0, 8], [-5, 12]], 1), c: 'ink', w: 2 }, { pts: J([[0, 8], [0, 13]], 1), c: 'ink', w: 2 }, { pts: J([[0, 8], [5, 12]], 1), c: 'ink', w: 2 }] },
+    { n: '鱼骨', f: () => { const out = [{ pts: J([[0, -6], [0, 8]], 1), c: 'ink', w: 2.3 }, { pts: J([[0, 8], [-4, 12], [0, 13]], 1), c: 'ink', w: 2 }]; for (let i = 0; i < 4; i++) { const y = -4 + i * 4; out.push({ pts: J([[0, y], [-6, y - 2]], 1), c: 'ink', w: 1.9 }); out.push({ pts: J([[0, y], [6, y - 2]], 1), c: 'ink', w: 1.9 }); } return out; } }
   ];
 
-  /* ---------- 出图 ---------- */
-  /* 复合模式用：以主题自身包围盒中心为准，平移+缩放到目标格位 */
-  function placeStrokes(list, cx, cy, sc, A, out, pen, rotDeg) {
-    const xs = [], ys = [];
-    list.forEach(s => s.pts.forEach(p => { xs.push(p[0]); ys.push(p[1]); }));
-    const mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
-    const my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
-    /* 她 10-12 23:18：方向不定——每块自己再转一个角度，不都摆得端端正正 */
-    const rot = ((rotDeg == null ? rnd(-20, 20) : rotDeg)) * Math.PI / 180;
-    const cs = Math.cos(rot), sn = Math.sin(rot);
-    list.forEach(s => {
-      const pts = s.pts.map(p => {
-        const px = (p[0] - mx) * sc, py = (p[1] - my) * sc;
-        return [cx + px * cs - py * sn, cy + px * sn + py * cs];
-      });
-      out.push({ d: smooth(pts), col: (s.c === 'ink') ? INK : (A.a[s.c] || INK), w: Math.max(1.3, (s.w || rnd(2.1, 3.1)) * sc * 1.4 * (pen || 1)), pts });
-    });
-  }
+  /* ---- 3. 景物部件 ---- */
+  const SCENE = [
+    { n: '弯月', f: () => [{ pts: J([[0, -12], [6, -6], [8, 0], [6, 6], [0, 12], [4, 6], [6, 0], [4, -6]], 1), c: 'ink', w: 2.6 }] },
+    { n: '星点', f: A => [{ pts: J([[0, -9], [0, 9]], 1), c: A.a[0] || 0, w: 2.4 }, { pts: J([[-9, 0], [9, 0]], 1), c: A.a[0] || 0, w: 2.4 }, { pts: J([[-5, -5], [5, 5]], 1), c: A.a[0] || 0, w: 1.8 }, { pts: J([[-5, 5], [5, -5]], 1), c: A.a[0] || 0, w: 1.8 }] },
+    { n: '云朵', f: () => [{ pts: J([[-12, 3], [-8, -5], [-1, -6], [4, -8], [10, -4], [13, 2], [9, 7], [1, 7], [-6, 7]], 1.2), c: 'ink', w: 2.5, f: 1 }] },
+    { n: '短树枝', f: () => [{ pts: J([[0, 12], [1, -6], [-3, -12]], 1.2), c: 'ink', w: 2.5 }, { pts: J([[-1, -2], [7, -6]], 1.1), c: 'ink', w: 2.2 }, { pts: J([[-2, 3], [-8, 0]], 1.1), c: 'ink', w: 2.2 }, { pts: J([[0, -7], [5, -11]], 1), c: 'ink', w: 2 }] },
+    { n: '叶片', f: A => [{ pts: J([[0, -10], [6, -3], [3, 7], [-3, 7], [-6, -3]], 1.2), c: 'ink', w: 2.4, f: 1 }, { pts: J([[0, -8], [0, 7]], 1), c: A.a[0] || 0, w: 2 }] },
+    { n: '石头', f: () => [{ pts: J(blob(0, 0, 8, 6)), c: 'ink', w: 2.5, f: 1 }] },
+    { n: '波纹', f: () => [{ pts: J(wave(-13, 0, 13, 0, 3, 4)), c: 'ink', w: 2.3 }, { pts: J(wave(-10, 6, 10, 6, 2.4, 3)), c: 0, w: 2.1 }] },
+    { n: '小山轮廓', f: () => [{ pts: J([[-14, 8], [-6, -4], [-2, 0], [4, -9], [13, 8]], 1.3), c: 'ink', w: 2.6 }] },
+    { n: '太阳', f: A => [{ pts: J(E(0, 0, 6, 6, true)), c: A.a[0] || 0, w: 2.5, f: 1 }, { pts: J([[-11, -11], [-8, -8]], 1), c: 'ink', w: 2 }, { pts: J([[11, -11], [8, -8]], 1), c: 'ink', w: 2 }, { pts: J([[-13, 0], [-9, 0]], 1), c: 'ink', w: 2 }, { pts: J([[13, 0], [9, 0]], 1), c: 'ink', w: 2 }, { pts: J([[-11, 11], [-8, 8]], 1), c: 'ink', w: 2 }, { pts: J([[11, 11], [8, 8]], 1), c: 'ink', w: 2 }] },
+    { n: '花瓣', f: A => [{ pts: J(E(0, -6, 3.6, 5, true)), c: A.a[0] || 0, w: 2.3, f: 1 }, { pts: J(E(0, 6, 3.6, 5, true)), c: A.a[0] || 0, w: 2.3, f: 1 }, { pts: J(E(-6, 0, 5, 3.6, true)), c: A.a[0] || 0, w: 2.3, f: 1 }, { pts: J(E(6, 0, 5, 3.6, true)), c: A.a[0] || 0, w: 2.3, f: 1 }, { pts: dot(0, 0), c: 'ink', w: 3.2 }] },
+    { n: '火苗', f: A => [{ pts: J([[0, 12], [-6, 4], [-4, -4], [0, -12], [4, -4], [6, 4]], 1.3), c: 'ink', w: 2.5 }, { pts: J([[0, 8], [-2, 2], [0, -3]], 1), c: A.a[0] || 0, w: 2.4 }] },
+    { n: '雨滴', f: A => [{ pts: J([[0, -9], [4, 0], [0, 7], [-4, 0]], 1.1), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '雪点', f: () => [{ pts: J([[0, -7], [0, 7]], 0.8), c: 'ink', w: 2.2 }, { pts: J([[-6, -3], [6, 3]], 0.8), c: 'ink', w: 2.2 }, { pts: J([[-6, 3], [6, -3]], 0.8), c: 'ink', w: 2.2 }] },
+    { n: '草丛', f: () => { const out = []; for (let i = 0; i < 5; i++) out.push({ pts: J([[i * 5 - 10, 8], [i * 5 - 12 + rnd(0, 4), -6 + rnd(-3, 3)]], 1.1), c: 'ink', w: 2.1 }); return out; } },
+    { n: '树桩', f: A => [{ pts: J([[-7, -4], [7, -4], [7, 8], [-7, 8]], 1.2), c: 'ink', w: 2.5, f: 1 }, { pts: J(E(0, -4, 7, 3, false, 0, Math.PI, 8)), c: A.a[0] || 0, w: 2.2 }] },
+    { n: '露珠', f: A => [{ pts: J(E(0, 0, 5, 5, true)), c: A.a[0] || 0, w: 2.3, f: 1 }, { pts: J(E(-1.4, -1.4, 1.6, 1.6, false, Math.PI * 0.7, Math.PI * 1.7, 6)), c: 'ink', w: 1.8 }] },
+    { n: '沙丘', f: A => [{ pts: J(wave(-14, 4, 14, -2, 5, 3)), c: A.a[0] || 0, w: 2.4 }, { pts: J(wave(-12, 10, 12, 6, 4, 3)), c: 'ink', w: 2.1 }] },
+    { n: '烟火', f: A => { const out = []; for (let i = 0; i < 8; i++) { const a = Math.PI * 2 * i / 8 + rnd(-0.2, 0.2); out.push({ pts: J([[0, 0], [Math.cos(a) * rnd(8, 14), Math.sin(a) * rnd(8, 14)]], 0.9), c: A.a[i % 2] || 0, w: 2 }); } return out; } },
+    { n: '风线', f: A => [{ pts: J(wave(-14, -3, 12, -4, 2.4, 3)), c: A.a[0] || 0, w: 2.2 }, { pts: J(wave(-11, 4, 14, 3, 2.6, 3)), c: 'ink', w: 2.1 }] },
+    { n: '湖面反光', f: A => { const out = []; for (let i = 0; i < 4; i++) out.push({ pts: J(wob(-10 + i * 2, -4 + i * 3, 6 - i * 2, -4 + i * 3, 1)), c: A.a[i % 2] || 0, w: 2.2 }); return out; } }
+  ];
+
+  /* ---- 4. 装饰线条 ---- */
+  const DECO = [
+    { n: '弧线', f: () => [{ pts: J(E(0, 6, 13, 11, false, Math.PI * 1.15, Math.PI * 1.85, 12)), c: 'ink', w: 2.3 }] },
+    { n: '虚线', f: A => { const out = []; for (let i = 0; i < 5; i++) out.push({ pts: J([[i * 6 - 12, 0], [i * 6 - 8, 0]], 0.7), c: A.a[0] || 0, w: 2.4 }); return out; } },
+    { n: '光斑', f: A => { const out = []; for (let i = 0; i < 6; i++) { const a = Math.PI * 2 * i / 6; out.push({ pts: J([[0, 0], [Math.cos(a) * rnd(7, 12), Math.sin(a) * rnd(7, 12)]], 0.8), c: A.a[0] || 0, w: 1.9 }); } return out; } },
+    { n: '细碎墨点', f: () => { const out = []; for (let i = 0; i < 9; i++) out.push({ pts: dot(rnd(-13, 13), rnd(-13, 13)), c: 'ink', w: rnd(1.6, 3) }); return out; } },
+    { n: '缠绕细线', f: A => [{ pts: J(wave(-13, 0, 13, 0, 7, 7), 0.9), c: A.a[0] || 0, w: 1.9 }, { pts: J(wave(-13, 6, 13, 6, 6, 6), 0.9), c: 'ink', w: 1.9 }] },
+    { n: '圆圈', f: A => [{ pts: J(E(0, 0, 10, 10, true)), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '方框', f: A => [{ pts: J([[-9, -9], [9, -9], [9, 9], [-9, 9], [-9, -9]], 1.4), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '三角', f: A => [{ pts: J([[0, -10], [10, 8], [-10, 8], [0, -10]], 1.4), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '菱形', f: A => [{ pts: J([[0, -10], [8, 0], [0, 10], [-8, 0], [0, -10]], 1.4), c: A.a[0] || 0, w: 2.3, f: 1 }] },
+    { n: '十字', f: () => [{ pts: J([[0, -10], [0, 10]], 0.8), c: 'ink', w: 2.4 }, { pts: J([[-10, 0], [10, 0]], 0.8), c: 'ink', w: 2.4 }] },
+    { n: '心形', f: A => [{ pts: J([[0, 10], [-9, 1], [-7, -6], [-2, -6], [0, -2], [2, -6], [7, -6], [9, 1], [0, 10]], 1.2), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '星形', f: A => [{ pts: J([[0, -11], [3, -3], [11, -3], [5, 2], [7, 10], [0, 5], [-7, 10], [-5, 2], [-11, -3], [-3, -3], [0, -11]], 1.2), c: A.a[0] || 0, w: 2.4, f: 1 }] },
+    { n: '螺旋', f: A => [{ pts: spiral(0, 0, 1.6, 10, rnd(1.6, 2.6)), c: A.a[0] || 0, w: 2.2 }] },
+    { n: '波浪线', f: A => [{ pts: J(wave(-13, 0, 13, 0, 5.5, 5)), c: A.a[0] || 0, w: 2.4 }] },
+    { n: '锯齿线', f: () => [{ pts: J(wave(-12, 0, 12, 0, 6, 6, true)), c: 'ink', w: 2.3 }] },
+    { n: '打叉', f: () => [{ pts: J([[-8, -8], [8, 8]], 1), c: 'ink', w: 2.6 }, { pts: J([[8, -8], [-8, 8]], 1), c: 'ink', w: 2.6 }] },
+    { n: '括号弧', f: () => [{ pts: J(E(-4, 0, 9, 11, false, Math.PI * 0.52, Math.PI * 1.48, 10)), c: 'ink', w: 2.4 }, { pts: J(E(4, 0, 9, 11, false, Math.PI * 1.52, Math.PI * 0.48, 10)), c: 'ink', w: 2.4 }] },
+    { n: '箭头', f: A => [{ pts: J([[-10, 0], [9, 0]], 0.9), c: A.a[0] || 0, w: 2.4 }, { pts: J([[9, 0], [3, -4]], 0.8), c: A.a[0] || 0, w: 2.3 }, { pts: J([[9, 0], [3, 4]], 0.8), c: A.a[0] || 0, w: 2.3 }] },
+    { n: '圆点组', f: A => { const out = []; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) out.push({ pts: dot(-6 + i * 6, -6 + j * 6), c: (i + j) % 2 ? A.a[0] || 0 : 'ink', w: 2.6 }); return out; } },
+    { n: '半圆', f: A => [{ pts: J(E(0, 3, 11, 10, false, Math.PI, Math.PI * 2, 12)), c: A.a[0] || 0, w: 2.4 }] },
+    { n: '乱线团', f: A => { const out = []; for (let i = 0; i < 3; i++) out.push({ pts: scribble(rnd(-4, 4), rnd(-4, 4), rnd(12, 22), rnd(10, 18)), c: i ? A.a[0] || 0 : 'ink', w: 2 }); return out; } }
+  ];
+
+  /* ---- 5. 基础画笔（不带固定图案的笔触本身） ---- */
+  const BRUSH = [
+    { n: '铅笔速写线', f: () => [{ pts: J([[rnd(-14, -8), rnd(-10, 10)], [rnd(-2, 2), rnd(-14, 14)], [rnd(8, 14), rnd(-10, 10)]], 1.6), c: 'ink', w: rnd(1.5, 2.1) }] },
+    { n: '淡晕染', f: A => [{ pts: J([[rnd(-12, -6), rnd(-8, 8)], [rnd(-4, 4), rnd(-12, 12)], [rnd(6, 12), rnd(-8, 8)]], 1.8), c: A.a[0] || 0, w: rnd(7, 11), soft: 1 }] },
+    { n: '细实线', f: () => [{ pts: J([[rnd(-14, -6), rnd(-12, 12)], [rnd(6, 14), rnd(-12, 12)]], 0.9), c: 'ink', w: rnd(1.3, 1.8) }] },
+    { n: '长弧', f: A => [{ pts: J(E(rnd(-4, 4), rnd(2, 8), rnd(12, 15), rnd(9, 13), false, Math.PI * rnd(0.85, 1.05), Math.PI * rnd(1.9, 2.05), 14)), c: A.a[0] || 0, w: rnd(1.8, 2.6) }] },
+    { n: '短促笔触', f: () => { const out = []; for (let i = 0; i < 4; i++) { const x = rnd(-12, 10), y = rnd(-12, 12); out.push({ pts: J([[x, y], [x + rnd(4, 9), y + rnd(-5, 5)]], 1), c: 'ink', w: rnd(1.8, 2.8) }); } return out; } },
+    { n: '交叉排线', f: A => { const out = []; for (let i = 0; i < 4; i++) out.push({ pts: J([[-10 + i * 5, -9], [2 + i * 5, 9]], 1.1), c: A.a[0] || 0, w: 1.9 }); for (let i = 0; i < 3; i++) out.push({ pts: J([[-8 + i * 5, 9], [4 + i * 5, -9]], 1.1), c: 'ink', w: 1.9 }); return out; } },
+    { n: '点阵', f: A => { const out = []; for (let i = 0; i < 14; i++) out.push({ pts: dot(rnd(-13, 13), rnd(-13, 13)), c: i % 3 ? 'ink' : (A.a[0] || 0), w: rnd(1.6, 2.6) }); return out; } },
+    { n: '抖线', f: A => [{ pts: J([[rnd(-14, -8), rnd(-10, 10)], [rnd(-4, 0), rnd(-13, 13)], [rnd(4, 8), rnd(-13, 13)], [rnd(9, 14), rnd(-10, 10)]], 2.2), c: A.a[0] || 0, w: rnd(1.9, 2.6) }] },
+    { n: '大回环', f: A => [{ pts: J(E(rnd(-2, 2), rnd(-2, 2), rnd(10, 14), rnd(8, 13), false, rnd(0, 1), rnd(4.6, 6), 16)), c: A.a[0] || 0, w: rnd(1.8, 2.4) }] },
+    { n: '平行细线', f: () => { const out = []; const n = Math.round(rnd(2, 4)); for (let i = 0; i < n; i++) out.push({ pts: J([[rnd(-13, -8), -8 + i * 5], [rnd(8, 13), -8 + i * 5 + rnd(-2, 2)]], 0.9), c: 'ink', w: 1.7 }); return out; } },
+    { n: '断续线', f: A => { const out = []; for (let i = 0; i < 4; i++) { const x = -12 + i * 7; out.push({ pts: J([[x, rnd(-6, 6)], [x + rnd(3, 5), rnd(-8, 8)]], 0.9), c: A.a[0] || 0, w: 2.2 }); } return out; } },
+    { n: '抛线', f: () => [{ pts: J([[rnd(-14, -10), rnd(2, 8)], [rnd(-3, 3), rnd(-14, -6)], [rnd(10, 14), rnd(2, 8)]], 1.5), c: 'ink', w: rnd(1.7, 2.4) }] }
+  ];
+
+  const KINDS = [
+    { n: '人物部件', parts: PERSON },
+    { n: '生物部件', parts: LIFE },
+    { n: '景物部件', parts: SCENE },
+    { n: '装饰线条', parts: DECO },
+    { n: '基础画笔', parts: BRUSH }
+  ];
+  const TOTAL = PERSON.length + LIFE.length + SCENE.length + DECO.length + BRUSH.length;
+  const CATS = KINDS.map(k => k.n);
+
+  /* ================= 组合引擎 ================= */
+  /* 她 10-13 08:28：随机挑元素、数量随机、无强制搭配 → 自己拼出一张画；每次构图都不一样 */
   function make() {
-    /* 复合涂鸦（她 10-09 20:08 拍板）：画几幅纯随机等概率（1/2/3 幅各 1/3），不调权重；
-       主题全库等概率抓，直线曲线、规则不规则自然相遇，允许重复，画画随心 */
-    /* 她 10-13 00:34：一张画上能放几幅不设上限——1~6 幅等概率，抽到几幅画几幅，位置/大小/朝向全随机 */
-    const comboN = 1 + Math.floor(Math.random() * 6);
-    /* 她 10-11 14:21：TA 也要笔感/粗细有区分、能填色、能换彩笔——
-       每幅搫一种笔感（圆头/马克/蜡笔）、一支笔号（细/中/粗乘在笔画粗细上），
-       闭形状 40% 概率垫填色层，55% 的幅面把部分黑墨笔画换成彩色笔（内容色，不套 UI 四色禁令） */
-    const style = pick(['round', 'round', 'marker', 'crayon', 'crayon']);
-    const pen = pick([0.72, 1, 1, 1.55]);
-    /* 她 10-12 23:18：TA 也要能自己创作——四成多直接走「随笔」（乱线/火柴人/怪形状），
-       其余才抽固定主题库（工程值 45%，待她拍） */
-    const poolPicked = Math.random() < 0.45 ? FREEHAND : SUBJECTS;
-    /* 每张抽 2~3 支马克笔 */
-    const pool = PAL.slice();
-    const a = [];
-    const nColor = 2 + (Math.random() < 0.45 ? 1 : 0);
-    for (let i = 0; i < nColor; i++) a.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    const A = { ink: INK, a: a };
-    const strokes = [];
-    let name, cat;
-    if (comboN === 1) {
-      const sub = pick(poolPicked);
-      /* 位子、大小、朝向都随机（她 10-12 23:18：位置随机、方向不定） */
-      placeStrokes(sub.f(A), rnd(34, 66), rnd(34, 64), rnd(0.74, 1.04), A, strokes, pen, rnd(-16, 16));
-      name = sub.n; cat = sub.cat;
-      /* 角落装饰：一半的画有，最多两个，位置在四角余白 */
-      const gCount = Math.random() < 0.5 ? (Math.random() < 0.3 ? 2 : 1) : 0;
-      const corners = [[16, 16], [84, 16], [16, 86], [84, 86]].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < gCount; i++) {
-        const g = pick(GARNISH)(A);
-        /* 装饰有的是单笔画有的是一组（小爱心三笔）——归一成数组再逐笔推 */
-        const gs = Array.isArray(g) ? g : [g];
-        const gx = corners[i][0] + rnd(-4, 4), gy = corners[i][1] + rnd(-4, 4);
-        gs.forEach(g => {
-          strokes.push({ d: smooth(J(g.pts.map(p => [gx + p[0], gy + p[1]]), 0.5)), col: (g.c === 'ink') ? INK : (A.a[g.c] || INK), w: (g.w || 1.6) * pen, pts: g.pts });
-        });
-      }
-    } else {
-      /* 复合：同框分区，主题允许重复；不出角落装饰（画面已满） */
-      /* 落点不再固定格位：每块在画布上随机找地方（互相尽量散开），方向各自随机 */
-      const boxes = [];
-      /* 位置随机、互相尽量散开：幅数越多间距判据越松，试 12 次挑最散的那个 */
-      const spread = Math.max(13, 46 / comboN + 8);
-      for (let i = 0; i < comboN; i++) {
-        let bx = 50, by = 50;
-        for (let t = 0; t < 12; t++) {
-          bx = rnd(24, 76); by = rnd(22, 78);
-          if (boxes.every(b => Math.abs(b[0] - bx) + Math.abs(b[1] - by) > spread)) break;
-        }
-        boxes.push([bx, by]);
-      }
-      /* 幅数越多每幅越小（0.7/√N 起步、最小 0.22），不然一张纸上挤成一团 */
-      const base = Math.max(0.22, 0.7 / Math.sqrt(comboN));
-      const names = [];
-      for (let i = 0; i < comboN; i++) {
-        const sub = pick(poolPicked);
-        names.push(sub.n);
-        placeStrokes(sub.f(A), boxes[i][0], boxes[i][1], base * rnd(0.82, 1.12), A, strokes, pen, rnd(-22, 22));
-      }
-      name = names.join(' + '); cat = pick(poolPicked).cat;
+    /* 画风（画笔类型）每次随机 */
+    const style = pick(['round', 'round', 'marker', 'crayon', 'pencil']);
+    const penBase = rnd(0.8, 1.5);            // 整张的笔粗基准（线条粗细还会逐笔浮动）
+
+    /* 两套色互相独立（她：「填涂和画笔颜色是两码事，不会一个做一个不做」）：
+       画笔色 = 这一张用的马克笔；填涂色 = 另外单独掷一次，可能一支都不填、也可能填好几块 */
+    /* 画笔色：这一张用哪几支彩笔（她 10-13 08:48「不同颜色的彩线咋这么少」：原来只给 2~3 支、
+       且所有零件都往同一支上取，整张画就只剩一种颜色） */
+    const strokeA = shuffle(PAL).slice(0, 3 + Math.floor(Math.random() * 3));   // 3~5 支
+    const fillA = shuffle(PAL).slice(0, Math.random() < 0.3 ? 0 : (Math.random() < 0.6 ? 1 : 3));
+    const A = { a: strokeA };
+
+    /* 构图：大面积留白 ↔ 画满，随机切换；元素数量跟着走，硬上限 8（她定的） */
+    const roll = Math.random();
+    const mode = roll < 0.26 ? 'sparse' : (roll < 0.72 ? 'normal' : 'dense');
+    const n = mode === 'sparse' ? 1 + Math.floor(Math.random() * 2)
+      : mode === 'normal' ? 2 + Math.floor(Math.random() * 4)
+        : Math.min(8, 6 + Math.floor(Math.random() * 3));
+
+    /* 抽元素（五大类等概率，允许重复——她说无强制搭配） */
+    const items = [];
+    for (let i = 0; i < n; i++) {
+      const kind = pick(KINDS);
+      const part = pick(kind.parts);
+      A.a = shuffle(strokeA);                            // 每个零件拿到的主色都不同（不然一张画同色）
+      let strokes = [];
+      try { strokes = part.f(A) || []; } catch (e) { strokes = []; }
+      if (!strokes.length) continue;
+      const scope = mode === 'sparse' ? rnd(1.25, 1.95) : (mode === 'normal' ? rnd(0.6, 1.2) : rnd(0.42, 0.86));
+      /* 先量出这个零件自己多大（含自身旋转/扭曲/拉伸的余量）——
+         她 10-13 08:40：「图案都飘出画布纸张了，那能看见啥」：
+         以前是先定缩放、瞎撒点，零件一被放大就出框。现在先量体再决定放多大、能离中心多远。 */
+      let er = 0;
+      strokes.forEach(s => s.pts.forEach(p => { const r = Math.sqrt(p[0] * p[0] + p[1] * p[1]); if (r > er) er = r; }));
+      const sx = rnd(0.9, 1.12), sy = rnd(0.9, 1.12);
+      const penM = 2.6 * penBase;                        // 笔宽占的边（线越粗越占地方）
+      er = er * 1.15 * Math.max(sx, sy);
+      /* 放不下就缩小：允许描线到达的半幅是 44（6~94，再留整体倾斜的余量） */
+      let sc = Math.min(scope * rnd(0.9, 1.12), (44 - penM) / Math.max(0.001, er));
+      sc = Math.max(sc, 0.26);
+      const reach = Math.max(0, 44 - (er * sc + penM));  // 这个零件允许偏离中心多远（量越大越居中）
+      items.push({
+        name: part.n, kind: kind.n, strokes,
+        px: 50 + rnd(-reach, reach),
+        py: 50 + rnd(-reach, reach),
+        sc: sc,
+        mir: Math.random() < 0.5 ? -1 : 1,                 // 镜像
+        rot: rnd(-180, 180),                               // 旋转
+        sx: sx, sy: sy,                                    // 轻微拉伸（扭曲的一半）
+        warp: rnd(0.3, 1.15),                              // 轻微扭曲
+        op: rnd(0.74, 1)                                   // 半透明 → 允许互相重叠、颜色混合
+      });
     }
-    /* 上色：闭形状 40% 垫填色层（马克笔色半透明，垫在所有笔画下面）；
-       55% 的幅面再挑 1~3 笔黑墨换彩笔——她要的「填色或者用不同颜色的画笔」 */
+    shuffle(items);                                        // 图层顺序随机：谁在前谁在后每次不一样
+
+    /* 逐笔画渲染：一笔一笔画出来（每条 path 单独一根线，笔粗逐笔浮动） */
+    const body = [];
     const fills = [];
-    strokes.forEach(s => {
-      if (!s.pts || s.pts.length < 6) return;
-      const a = s.pts[0], b = s.pts[s.pts.length - 1];
-      const dd = Math.sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]));
-      if (dd < 7 && Math.random() < 0.4) fills.push({ d: s.d, col: pick(A.a) });
-    });
-    /* 她 10-12 23:18 / 10-13：颜色覆盖率也随机——这回可能一块不填、也可能填五六块，浓淡也跟着变。
-       上限只是别把整张纸糊死（工程值：0/1/2/3/4/6 六档，待她拍） */
-    const fillRoll = Math.random();
-    const maxFill = fillRoll < 0.22 ? 0 : fillRoll < 0.42 ? 1 : fillRoll < 0.62 ? 2 : fillRoll < 0.8 ? 3 : fillRoll < 0.93 ? 4 : 6;
-    if (fills.length > maxFill) fills.length = maxFill;
-    const fillOp = rnd(0.16, 0.42).toFixed(2);
-    if (Math.random() < 0.55) {
-      const inkIdx = strokes.map((s, i) => (s.col === INK ? i : -1)).filter(i => i >= 0);
-      const nRe = 1 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < nRe && inkIdx.length; i++) {
-        const k = inkIdx.splice(Math.floor(Math.random() * inkIdx.length), 1)[0];
-        strokes[k].col = pick(A.a);
+    items.forEach(it => {
+      const tf = 'translate(' + it.px.toFixed(1) + ' ' + it.py.toFixed(1) + ') rotate(' + it.rot.toFixed(1) + ') scale(' +
+        (it.mir * it.sc * it.sx).toFixed(3) + ' ' + (it.sc * it.sy).toFixed(3) + ')';
+      /* 填涂层：闭形状按概率垫色——用【填涂色】那一套（跟画笔色不是一回事） */
+      it.strokes.forEach(s => {
+        if (!s.f || !fillA.length) return;
+        if (Math.random() > 0.42) return;
+        const pts = J(s.pts.map(p => [p[0], p[1]]), it.warp);
+        fills.push('<path d="' + smooth(pts) + '" fill="' + pick(fillA) + '" fill-opacity="' + rnd(0.16, 0.44).toFixed(2) +
+          '" stroke="none" opacity="' + it.op.toFixed(2) + '"' + blend() + ' transform="' + tf + '"/>');
+      });
+      /* 本元素的描线：整组套一个 transform —— 位置、缩放、旋转、镜像全靠它。
+         〔10-13 08:40 她报「图案都飘出画布纸张了」的根因〕原来这里直接把 path 塞进 body、
+         没套 transform，所有描线都落在坐标原点（画到纸外面去了）；填色和擦除带了，描线没带。 */
+      const pieces = [];
+      it.strokes.forEach(s => {
+        let pts = s.pts.map(p => [p[0], p[1]]);
+        pts = J(pts, it.warp);                             // 轻微扭曲
+        const w = Math.max(0.8, (s.w || rnd(1.9, 3.1)) * penBase * rnd(0.82, 1.24));   // 粗细随机浮动
+        /* 取色：零件说的彩色就是【颜色值本身】。以前拿它当 strokeA 的下标去查（strokeA['#D96A5B']
+           → undefined → 全落回墨色），这就是「彩线咋这么少」的根因；再给墨线留一条上彩的路。 */
+        const col = (typeof s.c === 'string' && s.c.charAt(0) === '#')
+          ? s.c
+          : (Math.random() < 0.55 ? pick(strokeA) : INK);
+        pieces.push(pathFor(style, smooth(pts), col, w, s.soft ? 0.44 : it.op));
+      });
+      /* 局部擦除：随到它就用纸色回描一截 → 画面有残缺感（她方案第 5 条） */
+      if (it.strokes.length >= 2 && Math.random() < 0.16) {
+        const s = pick(it.strokes);
+        const cut = s.pts.slice(0, Math.max(2, Math.round(s.pts.length * rnd(0.2, 0.55))));
+        pieces.push('<path d="' + smooth(J(cut, it.warp)) + '" fill="none" stroke="' + PAPER + '" stroke-width="' +
+          (Math.max(2.6, (s.w || 2.4) * penBase * 3.4)).toFixed(1) + '" stroke-linecap="round" opacity="0.96"/>');
       }
-    }
-    const rot = rnd(-6, 6).toFixed(1);
-    const strokePath = s => {
-      if (style === 'marker') return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 1.35).toFixed(1) + '" stroke-linecap="butt" stroke-linejoin="round" opacity="0.78"/>';
-      if (style === 'crayon') return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 0.9).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>' +
-        '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.w * 0.55).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" transform="translate(0.5 0.4)"/>';
-      return '<path d="' + s.d + '" fill="none" stroke="' + s.col + '" stroke-width="' + s.w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="0.94"/>';
-    };
+      body.push('<g transform="' + tf + '">' + pieces.join('') + '</g>');
+    });
+
+    const name = items.length ? items.map(i => i.name).join(' + ') : '随笔';
+    const cat = items.length ? items[0].kind : '基础画笔';
+    const rot = rnd(-3, 3).toFixed(1);
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">' +
-      '<rect x="2" y="2" width="96" height="96" rx="7" fill="#FFFEF8"/>' +
+      '<rect x="2" y="2" width="96" height="96" rx="7" fill="' + PAPER + '"/>' +
       '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="' + INK + '" stroke-width="1.1" opacity="0.55"/>' +
-      '<g transform="rotate(' + rot + ' 50 50)">' +
-      fills.map(f => '<path d="' + f.d + '" fill="' + f.col + '" fill-opacity="' + fillOp + '" stroke="none"/>').join('') +
-      strokes.map(strokePath).join('') +
-      '</g></svg>';
+      '<defs><clipPath id="lxdc"><rect x="4" y="4" width="92" height="92" rx="5.4"/></clipPath></defs>' +
+      '<g clip-path="url(#lxdc)"><g transform="rotate(' + rot + ' 50 50)">' +
+      fills.join('') + body.join('') +
+      '</g></g></svg>';
     return {
       dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
-      name: name, cat: CATS[cat]
+      name: name, cat: cat, style: style, mode: mode, n: items.length
     };
   }
+  /* 半透明元素互相叠的时候就让它混色（她方案第 6 条） */
+  function blend() { return Math.random() < 0.5 ? ' style="mix-blend-mode:multiply"' : ''; }
+  /* 每种笔感给一笔一个 data-ps 记号（只给验收看，不影响渲染）：
+     —— 之前探针靠“opacity=0.5 这种写死的数值”认笔感，我一调数值它就假红（10-13 回归实测）。
+     记号按【笔感】本身打，以后调粗细/透明度都不会再连坐。 */
+  function pathFor(style, d, col, w, op) {
+    const o = (op == null ? 1 : op).toFixed(2);
+    if (style === 'marker') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 1.3).toFixed(1) + '" stroke-linecap="butt" stroke-linejoin="round" opacity="' + o + '" data-ps="marker"' + blend() + '/>';
+    if (style === 'crayon') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.9).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + o + '" data-ps="crayon"' + blend() + '/>' +
+      '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.5).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + (Math.min(1, (op * 0.8) + 0.1)).toFixed(2) + '" data-ps="crayon"' + blend() + '/>';
+    if (style === 'pencil') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + Math.max(0.7, w * 0.62).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + (Math.min(1, op * 0.86)).toFixed(2) + '" data-ps="pencil"' + blend() + '/>';
+    return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + o + '" data-ps="round"' + blend() + '/>';
+  }
 
-  /* 只读口：探针验收用（种类数/类目/逐主题自检） */
-  return { make, count: SUBJECTS.length, allCount: SUBJECTS.length + FREEHAND.length,
-    freeCount: FREEHAND.length, free: FREEHAND, cats: CATS, subjects: SUBJECTS };
+  /* 只读口：探针验收用（部件池规模/类目/逐单元自检） */
+  return {
+    make, count: TOTAL, allCount: TOTAL, cats: CATS, kinds: KINDS,
+    persons: PERSON.length, lifes: LIFE.length, scenes: SCENE.length, decos: DECO.length, brushes: BRUSH.length,
+    parts: KINDS.reduce((a, k) => a.concat(k.parts), []),
+    poses: STICK_POSES.length
+  };
 })();
 
 /* =====================================================
@@ -31745,11 +31511,17 @@ const Schedule = (function () {
      实战面 = DB.state.msgs[convId] 里 TA 真发过的消息（按 type/标志数）
      专项面 = games.records / mall.orders / moments.posts / letters / diary / reports / redpackets / kinship.cards
      认不出来的一律如实说「档案里认不出」，不拿估算顶。
-   ※ 打分口径（她 10-13 00:06 亲口定）：掌握度就是随机数字——她原话「你就随机数字就好了呀
-     掌握度……所以给我随机」。按 联系人（或群）× 板块 派生一个稳定的随机数：
-     同一个人同一个板块刷新不跳数，换人/换板块就换数，不参与任何统计。
-     挑战度照旧按闸门算（她没让改）。子项下面那些「料/条数/种数/现状」照样上屏——
-     它们是档案里真有的东西，摆着给人看，不参与算分。
+   ※ 打分口径（她 10-13 08:40 定稿，两个都是【角色主观感受】）——她原文：
+     「掌握感（角色主观）：角色内心觉得自己会不会这个模块，0~100。每次 AI 使用模块后，会小幅修改，
+       叠加随机扰动，可升、可小幅回落。练得多大概率上升，但偶尔会莫名下降（心态起伏）。」
+     「操作负担（角色主观）：角色主观觉得操作麻烦、费力程度，0~100。练习多了倾向下降，
+       但存在随机波动，有时候明明练过，突然觉得操作变麻烦。」
+     「『掌握感 / 操作负担』本身自带自然起伏，不是单调匀速上涨；数值会小幅上下波动，不是只涨不跌。」
+     「底层客观操作记录只作为缓慢影响因素，允许主观感受和客观练习量不完全同步。」
+     —— 所以读数不再是「按对象×板块派生的定值」，而是存在 DB.state.feel 里的一条会走的感受：
+       随时间长自然漂移（带微弱回中力，不会飘到 0/100 卡死），再拿该板块的真实使用增量做一次小幅修正
+       （带扰动，所以偶尔不升反降）。子项只摆「名字 + 档案里的现状文字」，不带百分比、不参与算分。
+     【重置感受】（页面右上角）清空这一套、重新随机一套全新初始值，每次点出来的面板都不一样。
    ===================================================== */
 const Detect = (function () {
 
@@ -31781,7 +31553,68 @@ const Detect = (function () {
     return h >>> 0;
   };
   const rnd100 = (seed, lo, hi) => lo + (h32(seed) % (hi - lo + 1));
+  const rnd01 = (a, b) => a + Math.random() * (b - a);
   const day = ts => ts ? new Date(ts).toISOString().slice(0, 10) : '';
+
+  /* ---------- 角色主观感受：掌握感 / 操作负担（她 10-13 08:40） ---------- */
+  const clampF = v => Math.max(0, Math.min(100, v));
+  /* 一步随机游走：幅度随机 + 一点点回中力（不然会一路飘到 0 或 100 卡住不动） */
+  function stepOf(v, amp, mid) {
+    let d = rnd01(-amp, amp) + (mid - v) * 0.02;
+    if (v > 92) d -= 0.7;
+    if (v < 8) d += 0.7;
+    return clampF(v + d);
+  }
+  /* 读出（并按经过的时间推进）某个对象×板块的感受；used = 该板块的客观使用量，只当缓慢影响因素 */
+  function feel(id, key, used) {
+    const s = S();
+    if (!s.feel) s.feel = {};
+    const k = id + '|' + key;
+    let f = s.feel[k];
+    if (!f || typeof f.m !== 'number' || typeof f.b !== 'number') {
+      /* 第一次看（或刚重置）：随机一套全新初始值，不是固定的「初学模板」 */
+      f = { m: rnd01(16, 80), b: rnd01(14, 84), t: Date.now(), n: 0 };
+      s.feel[k] = f;
+    }
+    const now = Date.now();
+    const steps = Math.min(36, Math.max(0, Math.floor((now - (f.t || now)) / 60000)));  /* 每分钟一步，最多补 36 步 */
+    for (let i = 0; i < steps; i++) { f.m = stepOf(f.m, 1.1, 56); f.b = stepOf(f.b, 1.25, 50); }
+    if (steps > 0) f.t = now;
+    const dn = Math.max(0, (+used || 0) - (+f.n || 0));           /* 客观练习量涨了多少 */
+    if (dn > 0) {
+      f.m = clampF(f.m + Math.min(7, dn * 0.9) + rnd01(-3, 3.6));      /* 练得多大概率升，偶尔莫名回一下 */
+      f.b = clampF(f.b - Math.min(6, dn * 0.75) + rnd01(-2.2, 3.2));   /* 倾向变省事，也会突然觉得更麻烦 */
+      f.n = +used || 0;
+    } else if (+used || 0) { f.n = +used; }
+    return { m: Math.round(f.m), b: Math.round(f.b) };
+  }
+  /* 客观使用量：只喂给 feel() 当缓慢影响因素，不上屏、不参与显示 */
+  function useCnt(key, ctId, t0) {
+    const t = t0 || tally(ctId), S0 = S();
+    switch (key) {
+      case 'cards': return (t.aiText - t.aiKamoji - t.aiEmoji);
+      case 'kamoji': return t.aiKamoji;
+      case 'emojis': return t.aiEmoji;
+      case 'stickers': return t.aiImg;
+      case 'learn': return (typeof Library !== 'undefined' && Library.learnedCount) ? Library.learnedCount(ctId) : 0;
+      case 'free': return (typeof Library !== 'undefined' && Library.ftCount) ? Library.ftCount(ctId) : 0;
+      case 'voice': return t.aiVoice;
+      case 'emotion': return t.aiEmotion;
+      case 'moments': return (S0.moments.posts || []).filter(x => x.uid === ctId).length;
+      case 'letter': return t.aiLetter;
+      case 'games': return (((S0.games || {}).records) || []).filter(r => (r.players || []).indexOf(ctId) >= 0).length;
+      case 'quiz': return t.aiQuiz;
+      case 'mall': return (((S0.mall || {}).orders) || []).filter(o => o.buyerUid === ctId || o.toUid === ctId).length;
+      case 'doodle': return t.aiDoodle;
+      case 'report': return (((S0.reports || {})[ctId]) || []).length;
+      case 'diary': return Object.keys((((S0.diary || {})[ctId]) || {}).days || {}).length;
+      case 'redpacket': return Object.values(S0.redpackets || {}).filter(r => r.fromUid === ctId).length;
+      case 'call': return t.call;
+      case 'revoke': return t.revoke;
+      case 'reply': return t.aiText + t.myText;
+      default: return 0;
+    }
+  }
 
   /* ---------- 消息面统计（只数真档案） ---------- */
   function tally(ctId) {
@@ -31835,12 +31668,13 @@ const Detect = (function () {
     const learnedN = (typeof Library !== 'undefined' && Library.learnedCount) ? Library.learnedCount(ct.id) : 0;
     const ftN = (typeof Library !== 'undefined' && Library.ftCount) ? Library.ftCount(ct.id) : 0;   /* 荟萃·自由组句分组 */
     const emoN = (typeof Engine !== 'undefined' && Engine.emotionLibrary) ? Engine.emotionLibrary.length : 8;
-    const push = (r) => { r.score = pct(rnd100(ct.id + '|' + r.key, 22, 94)); r.challenge = pct(r.chal); rows.push(r); };
+    /* 两个数都是角色主观感受（她 10-13 08:40）：存在档案里、会自己起伏，不是每次现算的定值。
+       useCnt 只喂 feel() 当「缓慢影响因素」，不上屏。 */
+    const push = (r) => { const f = feel(ct.id, r.key, useCnt(r.key, ct.id, t)); r.score = f.m; r.challenge = f.b; rows.push(r); };
 
     /* ---- 字卡 ---- */
     {
       push({ key: 'cards', name: '字卡', icon: 'book',
-        chal: 70 * (1 - open(p.cardComboProb, 20)) + 30 * (1 - use(cards.length, 30)),
         hard: (p.cardComboProb || 0) <= 0 ? '拼字卡是关着的，TA 只会一句一句单发' : '拼卡概率 ' + p.cardComboProb + '%，一次拼 ' + (p.cardComboMin || 2) + '~' + (p.cardComboMax || 3) + ' 条',
         subs: [
           { n: '字卡库里备了多少话', v: cards.length + ' 条可用', p: pct(100 * use(cards.length, 30)) },
@@ -31858,7 +31692,6 @@ const Detect = (function () {
     /* ---- 颜文字 / EMOJI ---- */
     [['kamoji', '颜文字', 'kaomoji', nOf('kamoji'), t.aiKamoji, t.aiKamojiKinds], ['emojis', 'EMOJI', 'smile', nOf('emojis'), t.aiEmoji, t.aiEmojiKinds]].forEach(([k, nm, ic, n, used, kinds]) => {
       push({ key: k, name: nm, icon: ic,
-        chal: 100 * (1 - use(n, 12)),
         hard: n ? (n + ' 条备着，聊到兴头上自己会冒出来') : '一条都没有，TA 想发也发不出来',
         subs: [
           { n: '库里备了多少条', v: n + ' 条', p: pct(100 * use(n, 12)) },
@@ -31871,7 +31704,6 @@ const Detect = (function () {
 
     /* ---- 表情包图片 ---- */
     push({ key: 'stickers', name: '表情包图片', icon: 'image',
-      chal: 60 * (1 - open(p.imgProb, 20)) + 40 * (1 - use(stk.length, 10)),
       hard: '图片概率 ' + (p.imgProb || 0) + '% · 模式「' + ({ single: '单独发', attach: '文字后附带', mix: '混合发' }[p.imgMode || 'single']) + '」',
       subs: [
         { n: 'TA 手上有多少张表情图', v: stk.length + ' 张', p: pct(100 * use(stk.length, 10)) },
@@ -31887,7 +31719,6 @@ const Detect = (function () {
       const lr = p.learnRate || 0;
       const mineN = Math.max(0, learnedN - ftN);   /* 荟萃里属于「学我说话」的部分，自由组句另算 */
       push({ key: 'learn', name: '学我说话', icon: 'chat',
-        chal: 100 * (1 - open(lr, 20)),
         hard: lr ? ('我发的每句话有 ' + lr + '% 被收走') : '收集概率是 0，TA 一句都学不到',
         subs: [
           { n: '已经学到手的话', v: mineN + ' 条', p: pct(100 * use(mineN, 20)) },
@@ -31905,7 +31736,6 @@ const Detect = (function () {
       let canCompose = false, sample = '';
       try { if (typeof FreeTalk !== 'undefined' && FreeTalk.compose) { sample = FreeTalk.compose() || ''; canCompose = !!sample; } } catch (e) { /* 检测只读：组话口不可用就按「不能组」计，不拖身 */ }
       push({ key: 'free', name: '自由说话', icon: 'pencil',
-        chal: 100 * (1 - open(gf, 30)),
         hard: '概率 ' + gf + '% · ' + (canCompose ? ('现在当场就能组出话：「' + sample + '」') : '现在组不出话（词典不够用）'),
         subs: [
           { n: '当场能不能组出话（词典够不够）', v: canCompose ? ('能，刚试出一句：「' + sample + '」') : '组不出，词不够', p: canCompose ? 100 : 30 },
@@ -31920,7 +31750,6 @@ const Detect = (function () {
 
     /* ---- 语音 ---- */
     push({ key: 'voice', name: '语音', icon: 'mic',
-      chal: 100 * (1 - use(voice.length, 5)),
       hard: voice.length ? '语音库 ' + voice.length + ' 条 · 每句话 6% 概率用语音回' : '语音库是空的，TA 想发语音也没料',
       subs: [
         { n: 'TA 手上有多少条语音', v: voice.length + ' 条', p: pct(100 * use(voice.length, 5)) },
@@ -31932,7 +31761,6 @@ const Detect = (function () {
 
     /* ---- 情绪标记 ---- */
     push({ key: 'emotion', name: '情绪标记', icon: 'heart',
-      chal: 100 * (1 - open(p.emotionRate, 20)),
       hard: '概率 ' + (p.emotionRate || 0) + '%（每条文字独立掷）',
       subs: [
         { n: 'TA 手上有多少种情绪可用', v: emoN + ' 种（情绪表）', p: pct(100 * use(emoN, 8)) },
@@ -31949,7 +31777,6 @@ const Detect = (function () {
       const myCmts = mine.reduce((s, x) => s + ((x.comments || []).filter(c => c.uid !== ct.id).length), 0);
       const likes = mine.reduce((s, x) => s + ((x.likes || []).length), 0);
       push({ key: 'moments', name: '朋友圈', icon: 'camera',
-        chal: 100 * (1 - open(p.moPostRate, 30)),
         hard: '发帖 ' + (p.moPostRate || 0) + '% · 间隔 ' + (p.moPostMin || 0) + '~' + (p.moPostMax || 0) + ({ hour: ' 小时', min: ' 分钟' }[p.moPostUnit || 'hour']) + '/次',
         subs: [
           { n: 'TA 发过多少种不同的帖', v: mineKinds + ' 种（共 ' + mine.length + ' 条）' + (mine.length ? '，最近 ' + day(Math.max(...mine.map(x => x.ts || 0))) : ''), p: pct(100 * use(mineKinds, 8)) },
@@ -31966,7 +31793,6 @@ const Detect = (function () {
 
     /* ---- 信 ---- */
     push({ key: 'letter', name: '信', icon: 'mail',
-      chal: 100 * (1 - open(p.letterRate, 30)),
       hard: (p.letterRate || 0) + '% · 间隔 ' + raw(ct, 'ltrMinH', 1) + '~' + raw(ct, 'ltrMaxH', 24) + ' 小时',
       subs: [
         { n: 'TA 写过多少种不同的信', v: t.aiLetterKinds + ' 种', p: pct(100 * use(t.aiLetterKinds, 4)) },
@@ -31997,7 +31823,6 @@ const Detect = (function () {
       const kindsPlayed = new Set(mine.map(r => r.game)).size;
       const avgDiff = played.length ? played.reduce((s, k) => s + ({ uno: 55, doudizhu: 70, billiards: 65, gomoku: 50, ludo: 35, mono: 60, mine: 45, wheel: 15 }[k]), 0) / played.length : 60;
       push({ key: 'games', name: '游戏', icon: 'dice',
-        chal: pct(avgDiff),
         hard: mine.length ? ('一起玩过 ' + mine.length + ' 局 · 邀我 ' + t.aiGame + ' 次 · 最常玩 ' + (names[(mine.map(r => r.game).sort((a, b) => mine.filter(x => x.game === b).length - mine.filter(x => x.game === a).length)[0])] || '未知')) : '一局都没开过——TA 有 1% 概率邀你玩',
         subs: [{ n: '会玩几种游戏', v: kindsPlayed + ' / ' + keys.length + ' 种', p: pct(100 * use(kindsPlayed, keys.length)) }]
           .concat(subs.map(s => ({ n: s.n, v: s.v, p: s.p, sc: false }))),
@@ -32010,7 +31835,6 @@ const Detect = (function () {
       try { if (typeof Quiz !== 'undefined' && Quiz.askPool) pool = (Quiz.askPool(ct.id) || []).length; } catch (e) { /* 检测只读：题库口不在就按 0 道题算 */ }
       const papers = (S().quizzes || []).filter(z => !z.targets || z.targets.indexOf(ct.id) >= 0 || z.targets.indexOf('all') >= 0);
       push({ key: 'quiz', name: '决策（灵魂拷问）', icon: 'quiz',
-        chal: pct(100 * (1 - open(p.quizRate, 20)) + ((qlib.questions || []).length ? 0 : 20)),
         hard: (p.quizRate || 0) + '% · 题库 ' + (qlib.questions || []).length + ' 题' + (pool ? ('，现在能抽到 ' + pool + ' 题') : '，抽不到题'),
         subs: [
           { n: '题库里有多少题', v: (qlib.questions || []).length + ' 题 · ' + (qlib.groups || []).length + ' 个分组', p: pct(100 * Math.min(1, (qlib.questions || []).length / 20)) },
@@ -32033,7 +31857,6 @@ const Detect = (function () {
       const ibought = orders.filter(o => o.buyerUid === 'me' && o.toUid === ct.id);
       const addr = (((S().mall || {}).addr || {}).byContact || {})[ct.id];
       push({ key: 'mall', name: '商城', icon: 'box',
-        chal: 100 * (1 - open(p.shopRate, 10)),
         hard: '购物率 ' + (p.shopRate || 0) + '%（每轮聊天掷一次，2 小时防抖）',
         subs: [
           { n: 'TA 会几种买法', v: [gift.length, self.length, ibought.length].filter(n => n > 0).length + ' / 3 种（送我 / 买给自己 / 我买给它）', p: pct(100 * [gift.length, self.length, ibought.length].filter(n => n > 0).length / 3) },
@@ -32050,7 +31873,6 @@ const Detect = (function () {
     /* ---- 绘画 ---- */
     const doodleN = (typeof Doodle !== 'undefined') ? (Doodle.allCount || Doodle.count || 0) : 0;
     push({ key: 'doodle', name: '绘画', icon: 'brush',
-      chal: 100 * (1 - open(p.doodleRate, 10)),
       hard: '涂鸦率 ' + (p.doodleRate || 0) + '%（画的东西是现画的，不重样）',
       subs: [
         { n: 'TA 会画多少种题材', v: doodleN + ' 种（固定 ' + (typeof Doodle !== 'undefined' ? Doodle.count : 0) + ' + 随笔 ' + (typeof Doodle !== 'undefined' ? (Doodle.freeCount || 0) : 0) + '）', p: pct(100 * use(doodleN, 20)) },
@@ -32069,7 +31891,6 @@ const Detect = (function () {
       const taRecs = recs.filter(r => r && r.from === 'ai');
       const kindsRec = new Set(taRecs.map(r => String(r.type || r.kind || '报备'))).size;
       push({ key: 'report', name: '报备', icon: 'compass',
-        chal: 100 * (1 - (open(rp, 80) + open(ck, 80)) / 2),
         hard: rp || ck ? ('自动报备 ' + rp + '% · 来查岗 ' + ck + '%') : '两个都是关着的',
         subs: [
           { n: 'TA 报备过多少种不同的事', v: kindsRec + ' 种', p: pct(100 * use(kindsRec, 5)) },
@@ -32087,7 +31908,6 @@ const Detect = (function () {
       const visits = (bk.visits || []).length;
       const dr = ((S().settings || {}).diaryRates) || {};
       push({ key: 'diary', name: '心事簿', icon: 'book',
-        chal: 100 * (1 - open(dr.diary, 80)),
         hard: '全局概率：写心事 ' + (dr.diary || 0) + '% · 评论 ' + (dr.comment || 0) + '% · 回复 ' + (dr.reply || 0) + '%（这项是全局的，不按人）',
         subs: [
           { n: 'TA 写了多少天心事', v: days + ' 天', p: pct(100 * use(days, 14)) },
@@ -32101,7 +31921,6 @@ const Detect = (function () {
     {
       const rps = Object.values(S().redpackets || {}).filter(r => r.fromUid === ct.id);
       push({ key: 'redpacket', name: '红包', icon: 'hongbao',
-        chal: 100 * (1 - open(p.giftRedRate, 4)),
         hard: '主动发红包 ' + (p.giftRedRate || 0) + '% · 备注库 ' + nOf('redNotes') + ' 条',
         subs: [
           { n: '红包备注库备了多少条', v: nOf('redNotes') + ' 条', p: pct(100 * Math.min(1, nOf('redNotes') / 5)) },
@@ -32114,8 +31933,7 @@ const Detect = (function () {
 
     /* ---- 视频通话 ---- */
     push({ key: 'call', name: '视频通话', icon: 'video',
-      chal: 70,
-      hard: '这件事没有可学的料：打不打过来是固定的 3%，TA 天生就会——所以掌握度不适用，只看挑战度。' + '时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
+      hard: '这件事没有可学的料：打不打过来是固定的 3%，TA 天生就会——没有可练的料，掌握感不随练习走。' + '时长 ' + (raw(ct, 'callLo', '') === '' ? '默认 20~90 秒' : (raw(ct, 'callLo', 0) + '~' + raw(ct, 'callHi', 0) + ({ hour: ' 小时', min: ' 分钟' }[raw(ct, 'callUnit', 'min')]))),
       subs: [
         { n: '通话时长设置（现状，不计分）', v: raw(ct, 'callLo', '') === '' ? '没设，按默认 20~90 秒' : '设过了', p: raw(ct, 'callLo', '') === '' ? 50 : 100, sc: false },
         { n: '打过来过几次（现状，不计分）', v: t.call + ' 次', p: pct(100 * use(t.call, 3)), sc: false }
@@ -32127,7 +31945,6 @@ const Detect = (function () {
       const st = (typeof StatusEngine !== 'undefined' && StatusEngine.statusOf) ? StatusEngine.statusOf(ct) : null;
       const rot = ct.rot || null;
       push({ key: 'status', name: '状态', icon: 'pulse',
-        chal: rot && rot.rate > 0 ? 30 : 90,
         hard: rot && rot.rate > 0 ? ('每 ' + rot.minH + '~' + rot.maxH + ' 小时换一次，概率 ' + rot.rate + '%') : '状态轮换没开',
         subs: [
           { n: '状态库备了多少条', v: nOf('aiStatus') + ' 条', p: pct(100 * Math.min(1, nOf('aiStatus') / 6)) },
@@ -32139,8 +31956,7 @@ const Detect = (function () {
 
     /* ---- 撤回 ---- */
     push({ key: 'revoke', name: '撤回', icon: 'x',
-      chal: 100 * (1 - open(p.revokeRate, 50)),
-      hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算（会不会撤不靠学，所以掌握度不适用）',
+      hard: (p.revokeRate || 0) + '% · 单聊、群聊都按 TA 自己那格算（会不会撤不靠学）',
       subs: [
         { n: '撤回概率（现状，不计分）', v: (p.revokeRate || 0) + '%', p: pct(100 * open(p.revokeRate, 50)), sc: false },
         { n: '真撤回过几次（现状，不计分）', v: t.revoke + ' 次', p: pct(100 * use(t.revoke, 3)), sc: false }
@@ -32151,15 +31967,13 @@ const Detect = (function () {
     {
       const rnr = p.readNoReply || 0;
       const lo = p.minSec || 0, hi = p.maxSec || 0, mc = p.minCount || 0, mx = p.maxCount || 0;
-      const chal = pct(45 * Math.min(1, hi / 60) + 35 * Math.min(1, rnr / 50) + 20 * Math.min(1, mc / 4));
       const bad = [];
       if (rnr >= 50) bad.push('已读不回 ' + rnr + '% 偏高，TA 一半的话都不回你了');
       if (hi >= 60) bad.push('最慢要等 ' + hi + ' 秒才回，聊起来会像断线');
       if (mc >= 4) bad.push('一轮至少 ' + mc + ' 条，容易刷屏');
       if (hi && lo && hi - lo > 45) bad.push('快慢差太大（' + lo + '~' + hi + ' 秒），节奏忽快忽慢');
       push({ key: 'reply', name: '回复', icon: 'chat',
-        chal,
-        hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%（节奏类没有可学的料，掌握度不适用）',
+        hard: '等 ' + lo + '~' + hi + ' 秒 · 一轮 ' + mc + '~' + mx + ' 条 · 已读不回 ' + rnr + '%（节奏类没有可学的东西）',
         subs: [
           { n: '回复延迟（现状，不计分）', v: lo + '~' + hi + ' 秒', p: pct(100 * Math.min(1, hi / 60)), sc: false },
           { n: '一轮几条（现状，不计分）', v: mc + '~' + mx + ' 条', p: pct(100 * Math.min(1, mc / 4)), sc: false },
@@ -32182,7 +31996,8 @@ const Detect = (function () {
     arr.forEach(m => { if (m.from === 'ai' && m.senderId) speaker[m.senderId] = (speaker[m.senderId] || 0) + 1; });
     const spoke = members.filter(id => speaker[id]);
     const rows = [];
-    const push = r => { r.score = pct(rnd100(g.id + '|' + r.key, 22, 94)); r.challenge = pct(r.chal); rows.push(r); };
+    const gUse = () => arr.filter(m => m.from === 'ai').length;   /* 群里 TA 说过多少条：客观使用量 */
+    const push = r => { const f = feel(g.id, r.key, gUse()); r.score = f.m; r.challenge = f.b; rows.push(r); };
 
     push({ key: 'g-members', name: '成员活跃', icon: 'user',
       chal: pct(100 * (1 - use(spoke.length, Math.max(1, members.length)))),
@@ -32200,7 +32015,7 @@ const Detect = (function () {
 
     push({ key: 'g-limit', name: '每轮名额', icon: 'chat',
       chal: pct(100 * (1 - Math.min(1, (conv.groupMaxCount || 0) / 8))),
-      hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分（名额是闸门，掌握度不适用）',
+      hard: '一轮最多 ' + (conv.groupMaxCount || 0) + ' 条，在 ' + members.length + ' 位成员里分（名额是闸门）',
       subs: [
         { n: '每轮条数上限（现状，不计分）', v: (conv.groupMaxCount || 0) + ' 条', p: pct(100 * Math.min(1, (conv.groupMaxCount || 0) / 8)), sc: false },
         { n: '群里 AI 发言总数（现状，不计分）', v: arr.filter(m => m.from === 'ai').length + ' 条', p: pct(100 * use(arr.filter(m => m.from === 'ai').length, 40)), sc: false }
@@ -32281,7 +32096,7 @@ const Detect = (function () {
     if (!key) return '这句我没听出是哪个功能——写上功能名再问一次，比如「商城购物率改成 10% 行不行」。';
     const row = buildCt(ct).find(r => r.key === key);
     if (!row) return '这个功能在 TA 身上没找到。';
-    const curTxt = '现在「' + row.name + '」掌握度 ' + row.score + '%，挑战度 ' + row.challenge + '%。';
+    const curTxt = '现在「' + row.name + '」掌握感 ' + row.score + '%，操作负担 ' + row.challenge + '%。';
     const knob = KNOB[key];
     const num = (s.match(/(\d+(?:\.\d+)?)\s*%?/) || [])[1];
     if (!knob) return curTxt + '这一格没有单独的概率可调——它靠库里的料和别的功能带着走（' + (row.hard || '') + '）。' + (row.adv ? '我的建议：' + row.adv : '');
@@ -32339,17 +32154,17 @@ const Detect = (function () {
     head.innerHTML =
       '<button class="dt-who" id="dt-who"><i data-icon="user" data-size="15"></i><span>' + esc(curName()) + '</span><em>切换 ›</em></button>' +
       '<div class="dt-total">' +
-        '<div class="dt-total-b"><b>' + (all.m == null ? '—' : all.m + '%') + '</b><small>总体掌握度</small>' + bar(all.m || 0, 'ok') + '</div>' +
-        '<div class="dt-total-b"><b>' + all.c + '%</b><small>总体挑战度</small>' + bar(all.c, 'warn') + '</div>' +
+        '<div class="dt-total-b"><b>' + (all.m == null ? '—' : all.m + '%') + '</b><small>总体掌握感</small>' + bar(all.m || 0, 'ok') + '</div>' +
+        '<div class="dt-total-b"><b>' + all.c + '%</b><small>总体操作负担</small>' + bar(all.c, 'warn') + '</div>' +
       '</div>' +
-      '<div class="dt-tip">掌握度＝TA 对这件事的熟练程度；挑战度＝让 TA 做成这件事有多难。点开看细项和怎么调。</div>';
+      '<div class="dt-tip">掌握感＝TA 自己觉得这件事有多熟；操作负担＝TA 觉得做这件事有多费劲。两个数都带自然起伏，点开看细项和怎么调。</div>';
 
     list.innerHTML = rs.map((r, i) =>
       '<button class="dt-row card" data-i="' + i + '">' +
         '<span class="dt-ic"><i data-icon="' + r.icon + '" data-size="18"></i></span>' +
         '<span class="dt-main"><b>' + esc(r.name) + '</b>' + bar(r.score || 0, r.score == null ? '' : (r.score >= 60 ? 'ok' : (r.score >= 30 ? '' : 'bad'))) +
         '<small>' + esc(String(r.hard || '').slice(0, 46)) + '</small></span>' +
-        '<span class="dt-num"><b>' + (r.score == null ? '—' : r.score + '%') + '</b><small>挑战 ' + r.challenge + '%</small></span>' +
+        '<span class="dt-num"><b>' + (r.score == null ? '—' : r.score + '%') + '</b><small>负担 ' + r.challenge + '%</small></span>' +
       '</button>').join('');
 
     const advs = rs.filter(r => r.adv).sort((a, b) => a.score - b.score).slice(0, 4);
@@ -32377,6 +32192,8 @@ const Detect = (function () {
       b.addEventListener('click', () => applyFix(b.dataset.key, +b.dataset.val)));
     /* 图标：模板注入的 svg 图标是启动时统一渲染的，这里的新节点补一轮 */
     if (typeof mountIcons === 'function') { try { mountIcons(list); } catch (e) { /* 图标只是装饰，挂不上不拦检测页 */ } }
+    /* 感受会随时间和使用量走动，落一次盘（DB.save 自带 120ms 防抖，不会狂写） */
+    try { DB.save(); } catch (e) { /* 落盘失败不拦检测页：save 内部有兜底，这里只保证页面照常上屏 */ }
   }
 
   /* 照建议调一格（只动这一格，别的键一个不碰） */
@@ -32387,6 +32204,21 @@ const Detect = (function () {
     DB.save();
     UI.toast('已按建议改成 ' + val + '%');
     render();
+  }
+
+  /* 【重置感受】（她 10-13 08:40）：清空当前对象这套「掌握感 / 操作负担」，重新随机一套全新初始值——
+     每次都重新掷，点出来的初始面板不一样，不是回到同一个固定的「初学模板」。 */
+  function resetFeel() {
+    const o = curObj();
+    if (!o) { UI.toast('先在顶上选一个对象'); return; }
+    const s = S();
+    if (!s.feel) s.feel = {};
+    const pre = cur.id + '|';
+    let n = 0;
+    Object.keys(s.feel).forEach(k => { if (k.indexOf(pre) === 0) { delete s.feel[k]; n++; } });
+    DB.save();
+    render();                      /* 重画时 feel() 会重新掷一套新的初始值 */
+    UI.toast(n ? '感受已重置：重新生成了一套新的初始值' : '已重新掷一套新的感受');
   }
 
   function pickWho() {
@@ -32403,16 +32235,17 @@ const Detect = (function () {
   function openDetail(i) {
     const rs = rows(); const r = rs[i]; if (!r) return;
     const ct = curObj();
+    /* 她 10-13 08:28：子项不再显示任何百分比——两个总数已经是随机模拟数了，
+       再把「开关开没开、备了多少词」折成百分比挂上去，就成了「把有的都算进去」。
+       子项只留名字 + 现状文字（s.v），分数条整条拆掉。 */
     const lines = (r.subs || []).map(s =>
-      '<div class="dt-sub' + (s.sc === false ? ' dt-sub-ref' : '') + '"><div class="dt-sub-t"><span>' + esc(s.n) + '</span>' +
-      (s.sc === false ? '<b class="dt-ref">现状</b>' : '<b>' + s.p + '%</b>') + '</div>' +
-      (s.sc === false ? '' : bar(s.p, s.p >= 60 ? 'ok' : (s.p >= 30 ? '' : 'bad'))) +
+      '<div class="dt-sub"><div class="dt-sub-t"><span>' + esc(s.n) + '</span></div>' +
       '<small>' + esc(s.v) + '</small></div>').join('');
     const mask = document.createElement('div');
     mask.className = 'dialog-mask show dt-detail';
     mask.innerHTML = '<div class="dialog-card dt-dcard">' +
       '<div class="dt-dhead"><b>' + esc(r.name) + '</b><button class="dt-x" data-x="1">✕</button></div>' +
-      '<div class="dt-dsum">' + (r.score == null ? '<span>掌握度 <b>—</b></span>' : '<span>掌握度 <b>' + r.score + '%</b></span>') + '<span>挑战度 <b>' + r.challenge + '%</b></span></div>' +
+      '<div class="dt-dsum"><span>掌握感 <b>' + r.score + '%</b></span><span>操作负担 <b>' + r.challenge + '%</b></span></div>' +
       '<div class="dt-dhard">' + esc(r.hard || '') + '</div>' +
       '<div class="dt-subs">' + lines + '</div>' +
       (r.adv ? '<div class="dt-dadv">建议：' + esc(r.adv) + '</div>' : '') +
@@ -32428,6 +32261,8 @@ const Detect = (function () {
   }
 
   function init() {
+    const rb = el('dt-reset');
+    if (rb) rb.addEventListener('click', resetFeel);
     const cell = el('cell-detect');
     if (cell) cell.addEventListener('click', () => {
       if (!cur) {
@@ -32449,7 +32284,7 @@ const Detect = (function () {
     Router.go('detect');
   }
 
-  return { init, open: openFor, openGroup, render, askAnswer };
+  return { init, open: openFor, openGroup, render, askAnswer, resetFeel, feel };
 })();
 
 /* =====================================================
@@ -32640,6 +32475,36 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
        验收探针拿“全局存在”当就绪会抢跑（09-03 问卷套件就是这么误判成“钮没反”），改看这里 */
     document.documentElement.dataset.lxBooted = '1';
     window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
+    /* 真起来了：抹掉「本次启动」标记（下次开页不再走省内存模式），顺便看还有多少媒体没铺 */
+    try { DB.bootOk(); } catch (e) { /* 抹标记失败只影响下次是否保守启动，不拦界面 */ }
+    try { bindLeftMore(); } catch (e) { /* 加载条是附加口子，装不上也不能拦启动 */ }
+  }
+
+  /* 「加载更多图片」（她 10-13 09:21 闪退根治的配套口子）：启动是按字节预算铺的媒体，
+     没铺到的先显示占位；这里接着一批批铺，铺完重渲染图就出来。记录一个字节都没动过。 */
+  function bindLeftMore() {
+    const box = document.getElementById('lx-leftmore');
+    if (!box) return;
+    const txt = document.getElementById('lx-lm-txt');
+    const btn = document.getElementById('lx-lm-btn');
+    const x = document.getElementById('lx-lm-x');
+    const refresh = () => {
+      let left = 0; try { left = DB.unpackLeft(); } catch (e) { /* 数不出来就当没剩余，最多是不摆加载条 */ }
+      if (!left) { box.hidden = true; return; }
+      txt.textContent = '还有 ' + left + ' 个图片/视频这次没加载（没丢，都还在手机里）';
+      box.hidden = false;
+    };
+    (async function () { try { await DB.ready; } catch (e) { /* 启动那趟有问题也得把条子刷一遍（无桥/慢库环境常见） */ } refresh(); })();
+    if (x) x.addEventListener('click', () => { box.hidden = true; });
+    if (btn) btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.textContent = '加载中…';
+      try { await DB.unpackMore(); } catch (e) { /* 这一批铺不动就停手：剩余数照旧，再点还会重试 */ }
+      btn.disabled = false; btn.textContent = '加载更多图片';
+      try { if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender(); } catch (e) { /* 当前不在聊天页也重画一次，失败不影响已铺的图 */ }
+      try { if (typeof Home !== 'undefined' && Home.render) Home.render(); } catch (e) { /* 同上，首页重画失败不算错 */ }
+      try { if (typeof Moments !== 'undefined' && Moments.render) Moments.render(); } catch (e) { /* 同上，朋友圈重画失败不算错 */ }
+      refresh();
+    });
   }
 
   /* ---------------- 底部页签 ---------------- */
@@ -32963,7 +32828,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         const day0 = list.length ? list[0].day : null;
         const hit = day0 ? await DB.readBackup(day0) : null;
         if (!hit) { UI.toast('还没得备份可导'); return; }
-        const blob = new Blob([await DB.exportBundle(hit.doc, 'all')], { type: 'application/json' });
+        /* 低内存版（她 10-13 09:17）：不把整份拼成一个 JS 字符串，页面卡着时也打得出来 */
+        const blob = await DB.exportBundleBlob(hit.doc, 'all');
         UI.saveFile(blob, 'LOVEX自动备份-' + day0 + '.json', '已导出这份备份文件');
         return;
       }
@@ -33068,7 +32934,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       exporting = true;
       UI.busy('正在打包全部数据（含图片视频本体），大可能要等十几秒…');
       try {
-        const blob = new Blob([await DB.exportBundle(DB.state, 'all')], { type: 'application/json' });
+        const blob = await DB.exportBundleBlob(DB.state, 'all');
         const d = new Date(), p = n => String(n).padStart(2, '0');
         UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
                      '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出（含图片视频本体，文件会大一点）');
@@ -33085,7 +32951,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           conv: cv ? JSON.parse(JSON.stringify(cv)) : null,
           msgs: cv ? (DB.state.msgs[cv.id] || []) : []
         };
-        const blob = new Blob([await DB.exportBundle(pack, 'contact')], { type: 'application/json' });
+        const blob = await DB.exportBundleBlob(pack, 'contact');
         const d = new Date(), p = n => String(n).padStart(2, '0');
         UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
           d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
@@ -33150,7 +33016,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       exporting = true;
       UI.busy('正在打包聊天记录（' + n + ' 条）…');
       try {
-        const blob = new Blob([await DB.exportBundle(pack, 'msgs')], { type: 'application/json' });
+        const blob = await DB.exportBundleBlob(pack, 'msgs');
         const d = new Date(), p = x => String(x).padStart(2, '0');
         UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
           '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
@@ -33737,5 +33603,19 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
 })();
 
 </script>
+<!-- 媒体按需加载条（她 10-13 09:21「导入后闪退、怎么也进不去」的根治配套）：
+     启动按字节预算铺媒体，没铺到的先显示占位，这里给一个「加载更多」的口子 -->
+<div id="lx-leftmore" hidden>
+  <span id="lx-lm-txt"></span>
+  <button id="lx-lm-btn">加载更多图片</button>
+  <button id="lx-lm-x" title="先不加载">×</button>
+</div>
+<style>
+  #lx-leftmore{position:fixed;left:0;right:0;bottom:0;z-index:9000;display:flex;align-items:center;gap:8px;padding:9px 12px;background:#FFF6E5;border-top:1px solid #F0E2C8;font-size:12px;line-height:1.4;color:#6B5B3E}
+  #lx-leftmore[hidden]{display:none}
+  #lx-lm-txt{flex:1}
+  #lx-lm-btn{flex:none;border:none;border-radius:8px;padding:7px 12px;background:#2B2B31;color:#FFFDF6;font-size:12px}
+  #lx-lm-x{flex:none;border:none;background:transparent;color:#9A8B6E;font-size:16px;padding:2px 6px}
+</style>
 </body>
 </html>
