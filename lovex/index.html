@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261014-145046 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261014-173507 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -4609,20 +4609,54 @@ const DB = (function () {
      现在三个入口共用同一个函数：删好友、删会话、启动迁移。
      ===================================================== */
 
-  const mediaGC = [];   // 待回收的 IndexedDB 媒体引用（'idb:xxx'），防孤儿 blob 撑库
+  const mediaGC = [];   // 待回收的媒体本体引用（'idb:xxx'），防孤儿 blob 撑库
+  /* 一个节点里所有引用串（两族都收：'@mv…' 图/语音/头像、'idb:' 视频/封面） */
+  function refsAll(node) {
+    const out = [];
+    const walk = (v, d) => {
+      if (d > 6 || v == null) return;
+      if (typeof v === 'string') { if (v.indexOf('@mv') === 0 || /^idb:/.test(v)) out.push(v); return; }
+      if (Array.isArray(v)) { for (const x of v) walk(x, d + 1); return; }
+      if (typeof v === 'object') { for (const k of Object.keys(v)) walk(v[k], d + 1); }
+    };
+    walk(node, 0);
+    return out;
+  }
   function collectMedia(v, depth) {
     if (depth > 4 || v == null) return;
     if (typeof v === 'string') { if (/^idb:/.test(v)) mediaGC.push(v); return; }
     if (Array.isArray(v)) { for (const x of v) collectMedia(x, depth + 1); return; }
     if (typeof v === 'object') { for (const k of Object.keys(v)) collectMedia(v[k], depth + 1); }
   }
-  /* db.js 装载时 media.js 还没执行（MediaStore 在 TDZ），往后排一拍再真删 */
+  /* 删之前先核一遍「还有别处引用吗」——两族引用都算（@mv 图/语音 + idb: 视频/封面），
+     本地任何一份存档（快照/整档备份/影子）里还留着的也算。保留集算不出来就一个不删。 */
+  async function releaseMedia(refs) {
+    const list = (refs || []).filter(Boolean);
+    if (!list.length) return 0;
+    let keep;
+    try {
+      keep = new Set(refsAll(state));
+      const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
+      if (V && V.liveKeys) (await V.liveKeys()).forEach(k => keep.add(k));
+    } catch (e) {
+      if (typeof logErr === 'function') logErr('媒体回收暂停：保留集算不出来（宁可留不误删）');
+      return 0;
+    }
+    let n = 0;
+    for (const ref of list) {
+      if (keep.has(ref)) continue;                       /* 别处还引用着 → 留着 */
+      try { MediaStore.del(String(ref).replace(/^idb:/, '')); n++; } catch (e) { /* 删不掉就留着 */ }
+    }
+    return n;
+  }
+  /* 她 10-14 17:12：「找出会自动清理图片的原因所在」——除了开机那台清扫器，还有这里：
+     删会话/删好友/删动态时的回收，以前是「谁的就被删就删谁的本体」：
+     同一个本体现在别处还被引用时（封面/视频被两处用），删一处另一处也跟着空。
+     现在统一走 releaseMedia：等删完的动作落定，对**整档重算一次**「真没人引用了吗」。 */
   function flushMediaGC() {
     const list = mediaGC.splice(0);
     if (!list.length) return;
-    setTimeout(() => {
-      list.forEach(ref => { try { MediaStore.del(ref.slice(4)); } catch (e) {} });
-    }, 0);
+    setTimeout(() => { releaseMedia(list); }, 0);   /* db.js 装载时 MediaStore 还没执行（TDZ），排一拍再真删 */
   }
 
   /* 删一个会话：消息与里面的媒体本体一起走 */
@@ -4630,6 +4664,7 @@ const DB = (function () {
     const msgs = state.msgs && state.msgs[convId];
     if (msgs) { collectMedia(msgs, 0); delete state.msgs[convId]; }
     state.convs = (state.convs || []).filter(cv => cv.id !== convId);
+    flushMediaGC();   /* 收完就核一遍「还有别处引用吗」，不再攒到下一次清联系人才动 */
   }
 
   /* 清掉一个联系人在全库的数据残留，返回清掉的条目数 */
@@ -5161,8 +5196,12 @@ const DB = (function () {
     const doc = JSON.parse(JSON.stringify(root));      // 先拷一份：导出途中 state 再变也不影响
     const keys = Array.from(idbRefsIn(doc));
     const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    /* 10-14 她 16:40：21 片只能一片一片导。壳里改成「一份文件、追加着写」：
+       第 1 段带头，中间段只追加媒体条，最后一段收尾——整份仍是合法 bundle。
+       读的那条路（importBundleStream）本来就按块读 "media":[ 之后逐条切，一行不用改。 */
+    const single = !!(opt && opt.single);
     const head = () => '{"app":"LOVEX-BUNDLE","version":2,"kind":' + JSON.stringify(kind || 'all') +
-      ',"part":' + part + ',"exportedAt":' + JSON.stringify(new Date().toISOString()) +
+      (single ? '' : ',"part":' + part) + ',"exportedAt":' + JSON.stringify(new Date().toISOString()) +
       ',"data":' + (part === 1 ? JSON.stringify(doc) : 'null') + ',"media":[';
     let part = 1, buf = '', items = 0, taken = 0, miss = 0;
     buf = head();
@@ -5176,10 +5215,11 @@ const DB = (function () {
         /* 这片装不下：先封片（它已经是合法 JSON），开了新片再放这一条——
            逗号必须在这之后决定，不然新片开头会多一个前导逗号（10-14 踩过） */
         if (items && buf.length + it.length > limit) {
-          await onPart(buf + ']}', part, false);
-          part++; buf = head(); items = 0;
+          await onPart(single ? buf : (buf + ']}'), part, false);
+          part++; buf = single ? '' : head(); items = 0;
         }
-        buf += (items ? ',' : '') + it; items++;
+        /* 单文件模式封段之后，这一段没有头，第一条得自己补个逗号（数组还在继续） */
+        buf += (items || (single && part > 1) ? ',' : '') + it; items++;
       } catch (e) { miss++; }
       if (++taken % 4 === 0) await new Promise(r => setTimeout(r, 0));   // 每 4 个让一拍，界面不僵
     }
@@ -5403,8 +5443,10 @@ const DB = (function () {
           try { if (V.migrateToNative) { const mv = await V.migrateToNative(); if (mv && typeof logErr === 'function') logErr('媒体搬家：' + mv + ' 个本体落进原生文件'); } } catch (e) { if (typeof logErr === 'function') logErr('媒体搬家启动失败：' + ((e && e.message) || e) + '（下次开页自动重试）'); }
         })();
       }, 2500);
-      try { await V.snap(todayKey(), V.pack(state.msgs).doc); } catch (e) {}
-      try { await migrateLegacySnaps(); } catch (e) {}
+      /* 她 10-14 17:19：「没用过的都给我去掉」——每日聊天快照（14 天）那个口是 08-30 我加的，
+         她自己从来没用过，界面上今天也一并拿掉了；所以开页不再白写一份（每天一份纯属白占）。
+         snapMsgs 本身留着：只当「主档写不进去 / 没 IDB」那两种极端情况下的兵底。 */
+      try { await migrateLegacySnaps(); } catch (e) { /* 旧位里的两天快照迁一次就删，拿不准也不阻碍启动 */ }
       /* 上次主档没写进去（配额）而整档进了影子：影子更新就把那份新的顶上，一条不丢 */
       try {
         const at = +(localStorage.getItem(SHADOW_AT) || 0);
@@ -5417,10 +5459,12 @@ const DB = (function () {
           }
         }
       } catch (e) {}
-      /* 空闲时回收没人引用的媒体 blob（她 10-05 加固两遭）：
+      /* 空闲时回收没人引用的媒体 blob（她 10-05 加固两遭，她 10-14 17:12 再加固第三遭）：
          ① 内有图没进库（pending）就本轮不清——这种状态下的“没人引用”可能是假象；
-         ② 保留集除了文本引用，还包括 keepKeys(state)（内存里每个媒体反推的键）；
-         ③ 真清了就写一笔黑匣子，不再无声无息。 */
+         ② 保留集除了文本引用，还包括 keepKeys(state)（内存里每个媒体反推的键）
+            和 liveKeys()（每日聊天快照 + 每日整档备份 + 整档影子里出现过的每一个媒体）——
+            后者是她 10-14 早「换过备份后我啥也没干图又没了」的真凶：以前只算前者；
+         ③ 真清了就把删掉的键写进黑匣子，不再只报一个数。 */
       setTimeout(() => {
         (async function () {
           try {
@@ -5431,8 +5475,13 @@ const DB = (function () {
             const days = await listSnaps();
             for (const d of days) { try { parts.push(JSON.stringify(await V.readSnap(d.day))); } catch (e) {} }
             /* 传一组文本进去，不让它 join 成一个大串（她 10-14：那一下就是几十 MB 的峰值） */
-            const n = await V.sweep(parts, V.keepKeys(state));
-            if (n && typeof logErr === 'function') logErr('媒体清扫：清掉 ' + n + ' 个没人引用的媒体');
+            const extra = V.keepKeys(state);
+            if (V.liveKeys) { try { extra.push.apply(extra, await V.liveKeys()); } catch (e) { /* 取存档引用失败就按现有保留集来（宁可少清不误删） */ } }
+            const n = await V.sweep(parts, extra);
+            if (n && typeof logErr === 'function') {
+              logErr('媒体清扫：清掉 ' + n + ' 个没人引用的媒体'
+                + (V.sweptKeys ? '（' + V.sweptKeys().slice(0, 12).join(' ') + '）' : ''));
+            }
           } catch (e) {}
         })();
       }, 4000);
@@ -5466,6 +5515,18 @@ const DB = (function () {
      ① 手机「下载」目录那份 = 全量含图本体（exportBundle），是硬退路，写成才算今天备完；
      ② IDB @bk 那份 = 轻量引用版（防配额爆），只当快速回滚用。
      手机文件写失败当天自动重试（她 10-10：备份不能默默缺席）；浏览器没有静默写文件，@bk 写成即算数。 */
+  /* 她 10-14：「导入也导不进去原本在的」那一轮暴出来的真问题：
+     导入是「整档换血」，导错一份（比如早一天那份）原本的记录/图就回不来。
+     导入前先把现在这一份按今天存进「用某一天备份恢复」，选错能换回来——跟恢复备份走同一个口。 */
+  async function snapNow() {
+    const V = vault();
+    if (!V) return false;
+    try {
+      clearTimeout(saveTimer); writeNow();
+      return await V.snapFull(todayKey(), JSON.parse(JSON.stringify(state)));
+    } catch (e) { return false; }
+  }
+
   async function dailySnap(force) {
     const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
     if (!V) return false;                                  // 没 IDB 就不写（不然整档塞 localStorage 会当场爆配额）
@@ -5547,24 +5608,19 @@ const DB = (function () {
     catch (e) { return { found: 0, missing: 0, left: 0, err: String((e && e.message) || e) }; }
   }
 
-  /* 界面上的「加载更多图片」：接着放下一批（还是那个字节预算），放完 left 归零 */
-  async function unpackMore(cap) {
-    const V = vault();
-    if (!V) return { found: 0, missing: 0, left: 0 };
-    try { return await V.unpack(state, cap || undefined); }
-    catch (e) { return { found: 0, missing: 0, left: 0, err: String((e && e.message) || e) }; }
-  }
+  /* 10-14 清：界面上的「加载更多图片/提示剩余」那一套（unpackMore / unpackLeft）跟提示条一起退役，
+     媒体现在只有两条路：开机按次序铺一批，进哪个会话就补哪个（DB.unpackConv）。 */
 
   return {
     get state() { return state; },
     get ready() { return startReady(); },
     bootOk,
     bootSafe,
-    unpackMore,
     unpackConv,
-    unpackLeft: () => { const V = vault(); try { return V ? (V.stats().left || 0) : 0; } catch (e) { return 0; } },
     purgeContact,
     dropConv,
+    releaseMedia,
+    flushMediaGC,
     sweepOrphans,
     save,
     flushSave: writeNow,
@@ -5581,6 +5637,7 @@ const DB = (function () {
     getSnapMsgs,
     restoreSnap,
     dailySnap,
+    snapNow,
     listBackups,
     readBackup,
     restoreBackup,
@@ -9272,7 +9329,7 @@ const Media = (function () {
      元素上带 data-vsrc='@mv…' 的（朋友圈的视频就是）永远还匹配扫描条件，
      于是一写就再触发一次扫描、再写一次，任务队列永远不空，页面当场卡死。
      所以按元素记一个「上次处理时的引用串指纹」，指纹没变就不再入队。 */
-  const netMark = new WeakMap();
+  let netMark = new WeakMap();
   let netBusy = false, netTick = 0;
   function netRef(s) { const m = MV_ONE.exec(String(s || '')); return m ? m[0] : null; }
   function netFingerprint(el) {
@@ -9303,14 +9360,14 @@ const Media = (function () {
       const k = netRef(el.getAttribute('src'));
       if (k) {
         const u = await MediaStore.src(k);
-        if (u) { el.src = u; did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
+        if (u) { el.src = u; el.removeAttribute('data-mv-miss'); did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
       }
     }
     const dv = el.getAttribute('data-vsrc');
     if (dv) {
       const k = netRef(dv) || dv;
       const u = await MediaStore.src(k);
-      if (u) { el.src = u; did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
+      if (u) { el.src = u; el.removeAttribute('data-mv-miss'); did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
     }
     const st = el.getAttribute('style');
     if (st && MV_ONE.test(st)) {
@@ -9337,6 +9394,32 @@ const Media = (function () {
   }
   /* 立即补一轮（渲染后主动调）；不调也行——观察器会接住 */
   function hydrate(root) { netScan(root || (typeof document !== 'undefined' ? document.body : null)); if (netQ.length) netRun(); }
+  /* 她 10-14 16:40/16:41/16:43：「导入也导不进去原本在的」「头像依旧回不来」
+     「相册发出去的图片也丢了」——导入把本体补回了库，界面却还停在占位/字母：
+     已经标过「取不到」的元素被指纹记录挡住不再重试，missSet 也还留着旧账。
+     补回本体之后必须「拆掉旧账 + 全页重扫一遍」，界面才当场变成真图。 */
+  function recheck(root) {
+    try { missSet.clear(); } catch (e) {}
+    netMark = new WeakMap();
+    netQ.length = 0;
+    netScan(root || (typeof document !== 'undefined' ? document.body : null));
+    if (netQ.length) netRun();
+    return true;
+  }
+  /* 她 10-14 17:0x：「每次点开表情按钮都眼睁睁看着从无再出现」「每次发一张图整个聊天界面图片全刷新」——
+     根因不是丢图，是**每次都从空 src 出生再等异步补上**：重画一遍＝所有 img 元素重造、重新解码。
+     本体第一次取出来之后就躺在 MediaStore 的 urls 里，渲染层在**拼字符串那一刻**就该拿到这个地址。
+     拿不到（冷引用/真丢了）回空串，交给下面的网异步补，行为跟以前一样。 */
+  function href(v) {
+    if (!v) return '';
+    try {
+      if (typeof MediaStore === 'undefined' || !MediaStore.peek) return '';
+      return MediaStore.peek(v) || '';
+    } catch (e) { return ''; }   /* MediaStore 还没初始化（TDZ）时照旧走异步 */
+  }
+  /* 拼 HTML/建元素统一用这个：热引用＝真地址（当场就画得出），冷引用＝原串（网去补） */
+  function src0(v) { return href(v) || v; }
+
   /* 看着整页：新插进来的节点、以及被改过 src/style/data-vsrc 的节点都扫一遗 */
   function watchMedia() {
     if (typeof MutationObserver !== 'function' || typeof document === 'undefined') return false;
@@ -9352,7 +9435,7 @@ const Media = (function () {
       return true;
     } catch (e) { return false; }
   }
-  return { compressImage, VoiceRec, ANI_CAP, hydrate, watchMedia, missed: v => missSet.has(v) };
+  return { compressImage, VoiceRec, ANI_CAP, hydrate, watchMedia, recheck, href, src0, missed: v => missSet.has(v) };
 })();
 
 /* ---------------- P36d MediaStore：大文件媒体本体（她 08-27 定拆雷） ----------------
@@ -9488,6 +9571,16 @@ const MediaStore = (function () {
     },
     /* 引用串判定：'idb:xxx' */
     isRef(v) { return typeof v === 'string' && /^idb:/.test(v); },
+    /* 同步看一眼「解好的地址」（渲染层拼字符串时用）：命中回 objectURL，没命中回空串。
+       这里绝不发异步请求——拿不到就让渲染网去补，免得渲染层等它。 */
+    peek(v) {
+      if (!v) return '';
+      let key;
+      if (this.isRef(v)) key = v.slice(4);
+      else if (typeof v === 'string' && /^@mv[0-9a-z]+/.test(v)) key = v;
+      else return v;                 /* 内联 dataURL 直用，不用解 */
+      return urls.get(key) || '';
+    },
     /* 全部键（清扫用） */
     keys() { return keys(); },
     /* 渲染就绪 URL：idb引用→objectURL；兼容旧存档的 dataURL 直返；丢了返空串由调用方降级 */
@@ -9534,6 +9627,7 @@ const MediaVault = (function () {
   const MIN = 4096;                // 小于 4KB 的 data: 串不值得搬，留在主档
   let off = !(window.indexedDB);
   const armed = new Map();         // ref -> 1：本会话已确认在库里，不重复写
+  const swept = [];                // 最近一次清扫删掉的键（写黑匣子用）
   const st = { packed: 0, bytes: 0, missing: 0, refs: 0, flushErr: 0, missingLogged: 0, left: 0, safe: 0 };
 
   /* 一次启动最多把多少字节的媒体本体铺进内存（dataURL 字符数）。超出的保留引用串原样不动，
@@ -9673,13 +9767,29 @@ const MediaVault = (function () {
     for (const t of parts) { if (typeof t !== 'string' || !t) continue; for (const k of refsIn(t)) keep.add(k); }
     (extraKeys || []).forEach(k => keep.add(k));
     let n = 0;
+    swept.length = 0;
     for (const k of all) {
       if (typeof k !== 'string' || k.indexOf(P) !== 0) continue;   // 只清自己的
       if (keep.has(k)) continue;
-      try { await MediaStore.del(k); armed.delete(k); n++; } catch (e) {}
+      try { await MediaStore.del(k); armed.delete(k); n++; if (swept.length < 40) swept.push(k); } catch (e) { /* 删不掉就留着，不算错删 */ }
     }
     return n;
   }
+  /* 她 10-14 17:12：「我啥也没干，昨晚聊完今早一进又全被清理了」「什么换备份还清理我的媒体」
+     真因：清扫的保留集只算了【当前档 + 每日聊天快照】，**没算每日整档备份（@bk:）和整档影子**。
+     换过一次备份、或者 import 把档换回旧的之后，只在备份里还被引用的那些本体就成了“没人引用”——
+     开机 4 秒被清扫真删。这里把「所有本地存档里出现过的媒体」一并算进保留集，宁可留不可错删。
+     逐份读、只收引用、不留大串（档里存的是引用串，一份就几十 KB，手机上也不会顶内存）。 */
+  async function liveKeys() {
+    const out = [];
+    const take = doc => { if (doc) { try { keepKeys(doc).forEach(k => out.push(k)); } catch (e) { /* 这份读坏了就跳它，别的照样保 */ } } };
+    try { for (const d of await listSnaps()) take(await readSnap((d && d.day) || d)); } catch (e) { /* 快照索引读不到：不阻碍后面的备份保护 */ }
+    try { for (const b of await listFull()) take(await readFull((b && b.day) || b)); } catch (e) { /* 同上 */ }
+    try { const sh = await readShadow(); take(sh && sh.doc ? sh.doc : null); } catch (e) { /* 同上 */ }
+    return out;
+  }
+  /* 最近一次清扫到底删了哪些键（黑匣子用）——删过什么必须能查，不许无声无息 */
+  function sweptKeys() { return swept.slice(0); }
 
   /* ---- 整档影子（配额写满 / 主档损坏 / 被别的标签页覆盖时的找回口） ---- */
   async function shadow(doc, savedAt) {
@@ -9821,7 +9931,7 @@ const MediaVault = (function () {
 
   return {
     enabled() { return !off; },
-    hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs,
+    hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs, liveKeys, sweptKeys,
     shadow, readShadow, snap, listSnaps, readSnap,
     snapFull, listFull, readFull, harvest,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing, left: st.left }; },
@@ -9986,6 +10096,10 @@ const StatusEngine = (function () {
    ===================================================== */
 const Home = (function () {
 
+  /* 她 10-14 17:0x：列表/头像这些图也是「重画一次就白一瞬」的重灾区——
+     库里已经解好的地址直接拼进去，热引用当场就有图，冷引用仍交给渲染网去补。 */
+  const mediaSrc = v => (typeof Media !== 'undefined' && Media.src0) ? Media.src0(v) : v;
+
   /* ---------- 基础工具 ---------- */
   function contactById(id) {
     return DB.state.contacts.find(c => c.id === id);
@@ -10006,12 +10120,13 @@ const Home = (function () {
      不许把“已删除联系人”这种堆到脸上 */
   function avaInner(uid) {
     const c = uid === 'me' ? (DB.state.profile || {}) : contactById(uid);
+
     const txt = uid === 'me' ? ((DB.state.profile || {}).name || '我') : (c ? displayName(c) : '');
     /* 她 10-14：'@mv…' 不等于丢——画出来交给渲染网去库里取（取不到才会标 data-mv-miss）；
        只有网真取不回本体时才退回字母头像（她 10-04 的口径：不画破图） */
     const missAva = c && c.avatar && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(c.avatar)
       && typeof Media !== 'undefined' && Media.missed && Media.missed(c.avatar);
-    return c && c.avatar && !missAva ? '<img src="' + c.avatar + '" alt="">'
+    return c && c.avatar && !missAva ? '<img src="' + mediaSrc(c.avatar) + '" alt="">'
       : '<span class="ava-txt">' + UI.escapeHtml(String(txt || '?').slice(0, 1)) + '</span>';
   }
   /* ---------- 群会话工具（决策记录#15） ---------- */
@@ -10075,7 +10190,7 @@ const Home = (function () {
       if (isGroup) {
         if (cv.cover) {
           const im = document.createElement('img');
-          im.src = cv.cover;
+          im.src = mediaSrc(cv.cover);
           avEl.appendChild(im);
           if (cv.coverShape === 'square') avEl.classList.add('sq');
         } else {
@@ -10085,7 +10200,7 @@ const Home = (function () {
           membersOf(cv).slice(0, 4).forEach(mc => {
             const cell = document.createElement('span');
             if (mc.avatar) {
-              const im = document.createElement('img'); im.src = mc.avatar; cell.appendChild(im);
+              const im = document.createElement('img'); im.src = mediaSrc(mc.avatar); cell.appendChild(im);
             } else {
               cell.textContent = (displayName(mc) || '?').slice(0, 1);
             }
@@ -10096,7 +10211,7 @@ const Home = (function () {
         }
       } else if (c.avatar) {
         const im = document.createElement('img');
-        im.src = c.avatar;
+        im.src = mediaSrc(c.avatar);
         avEl.appendChild(im);
       } else {
         avEl.textContent = (displayName(c) || '?').slice(0, 1);
@@ -10578,6 +10693,10 @@ const Chat = (function () {
       : m.type === 'link' ? (m.watchInvite ? '[一起看邀请]' : '[链接]') : (m.text || '');
   }
 
+  /* 她 10-14 17:0x：热引用（库里已经解好的地址）在拼字符串那一刻就换成真地址——
+     不然每一次重画都是「先出生一个空 src 的元素，等异步补上」，那一帧就是白块；图一多整个界面像刷新一遍。 */
+  const mediaSrc = v => (typeof Media !== 'undefined' && Media.src0) ? Media.src0(v) : v;
+
   function appendOne(listEl, m) {
     if (m.ts - lastTs >= 5 * 60 * 1000) {
       const dv = document.createElement('div');
@@ -10686,7 +10805,9 @@ const Chat = (function () {
         bub.appendChild(miss);
       } else {
       const im = document.createElement('img');
-      im.src = m.img;
+      const imSrc = mediaSrc(m.img);
+      const imWarm = imSrc !== m.img;   /* 命中缓存：出生就带真图，不用再等 load 淡入一遍 */
+      im.src = imSrc;
       im.alt = m.doodle ? '涂鸦' : '图片';
       /* 表情贴纸微信式裸贴；普通相册图保持小预览；涂鸦另走清晰预览尺寸（SVG 正方形本体），点开全屏可放大 */
       if (m.doodle) {
@@ -10716,7 +10837,7 @@ const Chat = (function () {
       im.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); lpCancel(); showMsgActions(m); });   /* stopPropagation：否则冒到气泡上的那份 contextmenu 会再叠一层同款面板（探针 10-02 拓出） */
       /* 图片淡入（P8 加分项）：加载完成前透明，onload 后 0.3s 渐显；缓存图直接显示 */
       im.className = 'msg-img-fade' + (m.doodle ? ' msg-img-doodle' : '');
-      if (im.complete) im.classList.add('loaded');
+      if (imWarm || im.complete) im.classList.add('loaded');
       else im.addEventListener('load', () => im.classList.add('loaded'), { once: true });
       bub.appendChild(im);
       }
@@ -11332,7 +11453,23 @@ const Chat = (function () {
        （TA 发图本来就从那抽；库里有这张的不重复收） */
     /* 她 10-13 00:06：我发过的图片，只要还没进 TA 的图库就收（不再只收表情图；涂鸦不算图片表情） */
     if (m.type === 'img' && m.img && !m.doodle && cv.type === 'single') runSafe('chat.learn.sticker', () => learnFromMe(cv.id, '', m.img));
-    if (!convId || (cur && cv.id === cur.id)) renderMsgs();   // 悬浮窗发的消息不重渲主窗
+    if (!convId || (cur && cv.id === cur.id)) {
+      /* 她 10-14 17:0x：「我每次发送一图片都会整个聊天界面图片全刷新」——
+         以前发一条就整页重画，几十个图元素全部重造 + 重新解码，看着就像刷新了一遍。
+         现在只把这行追加进去；只有「这条会话还没画过」才整页画。 */
+      const list = document.getElementById('msg-list');
+      if (list && renderedConv === cur.id) {
+        appendOne(list, m);
+        scrollBottom();
+        /* 页面上最多留 msgLimit 行（跟整页画同一个上限），别让 DOM 越聊越长 */
+        let over = list.children.length - msgLimit - 1;
+        for (let i = 0; over > 0 && i < list.children.length; ) {
+          const c = list.children[i];
+          if (c.id === 'chat-earlier') { i++; continue; }
+          list.removeChild(c); over--;
+        }
+      } else renderMsgs();
+    }
     Home.render();
     Engine.onUserMessage(cv.id);   // 文字/图片/语音都会触发AI回复安排
   }
@@ -12187,7 +12324,7 @@ const Chat = (function () {
     ? ((typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(it.img)
           && typeof Media !== 'undefined' && Media.missed && Media.missed(it.img))
         ? '<span class="ed-kao">丢</span>'
-        : '<img src="' + it.img + '">')
+        : '<img src="' + mediaSrc(it.img) + '">')
     : kaoHtml(it.text);
   function stickerLib(kind) {
     if (kind === 'mine') return DB.state.libs.userStickers;
@@ -21535,8 +21672,15 @@ function coverTap(e) {
         if (!ok) return;
         const s = store();
         const gone = s.posts.find(p => p.id === id);
-        if (gone) (gone.videos || []).forEach(v => { if (MediaStore.isRef(v)) { MediaStore.del(v.slice(4)); MediaStore.del('pos_' + v.slice(4)); } });  /* P36d：删动态连文件带走（含首帧海报），防孤儿 */
         s.posts = s.posts.filter(p => p.id !== id);
+        /* P36d：删动态连文件带走（含首帧海报），防孤儿。
+           她 10-14 17:12：但得先把档里删干净再核一遍——同一段视频在别处（别的帖/聊天）还被引用就不删，
+           以前是无条件删，删一处另一处也跟着空。定位（pos_）是内部小记，跟着走没问题。 */
+        if (gone) {
+          const refs = (gone.videos || []).filter(v => MediaStore.isRef(v));
+          refs.forEach(v => { try { MediaStore.del('pos_' + v.slice(4)); } catch (e) { /* 定位小记删不掉就留着 */ } });
+          if (refs.length) { try { DB.releaseMedia(refs); } catch (e) { /* 核不出来就不删，宁可留不误删 */ } }
+        }
         DB.save(); renderList();
       });
   }
@@ -32805,8 +32949,17 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
   /* 她 10-05 新提：每天自动备份一份全档（一天一次，只留最近 7 天）。
      她 10-10 16:31 报“压根没有全档备份”钉出的时序炸弹：开页立刻打包全量（大档几十秒），
      而热更新在开页 10 秒内拿到新版就 web.reload()——备份每次都被摧死在半路，一个文件都没写成。
-     推到开页 75 秒后跑：躲开热更新窗口，也避开启动繁忙期。 */
-  setTimeout(() => { runSafe('backup.daily', () => { DB.dailySnap(); }); }, 75000);
+     她 10-14 16:54：「每日备份不要在一进去的时候备份了……固定时间，每天晚上进行一次备份，
+     不然确实像你说的又要备份又要导入不好」。所以不再开页就备：到点（默认 22:00）之后
+     第一次打开就补当天那份；一直开着就每 10 分钟看一眼到点没（dailySnap 自己会管“今天备过没”）。 */
+  const BK_AT = 22 * 60;                                   /* 每天晚上 22:00（她没点具体时刻，工程值待拍） */
+  function backupDue(now) { const d = new Date(now); return (d.getHours() * 60 + d.getMinutes()) >= BK_AT; }
+  function backupTick() {
+    try { if (backupDue(Date.now())) runSafe('backup.daily', () => { DB.dailySnap(); }); } catch (e) {}
+  }
+  backupTick();
+  setInterval(backupTick, 10 * 60 * 1000);
+  window.__LX_BK = { due: backupDue, tick: backupTick };   /* 探针直测「到点才备」（10-14 她改成晚上固定时间） */
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
     document.getElementById('btn-side').addEventListener('click', () => Router.go('mine'));
@@ -32824,26 +32977,11 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
     /* 真起来了：抹掉「本次启动」标记（下次开页不再走省内存模式），顺便看还有多少媒体没铺 */
     try { DB.bootOk(); } catch (e) { /* 抹标记失败只影响下次是否保守启动，不拦界面 */ }
-    try { bindLeftMore(); } catch (e) { /* 加载条是附加口子，装不上也不能拦启动 */ }
   }
 
-  /* 媒体没排上加载时的提示（她 10-13 11:13：看不到图会以为丢了——她那句「图片全部丢失」就是这么看出来的）。
-     不再摆「加载更多图片」按钮了：她 11:13「一点击加载更多图片就死机卡掉线」，那一下又是一整批进内存，
-     这台机器吃不下。改成打开哪个会话/朋友圈就自动补哪个（DB.unpackConv）。 */
-  function bindLeftMore() {
-    const box = document.getElementById('lx-leftmore');
-    if (!box) return;
-    const txt = document.getElementById('lx-lm-txt');
-    const x = document.getElementById('lx-lm-x');
-    const refresh = () => {
-      let left = 0; try { left = DB.unpackLeft(); } catch (e) { /* 数不出来就当没剩余，最多是不摆提示 */ }
-      if (!left) { box.hidden = true; return; }
-      txt.textContent = '还有 ' + left + ' 张图/视频没排上加载（一张没丢，都还在手机里）；进对应聊天或朋友圈会自动加载';
-      box.hidden = false;
-    };
-    (async function () { try { await DB.ready; } catch (e) { /* 启动那趟有问题也得把条子刷一遍（无桥/慢库环境常见） */ } refresh(); })();
-    if (x) x.addEventListener('click', () => { box.hidden = true; });
-  }
+  /* 她 10-13 11:13：看不到图会以为丢了——不再摆「加载更多图片」按钮（那一下又是一整批进内存，
+     这台机器吃不下），改成打开哪个会话/朋友圈就自动补哪个（DB.unpackConv）；
+     10-14 清：边上那条提示条连同 bindLeftMore / DB.unpackMore / DB.unpackLeft 一起退役。 */
 
   /* ---------------- 底部页签 ---------------- */
   function bindTabs() {
@@ -33115,28 +33253,20 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       });
     }
     document.getElementById('cell-storage').addEventListener('click', async () => {
-      let snaps = [];
-      try { snaps = await DB.listSnaps(); } catch (e) { logErr('存储管理：读快照失败 ' + (e && e.message)); }
       let bks = [];
       try { bks = await DB.listBackups(); } catch (e) { logErr('存储管理：读备份失败 ' + (e && e.message)); }
+      /* 她 10-14 17:19：「我只知道我自己手动备份和每日备份，剩下那都是啥乱七八糟的，没用的都给我去掉」
+         —— 「按天找回聊天记录（快照）」是我 08-30 加的口，她从来没用过，拿掉；
+         图片那条留着但改成人话（「补回丢失的图片」）——她现在手上只有一份旧备份，
+         就靠这个把图补回原位、不动现在的聊天记录。 */
       const act = await UI.actionSheet('存储管理', [
         { key: 'info', label: '本机占用概览' },
-        { key: 'harvest', label: '从旧备份文件里找回图片' },
-        { key: 'bk', label: bks.length ? ('每日自动备份（已存 ' + bks.length + ' 份）') : '每日自动备份（还没存过）' },
-        { key: 'snap', label: snaps.length ? ('按天找回聊天记录（' + snaps.length + ' 天快照）') : '按天找回聊天记录（暂无快照）' }
+        { key: 'harvest', label: '补回丢失的图片（选之前的备份文件）' },
+        { key: 'bk', label: bks.length ? ('每日自动备份（已存 ' + bks.length + ' 份）') : '每日自动备份（还没存过）' }
       ]);
       if (act === 'info') { storageOverview(); return; }
       if (act === 'harvest') { harvestInput.value = ''; harvestInput.click(); return; }
       if (act === 'bk') { openBackups(); return; }
-      if (act !== 'snap') return;
-      if (!snaps.length) return UI.toast('还没得快照：每天开页时存一份，只留最近 14 天');
-      const day = await UI.actionSheet('选一天合并回来（只补我缺的那几条，不整档覆盖）',
-        snaps.map(s => ({ key: s.day, label: s.day + ' · ' + (s.convs || 0) + ' 个会话' })));
-      if (!day) return;
-      let n = 0;
-      try { n = await DB.restoreSnap(day); } catch (e) {}
-      UI.toast(n ? ('已并回 ' + n + ' 条') : '这一天没有新东西可并');
-      if (n) setTimeout(() => location.reload(), 800);
     });
 
     /* --- 每天自动备份（她 10-05）：进来看见存了几份、能恢复、能导出成文件 ---
@@ -33149,7 +33279,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const opts = [{ key: 'now', label: '现在就备份一份' }];
       if (list.length) opts.push({ key: 'rst', label: '用某一天备份恢复（共 ' + list.length + ' 份）' });
       opts.push({ key: 'exp', label: list.length ? ('把最近这份导出成文件（' + list[0].day + '）') : '把最近这份导出成文件' });
-      opts.push({ key: 'tog', label: on ? '关掉「每天自动备份」' : '打开「每天自动备份」' });
+      opts.push({ key: 'tog', label: on ? '关掉「每天晚上自动备份」' : '打开「每天晚上自动备份」' });
       const act = await UI.actionSheet('每日自动备份' + (on ? '' : '（现在关着）'), opts);
       if (!act) return;
       if (act === 'now') {
@@ -33159,7 +33289,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       }
       if (act === 'tog') {
         DB.state.settings.dailyBackup = !on; DB.save();
-        UI.toast(!on ? '已打开：以后每天开页自动备份一份' : '已关掉每天自动备份');
+        UI.toast(!on ? '已打开：以后每天晚上自动备份一份' : '已关掉每天晚上自动备份');
         return;
       }
       if (act === 'exp') {
@@ -33284,17 +33414,24 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const nat = (typeof window !== 'undefined' && window.LovexNative
         && typeof window.LovexNative.saveBackup === 'function') ? window.LovexNative : null;
       if (nat) {
+        /* 她 10-14 16:40：「21 片只能一个一个导，好麻烦」。新版壳里改成「一份文件、边算边追加」，
+           她只要选那一个文件；老壳（没 saveBackupAppend）退回按片存，仍然能导。 */
+        const appendMode = typeof nat.saveBackupAppend === 'function';
         let okN = 0, failN = 0;
         const r = await DB.exportBundleParts(root, kind, {
+          single: appendMode,
           onPart: (text, i) => {
             let w = '';
-            try { w = nat.saveBackup(text, name + (i > 1 ? ('-第' + i + '片') : '') + '.json'); } catch (e) { w = ''; }
+            try {
+              w = appendMode ? nat.saveBackupAppend(text, name + '.json', i)
+                             : nat.saveBackup(text, name + (i > 1 ? ('-第' + i + '片') : '') + '.json');
+            } catch (e) { w = ''; }
             if (w) okN++; else failN++;
           }
         });
         UI.toast(failN
-          ? ('备成 ' + okN + '/' + r.parts + ' 片，有 ' + failN + ' 片没写成——看看手机还剩多少空间')
-          : ((okMsg || '已导出') + (r.parts > 1 ? ('（分了 ' + r.parts + ' 片，导入时一起选上）') : '') + '（已存到手机「下载」）'));
+          ? ('备成 ' + okN + '/' + r.parts + ' 段，有 ' + failN + ' 段没写成——看看手机还剩多少空间')
+          : ((okMsg || '已导出') + (appendMode || r.parts <= 1 ? '' : ('（分了 ' + r.parts + ' 片，导入时一起选上）')) + '（已存到手机「下载」）'));
         return r;
       }
       const blob = await DB.exportBundleBlob(root, kind);
@@ -33578,7 +33715,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     async function importAllFlow() {
       const ok = await UI.confirmBox({
         title: '导入备份',
-        text: '导入会用备份文件覆盖当前全部数据，且无法撤销。确定继续？',
+        text: '导入会用备份文件覆盖当前全部数据。导入前会先把现在这一份存好（选错了能在「用某一天备份恢复」里换回来）。确定继续？',
         danger: true, okText: '选择文件'
       });
       if (!ok) return;
@@ -33593,8 +33730,19 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { r = await DB.importBundleStream(file); }
       finally { UI.busyDone(); }
       if (r.kind === 'all') {
-        if (!r.data) throw new Error('这份是分片（第 ' + r.part + ' 片），里面只有媒体本体、没有档——把同一天的分片一起选上再导');
-        await DB.importAllBundle(r.data);
+        if (!r.data) {
+          /* 她 10-14 16:40：「我这边只能一个一个导」「导入也导不进去原本在的」。
+             只有媒体本体的那几片，本体其实已经进库了，以前这里直接报错——
+             现在拆掉占位旧账 + 重画，界面当场把图/头像补回原位。 */
+          const back = r.media || 0;
+          if (back) runSafe('import.recheck', () => Media.recheck(document.body));
+          UI.toast(back ? ('已补回媒体本体 ' + back + ' 个，正在把图补回原位…')
+                        : '这一份里没有可补的媒体本体（它可能不是备份文件）');
+          if (back) setTimeout(() => location.reload(), 700);
+          return;
+        }
+          await DB.snapNow();          /* 整档换血前先把现状存一份（导错能换回来，她 10-14） */
+          await DB.importAllBundle(r.data);
         DB.save();                      // 整档换血立刻落盘：后面任何一步炸了新数据也不丢（她 10-10 实测：崩在渲染，导入白做）
         Theme.apply(DB.state.settings.theme, false);
         /* 09-02 拆全局钩子时 bindMine 里的 renderMine 成了局部函数，这里裸调必炸（她 10-10 实报
@@ -33625,12 +33773,21 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         }
       } catch (err) { UI.busyDone(); UI.toast((err && err.message) || '导入失败：文件格式不对'); return; }
       UI.busyDone();
-      if (!doc) { UI.toast('这些文件里只有媒体本体、没有档（不是第一片？）——把同一天的分片一起选上'); return; }
+      if (!doc) {
+        /* 她 10-14 16:40：全是「只有媒体本体」的片，以前只报一句错——现在照样把本体补回原位 */
+        if (media) runSafe('import.recheck', () => Media.recheck(document.body));
+        UI.toast(media ? ('已补回媒体本体 ' + media + ' 个，正在把图补回原位…')
+                       : '这些文件里没有可补的媒体本体（也不是带档的那份）');
+        if (media) setTimeout(() => location.reload(), 700);
+        return;
+      }
       if (kind === 'all') {
+        await DB.snapNow();            /* 同上：整档换血前先存现状 */
         await DB.importAllBundle(doc);
         DB.save();
+        runSafe('import.recheck', () => Media.recheck(document.body));   /* 补回本体后当场重扫（重扫坏了也不能拦导入） */
         Theme.apply(DB.state.settings.theme, false);
-        UI.toast('导入成功：' + files.length + ' 片·带回媒体本体 ' + media + ' 个');
+        UI.toast('导入成功：' + files.length + ' 份·带回媒体本体 ' + media + ' 个');
         setTimeout(() => location.reload(), 700);
       }
     });
@@ -33981,18 +34138,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
 })();
 
 </script>
-<!-- 媒体没排上加载时的提示（她 10-13 11:13：看不到图会以为丢了）——
-     不摆「加载更多」按钮：一点就是整批进内存，她那台机器会直接卡掉线；改成进对应聊天/朋友圈自动补 -->
-<div id="lx-leftmore" hidden>
-  <span id="lx-lm-txt"></span>
-  <button id="lx-lm-x" title="先不提示">×</button>
-</div>
-<style>
-  #lx-leftmore{position:fixed;left:0;right:0;bottom:0;z-index:9000;display:flex;align-items:center;gap:8px;padding:9px 12px;background:#FFF6E5;border-top:1px solid #F0E2C8;font-size:12px;line-height:1.4;color:#6B5B3E}
-  #lx-leftmore[hidden]{display:none}
-  #lx-lm-txt{flex:1}
-  #lx-lm-btn{flex:none;border:none;border-radius:8px;padding:7px 12px;background:#2B2B31;color:#FFFDF6;font-size:12px}
-  #lx-lm-x{flex:none;border:none;background:transparent;color:#9A8B6E;font-size:16px;padding:2px 6px}
-</style>
+<!-- 10-14 清：媒体提示条（#lx-leftmore 与它的 bindLeftMore/unpackMore/unpackLeft）整套拿掉——
+     媒体现在是「开机按次序铺 + 进哪个会话补哪个」，不再需要边上一条提示 -->
 </body>
 </html>
