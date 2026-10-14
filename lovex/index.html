@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261013-114031 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261014-145046 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -1212,6 +1212,9 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 .msg-img-doodle{display:block;width:min(58vw,228px);max-width:min(58vw,228px);max-height:300px;object-fit:contain;cursor:zoom-in}
 /* 她 10-04：媒体本体丢失的占位（不画破图；找回口＝个人中心→存储管理→导出备份） */
 .msg-media-missing{font-size:12px;color:var(--t3);background:var(--fill);border-radius:8px;padding:10px 12px;max-width:132px;text-align:center}
+/* 她 10-14：渲染网真取不回本体（那才是真丢了）时给这些位置一个安静的占位，不画破图图标 */
+img[data-mv-miss]{min-width:40px;min-height:40px;background:var(--fill);border-radius:8px}
+.mo-thumb img[data-mv-miss],.mo-thumb[data-mv-miss]{background:var(--fill)}
 /* 相册发视频（她 10-02）：气泡裸贴视频，内联播放 */
 .msg-video{display:block;max-width:min(62vw,220px);border-radius:8px;background:#000}
 .bubble-video{background:none;border:none;padding:0}
@@ -3987,10 +3990,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
         <button class="cell" id="cell-storage"><span class="cell-icon"><i data-icon="database" data-size="18"></i></span><span class="cell-text">存储管理</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-detect"><span class="cell-icon"><i data-icon="pulse" data-size="18"></i></span><span class="cell-text">检测中心</span><span class="cell-ext">看 TA 掌握得怎么样</span><span class="chevron">›</span></button>
         <button class="cell" id="cell-data"><span class="cell-icon"><i data-icon="download"></i></span><span class="cell-text">数据管理</span><span class="chevron">›</span></button>
-        <input type="file" id="import-file" accept=".json,application/json" hidden>
+        <input type="file" id="import-file" accept=".json,application/json" multiple hidden>
         <input type="file" id="contact-import-file" accept=".json,application/json" hidden>
   <input type="file" id="msgs-import-file" accept=".json,application/json" hidden>
-  <input type="file" id="harvest-img-input" accept=".json,application/json" hidden>
+  <input type="file" id="harvest-img-input" accept=".json,application/json" multiple hidden>
 <input type="file" id="deco-css-file" accept="*/*" hidden>
 <input type="file" id="deco-frame-file" accept="image/png,image/svg+xml,image/*" hidden>
         <button class="cell" id="my-notify-row"><span class="cell-icon"><i data-icon="chat"></i></span><span class="cell-text">新消息通知</span><span class="cell-ext" id="notify-state">未开启</span><span class="chevron">›</span></button>
@@ -5143,6 +5146,47 @@ const DB = (function () {
     parts.push(']}');
     return new Blob(parts, { type: 'application/json' });
   }
+  /* ---- 分片全量导出（她 10-14）----
+     她 10-14 13:47：「过了一天APK就又全部丢失图片了……文件扫描导入图片还是一直闪退」。
+     追到底：一份带图本体的备份＝几十上百 MB。老写法（exportBundle）把它拼成一个巨大的 JS 字符串，
+     交给原生桥时 Java 那边还要再收一份（base64 再 ×1.37）——峰值 = 全部媒体 × 2~3，
+     而这步挂在自动每日备份上（开页 75 秒后跑），所以是「过了一天就崩」。
+     这里改成一片一片地拼、一片一片地交出去：写完一片就丢掉，峰值只留「当前这一片」。
+     每片自己是一份合法 bundle（part 标了第几片），导入时同一批文件一起选上就能拼回来。 */
+  const PART_MAX = 6 * 1024 * 1024;
+  async function exportBundleParts(root, kind, opt) {
+    const limit = (opt && opt.maxBytes) || PART_MAX;
+    const onPart = opt && opt.onPart;
+    if (typeof onPart !== 'function') throw new Error('缺少写入口');
+    const doc = JSON.parse(JSON.stringify(root));      // 先拷一份：导出途中 state 再变也不影响
+    const keys = Array.from(idbRefsIn(doc));
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    const head = () => '{"app":"LOVEX-BUNDLE","version":2,"kind":' + JSON.stringify(kind || 'all') +
+      ',"part":' + part + ',"exportedAt":' + JSON.stringify(new Date().toISOString()) +
+      ',"data":' + (part === 1 ? JSON.stringify(doc) : 'null') + ',"media":[';
+    let part = 1, buf = '', items = 0, taken = 0, miss = 0;
+    buf = head();
+    for (const k of keys) {
+      try {
+        const b = MS ? await MS.get(k) : null;
+        if (b == null) { miss++; continue; }             // 本体本来就没：引用照旧带走，不拦整份
+        let item = (typeof b === 'string') ? { k, v: b } : { k, v: await blobToDataUrl(b), b: 1 };
+        const it = JSON.stringify(item);
+        item = null;                                      // 早点放开这一条
+        /* 这片装不下：先封片（它已经是合法 JSON），开了新片再放这一条——
+           逗号必须在这之后决定，不然新片开头会多一个前导逗号（10-14 踩过） */
+        if (items && buf.length + it.length > limit) {
+          await onPart(buf + ']}', part, false);
+          part++; buf = head(); items = 0;
+        }
+        buf += (items ? ',' : '') + it; items++;
+      } catch (e) { miss++; }
+      if (++taken % 4 === 0) await new Promise(r => setTimeout(r, 0));   // 每 4 个让一拍，界面不僵
+    }
+    await onPart(buf + ']}', part, true);
+    return { parts: part, media: taken - miss, miss };
+  }
+
   /* 解析导入文件 + 把媒体本体放回 IDB（不动 state，合并由调用方按 kind 做）。
      返回 {kind, data, media}；kind: 'all' | 'contact' | 'msgs'。 */
   async function importBundleText(jsonText) {
@@ -5167,6 +5211,117 @@ const DB = (function () {
       }
     }
     return { kind, data, media: n };
+  }
+
+  /* ---- 流式导入（她 10-14）----
+     她 10-14 13:47：「文件扫描导入图片还是在一直闪退，一进去就退出来了」。
+     真因：老路子是 `f.text()` + `JSON.parse(整份文本)`——一份带图本体的备份几十上百 MB，
+     那一下要求「文本 + 解析结果」两份同时活着（dataURL 还要存成 UTF-16），必爆。
+     这里按块读（512KB）：v2 的 bundle 里 data 在前、media 在后，所以
+     ① 攒到 "media":[ 之前把档解析出来（档本身受主档 localStorage 限额，不大）；
+     ② 之后一条一条地切媒体项（都是纯字符串值的对象，花括号配平就能切），切出一条入库一条、马上丢。
+     老格式（v1 纯档 / CONTACT / MSGS）没有 media 区，只能整份读——但先看大小，太大就如实拒绝，
+     不拿「假装能导」把应用顶爆。 */
+  const READ_CHUNK = 512 * 1024;
+  const LEGACY_MAX = 24 * 1024 * 1024;
+  function sliceText(b) {
+    if (b && typeof b.text === 'function') { try { return b.text(); } catch (e) {} }
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result || ''));
+      fr.onerror = () => rej(fr.error || new Error('read-fail'));
+      fr.readAsText(b);
+    });
+  }
+  async function importBundleStream(file, opt) {
+    const o = opt || {};
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    const putOne = async one => {
+      if (!MS) return false;
+      let it = null;
+      try { it = JSON.parse(one); } catch (e) { return false; }
+      if (!it || !it.k || typeof it.v !== 'string') return false;
+      if (o.skipExisting) { try { if (await MS.get(it.k)) return false; } catch (e) { /* 查不到就当没有，照写 */ } }
+      try {
+        if (it.b) await MS.put(it.k, MS.dataUrlToBlob(it.v));
+        else await MS.put(it.k, it.v);
+        return true;
+      } catch (e) { return false; }
+    };
+    const head = await sliceText(file.slice(0, 8192));
+    if (String(head).indexOf('"LOVEX-BUNDLE"') < 0) {
+      if (file.size > LEGACY_MAX) {
+        throw new Error('这份备份 ' + (file.size / 1048576).toFixed(1) + 'MB，这个格式得整份读进来，'
+          + '手机上会把应用顶爆。请用新导出的分片备份（LOVEX…json）来导');
+      }
+      const text = await sliceText(file);
+      let obj = null;
+      try { obj = JSON.parse(text); } catch (e) { throw new Error('这个文件读不出来，选导出的那种 .json 备份'); }
+      /* 认得的格式走原来的合并；认不得的（老备份/任何带内联图的 JSON）也原样交出去——
+         「从旧备份里找回图片」只需要能从里面捞出内联的图，不该卡在格式上。 */
+      let kind = 'raw', data = obj;
+      try { const b = await importBundleText(text); kind = b.kind; data = b.data; }
+      catch (e) { /* 认不得：原样交出去，导档那边会因为 kind 不对而如实报错 */ }
+      return { kind, data, media: 0, blobs: 0, items: 0, part: 1, legacy: true };
+    }
+    let buf = '';
+    let i = 0, inStr = false, esc = false, depth = 0, start = -1, done = false, seen = false;
+    let doc = null, part = 1, media = 0, offset = 0, kind = 'all', items = 0, blobs = 0;
+    const pending = [];
+    while (offset < file.size && !done) {
+      const end = Math.min(offset + READ_CHUNK, file.size);
+      buf += await sliceText(file.slice(offset, end));
+      offset = end;
+      if (!seen) {
+        const at = buf.indexOf('"media":[');
+        if (at >= 0) {
+          /* 到 media 之前就是头 + 档；末尾补一句让它变成合法 JSON（不会被误当成数据：这段只用来读档） */
+          const meta = JSON.parse(buf.slice(0, at) + '"media":[]}');
+          doc = meta && meta.data ? meta.data : null;
+          part = (meta && meta.part) || 1;
+          kind = (meta && meta.kind) || 'all';
+          i = at + 9; buf = buf.slice(i); i = 0;
+          seen = true;
+        } else if (buf.length > 48 * 1024 * 1024) {
+          throw new Error('这份备份的档部分太大了，读不动');
+        }
+      }
+      if (seen) {
+        while (i < buf.length) {
+          const c = buf.charAt(i);
+          if (inStr) {
+            if (esc) esc = false;
+            else if (c === '\\') esc = true;
+            else if (c === '"') inStr = false;
+            i++; continue;
+          }
+          if (c === '"') { inStr = true; i++; continue; }
+          if (c === '{') { if (depth === 0) start = i; depth++; i++; continue; }
+          if (c === '}') {
+            depth--; i++;
+            if (depth === 0 && start >= 0) { pending.push(buf.slice(start, i)); start = -1; }
+            continue;
+          }
+          if (c === ']' && depth === 0) { done = true; i++; break; }
+          i++;
+        }
+        /* 入库一条丢一条；扫过的部分从 buf 里剪掉，峰值只留「当前这一条」 */
+        if (pending.length) {
+          for (const one of pending) {
+            items++;
+            if (one.indexOf('"b":1') > 0) blobs++;
+            if (await putOne(one)) media++;
+          }
+          pending.length = 0;
+          if (o.onProgress && media % 5 === 0) o.onProgress(media);
+        }
+        const trim = start >= 0 ? start : i;
+        if (trim > 256 * 1024) { buf = buf.slice(trim); i -= trim; if (start >= 0) start = 0; }
+      }
+      await new Promise(r => setTimeout(r, 0));   // 每块让一拍，界面不僵
+    }
+    if (!seen) throw new Error('这份备份里找不到媒体区，可能是文件没选对');
+    return { kind, data: doc, media, blobs, items, part, legacy: false };
   }
   /* 整档换血。她 10-13 09:21：这里当场把全档媒体铺进内存，导完又 reload 再铺一遍，
      媒体一多的档直接把 WebView 内存顶爆（「导入备份和贴图后直接闪退，怎么也进不去」）。
@@ -5275,7 +5430,8 @@ const DB = (function () {
                            localStorage.getItem(KEY) || '', localStorage.getItem(BAK) || ''];
             const days = await listSnaps();
             for (const d of days) { try { parts.push(JSON.stringify(await V.readSnap(d.day))); } catch (e) {} }
-            const n = await V.sweep(parts.join('\n'), V.keepKeys(state));
+            /* 传一组文本进去，不让它 join 成一个大串（她 10-14：那一下就是几十 MB 的峰值） */
+            const n = await V.sweep(parts, V.keepKeys(state));
             if (n && typeof logErr === 'function') logErr('媒体清扫：清掉 ' + n + ' 个没人引用的媒体');
           } catch (e) {}
         })();
@@ -5321,16 +5477,34 @@ const DB = (function () {
       if (!force && localStorage.getItem('LOVEX_BKFULL_DAY') === day) return false;   // 今天已经备份成过
       clearTimeout(saveTimer); writeNow();                 // 先把主档落盘，备的是最新那份
       const ok = await V.snapFull(day, JSON.parse(JSON.stringify(state)));
-      let where = '';
+      let where = '', partFail = 0, partAll = 0;
       try {
         if (ok && hasNative && state.settings.dailyBackup !== false) {
-          /* 带媒体本体（exportBundle）：这份文件是「浏览器被清只剩它」时的硬退路，只有引用串等于没备份视频/大图 */
-          where = window.LovexNative.saveBackup(await exportBundle(state, 'all'),
-            'LOVEX每日备份-' + day + '.json');
-          if (where && typeof logErr === 'function') logErr('备份：已写到手机 ' + where);
+          /* 带媒体本体：这份文件是「应用被清只剩它」时的硬退路，只有引用串等于没备份视频/大图。
+             但整份拼成一个大字符串＝内存峰值＝闪退（她 10-14 13:47：「过了一天又全部丢失图片」）。
+             所以改成**分片**：一片 ≤6MB，写完一片丢一片，峰值只留一片；
+             片名 -第2片/-第3片…，导入时同一批文件一起选上就能拼回来。 */
+          const r = await exportBundleParts(state, 'all', {
+            onPart: (text, i) => {
+              partAll = i;
+              let w = '';
+              try {
+                w = window.LovexNative.saveBackup(text, 'LOVEX每日备份-' + day + (i > 1 ? ('-第' + i + '片') : '') + '.json');
+              } catch (e) { w = ''; }
+              if (w) where = w; else partFail++;
+            }
+          });
+          if (typeof logErr === 'function')
+            logErr('备份：全量 ' + r.parts + ' 片·媒体 ' + r.media + ' 个'
+              + (r.miss ? ('（' + r.miss + ' 个本体找不回，引用照旧带走）') : '')
+              + (where ? '，已写到手机' : '，手机那边一片都没写成'));
         }
-      } catch (e2) { if (typeof logErr === 'function') logErr('备份：写手机文件失败 ' + (e2 && e2.message)); }
-      if (!hasNative || where) {
+      } catch (e2) {
+        if (!partFail) partFail = 1;
+        if (typeof logErr === 'function') logErr('备份：写手机文件失败 ' + (e2 && e2.message));
+      }
+      const fullOk = !!where && !partFail;
+      if (!hasNative || fullOk) {
         localStorage.setItem('LOVEX_BKFULL_DAY', day);     // 浏览器：@bk 写成即算数；APK：手机文件到手才算数
       } else if (!force) {
         /* 她 10-10：手机文件没写成不装没看见，当天 15 分钟后重试（热更新窗口/存储忙都躲得开） */
@@ -5396,8 +5570,10 @@ const DB = (function () {
     flushSave: writeNow,
     exportBundle,
     exportBundleBlob,
+    exportBundleParts,
     importAll,
     importBundleText,
+    importBundleStream,
     importAllBundle,
     backupInfo,
     recoverFromBackup,
@@ -9081,7 +9257,102 @@ const Media = (function () {
     }
   };
 
-  return { compressImage, VoiceRec, ANI_CAP };
+  /* ---------------- 引用串渲染网（她 10-14） ----------------
+     她 10-13 11:13 / 10-14 13:47 两次报「图片又一全部丢失」，两次都不是丢，是**没铺上**：
+     媒体本体在库里（原生私有文件 + IDB），state 里只剩下引用串 '@mv…'，而界面各处是直接
+     `el.src = 值` 的。与其把整档媒体铺进内存（那台机器吃不下，10-13 09:21 就是崩在这一步），
+     不如让引用串在**渲染出来的那一刻**就地换成 objectURL：取一个、挂一个、看完能释放。
+     一个 MutationObserver 看着整页，凡是带 '@mv' 的 <img src>／[data-vsrc]／内联 url() 都补上，
+     渲染层一处一处改也不用改；真取不到本体（那才是真丢了）标 data-mv-miss，界面画占位不画破图。 */
+  const MV_ONE = /@mv[0-9a-z]+/;
+  const netQ = [];
+  const missSet = new Set();
+  /* 10-14 补：防自触发死循环。
+     观察器盯 src/style/data-vsrc，而补图这一步本身就是「写 src」——
+     元素上带 data-vsrc='@mv…' 的（朋友圈的视频就是）永远还匹配扫描条件，
+     于是一写就再触发一次扫描、再写一次，任务队列永远不空，页面当场卡死。
+     所以按元素记一个「上次处理时的引用串指纹」，指纹没变就不再入队。 */
+  const netMark = new WeakMap();
+  let netBusy = false, netTick = 0;
+  function netRef(s) { const m = MV_ONE.exec(String(s || '')); return m ? m[0] : null; }
+  function netFingerprint(el) {
+    return String(el.getAttribute('src') || '') + '|' + String(el.getAttribute('data-vsrc') || '') + '|' + String(el.getAttribute('style') || '');
+  }
+  function netPush(el) {
+    if (!el || el.nodeType !== 1) return;
+    if (netQ.indexOf(el) >= 0) return;
+    const fp = netFingerprint(el);
+    if (netMark.get(el) === fp) return;   /* 这个状态已经补过了（自己写 src 又触发一次而已） */
+    netQ.push(el);
+  }
+  function netScan(root) {
+    if (!root || root.nodeType !== 1) return;
+    try {
+      if (root.tagName === 'IMG') { if (netRef(root.getAttribute('src'))) netPush(root); }
+      const dv = root.getAttribute('data-vsrc');
+      if (dv && MV_ONE.test(dv)) netPush(root);
+      const st = root.getAttribute('style');
+      if (st && MV_ONE.test(st)) netPush(root);
+      if (root.querySelectorAll) root.querySelectorAll('img[src^="@mv"], [data-vsrc^="@mv"], [style*="@mv"]').forEach(netPush);
+    } catch (e) { /* 扫不动也只是少补几张图，不能拦渲染 */ }
+  }
+  async function netFix(el) {
+    if (!el.isConnected) return 0;
+    let did = 0;
+    if (el.tagName === 'IMG') {
+      const k = netRef(el.getAttribute('src'));
+      if (k) {
+        const u = await MediaStore.src(k);
+        if (u) { el.src = u; did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
+      }
+    }
+    const dv = el.getAttribute('data-vsrc');
+    if (dv) {
+      const k = netRef(dv) || dv;
+      const u = await MediaStore.src(k);
+      if (u) { el.src = u; did++; } else { missSet.add(k); el.setAttribute('data-mv-miss', '1'); }
+    }
+    const st = el.getAttribute('style');
+    if (st && MV_ONE.test(st)) {
+      const k = netRef(st);
+      const u = await MediaStore.src(k);
+      if (u) { el.setAttribute('style', st.split(k).join(u)); did++; }
+      else missSet.add(k);
+    }
+    netMark.set(el, netFingerprint(el));   /* 记下这一版指纹，写完 src 不会再被自己触发 */
+    return did;
+  }
+  async function netRun() {
+    if (netBusy) return 0;
+    netBusy = true;
+    let n = 0;
+    try {
+      while (netQ.length) {
+        const el = netQ.shift();
+        try { n += await netFix(el); } catch (e) { /* 补一张失败不影响后面的 */ }
+        if (++netTick % 4 === 0) await new Promise(r => setTimeout(r, 0));   // 每 4 张让一拍，图多也不抩
+      }
+    } finally { netBusy = false; }
+    return n;
+  }
+  /* 立即补一轮（渲染后主动调）；不调也行——观察器会接住 */
+  function hydrate(root) { netScan(root || (typeof document !== 'undefined' ? document.body : null)); if (netQ.length) netRun(); }
+  /* 看着整页：新插进来的节点、以及被改过 src/style/data-vsrc 的节点都扫一遗 */
+  function watchMedia() {
+    if (typeof MutationObserver !== 'function' || typeof document === 'undefined') return false;
+    try {
+      const mo = new MutationObserver(muts => {
+        for (const m of muts) {
+          if (m.type === 'childList') { for (const n of m.addedNodes) { if (n && n.nodeType === 1) netScan(n); } }
+          else if (m.type === 'attributes') netScan(m.target);
+        }
+        if (netQ.length) netRun();
+      });
+      mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'data-vsrc'] });
+      return true;
+    } catch (e) { return false; }
+  }
+  return { compressImage, VoiceRec, ANI_CAP, hydrate, watchMedia, missed: v => missSet.has(v) };
 })();
 
 /* ---------------- P36d MediaStore：大文件媒体本体（她 08-27 定拆雷） ----------------
@@ -9135,21 +9406,37 @@ const MediaStore = (function () {
   }
   /* 媒体本体搬家：IDB → 原生私有文件。搬两类：@mv 字符串本体（图/音频 dataURL）、
      Blob 本体（视频 cvr_/vid_/海报 pos_，转 dataURL 存文本）。@ 开头的快照/备份 doc 是对象，不搬。
-     幂等（原生已有即跳过），启动时跑 */
-  async function migrateToNative() {
+     她 10-14：老写法每次开页对每个键都 loadMedia 一趟「看还在不在」——那是把整库媒体
+     又读回内存一趟（几百个键＝几十 MB 字符串在主线程上过一遍），大档上就是卡/崩的来源之一。
+     现在用一本账（@migrated）记住已经落过原生的键，只为账上没有的键干活；一趟最多搬 40 个，
+     剩下的下次开页接着搬（幂等）。 */
+  const MIGK = '@migrated';
+  async function migrateToNative(limit) {
     if (!NATIVE()) return 0;
+    const cap = (typeof limit === 'number' && limit > 0) ? limit : 40;
     let ks = [];
     try { ks = await keys(); } catch (e) { return 0; }
+    let done = new Set();
+    try {
+      const led = await run('readonly', s => s.get(MIGK));
+      if (Array.isArray(led)) done = new Set(led);
+    } catch (e) { /* 账读不出来就当空的，顶多多搬一趟 */ }
     let n = 0;
     for (const k of ks) {
-      if (k.charAt(0) === '@' && k.indexOf('@mv') !== 0) continue;   // 快照/备份/影子是 doc，不搬
-      if (nativeGet(k)) continue;
-      const v = await run('readonly', s => s.get(k));
-      if (typeof v === 'string' && v.length > 512) { if (nativePut(k, v)) n++; continue; }
-      if (v && typeof v === 'object' && typeof v.type === 'string' && v.size > 0) {
-        try { const t = await blobToDataUrl(v); if (t && nativePut(k, t)) n++; } catch (e) { /* 单个 Blob 转换失败不拦整批，下次开页搬家自动重试 */ }
-      }
+      if (n >= cap) break;
+      if (typeof k !== 'string' || (k.charAt(0) === '@' && k.indexOf('@mv') !== 0)) continue;   // 快照/备份/影子/账本身：doc，不搬
+      if (done.has(k)) continue;
+      let v = null;
+      try { v = await run('readonly', s => s.get(k)); } catch (e) { continue; }
+      let ok = false;
+      if (typeof v === 'string' && v.length > 512) ok = nativePut(k, v);
+      else if (v && typeof v === 'object' && typeof v.type === 'string' && v.size > 0) {
+        try { const t = await blobToDataUrl(v); if (t) ok = nativePut(k, t); } catch (e) { /* 单个 Blob 转换失败不拦整批，下次开页自动重试 */ }
+      } else ok = true;      // 小东西/空值：也记账，免得每趟都来看它
+      if (ok) { done.add(k); n++; }
+      await new Promise(r => setTimeout(r, 0));   // 每个让一拍，别把主线程堵住
     }
+    if (n) { try { await run('readwrite', s => s.put(Array.from(done), MIGK)); } catch (e) { /* 账写不进去最多下次多搬一趟 */ } }
     return n;
   }
   /* dataURL ⇄ Blob 互转的另一半（Blob→dataURL；导出备份/原生镜像用，moments 同用这一份） */
@@ -9206,8 +9493,13 @@ const MediaStore = (function () {
     /* 渲染就绪 URL：idb引用→objectURL；兼容旧存档的 dataURL 直返；丢了返空串由调用方降级 */
     async src(v) {
       if (!v) return '';
-      if (!this.isRef(v)) return v;               // 遗留 dataURL 直用
-      const key = v.slice(4);
+      /* 三种值：'idb:键'（视频/封面 Blob）、'@mv…'（媒体库键就是整串：图/语音/头像/表情都在库里）、
+         遗留 dataURL（直用）。她 10-14：显示层不该逼着先把本体铺进内存——引用串在这里就地换 objectURL，
+         取一个挂一个，字符串不进 state。 */
+      let key;
+      if (this.isRef(v)) key = v.slice(4);
+      else if (typeof v === 'string' && /^@mv[0-9a-z]+/.test(v)) key = v;
+      else return v;
       if (urls.has(key)) return urls.get(key);
       try {
         const b = await this.get(key);
@@ -9374,7 +9666,11 @@ const MediaVault = (function () {
     if (off) return 0;
     let all;
     try { all = await MediaStore.keys(); } catch (e) { return 0; }
-    const keep = new Set(refsIn(liveText));
+    /* liveText 允许传一组文本（她 10-14）：主档+备份+14 天快照以前是 join('\n') 拼成一个大字符串
+       再扫——那一下就是几十 MB 的峰值。改成一份一份扫、只把引用收进 Set，不留大串。 */
+    const keep = new Set();
+    const parts = Array.isArray(liveText) ? liveText : [liveText];
+    for (const t of parts) { if (typeof t !== 'string' || !t) continue; for (const k of refsIn(t)) keep.add(k); }
     (extraKeys || []).forEach(k => keep.add(k));
     let n = 0;
     for (const k of all) {
@@ -9711,9 +10007,11 @@ const Home = (function () {
   function avaInner(uid) {
     const c = uid === 'me' ? (DB.state.profile || {}) : contactById(uid);
     const txt = uid === 'me' ? ((DB.state.profile || {}).name || '我') : (c ? displayName(c) : '');
-    /* 她 10-04：媒体本体丢了的头像不画破图，退回字母头像（@mv 还在 = IDB 被清） */
-    const brokenAva = c && c.avatar && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(c.avatar);
-    return c && c.avatar && !brokenAva ? '<img src="' + c.avatar + '" alt="">'
+    /* 她 10-14：'@mv…' 不等于丢——画出来交给渲染网去库里取（取不到才会标 data-mv-miss）；
+       只有网真取不回本体时才退回字母头像（她 10-04 的口径：不画破图） */
+    const missAva = c && c.avatar && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(c.avatar)
+      && typeof Media !== 'undefined' && Media.missed && Media.missed(c.avatar);
+    return c && c.avatar && !missAva ? '<img src="' + c.avatar + '" alt="">'
       : '<span class="ava-txt">' + UI.escapeHtml(String(txt || '?').slice(0, 1)) + '</span>';
   }
   /* ---------- 群会话工具（决策记录#15） ---------- */
@@ -10377,7 +10675,10 @@ const Chat = (function () {
     }
 
     if (m.type === 'img' && m.img) {
-      if (typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img)) {
+      /* 她 10-14：'@mv…' 还躺在这里只说明「本体在库里、没铺进内存」，不等于丢——
+         画出来交给渲染网去取（img.src 是引用串时它会换成 objectURL），只有网真取不到才画占位 */
+      if (typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img)
+          && typeof Media !== 'undefined' && Media.missed && Media.missed(m.img)) {
         /* 她 10-04：媒体本体丢了不画破图，给占位（导出备份可找回内存里还在的） */
         const miss = document.createElement('div');
         miss.className = 'msg-media-missing';
@@ -10905,7 +11206,8 @@ const Chat = (function () {
       { key: 'quote', label: '引用回复' }
     ];
     /* 她 10-05：本体丢了的图/表情给一个“重新贴上这张图”的口（在哪个方向发的都能补） */
-    if (m.type === 'img' && m.img && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img))
+    if (m.type === 'img' && m.img && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(m.img)
+        && typeof Media !== 'undefined' && Media.missed && Media.missed(m.img))
       items.push({ key: 'reattach', label: '重新贴上这张图' });
     if (revocable) items.push({ key: 'revoke', label: '撤回' });
     items.push({ key: 'del', label: '删除', danger: true });
@@ -11882,7 +12184,8 @@ const Chat = (function () {
 
   /* 表情格内容（她 10-04）：本体丢了的图不画破图，给「丢」占位（可从导出备份找回） */
   const edCellBody = it => it.img
-    ? ((typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(it.img))
+    ? ((typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(it.img)
+          && typeof Media !== 'undefined' && Media.missed && Media.missed(it.img))
         ? '<span class="ed-kao">丢</span>'
         : '<img src="' + it.img + '">')
     : kaoHtml(it.text);
@@ -20945,7 +21248,9 @@ function coverTap(e) {
             : '') +
           ((p.images || []).length
             ? '<div class="mo-item-imgs n' + Math.min(p.images.length, 9) + '">' +
-              p.images.filter(d => !(typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(d))).map(d => '<div class="mo-thumb" style="background:#000 url(' + d + ') center/cover no-repeat"></div>').join('') + '</div>'
+              /* 她 10-14：引用串不筛掉——渲染网会把 url('@mv…') 换成 objectURL；
+                 真取不到才留空（不畫破图） */
+              p.images.map(d => '<div class="mo-thumb" style="background:#000 url(' + d + ') center/cover no-repeat"></div>').join('') + '</div>'
             : '') +
           (p.location ? '<div class="mo-item-loc">' + esc(p.location) + '</div>' : '') +
           '<div class="mo-item-meta"><span>' + fmtTime(p.ts) + '</span></div>' +
@@ -32512,6 +32817,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     /* 接线真正跑完的旗子：模块早就定义了，监听器却是现在才挂——
        验收探针拿“全局存在”当就绪会抢跑（09-03 问卷套件就是这么误判成“钮没反”），改看这里 */
     document.documentElement.dataset.lxBooted = '1';
+    /* 她 10-14 13:47：引用串渲染网。媒体本体在库里，state 里可能只剩 '@mv…'；
+       渲染出来的那一刻由它去取本体换 objectURL（真取不到才标 data-mv-miss）。
+       有了这条，媒体不必先全铺进内存，也不会再「看着像全丢」。 */
+    try { Media.watchMedia(); } catch (e) { /* 网装不上最多是图慢一拍，不拦启动 */ }
     window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
     /* 真起来了：抹掉「本次启动」标记（下次开页不再走省内存模式），顺便看还有多少媒体没铺 */
     try { DB.bootOk(); } catch (e) { /* 抹标记失败只影响下次是否保守启动，不拦界面 */ }
@@ -32858,8 +33167,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         const hit = day0 ? await DB.readBackup(day0) : null;
         if (!hit) { UI.toast('还没得备份可导'); return; }
         /* 低内存版（她 10-13 09:17）：不把整份拼成一个 JS 字符串，页面卡着时也打得出来 */
-        const blob = await DB.exportBundleBlob(hit.doc, 'all');
-        UI.saveFile(blob, 'LOVEX自动备份-' + day0 + '.json', '已导出这份备份文件');
+        await saveBundle(hit.doc, 'all', 'LOVEX自动备份-' + day0, '已导出这份备份文件');
         return;
       }
       if (act === 'rst') {
@@ -32895,78 +33203,113 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     };
     const harvestInput = document.getElementById('harvest-img-input');
     harvestInput.addEventListener('change', async () => {
-      const f = harvestInput.files && harvestInput.files[0];
+      const files = Array.prototype.slice.call(harvestInput.files || []);
       harvestInput.value = '';
-      if (!f) return;
+      if (!files.length) return;
       const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
       if (!V) { UI.toast('这个浏览器没开 IndexedDB，本功能用不了'); return; }
-      let doc = null;
-      try { doc = JSON.parse(await f.text()); }
-      catch (e) { UI.toast('这个文件读不出来，选导出的那种 .json 备份'); return; }
-      const found = V.harvest(doc);
-      /* 备份文件 media 区的键值对直补（idb: 引用按原键回库）：视频/朋友圈封面/海报
-         是 'idb:cvr_xxx' 这种键名引用，不走 @mv 内容哈希链——10-11 她报封面找回后仍丢就是这条漏了 */
-      let blobPut = 0;
-      if (Array.isArray(doc.media)) {
-        for (const it of doc.media) {
-          try {
-            if (!it || !it.k || typeof it.v !== 'string') continue;
-            if (await MediaStore.get(it.k)) continue;   // 本体已在（原生/IDB）就不覆盖
-            await MediaStore.put(it.k, it.b ? MediaStore.dataUrlToBlob(it.v) : it.v);
-            blobPut++;
-          } catch (e) { logErr('找回图片：视频/封面入库失败 ' + (e && e.message)); }
+      /* 她 10-14 13:47：老写法把整份文件 JSON.parse 进来（带图本体的备份几十上百 MB）
+         ——就是「文件扫描导入图片一直闪退」的真因。现在按块流式读，媒体本体一条一条进库；
+         分片备份可以一次全选。 */
+      const before = V.pendingRefs(DB.state);          // 这次之前，state 里引用的键
+      const found = { size: 0 };                        // 这份文件里带出来的媒体张数
+      let put = 0, blobPut = 0, doc = null, legacy = false;
+      UI.busy('正在从备份文件里找图…');
+      try {
+        for (const f of files) {
+          UI.busy('正在从备份文件里找图…已带回 ' + put + ' 个');
+          const r = await DB.importBundleStream(f, { skipExisting: true });
+          if (r.data) doc = r.data;
+          legacy = legacy || r.legacy;
+          put += r.media;
+          blobPut += (r.blobs || 0);
+          found.size += (r.items || r.media || 0);
         }
+        /* 老格式（图内联在档里、没有 media 区）：还走内容哈希那条链 */
+        if (legacy && doc) {
+          const h = V.harvest(doc);
+          found.size = h.size;
+          for (const [k, url] of h) {
+            if (!before.has(k)) continue;
+            try { await MediaStore.put(k, url); put++; } catch (e) { logErr('找回图片：入库失败 ' + (e && e.message)); }
+          }
+        }
+      } catch (e) {
+        UI.busyDone();
+        UI.toast((e && e.message) || '这个文件读不出来，选导出的那种 .json 备份');
+        return;
       }
-      const need = V.pendingRefs(DB.state);
-      const map = {};
-      let put = 0;
-      found.forEach((url, k) => {
-        if (!need.has(k)) return;
-        map[k] = url;
-      });
-      const keys = new Set(Object.keys(map));
-      /* 先数各处有多少个位置能被这张图补上（换完就数不出来了） */
+      /* 现在库里有哪些键 → 对上的就是「这次找回来的」 */
+      let have = [];
+      try { have = await MediaStore.keys(); } catch (e) { /* 数不出来就只报补回个数 */ }
+      const haveSet = new Set(have);
+      const keys = new Set();
+      before.forEach(k => { if (haveSet.has(k)) keys.add(k); });
+      /* 各个位置还剩多少个引用对上了（引用不就地换掉了——渲染网会自己取本体贴上，所以数的是位置） */
       const cChat = countRefsIn(DB.state.msgs, keys);
       const cLib = countRefsIn(DB.state.libs, keys);
       const cMo = countRefsIn(DB.state.moments, keys);
       const cAva = countRefsIn({ contacts: DB.state.contacts, profile: DB.state.profile }, keys);
-      for (const k of Object.keys(map)) {
-        try { await MediaStore.put(k, map[k]); put++; }
-        catch (e) { logErr('找回图片：入库失败 ' + (e && e.message)); }
-      }
-      let sites = 0;
+      const sites = cChat + cLib + cMo + cAva;
+      UI.busyDone();
       if (put) {
-        sites = V.replaceRefs(DB.state, map);
         DB.save();
         Home.render();
         Chat.rerender();
         try { Moments.settle(); } catch (e) { logErr('找回图片：朋友圈重画失败 ' + (e && e.message)); }
       }
+      /* 还有多少张真找不到本体：这是给她的诊断数，也是「到底丢没丢」的硬数据 */
+      let stillN = 0;
+      V.pendingRefs(DB.state).forEach(k => { if (!haveSet.has(k)) stillN++; });
       const go = await UI.confirmBox({
         title: '找回图片结果', okText: '知道了',
-        text: '这份文件里带图的 ' + found.size + ' 张\n'
+        text: '这份文件里带图 ' + found.size + ' 张\n'
           + '对上了 ' + keys.size + ' 张，贴回 ' + sites + ' 处\n'
           + '· 聊天 ' + cChat + ' 处\n· 图片表情库 ' + cLib + ' 处\n· 朋友圈 ' + cMo + ' 处\n· 头像 ' + cAva + ' 处\\n'
           + (blobPut ? ('· 视频/封面 ' + blobPut + ' 个按原位补回\\n') : '')
-          + (found.size > keys.size ? ('文件里还有 ' + (found.size - keys.size) + ' 张现在没地方用（不是丢的那些）\n') : '')
+          + (stillN ? ('· 还有 ' + stillN + ' 张找不到本体：换别的旧备份再试一次\n') : '· 一个都不缺，全在库里。\n')
           + (keys.size ? '刷新一下就都出来了。' : '没对上——这份备份里的图和你现在缺的可能不是同一批。')
       });
-      if (go && sites) setTimeout(() => location.reload(), 700);
+      if (go && (put || sites)) setTimeout(() => location.reload(), 700);
     });
 
     /* --- 数据管理聚合（#39w）：全部导出/导入/恢复备份 + 单联系人导出/导入 ---
        导出全部走 exportBundle：媒体本体一并打包，导入不再丢朋友圈视频/大图（她 10-06）
        她 10-09 06:15：导出期间主线程被序列化喋住，整页看似卡死；统一挂忙碌条+防重复点 */
     let exporting = false;
+    /* 导出一份带媒体本体的备份（她 10-14）：壳里走 DB.exportBundleParts——一片 ≤6MB，
+       写完一片丢一片（整份拼成一个大字符串＝内存峰值＝闪退）；浏览器里照旧一份 Blob。
+       name 不带 .json，内部自己接。 */
+    async function saveBundle(root, kind, name, okMsg) {
+      const nat = (typeof window !== 'undefined' && window.LovexNative
+        && typeof window.LovexNative.saveBackup === 'function') ? window.LovexNative : null;
+      if (nat) {
+        let okN = 0, failN = 0;
+        const r = await DB.exportBundleParts(root, kind, {
+          onPart: (text, i) => {
+            let w = '';
+            try { w = nat.saveBackup(text, name + (i > 1 ? ('-第' + i + '片') : '') + '.json'); } catch (e) { w = ''; }
+            if (w) okN++; else failN++;
+          }
+        });
+        UI.toast(failN
+          ? ('备成 ' + okN + '/' + r.parts + ' 片，有 ' + failN + ' 片没写成——看看手机还剩多少空间')
+          : ((okMsg || '已导出') + (r.parts > 1 ? ('（分了 ' + r.parts + ' 片，导入时一起选上）') : '') + '（已存到手机「下载」）'));
+        return r;
+      }
+      const blob = await DB.exportBundleBlob(root, kind);
+      UI.saveFile(blob, name + '.json', okMsg);
+      return { parts: 1, media: 0 };
+    }
     async function exportAllData() {
       if (exporting) return UI.toast('正在打包上一份，别急');
       exporting = true;
       UI.busy('正在打包全部数据（含图片视频本体），大可能要等十几秒…');
       try {
-        const blob = await DB.exportBundleBlob(DB.state, 'all');
         const d = new Date(), p = n => String(n).padStart(2, '0');
-        UI.saveFile(blob, 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-                     '-' + p(d.getHours()) + p(d.getMinutes()) + '.json', '备份文件已导出（含图片视频本体，文件会大一点）');
+        await saveBundle(DB.state, 'all', 'LOVEX备份-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+                     '-' + p(d.getHours()) + p(d.getMinutes()),
+                     '备份文件已导出（含图片视频本体，文件会大一点）');
       } finally { exporting = false; UI.busyDone(); }
     }
     async function exportContactData(ct) {
@@ -32980,10 +33323,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           conv: cv ? JSON.parse(JSON.stringify(cv)) : null,
           msgs: cv ? (DB.state.msgs[cv.id] || []) : []
         };
-        const blob = await DB.exportBundleBlob(pack, 'contact');
         const d = new Date(), p = n => String(n).padStart(2, '0');
-        UI.saveFile(blob, 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
-          d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
+        await saveBundle(pack, 'contact', 'LOVEX联系人-' + (ct.remark || ct.name) + '-' +
+          d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()),
           '「' + Home.displayName(ct) + '」的全部数据已导出');
       } finally { exporting = false; UI.busyDone(); }
     }
@@ -33045,10 +33387,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       exporting = true;
       UI.busy('正在打包聊天记录（' + n + ' 条）…');
       try {
-        const blob = await DB.exportBundleBlob(pack, 'msgs');
         const d = new Date(), p = x => String(x).padStart(2, '0');
-        UI.saveFile(blob, 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
-          '-' + p(d.getHours()) + p(d.getMinutes()) + '.json',
+        await saveBundle(pack, 'msgs', 'LOVEX聊天记录-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+          '-' + p(d.getHours()) + p(d.getMinutes()),
           '聊天记录已导出（' + pack.convs.length + ' 个会话 · ' + n + ' 条）');
       } finally { exporting = false; UI.busyDone(); }
     }
@@ -33096,17 +33437,13 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       });
     }
     const msgsFileInput = document.getElementById('msgs-import-file');
+    /* 她 10-14：不再 readAsText 整份再 JSON.parse（带图本体的备份几十上百 MB，那一下就是闪退），
+       统一走 DB.importBundleStream 按块读 */
     msgsFileInput.addEventListener('change', () => {
-      const f = msgsFileInput.files[0];
-      if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        runImportText(r.result).catch(err => {
-          UI.toast((err && err.message) || '导入失败');
-        });
-      };
-      r.readAsText(f);
+      const f = msgsFileInput.files && msgsFileInput.files[0];
       msgsFileInput.value = '';
+      if (!f) return;
+      runImportFile(f).catch(err => { UI.busyDone(); UI.toast((err && err.message) || '导入失败'); });
     });
 
     const contactFileInput = document.getElementById('contact-import-file');
@@ -33128,16 +33465,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       else if (key === 'imp-all' || key === 'bak') openLegacyFlow(key);
     });
     contactFileInput.addEventListener('change', () => {
-      const f = contactFileInput.files[0];
-      if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        runImportText(r.result).catch(err => {
-          UI.toast((err && err.message) || '导入失败');
-        });
-      };
-      r.readAsText(f);
+      const f = contactFileInput.files && contactFileInput.files[0];
       contactFileInput.value = '';
+      if (!f) return;
+      runImportFile(f).catch(err => { UI.busyDone(); UI.toast((err && err.message) || '导入失败'); });
     });
 
     /* --- 后台保活（#39w）：Web Audio 超低频近声波循环，防手机浏览器杀后台 ---
@@ -33254,36 +33585,54 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       fileInput.value = '';
       fileInput.click();
     }
-    /* 三个导入口共用一条道：解析（老新格式都认）→ 媒体本体先回库 → 再按 kind 走各自的合并 */
-    async function runImportText(text) {
-      const b = await DB.importBundleText(text);
-      if (b.kind === 'all') {
-        await DB.importAllBundle(b.data);
+    /* 三个导入口共用一条道：按块读文件（DB.importBundleStream）→ 媒体本体先回库 → 再按 kind 走各自的合并。
+       她 10-14 13:47：老写法 f.text() + JSON.parse(整份) 就是「文件扫描导入图片一直闪退」的真因。 */
+    async function runImportFile(file) {
+      UI.busy('正在读备份文件…');
+      let r = null;
+      try { r = await DB.importBundleStream(file); }
+      finally { UI.busyDone(); }
+      if (r.kind === 'all') {
+        if (!r.data) throw new Error('这份是分片（第 ' + r.part + ' 片），里面只有媒体本体、没有档——把同一天的分片一起选上再导');
+        await DB.importAllBundle(r.data);
         DB.save();                      // 整档换血立刻落盘：后面任何一步炸了新数据也不丢（她 10-10 实测：崩在渲染，导入白做）
         Theme.apply(DB.state.settings.theme, false);
         /* 09-02 拆全局钩子时 bindMine 里的 renderMine 成了局部函数，这里裸调必炸（她 10-10 实报
            renderMine is not defined）——整档覆盖后所有页面都要重画，直接重载，不逐个补调 */
-        UI.toast('导入成功，数据已恢复' + (b.media ? ('，带回媒体本体 ' + b.media + ' 个') : ''));
+        UI.toast('导入成功，数据已恢复' + (r.media ? ('，带回媒体本体 ' + r.media + ' 个') : ''));
         setTimeout(() => location.reload(), 700);
         return;
-      } else if (b.kind === 'contact') {
-        await importContactData(b.data);
-      } else if (b.kind === 'msgs') {
-        await importMsgsData(b.data);
-      } else {
-        throw new Error('文件格式不对');
       }
+      if (r.kind === 'contact') { await importContactData(r.data); return; }
+      if (r.kind === 'msgs') { await importMsgsData(r.data); return; }
+      throw new Error('文件格式不对');
     }
-    fileInput.addEventListener('change', () => {
-      const f = fileInput.files[0];
-      if (!f) return;
-      const r = new FileReader();
-      r.onload = () => {
-        runImportText(r.result).catch(err => {
-          UI.toast((err && err.message) || '导入失败：文件格式不对');
-        });
-      };
-      r.readAsText(f);
+    /* 「导入全部数据」：分片备份可以一次全选（壳里的选文件器已支持多选） */
+    fileInput.addEventListener('change', async () => {
+      const files = Array.prototype.slice.call(fileInput.files || []);
+      fileInput.value = '';
+      if (!files.length) return;
+      if (files.length === 1) { runImportFile(files[0]).catch(err => { UI.busyDone(); UI.toast((err && err.message) || '导入失败：文件格式不对'); }); return; }
+      UI.busy('正在读 ' + files.length + ' 份文件…');
+      let doc = null, media = 0, kind = '';
+      try {
+        for (const f of files) {
+          UI.busy('正在读 ' + files.length + ' 份文件…已带回媒体 ' + media + ' 个');
+          const r = await DB.importBundleStream(f);
+          media += r.media;
+          if (!kind) kind = r.kind;
+          if (r.data && !doc) doc = r.data;
+        }
+      } catch (err) { UI.busyDone(); UI.toast((err && err.message) || '导入失败：文件格式不对'); return; }
+      UI.busyDone();
+      if (!doc) { UI.toast('这些文件里只有媒体本体、没有档（不是第一片？）——把同一天的分片一起选上'); return; }
+      if (kind === 'all') {
+        await DB.importAllBundle(doc);
+        DB.save();
+        Theme.apply(DB.state.settings.theme, false);
+        UI.toast('导入成功：' + files.length + ' 片·带回媒体本体 ' + media + ' 个');
+        setTimeout(() => location.reload(), 700);
+      }
     });
 
     /* --- 恢复上次自动备份 --- */
