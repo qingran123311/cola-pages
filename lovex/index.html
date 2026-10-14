@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261014-173507 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261014-213404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -5237,6 +5237,9 @@ const DB = (function () {
     else if (obj.app === 'LOVEX' && obj.data) { kind = 'all'; data = obj.data; }
     else if (obj.app === 'LOVEX-CONTACT') { kind = 'contact'; data = obj; }
     else if (obj.app === 'LOVEX-MSGS') { kind = 'msgs'; data = obj; }
+    /* 更早那种整体备份（连 app 名都对不上，但里头摆的就是整档的 msgs/contacts）：也当整档认，
+       不然她那份唯一的老备份就算读进来了也只会得到一句「格式不对」（她 10-14 18:11）。 */
+    else if (obj.msgs || obj.contacts || obj.moments) { kind = 'all'; data = obj.data || obj; }
     else throw new Error('这不是 LOVE♡X 的备份文件');
     let n = 0;
     const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
@@ -5264,6 +5267,8 @@ const DB = (function () {
      不拿「假装能导」把应用顶爆。 */
   const READ_CHUNK = 512 * 1024;
   const LEGACY_MAX = 24 * 1024 * 1024;
+  const LEGACY_HOLD = 192 * 1024 * 1024;   /* 单条字符串的上限：超过了就把它当普通文字留在档里（不整份报错）
+                                              ——她 10-14 18:11「我就这一份备份」，导入不许再被任何东西拦下 */
   function sliceText(b) {
     if (b && typeof b.text === 'function') { try { return b.text(); } catch (e) {} }
     return new Promise((res, rej) => {
@@ -5272,6 +5277,92 @@ const DB = (function () {
       fr.onerror = () => rej(fr.error || new Error('read-fail'));
       fr.readAsText(b);
     });
+  }
+  /* ---- 老格式（图内联在档里、没有 media 区）----
+     她 10-14 18:11：「直接说太大了不许我导入，妈的我就这一份备份」。
+     以前这条路按 24MB 一刀切，把她唯一那份老备份拦在门外，还反过来叫她「用分片备份」——她根本没有分片。
+     现在按块扫文本：扫到一张图就把本体取出来入库，正文里那一段就地换成引用串（引用串很短），
+     峰值只留「当前这一张图」，多大都收；档最后再解析，它已经不胖了。
+     搬不动（没 IDB）才退回老规矩，如实拒绝。 */
+  async function importLegacyStream(file, o) {
+    const V = (typeof MediaVault !== 'undefined' && MediaVault.hash) ? MediaVault : null;
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    const canTake = !!(V && MS && MS.put);
+    if (!canTake && file.size > LEGACY_MAX) {
+      throw new Error('这份备份 ' + (file.size / 1048576).toFixed(1) + 'MB，这台设备上搬不动，读不出来');
+    }
+    let carry = '', carryAtQuote = false, headAtQuote = false, out = '', off = 0, media = 0, blobs = 0, seen = 0, skipped = 0;
+    const TAIL = 8;                                  // 块尾留几个字符：「data:」可能被块边界劈成两半
+    while (off < file.size) {
+      const end = Math.min(off + READ_CHUNK, file.size);
+      let s = carry + await sliceText(file.slice(off, end));
+      off = end;
+      carry = '';
+      headAtQuote = carryAtQuote;                    // 这块开头那个字符前面是不是引号（上一块交代下来的）
+      carryAtQuote = false;
+      let i = 0;
+      while (i < s.length) {
+        const at = s.indexOf('data:', i);
+        if (at < 0) {
+          /* 一块扫完没有图：把尾巴几个字符留给下一块（「data:」可能正好被劈成两半），
+             少留几个字不至于把一份大图当成普通文字又吐回档里。 */
+          const keep = Math.min(TAIL, s.length - i);
+          out += s.slice(i, s.length - keep);
+          carry = s.slice(s.length - keep);
+          carryAtQuote = (keep >= s.length) ? headAtQuote : (s.charAt(s.length - keep - 1) === '"');
+          break;
+        }
+        /* 只认「某个字符串值正好以 data: 开头」的那种（内联的图/音/视频都在这种位置）。
+           块边界上（at === 0）用上一块交代的信息判，别把自己的尾巴当成普通文字。 */
+        const atQuote = (at === 0) ? headAtQuote : (s.charAt(at - 1) === '"');
+        if (!atQuote) { out += s.slice(i, at + 5); i = at + 5; continue; }
+        const comma = s.indexOf(';base64,', at);
+        if (comma < 0) {
+          /* 到这里还没有 ';base64,'：要么是刚跨块（正常），要么真不是张图。
+             超过上限就当普通文字接着扫，不把整份导入弄断。 */
+          if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; skipped++; continue; }
+          out += s.slice(i, at); carry = s.slice(at); carryAtQuote = atQuote; break;
+        }
+        const q = s.indexOf('"', comma + 8);
+        if (q < 0) {
+          if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; skipped++; continue; }
+          out += s.slice(i, at); carry = s.slice(at); carryAtQuote = atQuote; break;
+        }
+        const url = s.slice(at, q);
+        out += s.slice(i, at);
+        if (url.length > 4096) {                     // 与 MediaVault 一致的「值得搬」门槛
+          const key = V.hash(url);
+          let ok = false;
+          if (o.skipExisting) { try { ok = !!(await MS.get(key)); } catch (e) { ok = false; } }
+          if (!ok) { try { await MS.put(key, url); ok = true; } catch (e) { ok = false; } }
+          if (ok) {
+            media++;
+            if (url.indexOf('data:video/') === 0) blobs++;
+            out += key;
+          } else {
+            out += url;                              // 搬不动就原样留在档里，不丢东西
+          }
+        } else {
+          out += url;
+        }
+        i = q;
+        if (i > 1024 * 1024) { headAtQuote = (s.charAt(i - 1) === '"'); s = s.slice(i); i = 0; }   // 扫过的别留着占内存
+      }
+      seen++;
+      if (o.onProgress && seen % 4 === 0) o.onProgress(media);
+      await new Promise(r => setTimeout(r, 0));      // 每块让一拍，界面不僵
+    }
+    if (carry) out += carry;
+    if (o.onProgress) o.onProgress(media);      /* 收尾再报一次：小档里那两次节流可能都没轮到 */
+    let kind = 'raw', data = null;
+    try {
+      const b = await importBundleText(out);
+      kind = b.kind;
+      data = b.data;
+    } catch (e) {
+      data = null;                                   // 认不得形状也不影响「把图补回来」：本体已经在库里了
+    }
+    return { kind, data, media, blobs, items: media, part: 1, legacy: true, skipped };
   }
   async function importBundleStream(file, opt) {
     const o = opt || {};
@@ -5289,21 +5380,7 @@ const DB = (function () {
       } catch (e) { return false; }
     };
     const head = await sliceText(file.slice(0, 8192));
-    if (String(head).indexOf('"LOVEX-BUNDLE"') < 0) {
-      if (file.size > LEGACY_MAX) {
-        throw new Error('这份备份 ' + (file.size / 1048576).toFixed(1) + 'MB，这个格式得整份读进来，'
-          + '手机上会把应用顶爆。请用新导出的分片备份（LOVEX…json）来导');
-      }
-      const text = await sliceText(file);
-      let obj = null;
-      try { obj = JSON.parse(text); } catch (e) { throw new Error('这个文件读不出来，选导出的那种 .json 备份'); }
-      /* 认得的格式走原来的合并；认不得的（老备份/任何带内联图的 JSON）也原样交出去——
-         「从旧备份里找回图片」只需要能从里面捞出内联的图，不该卡在格式上。 */
-      let kind = 'raw', data = obj;
-      try { const b = await importBundleText(text); kind = b.kind; data = b.data; }
-      catch (e) { /* 认不得：原样交出去，导档那边会因为 kind 不对而如实报错 */ }
-      return { kind, data, media: 0, blobs: 0, items: 0, part: 1, legacy: true };
-    }
+    if (String(head).indexOf('"LOVEX-BUNDLE"') < 0) return importLegacyStream(file, o);
     let buf = '';
     let i = 0, inStr = false, esc = false, depth = 0, start = -1, done = false, seen = false;
     let doc = null, part = 1, media = 0, offset = 0, kind = 'all', items = 0, blobs = 0;
@@ -5361,6 +5438,7 @@ const DB = (function () {
       await new Promise(r => setTimeout(r, 0));   // 每块让一拍，界面不僵
     }
     if (!seen) throw new Error('这份备份里找不到媒体区，可能是文件没选对');
+    if (o.onProgress) o.onProgress(media);      /* 收尾再报一次：小档里那两次节流可能都没轮到 */
     return { kind, data: doc, media, blobs, items, part, legacy: false };
   }
   /* 整档换血。她 10-13 09:21：这里当场把全档媒体铺进内存，导完又 reload 再铺一遍，
@@ -9458,6 +9536,9 @@ const MediaStore = (function () {
   function nativeGet(k) { const N = NATIVE(); if (!N) return ''; try { return N.loadMedia(NK(k)) || ''; } catch (e) { return ''; } }
   function nativeDel(k) { const N = NATIVE(); if (!N) return; try { N.delMedia(NK(k)); } catch (e) { /* 原生侧删失败不刷黑匣子：残留本体由媒体体检兜底发现，IDB 侧已删即不再引用 */ } }
   const urls = new Map();   // key→objectURL 复用，避免反复建销
+  /* 她 10-14 21:2x：导入/找回图片和开机那一趟清扫撞上时，刚写进来的本体还没被任何档引用，
+     就会被当成孤儿清掉。这里给清扫上一把闸：导入这类活儿开始前按住它一会儿。 */
+  let sweepHoldUntil = 0;
   let dbP = null;
   function db() {
     if (dbP) return dbP;
@@ -9583,6 +9664,9 @@ const MediaStore = (function () {
     },
     /* 全部键（清扫用） */
     keys() { return keys(); },
+    /* 刚在导东西：这段时间里清扫不许动手（宁可晚点清，也不许误删） */
+    holdSweep(ms) { sweepHoldUntil = Date.now() + (ms || 0); },
+    sweepHeld() { return Date.now() < sweepHoldUntil; },
     /* 渲染就绪 URL：idb引用→objectURL；兼容旧存档的 dataURL 直返；丢了返空串由调用方降级 */
     async src(v) {
       if (!v) return '';
@@ -9758,6 +9842,10 @@ const MediaVault = (function () {
      现在把内存里所有媒体反推的键一并算进保留集（extraKeys），宁可留不可错删。 */
   async function sweep(liveText, extraKeys) {
     if (off) return 0;
+    if (typeof MediaStore.sweepHeld === 'function' && MediaStore.sweepHeld()) {
+      if (typeof logErr === 'function') logErr('媒体清扫：刚在导入/补图，这一趟不扫（先保图）');
+      return 0;
+    }
     let all;
     try { all = await MediaStore.keys(); } catch (e) { return 0; }
     /* liveText 允许传一组文本（她 10-14）：主档+备份+14 天快照以前是 join('\n') 拼成一个大字符串
@@ -9827,16 +9915,20 @@ const MediaVault = (function () {
 
   /* ---- 每日全档自动备份（她 10-05：「再加一个每天都备份的功能」）
      跟上面的聊天快照不同：这里存的是整档（联系人/聊天/字卡库/朋友圈/钱包…都在），
-     媒体本体仍在媒体库里、主档里是引用串，所以一份只有几十 KB。留最近 7 天。
-     键前缀 '@bk:' 不带 '@mv'，清扫不会误伤。 */
+     媒体本体仍在媒体库里、主档里是引用串，所以一份只有几十 KB。
+     键前缀 '@bk:' 不带 '@mv'，清扫不会误伤。
+     她 10-14 21:07「保证我的图片数据可以长久在」：留的天数 7 → 30。
+     备一份才几十 KB，多留不心疼；而且清扫的“不许动”名单读的正是这些备份，
+     留得越久，那些“只在备份里还被引用”的图就护得越久。 */
   const BK = '@bk:', BKIDX = '@bkidx';
+  const BK_KEEP = 30;
   async function snapFull(day, doc, savedAt) {
     if (off) return false;
     try {
       const at = savedAt || Date.now();
       await MediaStore.put(BK + day, { day, savedAt: at, doc });
       const idx = (await MediaStore.get(BKIDX)) || [];
-      const next = [{ day, savedAt: at }].concat(idx.filter(x => x.day !== day)).slice(0, 7);
+      const next = [{ day, savedAt: at }].concat(idx.filter(x => x.day !== day)).slice(0, BK_KEEP);
       const gone = idx.filter(x => !next.some(y => y.day === x.day)).map(x => x.day);
       await MediaStore.put(BKIDX, next);
       for (const d of gone) { try { await MediaStore.del(BK + d); } catch (e) { if (typeof logErr === 'function') logErr('备份：清旧的失败 ' + (e && e.message)); } }
@@ -33338,6 +33430,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!files.length) return;
       const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
       if (!V) { UI.toast('这个浏览器没开 IndexedDB，本功能用不了'); return; }
+      /* 她 10-14 21:2x：补图这阵子别让开机那趟清扫插手——刚写进库的本体还没被档引用，容易被误判成孤儿 */
+      if (MediaStore.holdSweep) MediaStore.holdSweep(30 * 60 * 1000);
       /* 她 10-14 13:47：老写法把整份文件 JSON.parse 进来（带图本体的备份几十上百 MB）
          ——就是「文件扫描导入图片一直闪退」的真因。现在按块流式读，媒体本体一条一条进库；
          分片备份可以一次全选。 */
@@ -33348,7 +33442,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try {
         for (const f of files) {
           UI.busy('正在从备份文件里找图…已带回 ' + put + ' 个');
-          const r = await DB.importBundleStream(f, { skipExisting: true });
+          const r = await DB.importBundleStream(f, { skipExisting: true,
+            onProgress: n => UI.busy('正在从备份文件里找图…已带回 ' + (put + n) + ' 个') });
           if (r.data) doc = r.data;
           legacy = legacy || r.legacy;
           put += r.media;
@@ -33358,7 +33453,9 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         /* 老格式（图内联在档里、没有 media 区）：还走内容哈希那条链 */
         if (legacy && doc) {
           const h = V.harvest(doc);
-          found.size = h.size;
+          /* 老格式现在在流式那一层就把图搬进库了，doc 里已经没几张内联的；
+             这里只补「那一层没能搬动的」，别把刚才数好的张数抹成 0。 */
+          if (h.size) found.size = h.size;
           for (const [k, url] of h) {
             if (!before.has(k)) continue;
             try { await MediaStore.put(k, url); put++; } catch (e) { logErr('找回图片：入库失败 ' + (e && e.message)); }
@@ -33726,8 +33823,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
        她 10-14 13:47：老写法 f.text() + JSON.parse(整份) 就是「文件扫描导入图片一直闪退」的真因。 */
     async function runImportFile(file) {
       UI.busy('正在读备份文件…');
+      /* 她 10-14 21:2x：导入这阵子把清扫按住（刚写进库的东西还没被档引用，别当孤儿清掉） */
+      if (typeof MediaStore !== 'undefined' && MediaStore.holdSweep) MediaStore.holdSweep(30 * 60 * 1000);
       let r = null;
-      try { r = await DB.importBundleStream(file); }
+      try { r = await DB.importBundleStream(file, { onProgress: n => UI.busy('正在读备份文件…已找回 ' + n + ' 张图') }); }
       finally { UI.busyDone(); }
       if (r.kind === 'all') {
         if (!r.data) {
@@ -33736,8 +33835,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
              现在拆掉占位旧账 + 重画，界面当场把图/头像补回原位。 */
           const back = r.media || 0;
           if (back) runSafe('import.recheck', () => Media.recheck(document.body));
-          UI.toast(back ? ('已补回媒体本体 ' + back + ' 个，正在把图补回原位…')
-                        : '这一份里没有可补的媒体本体（它可能不是备份文件）');
+          UI.toast(back ? ('已找回 ' + back + ' 张图，正在把它们放回原来的位置…')
+                        : '这份文件里没找到图（可能不是备份文件）');
           if (back) setTimeout(() => location.reload(), 700);
           return;
         }
@@ -33747,7 +33846,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         Theme.apply(DB.state.settings.theme, false);
         /* 09-02 拆全局钩子时 bindMine 里的 renderMine 成了局部函数，这里裸调必炸（她 10-10 实报
            renderMine is not defined）——整档覆盖后所有页面都要重画，直接重载，不逐个补调 */
-        UI.toast('导入成功，数据已恢复' + (r.media ? ('，带回媒体本体 ' + r.media + ' 个') : ''));
+        UI.toast('导入成功，数据已恢复' + (r.media ? ('，图也一起回来了（' + r.media + ' 张）') : '')
+          + (r.skipped ? ('；另有 ' + r.skipped + ' 张太大这次没搬走' ) : ''));
         setTimeout(() => location.reload(), 700);
         return;
       }
@@ -33766,7 +33866,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try {
         for (const f of files) {
           UI.busy('正在读 ' + files.length + ' 份文件…已带回媒体 ' + media + ' 个');
-          const r = await DB.importBundleStream(f);
+          const r = await DB.importBundleStream(f, { onProgress: n => UI.busy('正在读 ' + files.length + ' 份文件…已找回 ' + (media + n) + ' 张图') });
           media += r.media;
           if (!kind) kind = r.kind;
           if (r.data && !doc) doc = r.data;
@@ -33776,8 +33876,8 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       if (!doc) {
         /* 她 10-14 16:40：全是「只有媒体本体」的片，以前只报一句错——现在照样把本体补回原位 */
         if (media) runSafe('import.recheck', () => Media.recheck(document.body));
-        UI.toast(media ? ('已补回媒体本体 ' + media + ' 个，正在把图补回原位…')
-                       : '这些文件里没有可补的媒体本体（也不是带档的那份）');
+        UI.toast(media ? ('已找回 ' + media + ' 张图，正在把它们放回原来的位置…')
+                       : '这些文件里没找到图（也不是带数据的那份）');
         if (media) setTimeout(() => location.reload(), 700);
         return;
       }
@@ -33787,7 +33887,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         DB.save();
         runSafe('import.recheck', () => Media.recheck(document.body));   /* 补回本体后当场重扫（重扫坏了也不能拦导入） */
         Theme.apply(DB.state.settings.theme, false);
-        UI.toast('导入成功：' + files.length + ' 份·带回媒体本体 ' + media + ' 个');
+        UI.toast('导入成功：' + files.length + ' 份，图一起回来了（' + media + ' 张）');
         setTimeout(() => location.reload(), 700);
       }
     });
