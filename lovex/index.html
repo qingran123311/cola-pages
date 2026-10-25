@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261025-151711 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261025-181321 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -4408,6 +4408,7 @@ const DB = (function () {
   function defaults() {
     return {
       version: 1,
+      savedAt: 0,                      // 这一份档是什么时候存的（开页时和「应用文件里那份」比谁新，见 nativeDocGet）
       profile: {                       // 我方身份（源策划·我方体系）
         name: '清然',
         avatar: null,                  // base64
@@ -4510,12 +4511,19 @@ const DB = (function () {
 
   let state;
   let mainRaw = null;      // 本次装载用的原文（水合时用来找 'idb:' 视频引用）
+  /* 她 10-25 17:55：「不只是聊天记录，是更新后……任何东西全部丢失，直接没有」
+     最狠的一种可能：主档还在那里、但这次没读出来（写了一半/被截断），于是内存里是空档，
+     一旦有任何一次存档，空档就把原来那份盖掉了——那就真成“全部直接没有”。
+     所以：读不出来就把原文扣下来，这一轮绝不允许拿空档去盖它。 */
+  let unreadableRaw = null;
+  let rescueDone = false;
   try {
     const raw = localStorage.getItem(KEY);
     mainRaw = raw;
     state = raw ? deepMerge(defaults(), JSON.parse(raw)) : defaults();
   } catch (e) {
     /* 主数据损坏时自动用上一份快照顶上 */
+    const raw0 = mainRaw;   // 读不出来的那份原文（下面 mainRaw 会被快照位覆盖，先扣下来）
     try {
       const bak = localStorage.getItem(BAK);
       const b = bak ? JSON.parse(bak) : null;
@@ -4523,10 +4531,70 @@ const DB = (function () {
       const rawB = b && b.raw ? (typeof b.raw === 'string' ? b.raw : JSON.stringify(b.raw)) : bak;
       mainRaw = rawB || null;
       state = rawB ? deepMerge(defaults(), JSON.parse(rawB)) : defaults();
+      /* 两份都没内容、但主档明明有一大段原文：那就是“读不出来”，不许拿空档盖（她 10-25 17:55） */
+      if (!rawB && raw0 && raw0.length > 2000) unreadableRaw = raw0;
     } catch (e2) {
       state = defaults();
+      unreadableRaw = (raw0 && raw0.length > 2000) ? raw0 : null;
     }
   }
+  /* ============ 她 10-25 17:17：「还是一直在清理我的聊天记录，只要我一刷新，我新聊的全部就都没有了，只有之前的」============
+     追到的是一条「静默失败」链，不是谁在清理：
+       ① 页面这块存储只有 5MB；图片只要还内联在档里（这台设备上媒体搬不出去时就会这样），两张大图就到底；
+       ② 主档写不进去时，老写法只往「影子/快照」塞，而那两格也在同一块写不进的存储上；
+       ③ 连黑匣子本身也写不进去 —— 所以界面上这么多年一直像“啥事都没发生”。
+     她聊的一切就只在内存里，刷新即回档，只剩上一次真正写成功的那份（“只有之前的”）。
+     兜底：壳里还有一条应用自己的文件通道（原生私有文件，没有 5MB 天花板）。
+     写不进页面就写文件；开页时哪份新用哪份。文字一条都不许丢。 */
+  function nativeDocPut(text, key) {
+    try {
+      const N = window.LovexNative;
+      if (!N || typeof N.saveMedia !== 'function') return false;
+      return N.saveMedia(key || '@maindoc', text) === true;
+    } catch (e) { return false; }
+  }
+  function nativeDocGet() {
+    try {
+      const N = window.LovexNative;
+      if (!N || typeof N.loadMedia !== 'function') return '';
+      return N.loadMedia('@maindoc') || '';
+    } catch (e) { return ''; }
+  }
+  /* 存不进去的那段时间里每次保存都想写文件的话，是几 MB 一次地砸盘。
+     攒一下：最多 1.5 秒一趟，但最后一趟必须补上（不然最近那几条又漏了）。 */
+  let natDocAt = 0, natDocTimer = null, natDocLast = '';
+  function nativeDocSave(text) {
+    if (!text) return false;
+    natDocLast = text;
+    const wait = 1500 - (Date.now() - natDocAt);
+    if (wait > 0) {
+      if (!natDocTimer) natDocTimer = setTimeout(() => {
+        natDocTimer = null; natDocAt = Date.now(); nativeDocPut(natDocLast);
+      }, wait);
+      return false;
+    }
+    natDocAt = Date.now();
+    return nativeDocPut(text);
+  }
+  function countMsgs(s) {
+    let n = 0; const m = (s && s.msgs) || {};
+    for (const k in m) if (Object.prototype.hasOwnProperty.call(m, k)) n += (m[k] || []).length;
+    return n;
+  }
+  /* 开页：文件里那份比页面这份新 → 就是它（她上一段聊的全在里面） */
+  let recoveredFromFile = null;
+  try {
+    const nat = nativeDocGet();
+    if (nat) {
+      const o = JSON.parse(nat);
+      const at = +((o && o.savedAt) || 0);
+      if (at && at > (+((state.savedAt) || 0))) {
+        const before = countMsgs(state);
+        state = deepMerge(defaults(), o);
+        recoveredFromFile = { at, msgs: countMsgs(state) - before };
+      }
+    }
+  } catch (e) { /* 文件读坏了就当没有，页面这份照常用 */ }
   /* 库结构归一（#39v附）：旧档/异常档缺 groups/items 键时补齐，
      防 ensurePanelSeed 等消费端直接 .filter 炸掉启动链。
      #39w（清然 14:41 报导入炸）：只归一“单库型”键——白名单制；
@@ -4651,6 +4719,9 @@ const DB = (function () {
   async function releaseMedia(refs) {
     const list = (refs || []).filter(Boolean);
     if (!list.length) return 0;
+    /* 只有文件通道、没有页面缓存的环境：数不出库里到底有哪些本体，这种环境一律不删 */
+    try { if (typeof MediaVault !== 'undefined' && MediaVault.nativeOnly && MediaVault.nativeOnly()) return 0; }
+    catch (e) { return 0; }
     let keep;
     try {
       keep = new Set(refsAll(state));
@@ -4876,19 +4947,14 @@ const DB = (function () {
     Object.keys((state.wallet && state.wallet.bal) || {}).forEach(mark);
     Object.values((state.kinship && state.kinship.cards) || {}).forEach(c => { if (c) { mark(c.fromUid); mark(c.toUid); } });
     ((state.moments && state.moments.posts) || []).forEach(p => { if (p) mark(p.uid); });
-    if (dead.size > 8) {
-      /* 一刷就是一整套账号：宁可停下报信，也不替谁做“全删”这个决定 */
-      if (typeof logErr === 'function')
-        logErr('孤儿清理暂停：一次要清 ' + dead.size + ' 个账号的残留，超出常规（导入换档请手动处理）');
-      return 0;
-    }
-    let touched = 0;
-    dead.forEach(u => { touched += purgeContact(u); });
-    /* 单聊会话指向已不存在的人（早期删好友漏删 conv）一并收掉 */
+    /* 她 10-25 17:45：「我在意的是为啥删，给我去掉这个」
+       ——开机时不再替她删任何东西：孤儿只报一次，原样留着，等她自己动手。 */
     const ghosts = (state.convs || []).filter(cv => cv.type === 'single' && cv.peerId && !live.has(cv.peerId));
-    ghosts.forEach(cv => { dropConv(cv.id); touched++; });
-    if (touched) save();
-    return touched;
+    if (typeof logErr === 'function' && (dead.size || ghosts.length)) {
+      logErr('自检：' + dead.size + ' 个已经不在通讯录里的名字还有旧数据、'
+        + ghosts.length + ' 个会话找不到对应联系人——都原样留着，一个字没动');
+    }
+    return 0;
   }
 
   let saveTimer = null;
@@ -4906,14 +4972,10 @@ const DB = (function () {
      备份位不再转义一整档；快照从 localStorage 搬进 IDB（不再只敢留两天）；
      配额写满不再拿删备份当自救，而是整档进 IDB 影子，下次开页影子顶上。
      IDB 不可用（隐私模式）→ MediaVault.enabled()=false，全部退回老写法，功能不坏。 */
-  const SNAP_KEY = 'LOVEX_MSGSNAP';            // 旧快照位：只用于迁一次再删（把配额还给主档）
-  const SNAP_REMOTE = 'LOVEX_MSGSNAP_REMOTE';
-  const SHADOW_AT = 'LOVEX_SHADOW_AT';          // 上一次“主档没写进去、整档进了影子”的时刻
-  const BAK_AT = 'LOVEX_DB_BAK_AT';             // 备份位的时刻（以前把它转义嵌在备份里，白占地方）
-  function todayKey() {
-    const d = new Date(), p = n => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
-  }
+  /* 旧快照位（LOVEX_MSGSNAP）：只用于搬一次再删（把配额还给主档）；SNAP_REMOTE 那把键已废（没人读） */
+  const SNAP_KEY = 'LOVEX_MSGSNAP';
+  const SHADOW_AT = 'LOVEX_SHADOW_AT';          // 上一次「主档没写进去、整档进了影子」的时刻
+  const BAK_AT = 'LOVEX_DB_BAK_AT';             // 旧备份位的时刻（已废：新版首次开页腾抽屉时一并清掉）
   /* db.js 比 media.js 先执行，装载期 MediaVault 还在 TDZ（碰一下就抛），
      所以取它必须走这个带兑底的口子：拿不到就当没 IDB，退回老写法。 */
   const vault = () => {
@@ -4921,31 +4983,23 @@ const DB = (function () {
     catch (e) { return null; }
   };
 
-  /* 每日快照：写进 IDB（没 5MB 天花板），每会话只留当天那一份 */
-  async function snapMsgs() {
-    const V = vault();
-    try {
-      if (!V) { legacySnapMsgs(); return; }
-      await V.snap(todayKey(), V.pack(state.msgs).doc);
-    } catch (e) {}
-  }
-  /* 老写法（只存 localStorage、只敢留两天）：没 IDB 时的退路，不是主路径 */
-  function legacySnapMsgs() {
-    try {
-      const day = todayKey();
-      const raw = localStorage.getItem(SNAP_KEY);
-      const cur = raw ? JSON.parse(raw) : { day: '', days: [] };
-      if (cur.day === day) return;
-      cur.day = day;
-      cur.days = (cur.days || []).filter(x => x.day !== day);
-      cur.days.unshift({ day: day, savedAt: Date.now(), msgs: state.msgs });
-      cur.days = cur.days.slice(0, 2);
-      try { localStorage.setItem(SNAP_KEY, JSON.stringify(cur)); }
-      catch (e1) {
-        cur.days = cur.days.slice(0, 1);
-        try { localStorage.setItem(SNAP_KEY, JSON.stringify(cur)); } catch (e2) {}
-      }
-    } catch (e) {}
+  /* 每日聊天快照（08-30 加的“每天自动存一份聊天记录”）——她 10-25 17:25：
+     「我加了自动备份，然后就开始丢东西……是否里面还有相关功能？」
+     UI 上的「按天找回」10-14 就拆了，但底下的写入一直没停：每天自动把全部聊天另存一份。
+     既没人用，也不该自动写——整条写入拆掉（已成旧数据的只读，不再新增）。 */
+  /* 她 10-25 17:25：「是否里面还有相关功能？导致我无法继续使用一直在丢失」
+     有。就这一把键：LOVEX_DB_BAK——每存一次都把上一份整档再写一遍，同一个 5MB 抽屉里常年两份整档。
+     写得越多，两份就越胖；坐到 5MB 满了那一天开始，主档就一次都写不进去——她那句“只有之前的”就是这么来的。
+     处理口径（不丢她的东西）：先搬进 IDB + 壳里再落一份文件（这两处没有 5MB 天花板），搬成功了才腾抽屉。 */
+  async function freeBackupSlot(V) {
+    let raw = null;
+    try { raw = localStorage.getItem(BAK); } catch (e) { return 0; }
+    if (!raw) return 0;
+    let ok = false;
+    try { ok = await V.keepOldCopy(raw); } catch (e) { ok = false; }
+    if (!ok) return 0;                       // 搬不走就原封不动留着（宁可占地方，不许冒险）
+    try { localStorage.removeItem(BAK); localStorage.removeItem(BAK_AT); } catch (e) { return 0; }
+    return 1;
   }
   /* 旧位里的两天快照：迁进 IDB 后把旧位删掉（已经存过的东西一分不丢，但不能再占主档配额） */
   async function migrateLegacySnaps() {
@@ -5006,7 +5060,8 @@ const DB = (function () {
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', function (e) {
       if (e.key !== KEY || !e.newValue) return;
-      try { localStorage.setItem(SNAP_REMOTE, e.newValue); } catch (x) {}
+      /* 以前这里还顺手往 LOVEX_MSGSNAP_REMOTE 塞一整份副本（另一个标签页写的档）——
+         而那把键全站没有任何地方读。抽屉里白白多一份整档，现在不存了。 */
       try { mergeForeign(JSON.parse(e.newValue)); } catch (x) {}
     });
   }
@@ -5015,12 +5070,29 @@ const DB = (function () {
     clearTimeout(saveTimer); saveTimer = null;
     const V = vault();
     if (!V) {                                  // 没 IDB：退回老写法，行为与 08-29 之前一致
+      state.savedAt = Date.now();
+      /* 这里以前每存一次都把上一份整档另存到 LOVEX_DB_BAK（她 10-25 17:25：
+         「是否里面还有相关功能？」——就是它：同一个 5MB 抽屉里常年两份整档，一半额度被白占），现在不存了 */
+      let text = '';
+      try { text = JSON.stringify(state); } catch (e) { text = ''; }
+      if (unreadableRaw) {                     // 开页那份读不出来：不拿空档盖它（同上一条）
+        if (!rescueDone) { rescueDone = true; nativeDocPut(unreadableRaw, '@rawrescue'); }
+        const saved2 = nativeDocSave(text);
+        saveHealth = { ok: false, file: saved2, at: Date.now(), why: '开页那份读不出来，没敢盖' };
+        if (typeof logErr === 'function') logErr('开页时那份档案读不出来（不是被删，是这一段没解开）——没拿空的去盖它，原来那份一个字没动');
+        return;
+      }
       try {
-        const curRaw = localStorage.getItem(KEY);
-        if (curRaw) localStorage.setItem(BAK, JSON.stringify({ savedAt: Date.now(), raw: curRaw }));
-      } catch (e) {}
-      try { localStorage.setItem(KEY, JSON.stringify(state)); }
-      catch (e) { if (onQuota) onQuota(e); }
+        localStorage.setItem(KEY, text);
+        saveHealth = { ok: true, file: false, at: Date.now(), why: '' };
+      } catch (e) {
+        /* 她 10-25 17:17：没 IDB 的设备上这一步一直是静默失败——现在写文件，写不进才真叫丢 */
+        const saved = nativeDocSave(text);
+        saveHealth = { ok: false, file: saved, at: Date.now(), why: (e && e.message) || '写不进去' };
+        if (onQuota) onQuota(e);
+        if (typeof logErr === 'function') logErr('这次没存进页面（' + ((e && e.message) || e) + '）'
+          + (saved ? '，已经改存到应用自己的文件里，开页不少' : '，也没有文件通道'));
+      }
       return;
     }
     const pk = V.pack(state);
@@ -5036,28 +5108,54 @@ const DB = (function () {
     commit(V);
   }
 
-  /* 真正落盘的那一步：能换成引用的已经换掉了（图在 IDB 里），主档只剩文字 */
+  /* 真正落盘的那一步：能换成引用的已经换掉了（图在库里），主档只剩文字 */
+  let saveHealth = { ok: true, file: false, at: 0, why: '' };   // 存储概览里只在出问题那天才显一行（她不看没事）
   function commit(V) {
+    state.savedAt = Date.now();          // 这一份档的时刻（跟文件里那份比新旧）
     const pk = V.pack(state);
     let text;
-    try { text = JSON.stringify(pk.doc); } catch (e) { return; }
-    const curRaw = localStorage.getItem(KEY);   // 主档被盖掉前抓走上一份，备份位要用
+    try { text = JSON.stringify(pk.doc); }
+    catch (e) {
+      /* 连字都拼不出来（档里进了转不动的东西）：不许多一层静默——直接写文件，并记一笔 */
+      let alt = '';
+      try { alt = JSON.stringify(state); } catch (e2) { alt = ''; }
+      const saved = nativeDocSave(alt);
+      saveHealth = { ok: false, file: saved, at: Date.now(), why: '整理数据出错' };
+      if (typeof logErr === 'function') logErr('这次没存进页面（整理数据出错：' + ((e && e.message) || e) + '）'
+        + (saved ? '，已经改存到应用自己的文件里，开页不少' : '，也没有文件通道'));
+      return;
+    }
+    const curRaw = localStorage.getItem(KEY);   // 主档被盖掉前先看一眼（只用于黑匣子判断，不再另存一份）
+    /* 她 10-25 17:55：「任何东西全部丢失，直接没有」——最狠的一条我把它堵上：
+       开页时那份档案读不出来（原文还在、只是这次解不开），这一轮绝不允许拿空档去盖它。
+       做法：先把原文抄一份到应用自己的文件（@rawrescue），新东西也只能写文件；
+       原档一个字不动。她一旦导入备份，这条路自动解除。 */
+    if (unreadableRaw) {
+      if (!rescueDone) { rescueDone = true; nativeDocPut(unreadableRaw, '@rawrescue'); }
+      const saved2 = nativeDocSave(text);
+      saveHealth = { ok: false, file: saved2, at: Date.now(), why: '开页那份读不出来，没敢盖' };
+      if (typeof logErr === 'function') logErr('开页时那份档案读不出来（不是被删，是这一段没解开）——'
+        + '没拿空的去盖它，原来那份一个字没动'
+        + (saved2 ? '；这次的东西已经另存到应用自己的文件里' : '；也没有文件通道'));
+      return;
+    }
     try {
       localStorage.setItem(KEY, text);
-      /* 备份位：直接存上一份原文串（不再 JSON 套一层转义，那层转义让副本比主档还大 1.17×） */
-      if (curRaw) {
-        localStorage.setItem(BAK, curRaw);
-        localStorage.setItem(BAK_AT, String(Date.now()));
-      }
       if (pk.pending.length) V.flush(pk.pending);  // 仍未搬动的后台接着搬，下次写盘换引用
+      saveHealth = { ok: true, file: false, at: Date.now(), why: '' };
     } catch (e) {
-      /* 写满不再删备份位：媒体已不在主档里，真写满只可能是文字本身超大。
-         整档进 IDB 影子（那边没天花板）+ 记一笔，下次开页影子把这份新的顶上 */
-      V.shadow(pk.doc, Date.now()).then(ok => {
-        if (ok) { try { localStorage.setItem(SHADOW_AT, String(Date.now())); } catch (x) {} }
-        snapMsgs();
-        if (onQuota) onQuota(e);
-      });
+      /* 写不进去：整档进影子（IDB 里没 5MB 天花板）+ 壳里有文件通道的再写一份文件；
+         两边都写不进才叫真没存住，那就得让她看见。 */
+      try {
+        V.shadow(pk.doc, Date.now()).then(ok => {
+          if (ok) { try { localStorage.setItem(SHADOW_AT, String(Date.now())); } catch (x) {} }
+          if (onQuota) onQuota(e);
+        });
+      } catch (x) { /* 影子写不进也不阻碍文件那一趟 */ }
+      const saved = nativeDocSave(text);
+      saveHealth = { ok: false, file: saved, at: Date.now(), why: (e && e.message) || '写不进去' };
+      if (typeof logErr === 'function') logErr('这次没存进页面（' + ((e && e.message) || e) + '）'
+        + (saved ? '，已经改存到应用自己的文件里，开页不少' : '，也没有文件通道'));
     }
   }
 
@@ -5070,6 +5168,8 @@ const DB = (function () {
   function applyImportedState(data) {
     state = deepMerge(defaults(), data);
     dropObsoleteKinshipAuto();
+    /* 她亲手上过一次导入 = 楼上的档不再“读不出来也护着”了，正常写回页面 */
+    unreadableRaw = null;
     clearTimeout(saveTimer);
     writeNow();
   }
@@ -5477,8 +5577,17 @@ const DB = (function () {
     if (readyP) return readyP;
     readyP = (async function () {
       try { await askPersist(); } catch (e) {}
+      /* 她 10-25 17:17：开页时页面这份不是最新的（上次写不进页面）→ 已经从文件里补回来了，说一句实话，
+         再说一遍不是谁在清理。顺手把补回来的这份写回页面（写不进也没关系，文件里已经是全的）。 */
+      if (recoveredFromFile) {
+        if (typeof logErr === 'function') logErr('开页时页面这份不是最新的，已经从应用自己的文件里补回 '
+          + (recoveredFromFile.msgs > 0 ? recoveredFromFile.msgs + ' 条聊天' : '整份记录') + '（上次是没写进页面，不是被清理）');
+        recoveredFromFile = null;
+        try { save(); } catch (e) {}
+      }
       const V = vault();
-      if (!V) { try { snapMsgs(); } catch (e) {} return true; }
+      if (!V) return true;
+      try { await freeBackupSlot(V); } catch (e) { /* 搬不动就留着，不冒险 */ }
       const safe = bootSafe();
       if (safe && typeof logErr === 'function') logErr('上次启动没走完（多半是媒体铺太多把内存顶爆了），这一次先用省内存的方式起来：图会少一些，记录一个没动');
       /* 铺的顺序按「她先看得到的地方」来（她 10-13 11:13：照存档字段顺序铺，额度被前面那些老会话吃光，
@@ -5509,10 +5618,9 @@ const DB = (function () {
           try { if (V.migrateToNative) { const mv = await V.migrateToNative(); if (mv && typeof logErr === 'function') logErr('媒体搬家：' + mv + ' 个本体落进原生文件'); } } catch (e) { if (typeof logErr === 'function') logErr('媒体搬家启动失败：' + ((e && e.message) || e) + '（下次开页自动重试）'); }
         })();
       }, 2500);
-      /* 她 10-14 17:19：「没用过的都给我去掉」——每日聊天快照（14 天）那个口是 08-30 我加的，
-         她自己从来没用过，界面上今天也一并拿掉了；所以开页不再白写一份（每天一份纯属白占）。
-         snapMsgs 本身留着：只当「主档写不进去 / 没 IDB」那两种极端情况下的兵底。 */
-      try { await migrateLegacySnaps(); } catch (e) { /* 旧位里的两天快照迁一次就删，拿不准也不阻碍启动 */ }
+      /* 旧的「每日聊天快照」位置：老档里要是还留着，一次性搬进 IDB 再把旧位清空（数据不丢，只腾抽屉）。
+         新的快照不再自动写了（她 10-25 17:25）。 */
+      try { await migrateLegacySnaps(); } catch (e) { /* 旧位搬不动就不搬，不阻碍启动 */ }
       /* 上次主档没写进去（配额）而整档进了影子：影子更新就把那份新的顶上，一条不丢 */
       try {
         const at = +(localStorage.getItem(SHADOW_AT) || 0);
@@ -5545,8 +5653,7 @@ const DB = (function () {
             if (V.liveKeys) { try { extra.push.apply(extra, await V.liveKeys()); } catch (e) { /* 取存档引用失败就按现有保留集来（宁可少清不误删） */ } }
             const n = await V.sweep(parts, extra);
             if (n && typeof logErr === 'function') {
-              logErr('媒体清扫：清掉 ' + n + ' 个没人引用的媒体'
-                + (V.sweptKeys ? '（' + V.sweptKeys().slice(0, 12).join(' ') + '）' : ''));
+              logErr('媒体体检：有 ' + n + ' 份早先的图现在没有任何存档提到（先原样留着，一个不删）');
             }
           } catch (e) {}
         })();
@@ -5596,6 +5703,8 @@ const DB = (function () {
   return {
     get state() { return state; },
     get ready() { return startReady(); },
+    /* 存得进存不进（存储概览只在出过事的时候拿它显一行，平常不显） */
+    saveHealth: () => ({ ok: saveHealth.ok, file: !!saveHealth.file, at: saveHealth.at, why: saveHealth.why }),
     bootOk,
     bootSafe,
     unpackConv,
@@ -5604,6 +5713,7 @@ const DB = (function () {
     releaseMedia,
     flushMediaGC,
     sweepOrphans,
+    applyImportedState,
     save,
     flushSave: writeNow,
     exportBundle,
@@ -5623,7 +5733,6 @@ const DB = (function () {
     set onQuota(fn) { onQuota = fn; }
   };
 })();
-
 /* ============================================================
  * Notify — P17 系统级消息通知（二期需求原文 L36 第五条）
  * 「我把它挂在后台，当前应用是抖音，对方发来消息时我就会看到
@@ -9607,6 +9716,17 @@ const MediaVault = (function () {
   const SNAPIDX = '@snapidx';      // 快照日期索引（找回界面直接读它）
   const MIN = 4096;                // 小于 4KB 的 data: 串不值得搬，留在主档
   let off = !(window.indexedDB);
+  /* 她 10-25 17:17 的复查：有些设备上页面缓存（IndexedDB）是关着的，那时整套媒体搬家器会整体关掉，
+     图就只能内联在 5MB 的主档里——两张大图就到底，然后主档写不进去、刷新回档。
+     壳里有应用自己的文件通道（原生三座桥）时，文件通道照样能把媒体搬出主档；那就接着搬，不许整体关。 */
+  const NAT = () => (typeof window !== 'undefined' && window.LovexNative &&
+    typeof window.LovexNative.saveMedia === 'function' &&
+    typeof window.LovexNative.loadMedia === 'function') ? window.LovexNative : null;
+  const NKk = k => String(k).replace(/[^@a-z0-9:]/gi, '_');
+  const nPut = (k, v) => { const N = NAT(); if (!N) return false; try { return N.saveMedia(NKk(k), v) === true; } catch (e) { return false; } };
+  const nGet = k => { const N = NAT(); if (!N) return ''; try { return N.loadMedia(NKk(k)) || ''; } catch (e) { return ''; } };
+  const nativeOnly = !window.indexedDB && !!NAT();
+  if (nativeOnly) off = false;
   const armed = new Map();         // ref -> 1：本会话已确认在库里，不重复写
   const swept = [];                // 最近一次清扫删掉的键（写黑匣子用）
   const st = { packed: 0, bytes: 0, missing: 0, refs: 0, flushErr: 0, missingLogged: 0, left: 0, safe: 0 };
@@ -9665,7 +9785,8 @@ const MediaVault = (function () {
     let n = 0;
     for (const [key, text] of pending) {
       try {
-        await MediaStore.put(key, text);
+        if (nativeOnly) { if (!nPut(key, text)) throw new Error('写不进应用文件'); }
+        else await MediaStore.put(key, text);
         armed.set(key, 1);
         st.packed++; st.bytes += text.length; n++;
       } catch (e) {
@@ -9707,7 +9828,7 @@ const MediaVault = (function () {
       if (bytes >= cap) break;                                  // 到预算了：后面的一律保留引用串
       const [parent, key, v] = jobs[i];
       try {
-        const text = await MediaStore.get(v);
+        const text = nativeOnly ? (nGet(v) || null) : await MediaStore.get(v);
         if (text == null) { missing++; st.missing++; continue; }  // 实体没了：保留引用串，界面上报，不静默抹掉
         armed.set(v, 1); parent[key] = text; bytes += text.length; found++;
       } catch (e) { missing++; st.missing++; }
@@ -9735,8 +9856,13 @@ const MediaVault = (function () {
      她 10-05：老写法只扫文本里的 '@mv'，一旦某次写盘时图还内联在档里（没进库）,
      那批图先前入库的本体就不在保留集里，会被当孤儿删——“记录还在、图没了”的一条真路。
      现在把内存里所有媒体反推的键一并算进保留集（extraKeys），宁可留不可错删。 */
+  /* 她 10-25 17:45：「关键不是说下次保存啥啥啥，我在意的是为啥删，给我去掉这个」
+     ——所以这条开机清扫**从此只认不清**：认得出来没被任何存档提到的，只登记名字，一个都不删。
+     要真想清，等她自己动手；宁可留，不可错删。 */
   async function sweep(liveText, extraKeys) {
     if (off) return 0;
+    /* 只有文件通道、数不出库里到底有哪些键：这一趟一律不删（宁可留不可错删） */
+    if (nativeOnly) return 0;
     if (typeof MediaStore.sweepHeld === 'function' && MediaStore.sweepHeld()) {
       if (typeof logErr === 'function') logErr('媒体清扫：刚在导入/补图，这一趟不扫（先保图）');
       return 0;
@@ -9752,9 +9878,10 @@ const MediaVault = (function () {
     let n = 0;
     swept.length = 0;
     for (const k of all) {
-      if (typeof k !== 'string' || k.indexOf(P) !== 0) continue;   // 只清自己的
+      if (typeof k !== 'string' || k.indexOf(P) !== 0) continue;   // 只看自己的
       if (keep.has(k)) continue;
-      try { await MediaStore.del(k); armed.delete(k); n++; if (swept.length < 40) swept.push(k); } catch (e) { /* 删不掉就留着，不算错删 */ }
+      n++;
+      if (swept.length < 40) swept.push(k);
     }
     return n;
   }
@@ -9899,8 +10026,22 @@ const MediaVault = (function () {
     return n;
   }
 
+  /* 整档旧副本（自动快照时代的 LOVEX_DB_BAK）搬进不限体积的地方：IDB + 应用自己的文件。
+     db.js 开页时用它腾 localStorage 那格（搬不成功就不腾）。 */
+  const OLDMAIN = '@oldmain';
+  async function keepOldCopy(text) {
+    if (!text) return false;
+    let ok = false;
+    try { if (NAT()) ok = nPut(OLDMAIN, text) || ok; } catch (e) { /* 文件通道写不进还有 IDB */ }
+    try { if (!off && !nativeOnly) { await MediaStore.put(OLDMAIN, text); ok = true; } } catch (e) { /* IDB 不行就看文件那头 */ }
+    return ok;
+  }
+
   return {
     enabled() { return !off; },
+    keepOldCopy,
+    /* 只有文件通道、没有页面缓存：清扫/回收这类“删”的事一律不动（数不出保留集就不删） */
+    nativeOnly() { return nativeOnly; },
     hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs, liveKeys, sweptKeys,
     shadow, readShadow, snap, listSnaps, readSnap,
     listFull, readFull, harvest,
@@ -33442,6 +33583,16 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       try { const a = JSON.parse(localStorage.getItem('LOVEX_ERRLOG') || '[]');
         return a.length ? '黑匣子错误 ' + a.length + ' 条（长按心事簿标题可看）\n' : ''; } catch (e) { return ''; }
     }
+    /* 她 10-25 17:17：只在「真没存进页面」时才显一行，平常一个字不多说 */
+    function saveLine() {
+      try {
+        const h = (typeof DB.saveHealth === 'function') ? DB.saveHealth() : null;
+        if (!h || h.ok) return '';
+        return (h.file
+          ? '上一次没写进页面（' + (h.why || '空间不够') + '），已改存到应用自己的文件里，开页不少\n'
+          : '上一次没写进页面（' + (h.why || '空间不够') + '），也没能改存文件——先导一份备份出来\n');
+      } catch (e) { return ''; }
+    }
     async function storageOverview() {
       let bytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
@@ -33470,6 +33621,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
               : '图片/语音已托管 ' + vs.packed + ' 个·' + vs.kb + ' KB（不占主档配额）\n'
                 + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了（本体被浏览器/手机清掉了，回不来；原图还在相册或微信里的，重新发一遍就补回来）\n' : ''))
           + '存储受浏览器保护：' + (typeof DB.persistState === 'function' ? DB.persistState() : '未知') + '\n'
+          + saveLine()
           + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
       });
