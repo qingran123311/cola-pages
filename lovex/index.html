@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261014-213404 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261025-151711 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -2557,8 +2557,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
    只用独立游戏色 --g-*，不进全站三色纪律（清然 08-28 晚口径）
    ===================================================== */
 /* 08-30 P41：--g-egg/--g-flower/--g-flower2/--g-hammer/--g-leaf 是「道具配色」入口撤掉后的死变量
-   （还带着她禁的彩色），删；只留转盘贴纸那条真在用的描边色 */
-:root{ --g-stick-line:#3A3A42 }
+   （还带着她禁的彩色），删；她 10-16 18:00 又拍了「转盘只留彩色」，贴纸那条描边色跟着没用了，一并删 */
 /* ---------- 大厅 ---------- */
 .gm-sec{font-size:12px;color:var(--t3);margin:2px 2px -8px}
 /* 08-30 P41 §五：原来是单行横滚（实测 shelf 可视 388 < 内容 424，第三张右缘 599 超出），
@@ -2722,7 +2721,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   background-image:repeating-linear-gradient(45deg,transparent 0 12px,color-mix(in srgb,var(--line) 30%,transparent) 12px 13px)}
 .gm-wlabel{position:absolute;left:50%;top:50%;font-size:12px;font-weight:700;color:var(--t1);
   font-style:italic;font-family:'Comic Sans MS','Segoe Print',cursive;letter-spacing:1px;white-space:nowrap}
-.gm-wlabel.sticker{color:var(--g-stick-line)}
 .gm-wheel-hub{position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;
   background:var(--card);border:2px solid var(--t2);transform:translate(-50%,-50%);
   display:flex;align-items:center;justify-content:center;color:var(--t2)}
@@ -2811,8 +2809,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mn-pin.by-me{box-shadow:0 0 0 1.5px var(--primary),0 1px 3px rgba(0,0,0,.25)}
 .mn-pin svg,.mn-pin img{width:100%;height:100%;display:block}
 .mn-pin span{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px}
-.mn-cell.mn-reveal{display:flex;align-items:center;justify-content:center;font-size:12px;
-  background:var(--card);box-shadow:inset 0 0 0 1px var(--line);opacity:.75;cursor:default}
+/* （她 10-16：“亮全盘雷”那条口径拆了，那个亮雷样式也没人用了，一并删） */
 /* 踩雷爆炸：💥 在格子处炸开（她点名 EMOJI+特效） */
 .gm-boomfx{position:fixed;z-index:1200;font-size:46px;pointer-events:none;line-height:1;
   animation:gm-pop .9s forwards;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
@@ -3254,25 +3251,37 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 /* ---------- 大富翁（P51）：方环 20 城 + 中间一块调度区 ---------- */
 .mc-wrap{display:flex;flex-direction:column;gap:5px;padding:2px 0 6px;position:relative}
 .mc-empty{padding:26px 12px;text-align:center;color:var(--t3);font-size:12px}
-/* 她 10-09 00:43：座位正 N 边形贴盘周界——上下横带（按角度比例定位）+ 左右立柱，取代 10-08 两簇 */
-.mc-band{position:relative;height:36px;min-height:36px}
-.mc-band .mc-pk{position:absolute;top:0}
-.mc-midrow{display:grid;grid-template-columns:auto 1fr auto;gap:4px;align-items:stretch}
-.mc-side{position:relative;width:86px;min-width:86px}
-.mc-side .mc-pk{position:absolute;left:0;right:0;flex-wrap:wrap;justify-content:center}
-.mc-side-empty{width:0;min-width:0}
-.mc-pk{width:auto;flex:none;flex-direction:row;align-items:center;gap:4px;padding:3px 8px;font-size:11px;
-  border:1px solid var(--line);border-radius:999px;background:var(--card);opacity:.62;max-width:none}
-.mc-pk.on{opacity:1;border-color:var(--t1)}
-.mc-pk b{font-weight:600;white-space:nowrap}
-.mc-pk small{color:var(--t3);font-size:10px}
-.mc-pk .mc-cash{color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums}
-.mc-pk .mc-cash::after{content:' 元';font-weight:400;font-size:9px;color:var(--t3)}
-.mc-dot{width:9px;height:9px;border-radius:50%;background:var(--tc,var(--t1));flex:none}
-.mc-me{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;background:var(--t1);color:var(--card)}
-.mc-out{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--line);color:var(--t3)}
+/* 她 10-25 13:46：「大富翁布局设计不对，三人时我无法看到另一个人……手机尺寸，请用心设计」
+   尺寸先规划好再落样式（手机竖屏只有一条横尺）：棋盘吃满桌区整宽（width:100%，最多 470），
+   座位不跟棋盘抢宽（三人局整颗出屏就是抢宽抢出来的）；410 宽的手机 => 格子 ~63px，名字与租金都装得下。 */
+/* 她 10-25 14:50：「5678 人的布局那也实在是太丑了吧？就必须堆在上面堆成一整面吗？
+   改成每不同的人数是不同的布局不可以吗？」——一条带压满盘顶，人一多就是一堵墙。
+   现在「围着棋盘坐下」：上下两条，我坐我这一侧（下带正中），对手在上带。
+   人数 → 上/下：2人 1/1、3人 1/2、4人 2/2、5人 2/3、6人 3/3、7人 3/4、8人 4/4。
+   每条带按自己的人数均分（--mc-n 是这一条上有几颗），人少卡就宽、人多最多 4 列。 */
+.mc-seats{display:grid;grid-template-columns:repeat(var(--mc-n,2),minmax(0,1fr));gap:5px}
+.mc-seats.mc-top{padding:0 0 6px}
+.mc-seats.mc-bot{padding:6px 0 1px}
+.mc-seats .mc-pk{width:100%;max-width:132px;justify-self:center}
+/* 一人一颗卡片：两行——上「头像 + 名字(+我/狱/出局)」，下「资产 · 地产」。
+   两行才装得下 4 列：390 宽的手机四列各 ~93px，三行会把金额折成“204…”。
+   注意 width：壳子那条 .gm-player 是定宽 80px（给别的游戏座位用的），这里必须盖掉。 */
+.mc-pk{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;
+  column-gap:4px;row-gap:1px;align-items:center;padding:4px 6px;font-size:10.5px;border:1px solid var(--line);
+  border-radius:10px;background:var(--card);opacity:.62;width:auto;min-width:0;box-sizing:border-box}
+.mc-pk.on{opacity:1;border-color:var(--t1);box-shadow:0 0 0 1px var(--t1) inset}
+.mc-pk .mc-ava{position:relative;grid-column:1;grid-row:1 / span 3;display:flex;align-items:center}
+.mc-pk .gm-mini-ava{width:22px;height:22px;border-radius:50%;overflow:hidden;border:2px solid var(--tc,var(--t1));background:var(--fill)}
+.mc-pk .mc-nm{grid-column:2;grid-row:1;display:flex;align-items:center;gap:3px;min-width:0}
+.mc-pk .mc-nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.mc-pk small{color:var(--t3);font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mc-pk .mc-cash{grid-column:2;grid-row:2;color:var(--t1);font-weight:700;font-size:10px}   /* 钱这一行不给省略号：窄了先让名字和地产让位 */
+.mc-pk .mc-prop{grid-column:2;grid-row:3;font-size:9px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mc-pk .mc-itbadge{position:absolute;right:-5px;bottom:-4px}
+.mc-me{flex:none;font-style:normal;font-size:8.5px;line-height:1;padding:1px 3px;border-radius:999px;background:var(--t1);color:var(--card)}
+.mc-out{flex:none;font-style:normal;font-size:8.5px;line-height:1;padding:1px 3px;border-radius:999px;border:1px solid var(--line);color:var(--t3)}
 /* 在狱里那颗角标：与“出局”同一长相，只是不摸成空牌 */
-.mc-jbadge{font-style:normal;font-size:9px;line-height:1;padding:2px 4px;border-radius:999px;border:1px solid var(--t2);color:var(--t1)}
+.mc-jbadge{flex:none;font-style:normal;font-size:8.5px;line-height:1;padding:1px 3px;border-radius:999px;border:1px solid var(--t2);color:var(--t1)}
 .mc-board{display:grid;grid-template-columns:repeat(var(--mg,6),minmax(0,1fr));grid-template-rows:repeat(var(--mg,6),1fr);gap:2px;
   width:100%;max-width:470px;min-width:0;margin:0 auto;overflow:hidden}
 .mc-cell{position:relative;min-width:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -3308,6 +3317,12 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .mc-dice{display:flex;gap:8px;font-size:calc(30px * var(--mq,1));line-height:1;color:var(--t1)}
 .mc-dice span{display:inline-flex}
 .mc-dice-x{font-size:calc(22px * var(--mq,1));color:var(--t3)}
+/* 真骰面（她 10-16）：白底圆角方骰 + 黑点，3×3 九个点位按点数摆；不再是字符表情 */
+.mc-face{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  width:1em;height:1em;padding:.11em;box-sizing:border-box;background:#fff;border:1.4px solid var(--t2);
+  border-radius:.2em;gap:.05em;box-shadow:0 1px 0 rgba(0,0,0,.12)}
+.mc-face i{width:100%;height:100%;border-radius:50%}
+.mc-face .mc-pip{background:var(--t1)}
 .mc-state{font-size:calc(11px * var(--mq,1));color:var(--t2);text-align:center}
 .mc-card,.mc-last{font-size:calc(10px * var(--mq,1));color:var(--t1);text-align:center;
   padding:2px 6px;border-radius:6px;background:var(--fill);max-width:100%;overflow-wrap:anywhere}
@@ -3389,6 +3404,10 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   background:var(--card);color:var(--t1);white-space:nowrap;cursor:pointer}
 .mc-act:active{background:var(--fill)}
 .mc-deed-f{margin-top:7px;font-size:10.5px;line-height:1.5;color:var(--t3)}
+/* 换地券 / 钱不够那两页的底行：一颗主钮 + 一句说清口径的小字（她 10-16 的两条新口径） */
+.mc-sw-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.mc-sw-f span{flex:1 1 150px;font-size:10.5px;line-height:1.5;color:var(--t3)}
+.mc-raise-top{margin:0 0 7px;font-size:11.5px;line-height:1.5;color:var(--t1);font-weight:600}
 .mc-chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 0}
 .gm-swipe>.mc-chips{flex-wrap:nowrap}
 .mc-chips .gm-rchip{flex:none}
@@ -4400,7 +4419,6 @@ const DB = (function () {
         chatBg: null,                  // 全局统一聊天背景（策划七-2 模式一；单聊 conv.bg 优先）
         diaryRates: { diary: 80, comment: 80, reply: 80 }, // 心事簿三概率（P21，她口供默认 80，可调）
         notify: false,                 // P17 系统消息通知开关（授权成功才置 true）
-        dailyBackup: true,             // 她 10-05：每天自动存一份全档备份（IDB，留最近 7 天）
         // P26 朋友圈互评开关已按她 08-27 21:08 口径改成「按人」：存 contacts[].params.moMutual，
         // 默认关=只有我能评赞；入口在资料卡·高级回复设置（不再占朋友圈右上角）
         lkRelay: '',                   // P36 视频/图文中转（自建 Worker 地址）：空=关，抖音/小红书只发标题卡；填了才去抓真封面（docs/lk-relay-worker.js）
@@ -5043,41 +5061,6 @@ const DB = (function () {
     }
   }
 
-  function backupInfo() {
-    try {
-      let raw = localStorage.getItem(BAK);
-      if (!raw) return null;
-      let savedAt = +(localStorage.getItem(BAK_AT) || 0);
-      /* 老存档的备份位是 {savedAt, raw转义串}，新存档是裸原文串 */
-      if (raw.charAt(0) === '{' && raw.indexOf('"raw"') > 0) {
-        const o = JSON.parse(raw);
-        savedAt = o.savedAt || savedAt;
-        raw = o.raw;
-      }
-      const d = raw ? JSON.parse(raw) : null;
-      return {
-        savedAt: savedAt,
-        convs: d && d.convs ? d.convs.length : 0,
-        msgs: d && d.msgs
-          ? Object.keys(d.msgs).reduce((n, k) => n + ((d.msgs[k] || []).length), 0)
-          : 0
-      };
-    } catch (e) { return null; }
-  }
-
-  function recoverFromBackup() {
-    let raw = localStorage.getItem(BAK);
-    if (!raw) return false;
-    if (raw.charAt(0) === '{' && raw.indexOf('"raw"') > 0) {
-      const o = JSON.parse(raw);
-      raw = o && o.raw;
-    }
-    if (!raw) return false;
-    state = deepMerge(defaults(), JSON.parse(raw));
-    clearTimeout(saveTimer);
-    writeNow();
-    return true;
-  }
   function save() {          // 高频写走防抖
     clearTimeout(saveTimer);
     saveTimer = setTimeout(writeNow, 120);
@@ -5503,6 +5486,11 @@ const DB = (function () {
          其余一律留白，等打开对应会话再补（DB.unpackConv）——不铺不等于丢，引用串原样留着。 */
       const MB = 1024 * 1024;
       try {
+        /* 她 10-16 18:03「我的头像总是丢」：上面那句「头像 → 会话列表 → …」的注释一直这么写，
+           代码里却从来没把我自己的头像摆进这份名单（只铺了联系人/会话/消息/朋友圈），
+           所以开页后 state.profile.avatar 一直是引用串，只能靠渲染网碰运气补。现在真排第一。
+           省内存模式（safe）也照取：就一张小图，几十 KB。 */
+        await V.unpack(state.profile, 1 * MB);
         if (!safe) {
           await V.unpack(state.contacts, 3 * MB);
           await V.unpack(state.convs, 1 * MB);
@@ -5588,92 +5576,8 @@ const DB = (function () {
     return mergeForeign({ msgs });
   }
 
-  /* ---- 每日自动备份（她 10-05）：整档一份，留 7 天 ----
-     她 10-10 16:31 拍板：每日备份要全量。两层分工：
-     ① 手机「下载」目录那份 = 全量含图本体（exportBundle），是硬退路，写成才算今天备完；
-     ② IDB @bk 那份 = 轻量引用版（防配额爆），只当快速回滚用。
-     手机文件写失败当天自动重试（她 10-10：备份不能默默缺席）；浏览器没有静默写文件，@bk 写成即算数。 */
-  /* 她 10-14：「导入也导不进去原本在的」那一轮暴出来的真问题：
-     导入是「整档换血」，导错一份（比如早一天那份）原本的记录/图就回不来。
-     导入前先把现在这一份按今天存进「用某一天备份恢复」，选错能换回来——跟恢复备份走同一个口。 */
-  async function snapNow() {
-    const V = vault();
-    if (!V) return false;
-    try {
-      clearTimeout(saveTimer); writeNow();
-      return await V.snapFull(todayKey(), JSON.parse(JSON.stringify(state)));
-    } catch (e) { return false; }
-  }
-
-  async function dailySnap(force) {
-    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
-    if (!V) return false;                                  // 没 IDB 就不写（不然整档塞 localStorage 会当场爆配额）
-    if (!force && state.settings.dailyBackup === false) return false;
-    try {
-      const day = todayKey();
-      const hasNative = typeof window !== 'undefined' && window.LovexNative
-        && typeof window.LovexNative.saveBackup === 'function';
-      if (!force && localStorage.getItem('LOVEX_BKFULL_DAY') === day) return false;   // 今天已经备份成过
-      clearTimeout(saveTimer); writeNow();                 // 先把主档落盘，备的是最新那份
-      const ok = await V.snapFull(day, JSON.parse(JSON.stringify(state)));
-      let where = '', partFail = 0, partAll = 0;
-      try {
-        if (ok && hasNative && state.settings.dailyBackup !== false) {
-          /* 带媒体本体：这份文件是「应用被清只剩它」时的硬退路，只有引用串等于没备份视频/大图。
-             但整份拼成一个大字符串＝内存峰值＝闪退（她 10-14 13:47：「过了一天又全部丢失图片」）。
-             所以改成**分片**：一片 ≤6MB，写完一片丢一片，峰值只留一片；
-             片名 -第2片/-第3片…，导入时同一批文件一起选上就能拼回来。 */
-          const r = await exportBundleParts(state, 'all', {
-            onPart: (text, i) => {
-              partAll = i;
-              let w = '';
-              try {
-                w = window.LovexNative.saveBackup(text, 'LOVEX每日备份-' + day + (i > 1 ? ('-第' + i + '片') : '') + '.json');
-              } catch (e) { w = ''; }
-              if (w) where = w; else partFail++;
-            }
-          });
-          if (typeof logErr === 'function')
-            logErr('备份：全量 ' + r.parts + ' 片·媒体 ' + r.media + ' 个'
-              + (r.miss ? ('（' + r.miss + ' 个本体找不回，引用照旧带走）') : '')
-              + (where ? '，已写到手机' : '，手机那边一片都没写成'));
-        }
-      } catch (e2) {
-        if (!partFail) partFail = 1;
-        if (typeof logErr === 'function') logErr('备份：写手机文件失败 ' + (e2 && e2.message));
-      }
-      const fullOk = !!where && !partFail;
-      if (!hasNative || fullOk) {
-        localStorage.setItem('LOVEX_BKFULL_DAY', day);     // 浏览器：@bk 写成即算数；APK：手机文件到手才算数
-      } else if (!force) {
-        /* 她 10-10：手机文件没写成不装没看见，当天 15 分钟后重试（热更新窗口/存储忙都躲得开） */
-        if (typeof logErr === 'function') logErr('备份：手机文件没写成，15 分钟后重试');
-        setTimeout(() => { dailySnap(); }, 15 * 60 * 1000);
-      }
-      return ok;
-    } catch (e) {
-      if (typeof logErr === 'function') logErr('备份：每日备份失败 ' + (e && e.message));
-      return false;
-    }
-  }
-  async function listBackups() {
-    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
-    try { return V ? await V.listFull() : []; } catch (e) { return []; }
-  }
   function backupText(doc) {
     return JSON.stringify({ app: 'LOVEX', version: 1, exportedAt: new Date().toISOString(), data: doc }, null, 2);
-  }
-  async function readBackup(day) {
-    const V = (typeof MediaVault !== 'undefined' && MediaVault.enabled && MediaVault.enabled()) ? MediaVault : null;
-    try { const hit = V ? await V.readFull(day) : null; return hit && hit.doc ? hit : null; } catch (e) { return null; }
-  }
-  async function restoreBackup(day) {
-    const hit = await readBackup(day);
-    if (!hit) return false;
-    state = deepMerge(defaults(), hit.doc);
-    clearTimeout(saveTimer);
-    writeNow();
-    return true;
   }
 
   /* 打开某个会话时把它的媒体补上（她 10-13 11:13：看不到图会以为丢了） */
@@ -5709,16 +5613,9 @@ const DB = (function () {
     importBundleText,
     importBundleStream,
     importAllBundle,
-    backupInfo,
-    recoverFromBackup,
     listSnaps,
     getSnapMsgs,
     restoreSnap,
-    dailySnap,
-    snapNow,
-    listBackups,
-    readBackup,
-    restoreBackup,
     backupText,
     resolveMedia,
     vaultStats,
@@ -9825,13 +9722,11 @@ const MediaVault = (function () {
     if (missing && typeof logErr === 'function' && !st.missingLogged) {
       st.missingLogged = 1;
       /* 她 10-10 16:39 骨刀：这句文案在 APK 里是胡说——数据在应用沙箱，不存什么浏览器。
-       如实写：存储层被系统关掉/清掉，她没动过任何东西也会发生；清扫有黑匣子，不会无声删 */
-    logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（媒体库存储被系统层关闭或清掉了，不是清扫删的——清扫删必记账）。去手机「下载」目录找 LOVEX每日备份 json 用「找回图片」补回');
-      /* 她 10-10 拍板：丢图必须解决——发现丢，第一时间把手机全量备份写掉（内存里还在的都能带走），
-         别等她手点：丢剩下的跟着丢就是二次事故 */
-      if (typeof DB !== 'undefined' && DB.dailySnap) {
-        try { DB.dailySnap(true); } catch (e) { /* 体检触发的自动备份失败不在这里记：dailySnap 内部自己有失败记账+15 分钟重试 */ }
-      }
+       如实写：存储层被系统关掉/清掉，她没动过任何东西也会发生；清扫有黑匣子，不会无声删
+       她 10-25 13:46：自动备份拆了，不再指着「LOVEX每日备份」那份文件说话，
+       改成她自己那份备份 + 「补回丢失的图片」这条路 */
+      logErr('媒体体检：' + missing + ' 个媒体实体找不到本体（媒体库存储被系统层关闭或清掉了，不是清扫删的——清扫删必记账）。'
+        + '手上那份备份文件还在的话，去「我」→「存储管理」→「补回丢失的图片」选它补回');
     }
     return { found, missing, left };
   }
@@ -9913,28 +9808,11 @@ const MediaVault = (function () {
     try { return (await MediaStore.get(SNAP + day)) || null; } catch (e) { return null; }
   }
 
-  /* ---- 每日全档自动备份（她 10-05：「再加一个每天都备份的功能」）
-     跟上面的聊天快照不同：这里存的是整档（联系人/聊天/字卡库/朋友圈/钱包…都在），
-     媒体本体仍在媒体库里、主档里是引用串，所以一份只有几十 KB。
-     键前缀 '@bk:' 不带 '@mv'，清扫不会误伤。
-     她 10-14 21:07「保证我的图片数据可以长久在」：留的天数 7 → 30。
-     备一份才几十 KB，多留不心疼；而且清扫的“不许动”名单读的正是这些备份，
-     留得越久，那些“只在备份里还被引用”的图就护得越久。 */
+  /* ---- 每日全档自动备份已按她 10-25 13:46 拆掉 ----
+     「删去自动备份功能……仅保留补照片功能」。写入口 snapFull 一起删除；
+     下面的 listFull/readFull 只读，留着是因为清扫的「不许动」名单还在读旧存下的备份——
+     宁可留着护住图，也不拆掉它去冒误删的险（她自己那几份旧备份也靠这个名单撑着）。 */
   const BK = '@bk:', BKIDX = '@bkidx';
-  const BK_KEEP = 30;
-  async function snapFull(day, doc, savedAt) {
-    if (off) return false;
-    try {
-      const at = savedAt || Date.now();
-      await MediaStore.put(BK + day, { day, savedAt: at, doc });
-      const idx = (await MediaStore.get(BKIDX)) || [];
-      const next = [{ day, savedAt: at }].concat(idx.filter(x => x.day !== day)).slice(0, BK_KEEP);
-      const gone = idx.filter(x => !next.some(y => y.day === x.day)).map(x => x.day);
-      await MediaStore.put(BKIDX, next);
-      for (const d of gone) { try { await MediaStore.del(BK + d); } catch (e) { if (typeof logErr === 'function') logErr('备份：清旧的失败 ' + (e && e.message)); } }
-      return true;
-    } catch (e) { if (typeof logErr === 'function') logErr('备份：写每日备份失败 ' + (e && e.message)); return false; }
-  }
   async function listFull() {
     if (off) return [];
     try { return (await MediaStore.get(BKIDX)) || []; } catch (e) { return []; }
@@ -10025,7 +9903,7 @@ const MediaVault = (function () {
     enabled() { return !off; },
     hash, pack, flush, unpack, sweep, refsIn, keepKeys, pendingRefs, replaceRefs, liveKeys, sweptKeys,
     shadow, readShadow, snap, listSnaps, readSnap,
-    snapFull, listFull, readFull, harvest,
+    listFull, readFull, harvest,
     stats() { return { packed: st.packed, kb: Math.round(st.bytes / 1024), refs: st.refs, missing: st.missing, left: st.left }; },
     /* 断链判定：装载时该换回 dataURL 的 '@mv' 还躺在原地 = 本体丢了（渲染处据此给占位，不画破图） */
     broken(v) { return typeof v === 'string' && /^@mv[0-9a-z]+/.test(v); },
@@ -10034,6 +9912,7 @@ const MediaVault = (function () {
     mediaStore: MediaStore
   };
 })();
+
 /* =====================================================
    LOVE♡X · status.js —— AI状态自动轮换引擎（P5，决策#29）
    规则（源策划「AI状态体系【最终绝对定稿】」）：
@@ -10192,6 +10071,29 @@ const Home = (function () {
      库里已经解好的地址直接拼进去，热引用当场就有图，冷引用仍交给渲染网去补。 */
   const mediaSrc = v => (typeof Media !== 'undefined' && Media.src0) ? Media.src0(v) : v;
 
+  /* 她 10-16 18:03：「我的头像总是丢」。真因＝头像这一类图在显示层有的地方直接把
+     state 里那个值当图片地址写进 src——存盘后那个值已经变成引用串（'@mv…'），
+     于是画出来是一张破图/空框，看起来就是「头像没了」。
+     这里把「取头像地址」收成一个口（和列表头像同一个口）：
+       能同步取到 → 写 src，当场就有；
+       只拿到引用串 → 挂 data-vsrc，交给引用串渲染网在那张图渲染出来的那一刻补，
+       真取不到才会标 data-mv-miss（那时显示层退回首字，不画破图）。 */
+  function avaAttr(v) {
+    if (!v) return '';
+    const u = mediaSrc(v);
+    /* 内联 dataURL（还没搬进库的）当场就能上屏；引用串只有在库里已解好时才写 src */
+    if (u && (u !== v || String(v).indexOf('data:') === 0)) return ' src="' + u + '"';
+    return ' data-vsrc="' + String(v) + '"';
+  }
+  function avaFill(img, v) {
+    if (!img) return;
+    if (!v) { img.removeAttribute('src'); img.removeAttribute('data-vsrc'); return; }
+    const u = mediaSrc(v);
+    if (u && (u !== v || String(v).indexOf('data:') === 0)) { img.src = u; img.removeAttribute('data-vsrc'); return; }
+    img.removeAttribute('src');
+    img.setAttribute('data-vsrc', String(v));
+  }
+
   /* ---------- 基础工具 ---------- */
   function contactById(id) {
     return DB.state.contacts.find(c => c.id === id);
@@ -10218,7 +10120,7 @@ const Home = (function () {
        只有网真取不回本体时才退回字母头像（她 10-04 的口径：不画破图） */
     const missAva = c && c.avatar && typeof MediaVault !== 'undefined' && MediaVault.broken && MediaVault.broken(c.avatar)
       && typeof Media !== 'undefined' && Media.missed && Media.missed(c.avatar);
-    return c && c.avatar && !missAva ? '<img src="' + mediaSrc(c.avatar) + '" alt="">'
+    return c && c.avatar && !missAva ? '<img' + avaAttr(c.avatar) + ' alt="">'
       : '<span class="ava-txt">' + UI.escapeHtml(String(txt || '?').slice(0, 1)) + '</span>';
   }
   /* ---------- 群会话工具（决策记录#15） ---------- */
@@ -10292,7 +10194,7 @@ const Home = (function () {
           membersOf(cv).slice(0, 4).forEach(mc => {
             const cell = document.createElement('span');
             if (mc.avatar) {
-              const im = document.createElement('img'); im.src = mediaSrc(mc.avatar); cell.appendChild(im);
+              const im = document.createElement('img'); avaFill(im, mc.avatar); cell.appendChild(im);
             } else {
               cell.textContent = (displayName(mc) || '?').slice(0, 1);
             }
@@ -10303,7 +10205,7 @@ const Home = (function () {
         }
       } else if (c.avatar) {
         const im = document.createElement('img');
-        im.src = mediaSrc(c.avatar);
+        avaFill(im, c.avatar);
         avEl.appendChild(im);
       } else {
         avEl.textContent = (displayName(c) || '?').slice(0, 1);
@@ -10391,7 +10293,7 @@ const Home = (function () {
       if (cv.cover) { const im = new Image(); im.src = cv.cover; av.appendChild(im); }
       else av.textContent = groupName(cv).slice(0, 1);
     } else if (c.avatar) {
-      const im = new Image(); im.src = c.avatar; av.appendChild(im);
+      const im = new Image(); avaFill(im, c.avatar); av.appendChild(im);
     } else av.textContent = (displayName(c) || '?').slice(0, 1);
     const tx = document.createElement('div');
     tx.className = 'mb-txt';
@@ -10573,6 +10475,7 @@ const Home = (function () {
   return {
     init, render, openConv,
     contactById, displayName, uidName, avaInner, ensureConv, openForm, msgBanner,
+    avaAttr, avaFill,
     membersOf, groupName
   };
 })();
@@ -16707,7 +16610,7 @@ const Group = (function () {
       const av = document.createElement('span');
       av.className = 'avatar pick-ava';
       if (c.avatar) {
-        const im = document.createElement('img'); im.src = c.avatar; av.appendChild(im);
+        const im = document.createElement('img'); Home.avaFill(im, c.avatar); av.appendChild(im);
       } else {
         av.textContent = (Home.displayName(c) || '?').slice(0, 1);
       }
@@ -16791,7 +16694,7 @@ const Group = (function () {
     meAv.className = 'avatar';
     const p = DB.state.profile;
     if (p.avatar) {
-      const im = document.createElement('img'); im.src = p.avatar; meAv.appendChild(im);
+      const im = document.createElement('img'); Home.avaFill(im, p.avatar); meAv.appendChild(im);
     } else {
       meAv.textContent = (p.name || '我').slice(0, 1);
     }
@@ -16816,7 +16719,7 @@ const Group = (function () {
       const av = document.createElement('span');
       av.className = 'avatar';
       if (mc.avatar) {
-        const im = document.createElement('img'); im.src = mc.avatar; av.appendChild(im);
+        const im = document.createElement('img'); Home.avaFill(im, mc.avatar); av.appendChild(im);
       } else {
         av.textContent = (Home.displayName(mc) || '?').slice(0, 1);
       }
@@ -17136,7 +17039,7 @@ const GroupManage = (function () {
     let h = '<div class="gm-tip">群主与管理员不受禁言限制；点整行即可切换管理员身份。</div><div class="item-list">';
     rows.forEach(r => {
       const av = r.c.avatar
-        ? '<img src="' + r.c.avatar + '">'
+        ? '<img' + Home.avaAttr(r.c.avatar) + '>'
         : esc((r.c.name || '?').slice(0, 1));
       let tag = '', btn = '';
       if (r.role === 'owner') { tag = '<span class="tag tag-ok">群主</span>'; btn = '<span class="gm-role-txt">群主</span>'; }
@@ -17220,7 +17123,7 @@ const GroupManage = (function () {
       h +=
         '<div class="lib-item gm-row' + (chipFor === id ? ' expanded' : '') + '">' +
           '<input type="checkbox" data-chk="' + id + '"' + (sel.has(id) ? ' checked' : '') + '>' +
-          '<span class="avatar li-ava">' + (mc.avatar ? '<img src="' + mc.avatar + '">' : esc(name(mc).slice(0, 1))) + '</span>' +
+          '<span class="avatar li-ava">' + (mc.avatar ? '<img' + Home.avaAttr(mc.avatar) + '>' : esc(name(mc).slice(0, 1))) + '</span>' +
           '<div class="li-main"><span class="li-text">' + esc(name(mc)) + '</span></div>' +
           tag + '<span class="li-btns">' + btn + '</span>' +
           (chipFor === id ? chipsHtml() : '') +
@@ -17233,7 +17136,7 @@ const GroupManage = (function () {
     if (kicked.length) {
       kicked.forEach(c => {
         h += '<div class="lib-item gm-row">' +
-          '<span class="avatar li-ava">' + (c.avatar ? '<img src="' + c.avatar + '">' : esc(name(c).slice(0, 1))) + '</span>' +
+          '<span class="avatar li-ava">' + (c.avatar ? '<img' + Home.avaAttr(c.avatar) + '>' : esc(name(c).slice(0, 1))) + '</span>' +
           '<div class="li-main"><span class="li-text">' + esc(name(c)) + '</span></div>' +
           '<span class="li-btns"><button class="gm-btn primary" data-op="invite" data-id="' + c.id + '">邀请回来</button></span>' +
         '</div>';
@@ -20222,7 +20125,7 @@ const Redpacket = (function () {
     /* 头像实时读当前资料（清然 22:26：换头像后详情页要跟着更新），无图回落首字 */
     const giver = iAmGiver ? DB.state.profile : Home.contactById(rp.fromUid);
     const avaHtml = (giver && giver.avatar)
-      ? '<img src="' + giver.avatar + '" alt="">'
+      ? '<img' + Home.avaAttr(giver.avatar) + ' alt="">'
       : '<span>' + esc(name(rp.fromUid).slice(0, 1)) + '</span>';
     const customCover = rp.coverId ? coverDataById(rp.coverId) : (iAmGiver ? myCoverFor() : aiCover(rp.fromUid));
     /* 可否抢（群聊三模式，L24）：专属只有 toUid；发出者本人也能抢一次；已抢过/领完则不能 */
@@ -20860,7 +20763,7 @@ const Moments = (function () {
       if (ct) { ava = ct.avatar; name = Home.displayName(ct); }
     }
     if (meAva) meAva.innerHTML = ava
-      ? '<img src="' + ava + '" alt="">'
+      ? '<img' + Home.avaAttr(ava) + ' alt="">'
       : '<span class="ava-txt">' + UI.escapeHtml((name || '我').charAt(0)) + '</span>';
     if (nameEl) nameEl.textContent = name;
     if (!cv) { box.classList.remove('has-img'); return; }
@@ -22074,8 +21977,9 @@ const Mine = (function () {
       flip(m, x, y, uid);
       m.hits = m.hits || {}; m.hits[uid] = (m.hits[uid] || 0) + 1;
       m.scores = m.scores || {}; m.scores[uid] = (m.scores[uid] || 0) - 5;
-      /* 她 10-08：踩到雷就炸开一片白——全场雷一次亮出，盘上继续，剩时间接着拼安全格 */
-      m.revealed = true;
+      /* 她 10-16 18:00：「怎么出BUG雷全部显示出来了，那还叫什么扫雷」——
+         10-08 那句「炸开一片白」是我理解错了：踩到雷只亮**踩到的这一颗**，
+         其余照旧藏着接着玩（盘上照旧继续，扣分不变）。全亮那个开关整个拆了。 */
       room.lastPos = room.lastPos || {}; room.lastPos[uid] = { x: x, y: y };
       room.moves.push({ uid, x, y, ts: Date.now(), mine: true });
       room.lastMv = { uid, cells: [key(x, y)], mine: true, ts: Date.now() };
@@ -22200,9 +22104,6 @@ const Mine = (function () {
         h += '<div class="mn-cell mn-open mn-boom' + own + (isLast ? ' mn-last' : '') + '">💣</div>';
       } else if (o) {
         h += '<div class="mn-cell mn-open mn-n' + own + (isLast ? ' mn-last' : '') + '" style="opacity:' + (0.45 + Math.min(8, o.n) * 0.07) + '">' + (o.n || '') + '</div>';
-      } else if (m.revealed && m.mineSet && m.mineSet.includes(k)) {
-        /* 她 10-08：踩到第一个雷炸开一片白——其余雷全亮出来（白底，不再藏） */
-        h += '<div class="mn-cell mn-reveal">💣</div>';
       } else if (m.flags[k]) {
         h += '<div class="mn-cell mn-flag' + (m.flagBy[k] === 'me' || !m.flagBy[k] ? ' by-me' : ' by-ta') +
           (isLast ? ' mn-last' : '') + '" data-x="' + x + '" data-y="' + y + '">🚩</div>';
@@ -22323,6 +22224,9 @@ const Uno = (function () {
   /* 定序动画正在播的房间 id：只存内存（不进存档）——存进存档的话，她刷一次页
      就停在“动画中”永远开不了局 */
   let fxRoom = null;
+  /* 猜拳正等她出拳的那个房（她 10-16）：只在内存，不进存档 —— 跟 fxRoom 一个道理，
+     半路刷新回来不该卡在“动画中/等你出拳”那种进不去游戏的死态 */
+  let rpsPick = null;
 
   function taUidOf(room) { return (room.players || []).find(x => x !== 'me') || null; }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -22484,13 +22388,19 @@ const Uno = (function () {
   }
   /* 定序：结果先算好、一轮一条存进 res.hist（动画播的是真数据，不是现掷），
      再把“怎么定”交给 playOrderFx 播。defer=true 时不立即开局（等动画放完）。 */
-  function orderWin(room, mode, defer) {
+  function orderWin(room, mode, defer, myPick) {
     const u = U(room);
     const res = { mode: mode, picks: [], winner: null, dir: Math.random() < 0.5 ? 1 : -1, rounds: 0, hist: [] };
-    const roll = () => mode === 'rps' ? rand(0, 2) : mode === 'dice' ? rand(1, 6) : rand(1, 99);
-    for (let round = 0; round < 3 && !res.winner; round++) {
+    /* 她 10-16 18:00：「UNO 先后手，我选择了先后手方式他妈自己就随机了？不应该我选择出啥石头剪刀布吗？」
+       猜拳里“我”的拳由她本人出（myPick=0/1/2）；对手的拳捏子随机。
+       她出了之后只算一轮：平局就原路交回去让她再出一次（加赛），不拿随机结果顶。 */
+    const mine = (myPick == null || myPick === undefined) ? null : (myPick | 0);
+    const roll = (id) => mode === 'rps' ? ((mine != null && id === 'me') ? mine : rand(0, 2))
+      : mode === 'dice' ? rand(1, 6) : rand(1, 99);
+    const maxRound = (mine != null) ? 1 : 3;
+    for (let round = 0; round < maxRound && !res.winner; round++) {
       res.rounds = round + 1;
-      const rolls = u.order.map(id => ({ uid: id, v: roll() }));
+      const rolls = u.order.map(id => ({ uid: id, v: roll(id) }));
       res.hist.push({ picks: rolls.map(x => ({ uid: x.uid, v: x.v, label: mode === 'rps' ? RPS[x.v] : mode === 'dice' ? x.v + ' 点' : x.v + ' 号' })) });
       res.picks = res.hist[res.hist.length - 1].picks;
       if (mode === 'rps') {
@@ -22498,7 +22408,10 @@ const Uno = (function () {
         rolls.forEach(x => { kinds[x.v] = (kinds[x.v] || 0) + 1; });
         const keys = Object.keys(kinds).map(Number);
         /* 全平、或石头剪刀布齐了（谁也吃不掉谁）都算平局 → 加赛，最多 3 轮后兜底 */
-        if (keys.length === 1 || keys.length === 3) continue;
+        if (keys.length === 1 || keys.length === 3) {
+          if (mine != null) { res.tie = true; break; }   // 她自己出拳：平局不落档，交回去重出
+          continue;
+        }
         const win = keys.find(k => keys.every(o => o === k || rpsBeat(k, o)));
         if (win == null) continue;
         res.winner = rolls.filter(x => x.v === win)[0].uid;         // 胜者组里取座位最靠前的
@@ -22509,6 +22422,7 @@ const Uno = (function () {
       }
       if (res.winner) break;
     }
+    if (res.tie) return res;                               // 平局：一个字都不落档（免得卡在“动画中”）
     if (!res.winner) { res.winner = u.order[rand(0, u.order.length - 1)]; res.fallback = true; }
     u.orderResult = res;
     u.idx = Math.max(0, u.order.indexOf(res.winner));
@@ -22913,11 +22827,19 @@ const Uno = (function () {
     const u = U(room);
     const res = u.orderResult;
     const playing = fxRoom === room.id;
-    let h = '<div class="un-order"><div class="un-order-t">先手怎么定？</div>' +
-      (playing ? '<div class="un-stage" id="un-stage"></div>' : '<div class="un-order-btns">' +
-        '<button class="btn btn-secondary" data-order="rps">猜拳</button>' +
-        '<button class="btn btn-secondary" data-order="dice">掷骰子</button>' +
-        '<button class="btn btn-secondary" data-order="rand">随机抽签</button></div>');
+    /* 猜拳正等她出拳（只在内存里记，不进存档——半路回来不会卡在“等你出拳”） */
+    const picking = !!(rpsPick && rpsPick.room === room.id) && !playing && !res;
+    let h = '<div class="un-order"><div class="un-order-t">' + (picking ? '你出哪个？' : '先手怎么定？') + '</div>' +
+      (playing ? '<div class="un-stage" id="un-stage"></div>' : (picking
+        ? '<div class="un-order-btns un-rps-pick">' +
+            '<button class="btn btn-secondary" data-hand="0">✊ 石头</button>' +
+            '<button class="btn btn-secondary" data-hand="1">✌ 剪刀</button>' +
+            '<button class="btn btn-secondary" data-hand="2">✋ 布</button></div>' +
+          '<div class="un-order-note">你出了才算，对手的拳同样随机——赢了先出</div>'
+        : '<div class="un-order-btns">' +
+            '<button class="btn btn-secondary" data-order="rps">猜拳</button>' +
+            '<button class="btn btn-secondary" data-order="dice">掷骰子</button>' +
+            '<button class="btn btn-secondary" data-order="rand">随机抽签</button></div>'));
     if (res && !playing) {
       h += '<div class="un-order-rows">' + res.picks.map(p =>
         '<span class="un-order-p' + (p.uid === res.winner ? ' win' : '') + '"><i>' + esc(nameOf(p.uid)) + '</i><b>' + esc(p.label) + '</b></span>').join('') + '</div>';
@@ -22930,14 +22852,28 @@ const Uno = (function () {
     h += '</div>';
     el.innerHTML = h;
     el.querySelectorAll('[data-order]').forEach(b => b.addEventListener('click', () => runOrder(room, b.dataset.order)));
+    /* 出了拳才算：这三个手就是“我自己出啥”（她 10-16 的口径） */
+    el.querySelectorAll('[data-hand]').forEach(b => b.addEventListener('click', () => runOrder(room, 'rps', +b.dataset.hand)));
   }
   /* 点一下定序按钮：先算结果、落库，再播过程；动画只在内存里标“正在播”（fxRoom），
      不存进存档——否则她刷到一半回来就卡在“动画中”永远开不了局 */
-  function runOrder(room, mode) {
+  function runOrder(room, mode, myPick) {
     const u = U(room);
     if (u.started) return;
     if (u.orderResult) { beginPlay(room); touch(room); return; }
-    const res = orderWin(room, mode, true);
+    /* 猜拳先请她自己出拳（她 10-16）：没出之前不算结果、不落档 */
+    if (mode === 'rps' && myPick == null) { rpsPick = { room: room.id }; touch(room); return; }
+    const res = orderWin(room, mode, true, myPick);
+    if (res.tie) {
+      /* 平局：把双方出的什么说清楚，再让她出一次（加赛），不拿随机结果顶 */
+      rpsPick = { room: room.id };
+      touch(room);
+      if (typeof UI !== 'undefined' && UI.toast) {
+        UI.toast('平局：' + res.picks.map(p => (p.uid === 'me' ? '你' : nameOf(p.uid)) + '出' + p.label).join('，') + '——再来一次');
+      }
+      return;
+    }
+    rpsPick = null;
     fxRoom = room.id;
     touch(room);
     playOrderFx(room, res, () => { fxRoom = null; beginPlay(room); touch(room); });
@@ -25043,7 +24979,7 @@ const Mono = (function () {
   const START_CASH = 500; const PASS_GO = 100; const GOAL_LAPS = 2; const GOAL_CITIES = 2; const ROUND_CAP = 14;
   const LAY_VER = 'v2';             // 盘面版本：老局按老布局跑完（格子内容一改，同一个 idx 就不是同一块地）
   /* 齿轮默认值（我拍的，可调；界面上不写“这是拍的”） */
-  const CFG = { cash: 800, passGo: 150, tier: 'std', goal: 0, cap: 20, ev: 'mid', beat: 'norm', price: 100, dbl: 1, up: 1, it: 1, tr: 1 };
+  const CFG = { cash: 800, passGo: 150, tier: 'std', goal: 0, cap: 20, ev: 'mid', beat: 'norm', price: 100, dbl: 1, up: 1, it: 1 };
   const TIERS = { fast: [2, 2], std: [3, 4], long: [5, 7], none: [0, 0] };   // [绕几趟过路钱, 几座均价城]
   const TIER_NAME = { fast: '快局', std: '标准', long: '长局', none: '不收场' };
   /* 内容格颗数按环长给：[20 格, 24 格, 28 格]（疏=一期那三颗；环越大城只会更多，不会因人多反而少城） */
@@ -25056,10 +24992,21 @@ const Mono = (function () {
     fast: { spin: 380, settle: 120, hop: 160, hopTa: 120, go: 260, land: 700, landTa: 500, card: 600 }
   };
   /* 老局那一套（存档里没 M.rule 的）：账与盘锁回一期，节奏跟着齿轮走 */
-  const RULE_V1 = { layVer: 'v1', cash: START_CASH, passGo: PASS_GO, price: 100, ev: 3, laps: GOAL_LAPS, cities: GOAL_CITIES, goalRaw: 0, cap: ROUND_CAP, tier: 'fast', auc: 0, dbl: 0, up: 0, it: 0, tr: 0 };
+  const RULE_V1 = { layVer: 'v1', cash: START_CASH, passGo: PASS_GO, price: 100, ev: 3, laps: GOAL_LAPS, cities: GOAL_CITIES, goalRaw: 0, cap: ROUND_CAP, tier: 'fast', auc: 0, dbl: 0, up: 0, it: 0 };
   /* 玩家身份色：4 个主色 + 各自加深一档，8 家分得开，且不碰 255°~305°（紫色会被否） */
   const COLORS = ['#D96A5E', '#E9C46A', '#7FA97C', '#7E9CC0', '#A45B4E', '#C08A2E', '#4F7A57', '#3F6A8C'];
-  const DIE = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
+  /* 她 10-16 18:00：「为啥不把骰子做成那种的，我不是给过你图吗」——
+     骰面不再用字符表情（⚀⚁…），改成真骰面：白底圆角方骰 + 黑点，六面按点位摆。
+     DIE 只剩“报数时的文字”这一处用（赌台播报读“⚂怕”不如读“3 点”）。 */
+  const DIE = { 1: '①', 2: '②', 3: '③', 4: '④', 5: '⑤', 6: '⑥' };
+  /* 3×3 九个位，下标 0~8；这是骰面点位的唯一一份口径 */
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function faceHTML(v) {
+    const at = PIPS[v] || [];
+    let h = '<span class="mc-face">';
+    for (let i = 0; i < 9; i++) h += (at.indexOf(i) >= 0 ? '<i class="mc-pip"></i>' : '<i></i>');
+    return h + '</span>';
+  }
   /* 24 座城，按地价从小到大排：小环取前 16，大环取全部——加人不加乱的口径就这一句 */
   const CITY_LIST = [
     ['青岛', 60], ['大连', 70], ['宁波', 80], ['厦门', 90], ['苏州', 100], ['南京', 110],
@@ -25109,7 +25056,8 @@ const Mono = (function () {
     { t: '出租车把你掠到最近的一座城下', near: 'city' },
     { t: '在长椅捣到一张免租', shield: 1 },
     { t: '开了朋友的车，下一手走得远一倍', jump: 1 },
-    { t: '当场查到违规，送进监狱', jail: 1 }
+    { t: '当场查到违规，送进监狱', jail: 1 },
+    { t: '一张换地券：挑谁的一块地，跟你的一块对换（不用补差价）', land2: 1 }
   ];
   const FATE = [
     { t: '航班延误，住了一晚酒店', cash: -50 },
@@ -25120,7 +25068,7 @@ const Mono = (function () {
     { t: '捣到红包，回起点存起来', to: 0 },
     { t: '加班费到账', cash: 60 },
     { t: '替各家修了一回门锁', rep: 25 },
-    { t: '跟人换了个座位', swap: 1 },
+    { t: '命运让你换地：挑谁，就把他的一块地跟你的一块对调', land2: 1 },
     { t: '手续办完了，手里多一张出狱卡', getout: 1 },
     { t: '这张不算，再抽一张', again: 1 },
     { t: '查房，先进监狱蹲着', jail: 1 },
@@ -25153,7 +25101,7 @@ const Mono = (function () {
   const LVL = [1, 3, 8, 20];              // 空地 → 小楼 → 大楼 → 地标
   const LVL_NAME = ['', '小楼', '大楼', '地标'];
   const BUILD_RATE = 0.5;                 // 盖一档 = 地价的一半（向上取整，最少 20）
-  const HOUSES_EACH = 6;                  // 限量库存：每人 6 颗，全场共 n×6 颗；抢完必须在盘上写清，不许静默失败
+  const HOUSES_EACH = 6;                  // 每人 6 颗（现在只当“盖了多少档”的计数，不再当闸——她 10-16：升级不限次数不限块数）
   const MORT_RATE = 0.5; const BACK_RATE = 1.1;   // 抵押拿一半地价，赎回多付一成
   /* 道具只存一颗（单槽）：摸到新的一顶掉手里那颗，顶掉了什么写进播报——背包/堆叠/多选那一层复杂度全切掉 */
   const IT_NAME = { dice: '遥控骰子', rev: '转向卡', warp: '传送卡', smash: '拆楼卡', shield: '免租卡' };
@@ -25253,7 +25201,7 @@ const Mono = (function () {
       cap: clamp(c.cap, CFG.cap, 0, 40), ev: EV_N[c.ev] ? c.ev : CFG.ev,
       beat: BEAT[c.beat] ? c.beat : CFG.beat, price: clamp(c.price, CFG.price, 60, 160), dbl: +c.dbl === 0 ? 0 : 1,
       /* 三个“要不要”：没填过 = 关（没填过就是字段不存在，当 0），填了才开 */
-      up: +c.up === 0 ? 0 : 1, it: +c.it === 0 ? 0 : 1, tr: +c.tr === 0 ? 0 : 1
+      up: +c.up === 0 ? 0 : 1, it: +c.it === 0 ? 0 : 1
     };
   }
   function ruleOf(c, side) {
@@ -25262,7 +25210,7 @@ const Mono = (function () {
     return {
       layVer: LAY_VER, cash: c.cash, passGo: c.passGo, price: c.price, goalRaw: c.goal, cap: c.cap,
       ev: evRow[Math.max(0, Math.min(2, side - 6))], laps: t[0], cities: t[1], tier: c.tier, beat: c.beat, dbl: c.dbl, auc: 1, goal: null,
-      up: c.up, it: c.it, tr: c.tr
+      up: c.up, it: c.it
     };
   }
   function L(r) { const M = st(r); return lay(M.side, M.rule); }
@@ -25294,7 +25242,7 @@ const Mono = (function () {
       jail: {}, jcard: {}, shield: {}, dbl: {}, jump: {}, auc: null,
       /* C 期那几颗：lv=这块盖到第几档，mort=抵出去拿了多少钱，items=手里那颗道具（单槽），
          fix=遥控来的点数，rev=下一手倒着走，stock=全场还剩几颗楼可盖，pick=正在点格子 */
-      lv: {}, mort: {}, items: {}, fix: {}, rev: {}, stock: 0, pick: null,
+      lv: {}, mort: {}, items: {}, fix: {}, rev: {}, stock: 0, pick: null, sw: null, short: null,
       beginAt: 0, beginQueued: 0, rankRows: null,
       /* 五拍用的那几颗：actor=这一拍是谁，roll=骰子已定还没落定，plan=路径（只算不走），
          cardShow=事件翻牌，fast=她按了快进 */
@@ -25374,7 +25322,6 @@ const Mono = (function () {
   /* ---------- C 期：盖楼 / 抵押 / 道具 / 换地——判定与记账只住这一段，别处只调它 ---------- */
   function upOn(r) { return +(st(r).rule.up || 0) === 1; }
   function itOn(r) { return +(st(r).rule.it || 0) === 1; }
-  function trOn(r) { return +(st(r).rule.tr || 0) === 1; }
   function buildCost(r, i) { const c = L(r).C[i]; return (c && c.p) ? Math.max(20, Math.round(c.p * BUILD_RATE)) : 0; }   /* 与 priceOf 同一道守：没地价的格不产生 NaN（资产口径不许被不可拥有的格弄脏） */
   function lvOf(r, i) { return upOn(r) ? (st(r).lv[+i] | 0) : 0; }
   function lvName(r, i) { return LVL_NAME[lvOf(r, i)] || ''; }
@@ -25393,7 +25340,9 @@ const Mono = (function () {
     return groupCells(r, i).every(x => M.own[x] === uid && !M.mort[x]);
   }
   function stockMax(r) { return Math.max(2, (st(r).order || []).length) * HOUSES_EACH; }
-  /* 盖楼四件事缺一件就当场说清缺哪件：集齐整组、同组差不得超一格、库存还有、钱够 */
+  /* 盖楼三件事缺一件就当场说清缺哪件：是你的城、没抵着、钱够。
+     她 10-16 18:00：「升级不限制只能升六次或六块领地」——原来那三道闸（必须先凑齐整组、
+     同组只许抬最低那档、全场库存见底就“楼用完了”）全拆了；M.stock 从门槛退成计数。 */
   function canBuild(r, uid, i) {
     const M = st(r);
     i = +i;
@@ -25404,10 +25353,6 @@ const Mono = (function () {
     if (M.mort[i]) return { err: '抵着押，先赎回' };
     if (M.jail[uid]) return { err: '在狱里，盖不了' };
     if ((M.lv[i] | 0) >= LVL.length - 1) return { err: '这一座已经盖到顶' };
-    if (!ownsGroup(r, uid, i)) return { err: '同一组还没凑齐' };
-    const low = Math.min.apply(null, groupCells(r, i).map(x => M.lv[+x] | 0));
-    if ((M.lv[i] | 0) > low) return { err: '先盖矮的那几座' };
-    if ((M.stock | 0) <= 0) return { err: '楼用完了' };
     const cost = buildCost(r, i);
     if ((M.cash[uid] | 0) < cost) return { err: '现金不够这一档（' + cost + '）' };
     return { ok: 1, cost: cost };
@@ -25418,7 +25363,7 @@ const Mono = (function () {
     i = +i;
     M.cash[uid] = (M.cash[uid] | 0) - can.cost;
     M.lv[i] = (M.lv[i] | 0) + 1;
-    M.stock = (M.stock | 0) - 1;
+    M.stock = (M.stock | 0) - 1;      // 只记“盖了多少档”，不再当门栓（她 10-16）
     (r.moves = r.moves || []).push({ who: uid, act: 'build', cell: i, lv: M.lv[i], cost: can.cost, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { cash: [{ uid: uid, amt: -can.cost, at: i }], buy: { at: i, uid: uid, name: nameOf(r, i) } });
     feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 在 ' + esc(nameOf(r, i)) + ' 盖起' + esc(LVL_NAME[M.lv[i]]) +
@@ -25553,65 +25498,188 @@ const Mono = (function () {
   /* 遥控那一手：骰面跟着点数摆，不让她看见「⚀⚁ 走 11 格」这种自相矛盾的画面 */
   function diceOf(n) { n = Math.max(2, Math.min(12, n | 0)); return n <= 7 ? [1, n - 1] : [6, n - 6]; }
 
-  /* ---------- 与 TA 换地（C4）：我摆条件，它按“这一块离成组还差几座 + 现金补不补得平”答话。
-     拒绝必须给真理由（理由从判定分支里出来，不是随机挑一句）；上面那些估值只住代码，界面上一个字不写。 ---------- */
-  function tradable(r, uid) {
+  /* ---------- 换地券（她 10-16 18:11）：只从机会 / 命运里抽出来，抽到的人强制跟一个人对调
+     一块地、不补差价；多人时先挑换谁。原来盘下那颗常驻的「找 TA 换地」与整套谈判（我摆条件、
+     它按值不值答应）全拆了——同一件事只留一个入口，那个入口就是卡。 ---------- */
+  function doSwapLand(r, uid, foe, theirs, mine) {
     const M = st(r);
-    return ownedProps(r, uid).map(i => +i).filter(i => !(M.lv[i] | 0) && !M.mort[i]);   // 有楼、抵着押的先自己处理完
-  }
-  /* 拿到这一块后这一组是否全归他（gained = 这一笔里同时到手的其它块） */
-  function fills(r, uid, i, gained) {
-    const M = st(r);
-    return groupCells(r, i).every(x => M.own[x] === uid || gained.indexOf(+x) >= 0);
-  }
-  function tradeAsk(r, ta, mine, theirs, cash) {
-    const M = st(r);
-    if (!trOn(r)) return { err: '这一局没开换地' };
-    if (!ta || ta === 'me' || M.out[ta]) return { err: '找谁换？' };
-    if (M.jail[ta]) return { err: nm(ta) + ' 在狱里，这会儿不谈事' };
-    mine = (mine || []).map(i => +i).filter(i => M.own[i] === 'me');
-    theirs = (theirs || []).map(i => +i).filter(i => M.own[i] === ta);
-    if (!mine.length && !theirs.length) return { err: '至少点一块地' };
-    const stuck = mine.concat(theirs).filter(i => (M.lv[i] | 0) || M.mort[i]);
-    if (stuck.length) return { err: '有楼或抵着押的，先自己处理掉' };
-    const pay = Math.round(+cash || 0);                       // >0 = 我找补给它，<0 = 要它倒找
-    if (pay > 0 && (M.cash['me'] | 0) < pay) return { err: '你手上没这些钱' };
-    if (pay < 0 && (M.cash[ta] | 0) + pay < 0) return { err: '它手上没这些钱' };
-    const val = a => a.reduce((s, i) => s + priceOf(r, i), 0);
-    /* 它补齐一整组给加成，被拆散一整组算代价；能拆你的组它更愿意——都按组地价一个比例，不另立一套数 */
-    let bonus = 0;
-    mine.forEach(i => { if (fills(r, ta, i, mine)) bonus += Math.round(groupSum(r, i) * 0.5); });
-    let brk = 0;
-    theirs.forEach(i => { if (ownsGroup(r, ta, i)) brk += Math.round(groupSum(r, i) * 0.6); });
-    let want = 0;
-    theirs.forEach(i => { if (ownsGroup(r, 'me', i)) want += Math.round(groupSum(r, i) * 0.4); });
-    const gain = val(mine) + Math.max(0, pay) + bonus;
-    const lose = val(theirs) + Math.max(0, -pay) + brk;
-    const yes = gain + want >= lose;
-    const why = yes
-      ? (bonus ? '行，那几块正好补我的组' : (pay > 0 ? '行，这一笔我认' : (theirs.length ? '换就换，谁也别嫌谁' : '这钱我收下，地还是你的')))
-      : (brk ? '那几块我凑齐了，换出去我就收不到租了'
-        : (pay < 0 ? '我手上现金不够找你这一笔'
-          : (!mine.length ? '就这点，我还不如自己等下一趟'
-            : (bonus ? '' : '你给的那几块我暂时用不上'))));
-    feed(r, 'me', '你把 ' + esc(mine.map(i => nameOf(r, i)).join('、') || '什么都没有') +
-      (pay > 0 ? ' 与 ' + pay + ' 元' : '') + ' 发给 ' + esc(nm(ta)) + '，要它的 ' +
-      esc(theirs.map(i => nameOf(r, i)).join('、') || '那块地') + (pay < 0 ? '，再补 ' + (-pay) + ' 元' : ''));
-    (r.moves = r.moves || []).push({ who: 'me', act: 'trade', to: ta, give: mine, take: theirs, cash: pay, no: yes ? 0 : 1, ts: Date.now() });
-    if (!yes) {
-      feed(r, 'ta', esc(nm(ta)) + ' 不换：' + esc(why));
-      Games.say(r, ta, '快捷短语');
-      touch(r);
-      return { ok: 0, why: why };
-    }
-    mine.forEach(i => { M.own[i] = ta; });
-    theirs.forEach(i => { M.own[i] = 'me'; });
-    if (pay) { M.cash['me'] = (M.cash['me'] | 0) - pay; M.cash[ta] = (M.cash[ta] | 0) + pay; }
-    feed(r, 'sys', esc(nm(ta)) + ' 点了头：' + esc(theirs.map(i => nameOf(r, i)).join('、') || '没拿地') + ' 归你，' +
-      esc(mine.map(i => nameOf(r, i)).join('、') || '没给地') + ' 归它' + (pay ? '，找补 ' + Math.abs(pay) : '') + '（' + esc(why) + '）');
-    Games.say(r, ta, '快捷短语');
+    theirs = +theirs; mine = +mine;
+    if (!foe || foe === uid || M.out[foe]) return { err: '跟谁换？' };
+    if (M.own[theirs] !== foe) return { err: '那一块不是他的' };
+    if (M.own[mine] !== uid) return { err: '那一块不是你的' };
+    M.own[theirs] = uid; M.own[mine] = foe;
+    (r.moves = r.moves || []).push({ who: uid, act: 'swap', foe: foe, take: theirs, give: mine, ts: Date.now() });
+    M.fx = Object.assign({}, M.fx, { swap: { take: theirs, give: mine } });
+    feed(r, 'sys', esc(nm(uid)) + ' 用 ' + esc(nameOf(r, mine)) + ' 换走了 ' + esc(nm(foe)) + ' 的 ' +
+      esc(nameOf(r, theirs)) + '（换地券，不补差价）');
+    if (uid !== 'me') Games.say(r, uid, '快捷短语');
     touch(r);
-    return { ok: 1, why: why };
+    return { ok: 1, s: '换到 ' + nameOf(r, theirs) };
+  }
+  /* TA 抽到这一张：拿对方最值钱的一块，把自己最便宜的一块给它——换地不补差价，这就是最划算的一手 */
+  function aiSwapLand(r, uid) {
+    const mine = ownedProps(r, uid).map(i => +i);
+    const foes = alive(r).filter(u => u !== uid && ownedProps(r, u).length);
+    if (!mine.length || !foes.length) return { s: '换地券用不上，先压箱底' };
+    let theirs = null, foe = null;
+    foes.forEach(u => ownedProps(r, u).forEach(i => {
+      if (theirs == null || priceOf(r, +i) > priceOf(r, theirs)) { theirs = +i; foe = u; }
+    }));
+    const give = mine.slice().sort((a, b) => priceOf(r, a) - priceOf(r, b))[0];
+    return doSwapLand(r, uid, foe, theirs, give);
+  }
+  /* 换地券这一拍收尾：账已落，把这一手接着走完 */
+  function endSwap(r) {
+    const M = st(r);
+    M.pending = null; M.sw = null; M.phase = 'roll';
+    nextTurn(r);
+    touch(r);
+  }
+  /* 我抽到的那一张：先挑人（多人时），再挑他哪一块、拿我哪一块去换；挑好点一下就成交 */
+  function swapSheet(r) {
+    const M = st(r);
+    if (!M.pending || !M.pending.sw || !M.sw) return;
+    const mine = ownedProps(r, 'me').map(i => +i);
+    const foes = alive(r).filter(u => u !== 'me' && ownedProps(r, u).length);
+    if (!mine.length || !foes.length) { UI.toast('没地可换'); return; }
+    const pick = M.sw;
+    if (!pick.foe || foes.indexOf(pick.foe) < 0) pick.foe = foes[0];
+    const mask = pop('换地券', '<div id="mc-sw-b"></div>');
+    mask.dataset.mcSheet = 'swap';
+    function draw() {
+      const box = mask.querySelector('#mc-sw-b');
+      if (!box) return;
+      const list = ownedProps(r, pick.foe).map(i => +i);
+      box.innerHTML =
+        '<div class="gm-opt"><span>跟谁换</span>' + foes.map(u => '<button class="gm-rchip' + (u === pick.foe ? ' on' : '') +
+          '" data-foe="' + u + '">' + esc(nm(u)) + '</button>').join('') + '</div>' +
+        '<div class="form-label">要他的哪一块</div><div class="gm-swipe"><div class="mc-chips" data-side="theirs">' +
+          list.map(i => '<button class="gm-rchip' + (pick.theirs === +i ? ' on' : '') + '" data-i="' + i + '">' +
+            esc(nameOf(r, i)) + ' 租' + rentOf(r, i) + '</button>').join('') + '</div></div>' +
+        '<div class="form-label">拿你的哪一块去换</div><div class="gm-swipe"><div class="mc-chips" data-side="mine">' +
+          mine.map(i => '<button class="gm-rchip' + (pick.mine === +i ? ' on' : '') + '" data-i="' + i + '">' +
+            esc(nameOf(r, i)) + ' 租' + rentOf(r, i) + '</button>').join('') + '</div></div>' +
+        '<div class="mc-sw-f"><button class="btn btn-primary" data-ok>就换这两块</button>' +
+        '<span>抽到这一张就强制换，不用补差价；楼跟着地一起过去。</span></div>';
+      box.querySelectorAll('[data-foe]').forEach(b => b.addEventListener('click', () => { pick.foe = b.dataset.foe; pick.theirs = null; draw(); }));
+      box.querySelectorAll('[data-side]').forEach(w => w.addEventListener('click', e => {
+        const b = e.target.closest ? e.target.closest('.gm-rchip') : null;
+        if (!b) return;
+        const i = +b.dataset.i;
+        if (w.dataset.side === 'theirs') pick.theirs = (pick.theirs === i ? null : i);
+        else pick.mine = (pick.mine === i ? null : i);
+        draw();
+      }));
+      box.querySelector('[data-ok]').addEventListener('click', () => runSafe('mc.sw.ok', () => {
+        const x = doSwapLand(r, 'me', pick.foe, pick.theirs, pick.mine);
+        if (x && x.err) { UI.toast(x.err); return; }
+        mask.remove();
+        endSwap(r);
+      }));
+    }
+    draw();
+  }
+
+  /* ---------- 钱不够（她 10-16 18:11）：抵押藏起来，只在“付不出”这一刻当筹钱的一条路出现 ---------- */
+  /* 每一块地能换多少钱：没抵过、没楼的能抵押；有楼的能拆一档拿回一半（拆高的那一座，与盖楼对称） */
+  function raiseWays(r, uid) {
+    const M = st(r), ways = [];
+    ownedProps(r, uid).map(i => +i).forEach(i => {
+      if (M.mort[i]) return;
+      if (M.lv[i] | 0) {
+        const top = Math.max.apply(null, groupCells(r, i).map(x => M.lv[+x] | 0));
+        if ((M.lv[i] | 0) >= top) ways.push({ k: 'sell', i: i, got: Math.round(buildCost(r, i) * 0.5) });
+      } else if (upOn(r)) ways.push({ k: 'mort', i: i, got: Math.max(20, Math.round(priceOf(r, i) * MORT_RATE)) });
+    });
+    return ways;
+  }
+  /* TA 钱不够：先把楼拆了、再把不值钱的地抵出去，凑不出才出局（与她能看到的顺序一致） */
+  function aiRaise(r, uid) {
+    const M = st(r);
+    let guard = 0;
+    while ((M.cash[uid] | 0) < 0 && guard++ < 40) {
+      const w = raiseWays(r, uid).sort((a, b) => a.got - b.got)[0];
+      if (!w) break;
+      if (w.k === 'sell') doSell(r, uid, w.i, 1); else doMort(r, uid, w.i);
+    }
+  }
+  /* 付不出钱都从这一个口走：我 → 摆筹钱页等她选；TA → 自己凑，凑不出就出局 */
+  function shortfall(r, uid, why, creditor) {
+    const M = st(r);
+    if ((M.cash[uid] | 0) >= 0) return 0;
+    if (uid !== 'me') {
+      aiRaise(r, uid);
+      if ((M.cash[uid] | 0) < 0) bankrupt(r, uid, creditor || null);
+      return 1;
+    }
+    M.short = { why: why || '', to: creditor || null };
+    M.pending = { short: 1 };
+    M.phase = 'act';
+    killPlans(r, 'mcBeat');
+    armClock(r);
+    touch(r);
+    raiseSheet(r);
+    return 1;
+  }
+  function endShort(r) {
+    const M = st(r);
+    M.pending = null; M.short = null; M.phase = 'roll';
+    nextTurn(r);
+    touch(r);
+  }
+  /* 换地券 / 筹钱那两页是跟着 pending 走的：这一手过完就收掉，不把一个已经没用的浮层留在屏上 */
+  function dropMcSheet() {
+    [].slice.call(document.querySelectorAll('#dialog-layer [data-mc-sheet]')).forEach(m => m.remove());
+  }
+  /* 筹钱页：哪块地能换钱就摆哪个钮，凑够了才让她接着走；实在凑不出才认输 */
+  function raiseSheet(r) {
+    const M = st(r);
+    if (!M.pending || !M.pending.short) return;
+    const s0 = M.short || {};
+    const mask = pop('钱不够了', '<div id="mc-raise-b"></div>');
+    mask.dataset.mcSheet = 'raise';
+    function draw() {
+      const box = mask.querySelector('#mc-raise-b');
+      if (!box) return;
+      const MM = st(r), cash = MM.cash['me'] | 0, ways = raiseWays(r, 'me');
+      box.innerHTML =
+        '<div class="mc-raise-top">' + (s0.why ? esc(s0.why) : '这一笔') + ' 付不出：手上 ' + cash +
+        (cash < 0 ? '，还差 ' + (-cash) : '，已经够了') + '</div>' +
+        '<div class="mc-deed">' + ownedProps(r, 'me').map(i => {
+          const w = ways.filter(x => x.i === +i)[0];
+          return '<div class="mc-deed-row' + (MM.mort[i] ? ' mort' : '') + '"><span class="nm"><b>' + esc(nameOf(r, i)) + '</b>' +
+            ((MM.lv[i] | 0) ? '<i>' + esc(LVL_NAME[MM.lv[i] | 0]) + '</i>' : '') + '</span>' +
+            '<span>租 ' + rentOf(r, i) + '</span><span class="acts">' +
+            (w ? '<button class="mc-act" data-k="' + w.k + '" data-i="' + i + '">' +
+              (w.k === 'mort' ? '抵押 +' : '拆一档 +') + w.got + '</button>'
+              : (MM.mort[i] ? '已抵 ' + (MM.mort[i] | 0) : '这块抵不了')) + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="mc-sw-f">' + (cash >= 0
+          ? '<button class="btn btn-primary" data-go>够付了，接着走</button><span>钱够了，不用再抵。</span>'
+          : '<span>把能换钱的地抵出去（有楼的先拆一档），凑够就能付。</span>') +
+          '<button class="btn btn-secondary" data-out>实在没法子</button></div>';
+      box.querySelectorAll('.mc-act').forEach(b => b.addEventListener('click', () => runSafe('mc.raise.act', () => {
+        const i = +b.dataset.i;
+        const x = b.dataset.k === 'mort' ? doMort(r, 'me', i) : doSell(r, 'me', i, 1);
+        if (x && x.err) { UI.toast(x.err); return; }
+        draw();
+        touch(r);
+      })));
+      const go = box.querySelector('[data-go]');
+      if (go) go.addEventListener('click', () => runSafe('mc.raise.go', () => { mask.remove(); endShort(r); }));
+      const out = box.querySelector('[data-out]');
+      if (out) out.addEventListener('click', () => runSafe('mc.raise.out', () => {
+        if (!out.dataset.arm) { out.dataset.arm = '1'; out.textContent = '再点一下＝这一局认输'; return; }
+        const to = s0.to || null;
+        mask.remove();
+        const M3 = st(r);
+        M3.pending = null; M3.short = null; M3.phase = 'roll';
+        bankrupt(r, 'me', to);
+        nextTurn(r);
+        touch(r);
+      }));
+    }
+    draw();
   }
 
   /* ---------- 开局 ---------- */
@@ -25626,7 +25694,7 @@ const Mono = (function () {
     M.oi = rand(0, Math.max(0, M.order.length - 1));    // 谁先走是随机的，不是默认我先
     M.pos = {}; M.cash = {}; M.out = {}; M.own = {};
     M.jail = {}; M.jcard = {}; M.shield = {}; M.dbl = {}; M.jump = {};
-    M.lv = {}; M.mort = {}; M.items = {}; M.fix = {}; M.rev = {}; M.pick = null;
+    M.lv = {}; M.mort = {}; M.items = {}; M.fix = {}; M.rev = {}; M.pick = null; M.sw = null; M.short = null;
     M.auc = null;
     /* 限量库存：全场共 n×6 颗楼，抢完就盖不了（盘上写清，不静默）；没开盖楼就不排这一池 */
     M.stock = M.rule.up ? Math.max(2, M.order.length) * HOUSES_EACH : 0;
@@ -25753,6 +25821,7 @@ const Mono = (function () {
       applyHop(r, uid, plan);
       touch(r);
       if (M.phase === 'over') return;
+      if (M.pending || M.short) return;     // 等她选（换地券 / 钱不够筹钱）：这一拍先不放
       pushBeat(r, 'next', beatMs(r, M.cardShow ? 'card' : 'land'));
       return;
     }
@@ -25862,13 +25931,13 @@ const Mono = (function () {
     feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 交了 ' + b + ' 保释金，出来了');
     return { ok: 1 };
   }
-  /* 给盘里付钱（税、保释）：钱不够就出局，不把负数留在盘上装没事 */
+  /* 给盘里付钱（税、保释）：钱不够不再直接出局，先问她要不要抵地凑（她 10-16 18:11） */
   function payBank(r, uid, amt, why) {
     const M = st(r);
     M.cash[uid] = (M.cash[uid] | 0) - amt;
     (r.moves = r.moves || []).push({ who: uid, act: 'pay', amt: amt, why: why, ts: Date.now() });
     feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 付了 ' + amt + '（' + esc(why) + '）');
-    if (M.cash[uid] < 0) bankrupt(r, uid, null);
+    if (M.cash[uid] < 0) shortfall(r, uid, why, null);
   }
   /* 交租：免租那一张先挡一次（也只挡一次，不滚存） */
   function payRent(r, uid, host, at, rent) {
@@ -25886,7 +25955,7 @@ const Mono = (function () {
     M.last = nm(uid) + ' 在 ' + nameOf(r, at) + ' 交租 ' + rent + ' 给 ' + nm(host);
     feed(r, uid === 'me' ? 'me' : 'ta', esc(M.last));
     if (uid !== 'me') Games.say(r, uid, '快捷短语');      // 交了租它要嘨一句（话从她的库里挑，拍子上不叠加）
-    if (M.cash[uid] < 0) bankrupt(r, uid, host);
+    if (M.cash[uid] < 0) shortfall(r, uid, '交租给 ' + nm(host), host);
   }
   function draw(r, uid, kind, at, depth) {
     const M = st(r);
@@ -25896,6 +25965,7 @@ const Mono = (function () {
     (r.moves = r.moves || []).push({ who: uid, act: 'card', kind: kind, text: c.t, ts: Date.now() });
     M.fx = Object.assign({}, M.fx, { card: { at: at, text: M.card } });
     const res = cardDo(r, uid, c);
+    if (res.hold && uid === 'me' && !M.fast) swapSheet(r);     // 换地券：当场把挑地那页摆出来
     feed(r, uid === 'me' ? 'me' : 'ta', esc(nm(uid)) + ' 抽到' + esc(M.card) + (res.s ? '（' + res.s + '）' : ''));
     /* 正在表演：抽到的牌翻一张大的给她看；一把过的那条路不翻（那本来就没在演） */
     if (M.phase === 'show') { M.cardSeq = (M.cardSeq || 0) + 1; M.cardShow = { k: (l.EV[at] ? l.EV[at][1] : '机会'), x: c.t, e: res.s || '什么也没干' }; }
@@ -25908,7 +25978,7 @@ const Mono = (function () {
   /* 卡上那些字段怎么落到账上，只这一处：加一种效果就加一条，不在 draw 里再拄一份 */
   function cardDo(r, uid, c) {
     const M = st(r), l = L(r), s = [];
-    let moved = 0;
+    let moved = 0, hold = 0;
     const v2 = (M.rule.layVer || LAY_VER) !== 'v1';   // 老局那一版：卡上挑格不算过起点（一期就这么跑的，不半途换账）
     const add = (u, amt) => { M.cash[u] = (M.cash[u] | 0) + amt; };
     if (c.cash) {
@@ -25920,7 +25990,7 @@ const Mono = (function () {
       const others = alive(r).filter(u => u !== uid);
       others.forEach(u => { add(u, -c.eachGet); add(uid, c.eachGet); });
       if (others.length) s.push('各家掩 ' + c.eachGet + '，收到 ' + c.eachGet * others.length);
-      others.forEach(u => { if ((M.cash[u] | 0) < 0) bankrupt(r, u, uid); });
+      others.forEach(u => { if ((M.cash[u] | 0) < 0) shortfall(r, u, '卡上的账', uid); });
     }
     if (c.eachGive) {
       const others = alive(r).filter(u => u !== uid);
@@ -25966,19 +26036,27 @@ const Mono = (function () {
     if (c.getout) { M.jcard[uid] = (M.jcard[uid] | 0) + 1; s.push('手里多一张出狱卡'); }
     if (c.shield) { M.shield[uid] = 1; s.push('下一回填别人的租不掱钱'); }
     if (c.jump) { M.jump[uid] = 1; s.push('下一手步数翻倍'); }
-    if (c.swap) {
-      const foe = alive(r).filter(u => u !== uid);
-      if (foe.length) {
-        const t = foe[Math.floor(Math.random() * foe.length)];
-        const p1 = M.pos[uid] | 0, p2 = M.pos[t] | 0;
-        M.pos[uid] = p2; M.pos[t] = p1; moved = 1;
-        s.push('与 ' + nm(t) + ' 换了个位置');
-        M.fx = Object.assign({}, M.fx, { hop: { uid: uid, to: p2 } });
-      } else s.push('场上没别人，换不成');
+    /* 换地券（她 10-16 18:11）：抽到机会/命运的那一位，强制跟一个人对调一块地、不补差价。
+       我抽到就摆出来让我挑（多人先挑换谁）；TA 抽到自己按最划算的一手换掉。 */
+    if (c.land2) {
+      const mineAll = ownedProps(r, uid).map(i => +i);
+      const foes = alive(r).filter(u => u !== uid && ownedProps(r, u).length);
+      if (!mineAll.length || !foes.length) s.push('换地券用不上（' + (mineAll.length ? '别人手上没地' : '你手上没地') + '），先压箱底');
+      else if (uid === 'me') {
+        M.sw = { foe: foes.length === 1 ? foes[0] : null, mine: null, theirs: null };
+        M.pending = { sw: 1 };
+        M.phase = 'act';
+        hold = 1;
+        s.push('挑一个人、挑两块地：这一张强制换，不补差价');
+        armClock(r);
+      } else {
+        const x = aiSwapLand(r, uid);
+        s.push(x && x.s ? x.s : '换了块地');
+      }
     }
     if (c.again) s.push('再抽一张');
-    if ((M.cash[uid] | 0) < 0) bankrupt(r, uid, null);
-    return { s: s.map(x => esc(x)).join(' · '), moved: moved };
+    if ((M.cash[uid] | 0) < 0) shortfall(r, uid, '卡上的账', null);
+    return { s: s.map(x => esc(x)).join(' · '), moved: moved, hold: hold };
   }
   /* 池子 = 内置那一版 + 她往「大富翁-机会 / 大富翁-命运」里塞的那几条（有就并进来，没有就用内置，不替她写内容） */
   function poolFor(r, kind) {
@@ -26040,7 +26118,8 @@ const Mono = (function () {
     if (M.phase === 'over') return;
     clearClock(r);
     killPlans(r, 'mcRoll'); killPlans(r, 'mcBeat');
-    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0; M.auc = null; M.pick = null;
+    M.pending = null; M.roll = null; M.plan = null; M.cardShow = null; M.fast = 0; M.auc = null; M.pick = null; M.sw = null; M.short = null;
+    dropMcSheet();
     hideCard();
     M.turnNo++;
     if (alive(r).length <= 1) { endIt(r, alive(r)[0] || null); return; }
@@ -26139,6 +26218,11 @@ const Mono = (function () {
     if (!isProp(r, at) || M.own[at] || M.jail[uid] || (M.cash[uid] || 0) < priceOf(r, at)) return -1;
     return at;
   }
+  /* 我这一手踩在自己哪块城上（没踩到/不是城/还没买下的都返 -1） */
+  function ownCity(r, uid) {
+    const M = st(r), at = M.pos[uid] | 0, c = L(r).C[at];
+    return (c && c.t === 'city' && M.own[at] === uid) ? at : -1;
+  }
   /* 落点能买才问一句；不能买直接换手，不摆一个点了没反应的钮 */
   function askBuy(r) {
     const M = st(r);
@@ -26155,6 +26239,13 @@ const Mono = (function () {
     M.actor = null;
     if (M.phase === 'over') return;
     if (uid !== 'me') aiBuild(r, uid);      // TA 先把手里凑齐的那组盖一档，再看这块地买不买（我这边自己按钮）
+    /* 她 10-16 18:00：「第二次转到该块自己的领地的时候可以选择升级，不是直接就放在下边」
+       ——落点就是自己的城，把“升不升”摆出来让她选（TA 那份在换手时自己定，不走这个问句）。 */
+    const ownAt = ownCity(r, 'me');
+    if (ownAt >= 0 && upOn(r) && (M.lv[ownAt] | 0) < LVL.length - 1 && canBuild(r, 'me', ownAt).ok) {
+      M.phase = 'act'; M.pending = { cell: ownAt, up: 1 }; armClock(r);
+      return;
+    }
     const at = buyable(r, uid);
     if (at >= 0 && uid === 'me') {
       M.phase = 'act'; M.pending = { cell: at }; armClock(r);
@@ -26168,7 +26259,17 @@ const Mono = (function () {
   function myBuy(r, yes) {
     const M = st(r);
     if (M.phase !== 'act' || !M.pending) return;
+    if (M.pending.sw || M.pending.short) return;    // 换地券 / 筹钱那两页自己收尾，不走买地这一支
     const at = M.pending.cell;
+    if (M.pending.up) {                     // 踩到自己城的“升不升”（她 10-16）
+      if (yes) { const res = doBuild(r, 'me', at); if (res && res.err) { UI.toast(res.err); return; } }
+      else feed(r, 'me', esc(nameOf(r, at)) + ' 先不升');
+      M.pending = null;
+      M.phase = 'roll';
+      nextTurn(r);
+      touch(r);
+      return;
+    }
     if (yes) {
       const res = tryBuy(r, 'me', at);
       if (res && res.err) { UI.toast(res.err); return; }
@@ -26275,6 +26376,24 @@ const Mono = (function () {
       myBid(r, can ? 1 : 0);
       return true;
     }
+    if (M.phase === 'act' && M.pending && M.pending.sw) {
+      feed(r, 'me', '时间到，替你换了（拿你最便宜的一块，换他最贵的一块）');
+      const x = aiSwapLand(r, 'me');
+      if (x && x.err) feed(r, 'me', '这张换地券没换成：' + x.err);
+      endSwap(r);
+      return true;
+    }
+    if (M.phase === 'act' && M.pending && M.pending.short) {
+      aiRaise(r, 'me');
+      const to = (M.short || {}).to || null;
+      if ((M.cash['me'] | 0) < 0) {
+        feed(r, 'me', '时间到，能换钱的都换完了，还是付不出');
+        M.pending = null; M.short = null; M.phase = 'roll';
+        bankrupt(r, 'me', to);
+        nextTurn(r);
+      } else { feed(r, 'me', '时间到，替你抵了地凑够钱'); endShort(r); }
+      return true;
+    }
     if (M.phase === 'act') {
       const at = (M.pending || {}).cell;
       const can = at != null && (M.cash['me'] || 0) >= priceOf(r, at);
@@ -26370,12 +26489,13 @@ const Mono = (function () {
     const own = prop && M.own[i] && !M.out[M.own[i]] ? M.own[i] : null;
     const isGo = i === 0;
     const cur = M.order.filter(u => !M.out[u] && (M.pos[u] | 0) === i).length;
-    /* 格下那一行小字：有主的报租，没主的报价，功能格说人话（宽不超过五个字，窄屏才不会顶出格） */
+    /* 格下那一行小字：有主的只报当时租金，没主的报价，功能格说人话（宽不超过五个字，窄屏才不会顶出格）
+       她 10-16 18:00：「购买了那块地格子就不要显示初始购买的金币了，直接显示当然（当前）的租金就好」 */
     let sub = '';
     if (isGo) sub = (l.side > 6 ? '+' : '过一趟 +') + M.rule.passGo;
     else if (c) {
       if (M.mort[i]) sub = '抵 ' + (M.mort[i] | 0);        // 抵出去的那块只报这一件事：租收不着了
-      else if (c.t === 'city') sub = lvOf(r, i) ? '租' + rentOf(r, i) : c.p + (own ? ' · 租' + rentOf(r, i) : '');
+      else if (c.t === 'city') sub = own ? '租' + rentOf(r, i) : String(c.p);
       else if (c.t === 'station') sub = own ? '租' + rentOf(r, i) : String(c.p);
       else if (c.t === 'jail') sub = '掷双出';
       else if (c.t === 'tax') sub = '一成';
@@ -26412,48 +26532,43 @@ const Mono = (function () {
     const cells = [];
     for (let i = 0; i < l.N; i++) cells.push(cellHtml(r, M, l, i));
     let h = '<div class="mc-wrap" style="--mq:' + q.toFixed(3) + ';--mg:' + l.side + '">';
-    /* 盘外这一行：一人一颗（头像 + 颜色 + 名字 + 资产 + 现金与地产），一排画不下就左右划。
-       09-14 她两句一起说：“头像怎么没有，别的游戏都有”、“位置怎么直接在上面一束下来了”——
-       以前 5 人以上把每人压到 30% 宽、另外再挂一行小字，于是盘顶堆成一堆；
-       现在不分档：信息全在一颗上，窄了可划，与结算表同一个“左右划”口径（.gm-swipe 同一家） */
-    /* 她 10-09 00:43：头像按人数分立——正 N 边形贴到棋盘周界（我=6 点钟位，其余按座位序等分），
-       五人五角、六人六角…以此类推；10-08「上下两簇」口径被本条演进 */
+    /* 她 10-25 14:50 第二次说布局：「5678 人的布局那也实在是太丑了吧？就必须堆在上面堆成一整面吗？
+       改成每不同的人数是不同的布局不可以吗？」——一条带全压在盘顶，人一多就是一堵墙。
+       现在改成「围着棋盘坐下」：
+       ① 座位分上下两条，我永远坐在我这一侧（下带正中），对手在上带；
+       ② 人数决定两条各坐几个：2人 1/1、3人 1/2、4人 2/2、5人 2/3、6人 3/3、7人 3/4、8人 4/4
+          （上带不多于下带，一条带最多 4 颗）；
+       ③ 每条带按自己的人数均分宽度：人少时卡片更宽像一块牌子，人多时缩到 4 列，
+          卡片改成两行（头像 + 名字 / 资产 · 地产），390 宽的手机上 4 列也不把金额折成“204…”；
+       ④ 棋盘仍吃满桌区整宽，座位不再跟棋盘抢宽（10-25 三人局整颗出屏就是抢宽抢出来的）。 */
     const NN = M.order.length;
-    const myIdx = Math.max(0, M.order.indexOf('me'));
-    const bandOf = th => (th >= 45 && th < 135) ? 'bot' : (th >= 135 && th < 225) ? 'left' : (th >= 225 && th < 315) ? 'top' : 'right';
-    const seats = M.order.map((u, i) => {
-      let th = (90 + 360 * ((((i - myIdx) % NN) + NN) % NN) / NN) % 360;   // 屏幕角：0°=右 90°=下
-      const band = bandOf(th);
-      let f;                                                               // 沿边 0~1
-      if (band === 'bot') f = (135 - th) / 90;                             // 左→右
-      else if (band === 'left') f = (225 - th) / 90;                       // 上→下
-      else if (band === 'top') f = (th - 225) / 90;                        // 左→右
-      else f = ((th < 45 ? th + 360 : th) - 315) / 90;                     // 上→下
-      return { u: u, band: band, f: f };
-    });
-    const pkOne = s => '<span class="gm-player mc-pk' + (curUid(r) === s.u && M.phase !== 'over' ? ' on' : '') + (s.u === 'me' ? ' me' : '') +
-      '" data-uid="' + s.u + '" style="' + (s.band === 'top' || s.band === 'bot'
-        ? 'left:' + (s.f * 100).toFixed(1) + '%;transform:translateX(-50%)'
-        : 'top:' + (s.f * 100).toFixed(1) + '%;transform:translateY(-50%)') + '">' +
-      '<span class="gm-mini-ava">' + Home.avaInner(s.u) + '</span>' +
-      '<i class="mc-dot" style="--tc:' + (colOf(r, s.u) || 'var(--t1)') + '"></i>' +
-      '<b>' + esc(nm(s.u)) + '</b>' +
-      '<small class="mc-cash">' + assets(r, s.u) + '</small>' +
-      '<small>现' + (M.cash[s.u] || 0) + ' · ' + ownedProps(r, s.u).length + ' 块' + houseTxt(r, s.u) + '</small>' +
-      (M.items[s.u] ? '<em class="mc-itbadge">' + esc(IT_NAME[M.items[s.u]]) + '</em>' : '') +
-      (s.u === 'me' ? '<em class="mc-me">我</em>' : '') +
-      (M.jail[s.u] ? '<em class="mc-jbadge">狱</em>' : '') +
-      (M.out[s.u] ? '<em class="mc-out">出局</em>' : '') + '</span>';
-    const bandHtml = bd => { const arr = seats.filter(s => s.band === bd).sort((a, b) => a.f - b.f);
-      return arr.length ? '<div class="mc-band mc-band-' + bd + '">' + arr.map(pkOne).join('') + '</div>' : ''; };
-    const sideHtml = bd => { const arr = seats.filter(s => s.band === bd).sort((a, b) => a.f - b.f);
-      return '<div class="mc-side mc-side-' + bd + (arr.length ? '' : ' mc-side-empty') + '">' + arr.map(pkOne).join('') + '</div>'; };
-    h += bandHtml('top');
-    h += '<div class="mc-midrow">' + sideHtml('left') + '<div class="mc-board" id="mc-board">' + cells.join('') +
+    const botN = Math.ceil(NN / 2);                       // 下带坐几个（含我）：3人→2、5人→3、8人→4
+    const others = M.order.filter(u => u !== 'me');
+    const botBand = others.slice(0, Math.max(0, botN - 1));
+    botBand.splice(Math.floor(botBand.length / 2), 0, 'me');   // 我坐正中，两边对称
+    const topBand = NN > 1 ? others.slice(botBand.length - 1) : [];
+    const pkOne = u => '<span class="gm-player mc-pk' + (curUid(r) === u && M.phase !== 'over' ? ' on' : '') + (u === 'me' ? ' me' : '') +
+      '" data-uid="' + u + '" style="--tc:' + (colOf(r, u) || 'var(--t1)') + '">' +
+      '<span class="mc-ava"><span class="gm-mini-ava">' + Home.avaInner(u) + '</span>' +
+      (M.items[u] ? '<em class="mc-itbadge">' + esc(IT_NAME[M.items[u]]) + '</em>' : '') + '</span>' +
+      '<span class="mc-nm"><b>' + esc(nm(u)) + '</b>' +
+      (u === 'me' ? '<em class="mc-me">我</em>' : '') +
+      (M.jail[u] ? '<em class="mc-jbadge">狱</em>' : '') +
+      (M.out[u] ? '<em class="mc-out">出局</em>' : '') + '</span>' +
+      /* 第二行一句话说完资产与地产（两行才装得下 4 列）；现金仍留在盘中央的买地提示里，
+         同一件事不在两处各写一遍（她 10-25：个人信息框设计不对） */
+      '<small class="mc-cash">' + assets(r, u) + '</small>' +
+      '<small class="mc-prop">' + ownedProps(r, u).length + ' 块' + houseTxt(r, u) + '</small>' +
+      '</span>';
+    const bandHtml = (arr, cls) => arr.length
+      ? ('<div class="mc-seats ' + cls + '" style="--mc-n:' + arr.length + '">' + arr.map(pkOne).join('') + '</div>')
+      : '';
+    h += bandHtml(topBand, 'mc-top');
+    h += '<div class="mc-board" id="mc-board">' + cells.join('') +
       '<div class="mc-mid" style="grid-column:2 / ' + l.side + ';grid-row:2 / ' + l.side + '">' +
       '<div class="mc-dice' + (spinning ? ' spin' : M.dice ? ' land' : '') + '">' + (spinning
-        ? '<b class="mc-dice-b"></b><b class="mc-dice-b"></b>'
-        : M.dice ? '<span>' + DIE[M.dice[0]] + '</span><span>' + DIE[M.dice[1]] + '</span>' : '<span class="mc-dice-x">◎</span>') + '</div>' +
+        ? faceHTML(6) + faceHTML(2)
+        : M.dice ? faceHTML(M.dice[0]) + faceHTML(M.dice[1]) : '<span class="mc-dice-x">◎</span>') + '</div>' +
       '<div class="mc-state">' + (M.phase === 'begin' ? '开局准备…' : M.phase === 'over' ? '这局收了'
         : M.phase === 'show' ? ((M.actor === 'me' ? '骰子落定' : esc(nm(M.actor || curUid(r))) + ' 那一步') + ' · 点一下跳过')
         : (M.phase === 'bid' && (M.pending || {}).who === 'me')
@@ -26462,19 +26577,31 @@ const Mono = (function () {
           : M.jail['me'] ? '你在狱里：掷双、交保或用卡' : '轮到你，掷骰子') : esc(nm(curUid(r))) + ' 在想…')) + '</div>' +
       '<div class="mc-goal">' + (goalOf(r) > 0 ? '目标 ' + goalOf(r) : '不收场') + ' · 第 ' + (M.turnNo + 1) + ' 回合' +
         (R.cap > 0 ? ' · 每人最多 ' + R.cap + ' 轮' : '') + '</div>' +
-      /* 限量库存与手里那颗道具：抢完了什么、手里拿着什么都写在盘中央，不让她靠猜 */
-      ((upOn(r) || (itOn(r) && M.items['me'])) ? '<div class="mc-deep">' +
-        (upOn(r) ? ('还能盖 ' + (M.stock | 0) + ' 颗' + ((M.stock | 0) <= 0 ? '（楼用完了）' : '')) : '') +
-        (itOn(r) && M.items['me'] ? ((upOn(r) ? ' · ' : '') + '手里：' + esc(IT_NAME[M.items['me']])) : '') + '</div>' : '') +
+      /* 手里那颗道具写在盘中央（不让她靠猜）。库存那行拆了——她 10-16：升级不限次数，
+         再说“还能盖几颗”就是拿旧口径骗人 */
+      ((itOn(r) && M.items['me']) ? '<div class="mc-deep">手里：' + esc(IT_NAME[M.items['me']]) + '</div>' : '') +
       (M.card ? '<div class="mc-card">' + esc(M.card) + '</div>' : '') +
       (M.last ? '<div class="mc-last">' + esc(M.last) + '</div>' : '') +
-      '</div></div>' + sideHtml('right') + '</div>' +
-    bandHtml('bot');
+      '</div></div>';
+    h += bandHtml(botBand, 'mc-bot');   // 下带：我坐在这一侧
     /* 操作条 */
     h += '<div class="mc-bar">';
     if (M.phase === 'begin') h += '<span class="mc-hint">马上开跑…</span>';
     else if (M.phase === 'over') h += '<span class="mc-hint">这局收了，盈亏已进累计记分牌</span>';
-    else if (myTurn && M.phase === 'act') {
+    else if (myTurn && M.phase === 'act' && (M.pending || {}).sw) {
+      h += '<button class="btn btn-primary" id="mc-sw">换地券：挑地</button>' +
+        '<span class="mc-hint">抽到这一张就强制换：挑一个人、挑两块地，不补差价</span>';
+    } else if (M.phase === 'act' && (M.pending || {}).short) {
+      h += '<button class="btn btn-primary" id="mc-raise">去筹钱</button>' +
+        '<span class="mc-hint">手上 ' + (M.cash['me'] || 0) + '，差 ' + Math.max(0, -((M.cash['me'] || 0))) + '：抵一块地凑出来</span>';
+    }
+    else if (myTurn && M.phase === 'act' && (M.pending || {}).up) {
+      /* 踩到自己的城：问她升不升（她 10-16 的口径），花费与升到哪一档都写在脸上 */
+      const at = M.pending.cell, cost = buildCost(r, at), nx = (M.lv[at] | 0) + 1;
+      h += '<button class="btn btn-primary" id="mc-up">升为' + esc(LVL_NAME[nx] || '更高一档') + ' ' + cost + '</button>' +
+        '<button class="btn btn-secondary" id="mc-no">不升</button>' +
+        '<span class="mc-hint">' + esc(nameOf(r, at)) + ' 租金 ' + rentOf(r, at) + ' → ' + (LVL[nx] ? Math.round(rentOf(r, at) / LVL[nx - 1] * LVL[nx]) : rentOf(r, at)) + '</span>';
+    } else if (myTurn && M.phase === 'act') {
       const at = (M.pending || {}).cell;
       h += '<button class="btn btn-primary" id="mc-buy">买下 ' + esc(nameOf(r, at)) + ' ' + priceOf(r, at) + '</button>' +
         '<button class="btn btn-secondary" id="mc-no">不买</button>' +
@@ -26489,11 +26616,10 @@ const Mono = (function () {
         if (M.jail['me']) {
           h += '<button class="btn btn-secondary" id="mc-bail">交保 ' + bailOf(r) + '</button>';
           if (M.jcard['me'] | 0) h += '<button class="btn btn-secondary" id="mc-jcard">用出狱卡（' + (M.jcard['me'] | 0) + '）</button>';
-          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">拆抵与赎回</button>';
+          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">拆楼与赎回</button>';
           h += '<span class="mc-hint">掷出双数就自己出来了</span>';
         } else {
-          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">盖楼与抵押</button>';
-          if (trOn(r) && alive(r).some(u => u !== 'me' && tradable(r, u).length)) h += '<button class="btn btn-secondary" id="mc-trade">找 TA 换地</button>';
+          if (upOn(r) && ownedProps(r, 'me').length) h += '<button class="btn btn-secondary" id="mc-deed">我的地产</button>';
           h += '<span class="mc-hint">第 ' + (M.turnNo + 1) + ' 回合' +
             ((M.dbl['me'] | 0) === 2 && M.rule.dbl ? ' · 已连掷两个双数' : '') + (M.jump['me'] ? ' · 下一手步数翻倍' : '') +
             (M.fix['me'] ? ' · 这一手遥控 ' + (M.fix['me'] | 0) + ' 步' : '') + (M.rev['me'] ? ' · 下一手倒着走' : '') + '</span>';
@@ -26524,11 +26650,13 @@ const Mono = (function () {
     const jc = el.querySelector('#mc-jcard'); if (jc) jc.addEventListener('click', () => runSafe('mc.jcard', () => { const x = tryOut(r, 'me', 'card'); if (x && x.err) UI.toast(x.err); }));
     const bd = el.querySelector('#mc-bid'); if (bd) bd.addEventListener('click', () => runSafe('mc.bid', () => myBid(r, 1)));
     const bp = el.querySelector('#mc-pass'); if (bp) bp.addEventListener('click', () => runSafe('mc.pass', () => myBid(r, 0)));
+    const ub = el.querySelector('#mc-up'); if (ub) ub.addEventListener('click', () => runSafe('mc.up', () => myBuy(r, 1)));
+    const swb = el.querySelector('#mc-sw'); if (swb) swb.addEventListener('click', () => runSafe('mc.sw', () => swapSheet(r)));
+    const rsb = el.querySelector('#mc-raise'); if (rsb) rsb.addEventListener('click', () => runSafe('mc.raise', () => raiseSheet(r)));
     const bb = el.querySelector('#mc-buy'); if (bb) bb.addEventListener('click', () => runSafe('mc.buy', () => myBuy(r, 1)));
     const nb = el.querySelector('#mc-no'); if (nb) nb.addEventListener('click', () => runSafe('mc.no', () => myBuy(r, 0)));
     const itb = el.querySelector('#mc-it'); if (itb) itb.addEventListener('click', () => runSafe('mc.item', () => useItemBtn(r)));
     const ddb = el.querySelector('#mc-deed'); if (ddb) ddb.addEventListener('click', () => runSafe('mc.deed', () => deedSheet(r)));
-    const trb = el.querySelector('#mc-trade'); if (trb) trb.addEventListener('click', () => runSafe('mc.trade', () => tradeSheet(r)));
     const pxb = el.querySelector('#mc-pickx'); if (pxb) pxb.addEventListener('click', () => runSafe('mc.pickx', () => { M.pick = null; touch(r); }));
     /* 点格子：只在“正在挑一格”时吃（传送与拆楼靠它），平时点了不抢动作 */
     [].slice.call(el.querySelectorAll('.mc-cell')).forEach(td => td.addEventListener('click', ev => runSafe('mc.pick', () => {
@@ -26676,14 +26804,14 @@ const Mono = (function () {
     ownedProps(r, u).forEach(i => { if (M.mort[i]) mo++; });
     return mo ? '（抵着 ' + mo + ' 块，那几块收不到租）' : '';
   }
-  /* 一行地产：名字 · 地价 · 租，右边能干什么就摆什么钮（干不了的一个不摆，不留死钮） */
+  /* 一行地产：名字 · 地价 · 租，右边能干什么就摆什么钮。抵押不在这页（她 10-16 18:11：
+     抵押藏起来，只在付不出钱那一刻作为筹钱的一条路出现），抵过的那几块留一个赎回钮 */
   function deedRow(r, M, i) {
     const acts = [];
     const can = canBuild(r, 'me', i);
     if (can.ok) acts.push('<button class="mc-act" data-k="build" data-i="' + i + '">盖 ' + can.cost + '</button>');
     if (M.lv[i] | 0) acts.push('<button class="mc-act" data-k="sell" data-i="' + i + '">拆一档 +' + Math.round(buildCost(r, i) * 0.5) + '</button>');
     if (M.mort[i]) acts.push('<button class="mc-act" data-k="back" data-i="' + i + '">赎回 ' + backCost(r, i) + '</button>');
-    else if (!(M.lv[i] | 0)) acts.push('<button class="mc-act" data-k="mort" data-i="' + i + '">抵押 +' + Math.max(20, Math.round(priceOf(r, i) * MORT_RATE)) + '</button>');
     const c = L(r).C[i];
     const note = (c && c.t === 'city' && !can.ok) ? '<em>' + esc(can.err) + '</em>' : '';
     return '<div class="mc-deed-row' + (M.mort[i] ? ' mort' : '') + '"><span class="nm"><b>' + esc(nameOf(r, i)) + '</b>' +
@@ -26694,7 +26822,7 @@ const Mono = (function () {
   function deedSheet(r) {
     const M = st(r);
     if (!ownedProps(r, 'me').length) { UI.toast('手上还没地产'); return; }
-    const mask = pop('盖楼与抵押', '<div class="gm-swipe"><div class="mc-deed">' +
+    const mask = pop('我的地产', '<div class="gm-swipe"><div class="mc-deed">' +
       '<div class="mc-deed-h"><span>地产</span><span>地价</span><span>租</span><span>能干什么</span></div>' +
       '<div id="mc-deed-rows"></div>' +
       (upOn(r) ? '<div class="mc-deed-f" id="mc-deed-f"></div>' : '<div class="mc-deed-f">这一局没开盖楼，只能看看。</div>') +
@@ -26704,8 +26832,7 @@ const Mono = (function () {
       if (!box) return;
       box.innerHTML = ownedProps(r, 'me').map(i => deedRow(r, MM, +i)).join('');
       const f = mask.querySelector('#mc-deed-f');
-      if (f) f.textContent = '全场还能盖 ' + (MM.stock | 0) + ' 颗（每人 ' + HOUSES_EACH + ' 颗的池子）' +
-        ((MM.stock | 0) <= 0 ? '——楼用完了，谁都盖不了' : '');
+      if (f) f.textContent = '升级不设上限（你的城、没抵押、钱够就能一档一档往上盖）；抵押只在付不出钱的时候才出现';
       box.querySelectorAll('.mc-act').forEach(b => b.addEventListener('click', () => runSafe('mc.deed.act', () => {
         if (!myAct(r)) return;
         const i = +b.dataset.i, k = b.dataset.k;
@@ -26732,57 +26859,6 @@ const Mono = (function () {
       if (x && x.err) UI.toast(x.err);
       touch(r);
     })));
-  }
-  function tradeSheet(r) {
-    const M = st(r);
-    if (!trOn(r)) { UI.toast('这一局没开换地'); return; }
-    const foes = alive(r).filter(u => u !== 'me' && tradable(r, u).length);
-    if (!foes.length) { UI.toast('场上没人有可换的地'); return; }
-    const pick = { ta: foes[0], give: [], take: [], cash: '' };
-    const mask = document.createElement('div');
-    mask.className = 'dialog-mask';
-    mask.innerHTML = '<div class="dialog dialog-wide"><div class="dialog-title">找 TA 换地</div>' +
-      '<div class="form-body" id="mc-trade-b"></div><div class="dialog-btns">' +
-      '<button class="btn btn-secondary" data-x>取消</button><button class="btn btn-primary" data-ok>发给 TA</button></div></div>';
-    document.getElementById('dialog-layer').appendChild(mask);
-    UI.raise(mask);
-    mask.querySelector('[data-x]').addEventListener('click', () => mask.remove());
-    mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
-    function row(label, list, sel, side) {
-      return '<div class="form-label">' + label + '</div><div class="gm-swipe"><div class="mc-chips" data-side="' + side + '">' +
-        (list.length ? list.map(i => '<button class="gm-rchip' + (sel.indexOf(i) >= 0 ? ' on' : '') + '" data-i="' + i + '">' +
-          esc(nameOf(r, i)) + ' ' + priceOf(r, i) + '</button>').join('') : '<span class="mc-none">这一边没可换的</span>') + '</div></div>';
-    }
-    function draw() {
-      const ta = pick.ta, M2 = st(r);
-      mask.querySelector('#mc-trade-b').innerHTML =
-        '<div class="gm-opt"><span>跟谁</span>' + foes.map(u => '<button class="gm-rchip' + (u === ta ? ' on' : '') +
-          '" data-ta="' + u + '">' + esc(nm(u)) + '</button>').join('') + '</div>' +
-        row('你给出的地', tradable(r, 'me'), pick.give, 'give') +
-        row('你要它的地', tradable(r, ta), pick.take, 'take') +
-        '<div class="form-row"><div class="form-label">找补（正数你添钱，负数要它添）</div>' +
-        '<input class="input" type="number" id="mc-tcash" value="' + esc(pick.cash) + '" placeholder="0">' +
-        '<small class="mc-tip">你手上 ' + (M2.cash['me'] | 0) + '，' + esc(nm(ta)) + ' 手上 ' + (M2.cash[ta] | 0) + '</small></div>' +
-        '<div class="mc-deed-f">有楼的先把楼拆了、抵着押的先赎回，这两类都不列进来。点一下选中，再点一下取消。</div>';
-      mask.querySelectorAll('[data-ta]').forEach(b => b.addEventListener('click', () => { pick.ta = b.dataset.ta; pick.take = []; draw(); }));
-      mask.querySelectorAll('[data-side]').forEach(box => box.addEventListener('click', e => {
-        const b = e.target.closest ? e.target.closest('.gm-rchip') : null;
-        if (!b) return;
-        const arr = pick[box.dataset.side], i = +b.dataset.i, at = arr.indexOf(i);
-        if (at >= 0) arr.splice(at, 1); else arr.push(i);
-        draw();
-      }));
-      const ci = mask.querySelector('#mc-tcash');
-      if (ci) ci.addEventListener('input', () => { pick.cash = ci.value; });
-    }
-    draw();
-    mask.querySelector('[data-ok]').addEventListener('click', () => runSafe('mc.trade.ok', () => {
-      if (!myAct(r)) return;
-      const x = tradeAsk(r, pick.ta, pick.give, pick.take, Math.round(+pick.cash || 0));
-      if (x && x.err) { UI.toast(x.err); return; }
-      mask.remove();
-      touch(r);
-    }));
   }
   /* 手里那颗按下去：能直接用的就用，要先挑一格/挑个数的就进对应那一页；干不了的事不摆钮 */
   function useItemBtn(r) {
@@ -26835,7 +26911,6 @@ const Mono = (function () {
       seg('dbl', '连掷三个双数就进狱', [['1', '开'], ['0', '关']]) +
       seg('up', '盖楼与抵押', [['1', '开'], ['0', '关']]) +
       seg('it', '道具（歇脚那一格摸一颗）', [['1', '开'], ['0', '关']]) +
-      seg('tr', '与 TA 换地', [['1', '开'], ['0', '关']]) +
       row('cash', '起步金（300~3000）', c.cash, '每人开局这么多', '') +
       row('passGo', '过起点领（50~400）', c.passGo, '绕一圈领这些', '') +
       row('goal', '目标资产（留空按上面档位算）', c.goal, '填了就以这个数为准，“不收场”也能靠它收', '留空') +
@@ -26865,8 +26940,8 @@ const Mono = (function () {
       prev.textContent = '这套数开出来：20 格环 ' + l.cities + ' 座城 · 内容格 ' + R.ev + (mix ? '（' + mix + '）' : '') + ' · 目标 ' +
         (R.goal > 0 ? R.goal + ' 元' : '不收场') + ' · 每人最多 ' + (R.cap > 0 ? R.cap + ' 轮' : '不设上限') +
         (R.dbl ? ' · 连掷三双进狱' : '') +
-        (R.up ? ' · 楼三档（租 1/3/8/20 倍），全场共 ' + (2 * HOUSES_EACH) + ' 颗可盖' : '') +
-        (R.it ? ' · 歇脚摸道具' : '') + (R.tr ? ' · 可与 TA 换地' : '');
+        (R.up ? ' · 楼三档（租 1/3/8/20 倍），升级不限次数不限块数' : '') +
+        (R.it ? ' · 歇脚摸道具' : '') + ' · 机会/命运里有换地券';
     }
     mask.querySelectorAll('[data-ck]').forEach(b => b.addEventListener('click', () => {
       pend[b.dataset.ck] = b.dataset.cv;
@@ -26942,14 +27017,13 @@ const Mono = (function () {
       step, land, tryBuy, payRent, draw, bankrupt, nextTurn, begin, askBuy, rankRows, endIt, popCard,
       myRoll, myBuy, aiWantsBuy, taTurn, onTimeout, playFx, fitBoard,
       /* C 期那套：判定、记账、浮层都只这一个口，验收也从这里读 */
-      upOn, itOn, trOn, canBuild, doBuild, doSell, doMort, doBack, buildCost, backCost, lvOf, lvName, mortOf,
-      groupCells, groupSum, ownsGroup, stockMax, houseTxt, deedNote, tradable, tradeAsk, fills,
-      giveItem, useItem, useItemBtn, pickDo, aiUseItem, aiBuild, diceOf, deedSheet, tradeSheet, diceSheet, pop
+      upOn, itOn, canBuild, doBuild, doSell, doMort, doBack, buildCost, backCost, lvOf, lvName, mortOf,
+      groupCells, groupSum, ownsGroup, stockMax, houseTxt, deedNote, raiseWays, doSwapLand, aiSwapLand,
+      giveItem, useItem, useItemBtn, pickDo, aiUseItem, aiBuild, diceOf, deedSheet, swapSheet, raiseSheet, shortfall, endShort, endSwap, diceSheet, pop
     };
   }
   return { def };
 })();
-
 /* =====================================================
    LOVE♡X · billiards.js —— 台球（双人，8 球制重做）
    她 10-09 13:02 口述：台球一塌糊涂点不动杆；解除游戏图标/配色限制，按参考文档
@@ -27761,7 +27835,8 @@ const Games = (function () {
     const g = DB.state.games = DB.state.games || {};
     g.rooms = g.rooms || {}; g.records = g.records || [];
     g.wheelCfg = g.wheelCfg || { reds: [52, 520, 1314, 5200], weights: { red: 20, truth: 20, dare: 20, errand: 20, blank: 20 } };
-    g.propsStyle = g.propsStyle || 'mono';
+    /* 她 10-16 18:00：转盘只留彩色——配色开关（彩色 / 黑白两套）连同两条色板一起拆了。
+       旧存档里那个字段不再读，也不往外写（留着不动，不给她的数据添乱）。 */
     return g;
   }
   function esc(s) { return UI.escapeHtml(s); }   // 全站唯一口径在 UI.escapeHtml（09-02 拢条）
@@ -28647,15 +28722,12 @@ const Games = (function () {
     const rs = document.getElementById('room-resign'); if (rs) rs.addEventListener('click', resign);
     const qb = document.getElementById('room-quick'); if (qb) bindFab(qb);
     /* 她 08-29 定：道具入口=双击对方头像（双击 450ms 内两下；手机点两下同效）
-       08-30 纠察二：八人桌要每一格都点得动（以前只绑了第一个），并且记住双击的是谁 */
-    body.querySelectorAll('.gm-player[data-uid]:not([data-uid="me"])').forEach(chip => {
-      let lastTap = 0;
-      chip.addEventListener('click', () => {
-        const now = Date.now();
-        if (now - lastTap < 450) { lastTap = 0; propTarget = chip.dataset.uid; openPropRing(chip.dataset.uid); }
-        else lastTap = now;
-      });
-    });
+       08-30 纠察二：八人桌要每一格都点得动（以前只绑了第一个），并且记住双击的是谁
+       她 10-16 18:00：「我为啥不能双击头像选道具？之前不就和你说了游戏都要做成这样的吗」
+       真因＝这条双击只绑在壳子自己画的 .gm-player 座位上（而且每次重绘只绑一次），
+       大富翁的座位是它自己画的 .mc-pk、不在 .gm-players 里——所以大富翁里双击等于点空气。
+       改成整页代理一次挂上：不随重绘丢，凡标了 data-uid 的座位（壳子的、各游戏的）都吃得到。 */
+    bindPropDoubleTap();
     closePropRing();   // 整页重绘后旧环指向的座位已死，直接收掉
     /* 装回去放在最后：页内输入框可能是上面 defOf(r).render() 里游戏自己画的，
        在 innerHTML 那一秒它还根本不存在——第一轮就是这么没装上的 */
@@ -28693,19 +28765,79 @@ const Games = (function () {
   /* 两个面板共用一套开合：开一个关另一个（她 08-29：道具要一眼找得到，独立成「道具」钮） */
   /* 她 10-09 13:53：道具改成环绕对方头像一圈小图标（纯图标、点即用），不再开下方一行。
      双击头像（08-29 口径不变）→ 图标绕座位上半圈展开，点空处收，扔完即收。 */
+  /* 座位元素：壳子画的 .gm-player 和游戏自己画的 .mc-pk（大富翁）都要找得到——
+     道具环、飞行动画、命中抶动全走这一个口，不然「大富翁里手不了道具」这类不统一又会冒出来。 */
+  function seatEl(uid) {
+    if (!uid) return null;
+    const sel = '[data-uid="' + uid + '"]';
+    return document.querySelector('.gm-players .gm-player' + sel) ||
+           document.querySelector('.gm-player' + sel) ||
+           document.querySelector('.mc-pk' + sel) ||
+           document.querySelector(sel);
+  }
+  /* 双击对方头像开道具环（全游戏一份，整页代理）
+     她 10-25 13:46 又报「我无法双击头像弹道具」：只认 click 这条路太脆——
+     WebView / 触屏下第二下被当成手势吞掉、或点击合成慢到超过 450ms，都不会进到 click。
+     现在两下都算：pointerup（手指抬起）+ click（鼠标 / 无障碍），同一指只计一下；
+     窗口 450 → 600ms；滑动超过 12px 不算点击（刷盘不会被当成双击）。 */
+  function bindPropDoubleTap() {
+    if (bindPropDoubleTap._done) return;
+    bindPropDoubleTap._done = true;
+    let lastUid = '', lastAt = 0;
+    let downX = 0, downY = 0, downAt = 0, moved = 0, clickArmed = false;
+    const seatOf = ev => {
+      const t = ev && ev.target;
+      const chip = t && t.closest ? t.closest('[data-uid]') : null;
+      if (!chip || !chip.dataset || !chip.dataset.uid) return null;
+      if (!chip.classList.contains('gm-player') && !chip.classList.contains('mc-pk')) return null;
+      return chip;
+    };
+    const tapIn = (uid, at) => {
+      if (!uid || uid === 'me') return;
+      if (lastUid === uid && at - lastAt <= 600) { lastUid = ''; lastAt = 0; propTarget = uid; openPropRing(uid); return; }
+      lastUid = uid; lastAt = at;
+    };
+    document.addEventListener('pointerdown', ev => {
+      downX = ev.clientX; downY = ev.clientY; downAt = Date.now(); moved = 0;
+    }, true);
+    document.addEventListener('pointermove', ev => {
+      if (!downAt) return;
+      if (Math.abs(ev.clientX - downX) > 12 || Math.abs(ev.clientY - downY) > 12) moved = 1;
+    }, true);
+    document.addEventListener('pointerup', ev => {
+      const chip = seatOf(ev), now = Date.now();
+      const quick = downAt && (now - downAt) < 800 && !moved;
+      downAt = 0;
+      if (!chip || !quick) return;
+      clickArmed = true;                    // 这一下已经计过，紧随其后的 click 不再算第二下
+      tapIn(chip.dataset.uid, now);
+    }, true);
+    document.addEventListener('click', ev => {
+      if (clickArmed) { clickArmed = false; return; }
+      const chip = seatOf(ev);
+      if (chip) tapIn(chip.dataset.uid, Date.now());
+    }, true);
+  }
   function openPropRing(uid) {
     closePropRing();
-    const host = document.querySelector('.gm-players');
-    const chip = host && host.querySelector('.gm-player[data-uid="' + uid + '"]');
+    const chip = seatEl(uid);
     if (!chip || !PROPS.length) return;
     const ring = document.createElement('div');
     ring.id = 'gm-prop-ring';
     const rc = chip.getBoundingClientRect();
-    ring.style.left = Math.round(rc.left + rc.width / 2) + 'px';
-    ring.style.top = Math.round(rc.top + rc.height / 2) + 'px';
-    const R = 56;
+    const n = PROPS.length, arc = Math.PI / (n + 1), R = 58;
+    /* 环开在有空的那一侧：座位在上半屏就往下去（座位带现在横在棋盘上方，往上开会顶到标题栏、
+       看上去像贴在别人头上），在下半屏才往上扇；锚点再按屏边收一下——两颗道具不许出屏（出屏就等于“没弹”）。 */
+    const cx = rc.left + rc.width / 2, cy = rc.top + rc.height / 2;
+    const below = cy < innerHeight * 0.52;
+    const base = below ? Math.PI / 2 : -Math.PI / 2;
+    const padX = R + 22, padY = R + 22;
+    const ax = Math.max(padX, Math.min(cx, Math.max(padX, innerWidth - padX)));
+    const ay = Math.max(padY, Math.min(cy, Math.max(padY, innerHeight - padY)));
+    ring.style.left = Math.round(ax) + 'px';
+    ring.style.top = Math.round(ay) + 'px';
     PROPS.forEach((p, i) => {
-      const a = -Math.PI / 2 + (i - (PROPS.length - 1) / 2) * (Math.PI / (PROPS.length + 1));
+      const a = base + (i - (n - 1) / 2) * arc;
       const b = document.createElement('button');
       b.className = 'gm-ring-prop';
       b.title = p.name;
@@ -28862,10 +28994,8 @@ const Games = (function () {
      花/锤保留 EMOJI（她 08-29 亲自放行过，本轮只修时序，不自作主张改风格）。
      挂 body + fixed：整页重建杀不到（上一轮的真根因）。 */
   function propFly(p, fromUid, toUid) {
-    const host = document.querySelector('.gm-players');
-    if (!host) return;
-    const fromEl = host.querySelector('.gm-player[data-uid="' + fromUid + '"]');
-    const toEl = host.querySelector('.gm-player[data-uid="' + toUid + '"]');
+    const fromEl = seatEl(fromUid);
+    const toEl = seatEl(toUid);
     if (!fromEl || !toEl) return;
     const egg = p.id === 'egg';
     const el = document.createElement('div');
@@ -28907,8 +29037,7 @@ const Games = (function () {
   }
   /* 命中：目标抖一下 + 碎态。鸡蛋的碎态画全：壳裂三片（带白内侧）+ 蛋液摊开 + 蛋黄滑定 + 墨点飞溅 */
   function hitAvatar(toUid, p) {
-    const host = document.querySelector('.gm-players');
-    const tEl = host && host.querySelector('.gm-player[data-uid="' + toUid + '"]');
+    const tEl = seatEl(toUid);
     if (!tEl) return;
     tEl.classList.add('gm-splat');
     setTimeout(() => tEl.classList.remove('gm-splat'), 620);
@@ -29268,9 +29397,9 @@ const Games = (function () {
       if (roll <= 0) { idx = i; break; }
     }
     const grad = WHEEL_SECTORS.map((k, i) => {
-      const c = S().propsStyle === 'sticker'
-        ? ['#E9C46A', '#94B8D4', '#A8C7A0', '#D9A8A8', '#CFCFCF'][i]
-        : ['#FFFFFF', '#EDEDF0', '#E2E2E6', '#D8D8DC', '#CECED2'][i];
+      /* 她 10-16 18:00：「把游戏里面的转盘配色删了，就只留彩色」——配色开关连同两套色板
+         一起拆了，就这一套彩色。 */
+      const c = ['#E9C46A', '#94B8D4', '#A8C7A0', '#D9A8A8', '#CFCFCF'][i];
       return c + ' ' + (i * 72) + 'deg ' + ((i + 1) * 72) + 'deg';
     }).join(',');
     overlay.innerHTML =
@@ -29279,7 +29408,7 @@ const Games = (function () {
         '<div class="gm-wheel-wrap"><div class="gm-wheel-pointer"></div>' +
         '<div class="gm-wheel" id="gm-wheel" style="background:conic-gradient(' + grad + ')">' +
           WHEEL_SECTORS.map((k, i) =>
-            '<span class="gm-wlabel' + (S().propsStyle === 'sticker' ? ' sticker' : '') + '" style="transform:translate(-50%,-50%) rotate(' + (i * 72 + 36) + 'deg) translateY(-86px)">' + esc(WHEEL_NAMES[k]) + '</span>').join('') +
+            '<span class="gm-wlabel sticker" style="transform:translate(-50%,-50%) rotate(' + (i * 72 + 36) + 'deg) translateY(-86px)">' + esc(WHEEL_NAMES[k]) + '</span>').join('') +
           '<span class="gm-wheel-hub"><i data-icon="heart-sketch" data-size="18"></i></span>' +
         '</div></div>' +
         '<div class="gm-wheel-result" id="gm-wheel-result"></div>' +
@@ -29316,35 +29445,48 @@ const Games = (function () {
     } else {
       const gname = { truth: '转盘-真心话', dare: '转盘-大冒险', errand: '转盘-使唤' }[kind];
       const label = WHEEL_NAMES[kind];
-      /* 她 10-04：转盘不是假设——输家真回答。TA 用 TA 的字卡库/游戏语料抽一句真发进聊天；
-         我输了就弹表单，答完同一条口发进聊天（包括我也是） */
-      const lconv = convOf(loser);
+      /* 她 10-04：转盘不是假设——输家真回答。
+         她 10-16 18:00：「要是真心话要把问题真的设计出弹窗来先回答问题发进聊天界面……
+         就全部做一个文字说我回答？我他妈回答了吗？起到了 0 个作用」。当时两个真 bug：
+         ① 弹窗里根本没有「题」——只让人“答一句”，真心话没有问句就不成立；
+         ② 我输的时候 convOf('me') 永远找不到会话（会话是按对方 id 记的），
+            于是 lconv 那句守卫恒假、弹窗永远不弹，只剩一行干巴巴的文字。
+         现在：先把题抽出来摆在弹窗上；会话按在局对手找；答完把题与答一起发进聊天。 */
+      const oppConvs = (r.players || []).filter(u => u !== 'me').map(u => convOf(u)).filter(Boolean);
+      const lconv = (loser === 'me' ? oppConvs[0] : convOf(loser)) || oppConvs[0] || null;
+      const rq = pickLine(gname, loser === 'me' ? null : loser, null) ||
+        (kind === 'truth' ? '（真心话题库空了）说一件你今天最想告诉我的事' : '（题库空了）随便做一件让我记住的事');
       if (loser === 'me') {
-        feed(r, 'sys', '转中「' + label + '」——该你答了');
-        if (lconv && typeof Home !== 'undefined' && Home.openForm) {
+        feed(r, 'sys', '转中「' + label + '」——' + esc(rq));
+        if (typeof Home !== 'undefined' && Home.openForm) {
           Home.openForm({
             title: label + ' · 该你答了',
-            fields: [{ key: 'say', label: label + '，答一句（答完发进聊天）', type: 'textarea' }],
+            fields: [{ key: 'say', label: rq, type: 'textarea' }],
             okText: '答了',
             onSubmit(v) {
               const t = String(v.say || '').trim();
               if (!t) return '总得答点什么吧';
-              if (typeof Chat !== 'undefined' && Chat.sendTo) Chat.sendTo(lconv, t);
-              else if (typeof Engine !== 'undefined' && Engine.pushRaw)
-                Engine.pushRaw(lconv, { from: 'me', type: 'text', text: t, ts: Date.now() });
+              /* 题与答一起落聊天：聊天里看得见“问了什么、怎么答的”，不然就只是一句没头没尾的话 */
+              const payload = rq + '\n——' + t;
+              if (lconv && typeof Chat !== 'undefined' && Chat.sendTo) Chat.sendTo(lconv.id, payload);
+              else if (lconv && typeof Engine !== 'undefined' && Engine.pushRaw)
+                Engine.pushRaw(lconv, { from: 'me', type: 'text', text: payload, ts: Date.now() });
               feed(r, 'me', esc(t));
+              try { DB.save(); renderRoom(); } catch (e) { /* 重画失败也不吞掉已发的消息 */ }
               return null;
             }
           });
+        } else if (typeof UI !== 'undefined' && UI.toast) {
+          UI.toast(label + '：' + rq);      // 表单开不出来也不能让题默默消失
         }
         resultText = label + '——该你答（答完落聊天）';
       } else {
         const line = pickLine(gname, loser, null) || '（语料空空，去文件管理·游戏库加几条）';
         if (lconv && line && typeof Engine !== 'undefined' && Engine.pushRaw) {
-          Engine.pushRaw(lconv, { from: 'ai', text: line, senderId: loser });
+          Engine.pushRaw(lconv, { from: 'ai', text: rq + '\n——' + line, senderId: loser });
           if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender();
         }
-        feed(r, 'sys', '转中「' + label + '」——' + esc(name(loser)) + '：' + esc(line));
+        feed(r, 'sys', '转中「' + label + '」——' + esc(rq) + ' → ' + esc(name(loser)) + '：' + esc(line));
         resultText = label + '：' + name(loser) + ' ' + line;
       }
     }
@@ -29369,7 +29511,6 @@ const Games = (function () {
       { key: 'mine', label: '扫雷棋盘（边长 / 雷数）' },
       { key: 'uno', label: 'UNO 规则（叠加 / 喊话 / 质疑）' }
     ].concat(auto).concat([
-      { key: 'prop', label: '转盘配色：' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿') + '（点一下切换）' },
       { key: 'chat', label: 'TA 下棋时说话频率：' + chatProb() + '%（点一下改）' }
     ])).then(k => {
       if (k && String(k).indexOf('cfg:') === 0) {
@@ -29377,10 +29518,7 @@ const Games = (function () {
         if (d && d.openCfg) d.openCfg();
         return;
       }
-      if (k === 'prop') {
-        S().propsStyle = S().propsStyle === 'sticker' ? 'mono' : 'sticker';
-        DB.save(); UI.toast('转盘已切换为' + (S().propsStyle === 'sticker' ? '彩色贴纸' : '黑白线稿'));
-      } else if (k === 'mine') {
+      if (k === 'mine') {
         const mc = DB.state.games.mineCfg = DB.state.games.mineCfg || { size: 16, mines: 40 };
         Home.openForm({
           title: '扫雷棋盘（新对局生效）',
@@ -29606,7 +29744,10 @@ const Games = (function () {
     /* 游戏库分组只读（09-14 B4）：游戏自己拼卡池用，不是第二个写入口 */
     libGroup,
     /* 逐组补缺只这一个口（09-14 B4）：导出去只为验收能重跑一遍看“补不补、会不会把她那条冲掉” */
-    ensureSeed
+    ensureSeed,
+    /* 给验收探针（10-16）：转盘“转中之后那一拍”得能直接驱动，
+       不然真心话那条链（抽题 → 弹窗 → 答完落聊天）只能靠转盘慢慢转出来 */
+    applyWheel, prizeRoles, WHEEL_SECTORS, WHEEL_NAMES
   };
 })();
 
@@ -29631,7 +29772,7 @@ const Profile = (function () {
         img = document.createElement('img');
         av.insertBefore(img, av.firstChild);
       }
-      img.src = c.avatar;
+      Home.avaFill(img, c.avatar);
       av.classList.add('has-img');
     } else {
       if (img) img.remove();
@@ -30289,7 +30430,7 @@ const Call = (function () {
 
   function avatarHTML(c, size) {
     return c && c.avatar
-      ? '<img src="' + c.avatar + '">'
+      ? '<img' + Home.avaAttr(c.avatar) + '>'
       : '<span>' + (c ? Home.displayName(c).slice(0, 1) : '?') + '</span>';
   }
 
@@ -30754,7 +30895,7 @@ const Call = (function () {
           (st.pinned === 'me' ? ' pinned' : '') + '" data-pid="me">' +
           (on && st.camOn && stream
             ? '<video class="cell-video" autoplay muted playsinline></video>'
-            : '<div class="call-avatar sm">' + (myAv ? '<img src="' + myAv + '">' : '<span>' + esc(myName.slice(0, 1)) + '</span>') + '</div>') +
+            : '<div class="call-avatar sm">' + (myAv ? '<img' + Home.avaAttr(myAv) + '>' : '<span>' + esc(myName.slice(0, 1)) + '</span>') + '</div>') +
           '<div class="cell-name">' + esc(myName) + '</div></div>';
         mid = '<div class="call-grid n' + Math.min(joined.length + 1 + (inviteable ? 1 : 0), 9) + (st.pinned ? ' pin' : '') + '">' +
           myCell(true) +
@@ -33038,20 +33179,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
   runSafe('theme.deco', () => applyDeco());
   /* 她 10-05：重进后静默重挂（权限还在就重新接上；权限真没了就把开关改成关） */
   runSafe('notify.resume', () => Notify.resume());
-  /* 她 10-05 新提：每天自动备份一份全档（一天一次，只留最近 7 天）。
-     她 10-10 16:31 报“压根没有全档备份”钉出的时序炸弹：开页立刻打包全量（大档几十秒），
-     而热更新在开页 10 秒内拿到新版就 web.reload()——备份每次都被摧死在半路，一个文件都没写成。
-     她 10-14 16:54：「每日备份不要在一进去的时候备份了……固定时间，每天晚上进行一次备份，
-     不然确实像你说的又要备份又要导入不好」。所以不再开页就备：到点（默认 22:00）之后
-     第一次打开就补当天那份；一直开着就每 10 分钟看一眼到点没（dailySnap 自己会管“今天备过没”）。 */
-  const BK_AT = 22 * 60;                                   /* 每天晚上 22:00（她没点具体时刻，工程值待拍） */
-  function backupDue(now) { const d = new Date(now); return (d.getHours() * 60 + d.getMinutes()) >= BK_AT; }
-  function backupTick() {
-    try { if (backupDue(Date.now())) runSafe('backup.daily', () => { DB.dailySnap(); }); } catch (e) {}
-  }
-  backupTick();
-  setInterval(backupTick, 10 * 60 * 1000);
-  window.__LX_BK = { due: backupDue, tick: backupTick };   /* 探针直测「到点才备」（10-14 她改成晚上固定时间） */
+  /* 她 10-25 13:46：「删去自动备份功能……自从加了这个功能频繁出问题，我一直在丢失聊天记录或者图片」
+     —— 自动备份（每天定时一份全档、自动往手机「下载」里写文件、数据管理里的「恢复上次自动备份」、
+     导入前自动先存一份）整套拆掉，一件都不留：不再有任何“自己跑起来动她数据”的备份动作。
+     留下的只有她自己按的两件事：手动导出/导入，和「补回丢失的图片」（选她之前那份备份文件）。 */
 
     // 首页左上角头像 → 我的主页（推入式，可返回）
     document.getElementById('btn-side').addEventListener('click', () => Router.go('mine'));
@@ -33066,6 +33197,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
        渲染出来的那一刻由它去取本体换 objectURL（真取不到才标 data-mv-miss）。
        有了这条，媒体不必先全铺进内存，也不会再「看着像全丢」。 */
     try { Media.watchMedia(); } catch (e) { /* 网装不上最多是图慢一拍，不拦启动 */ }
+    /* 她 10-16 18:03「我的头像总是丢」：开机头一两秒里库还没热（原生桥/IDB 都没就绪），
+       这时候补图没补上会被渲染网按指纹记住、不再重试——头像就一直空着，直到下次导入或重开。
+       这里开机后无条件再补一轮（只重扫、只写地址，一个字节的数据都不改）。 */
+    setTimeout(() => { try { Media.recheck(); } catch (e) { /* 补不回来最多是维持原样，不拦界面 */ } }, 2600);
     window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
     /* 真起来了：抹掉「本次启动」标记（下次开页不再走省内存模式），顺便看还有多少媒体没铺 */
     try { DB.bootOk(); } catch (e) { /* 抹标记失败只影响下次是否保守启动，不拦界面 */ }
@@ -33111,7 +33246,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         img = document.createElement('img');
         av.insertBefore(img, av.firstChild);
       }
-      img.src = p.avatar;
+      Home.avaFill(img, p.avatar);
       av.classList.add('has-img');
     } else {
       if (img) img.remove();
@@ -33130,7 +33265,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     b.innerHTML = '';
     if (p.avatar) {
       const im = document.createElement('img');
-      im.src = p.avatar;
+      Home.avaFill(im, p.avatar);
       b.appendChild(im);
     } else {
       b.textContent = (p.name || '清').slice(0, 1);
@@ -33308,10 +33443,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         return a.length ? '黑匣子错误 ' + a.length + ' 条（长按心事簿标题可看）\n' : ''; } catch (e) { return ''; }
     }
     async function storageOverview() {
-      const bks = await DB.listBackups();
-      const bkTxt = bks.length
-        ? ('每日自动备份 ' + bks.length + ' 份 · 最近 ' + bks[0].day + '（留最近 7 天）\n')
-        : '每日自动备份：还没存过（每天开页时自动存一份）\n';
       let bytes = 0;
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -33339,74 +33470,23 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
               : '图片/语音已托管 ' + vs.packed + ' 个·' + vs.kb + ' KB（不占主档配额）\n'
                 + (vs.missing ? '有 ' + vs.missing + ' 个媒体实体找不回了（本体被浏览器/手机清掉了，回不来；原图还在相册或微信里的，重新发一遍就补回来）\n' : ''))
           + '存储受浏览器保护：' + (typeof DB.persistState === 'function' ? DB.persistState() : '未知') + '\n'
-          + bkTxt
           + blackboxLine()
           + '数据仅存本机，清缓存前记得导出备份。'
       });
     }
     document.getElementById('cell-storage').addEventListener('click', async () => {
-      let bks = [];
-      try { bks = await DB.listBackups(); } catch (e) { logErr('存储管理：读备份失败 ' + (e && e.message)); }
       /* 她 10-14 17:19：「我只知道我自己手动备份和每日备份，剩下那都是啥乱七八糟的，没用的都给我去掉」
          —— 「按天找回聊天记录（快照）」是我 08-30 加的口，她从来没用过，拿掉；
          图片那条留着但改成人话（「补回丢失的图片」）——她现在手上只有一份旧备份，
-         就靠这个把图补回原位、不动现在的聊天记录。 */
+         就靠这个把图补回原位、不动现在的聊天记录。
+         她 10-25 13:46：连「每日自动备份」这一条也拆了——只留她手点的那两件。 */
       const act = await UI.actionSheet('存储管理', [
         { key: 'info', label: '本机占用概览' },
-        { key: 'harvest', label: '补回丢失的图片（选之前的备份文件）' },
-        { key: 'bk', label: bks.length ? ('每日自动备份（已存 ' + bks.length + ' 份）') : '每日自动备份（还没存过）' }
+        { key: 'harvest', label: '补回丢失的图片（选之前的备份文件）' }
       ]);
       if (act === 'info') { storageOverview(); return; }
       if (act === 'harvest') { harvestInput.value = ''; harvestInput.click(); return; }
-      if (act === 'bk') { openBackups(); return; }
     });
-
-    /* --- 每天自动备份（她 10-05）：进来看见存了几份、能恢复、能导出成文件 ---
-       备份写在 IDB（媒体本体本来就在 IDB，主档里是引用串，一份只有几十 KB）。
-       如实交底：IDB 被浏览器/手机整个清掉时备份也跟着没——所以还留了「导出成文件」这条硬退路。 */
-    async function openBackups() {
-      let list = [];
-      try { list = await DB.listBackups(); } catch (e) { logErr('备份：读列表失败 ' + (e && e.message)); }
-      const on = DB.state.settings.dailyBackup !== false;
-      const opts = [{ key: 'now', label: '现在就备份一份' }];
-      if (list.length) opts.push({ key: 'rst', label: '用某一天备份恢复（共 ' + list.length + ' 份）' });
-      opts.push({ key: 'exp', label: list.length ? ('把最近这份导出成文件（' + list[0].day + '）') : '把最近这份导出成文件' });
-      opts.push({ key: 'tog', label: on ? '关掉「每天晚上自动备份」' : '打开「每天晚上自动备份」' });
-      const act = await UI.actionSheet('每日自动备份' + (on ? '' : '（现在关着）'), opts);
-      if (!act) return;
-      if (act === 'now') {
-        const okNow = await DB.dailySnap(true);
-        UI.toast(okNow ? '已备份今天这份' : '没备成：本机没开 IndexedDB 或空间不够');
-        return;
-      }
-      if (act === 'tog') {
-        DB.state.settings.dailyBackup = !on; DB.save();
-        UI.toast(!on ? '已打开：以后每天晚上自动备份一份' : '已关掉每天晚上自动备份');
-        return;
-      }
-      if (act === 'exp') {
-        const day0 = list.length ? list[0].day : null;
-        const hit = day0 ? await DB.readBackup(day0) : null;
-        if (!hit) { UI.toast('还没得备份可导'); return; }
-        /* 低内存版（她 10-13 09:17）：不把整份拼成一个 JS 字符串，页面卡着时也打得出来 */
-        await saveBundle(hit.doc, 'all', 'LOVEX自动备份-' + day0, '已导出这份备份文件');
-        return;
-      }
-      if (act === 'rst') {
-        const day = await UI.actionSheet('选一份备份恢复（整档覆盖，当前数据会被这份替掉）',
-          list.map(x => ({ key: x.day, label: x.day + ' · ' + new Date(x.savedAt).toLocaleTimeString().slice(0, 5) })));
-        if (!day) return;
-        const go = await UI.confirmBox({
-          title: '恢复备份', okText: '恢复',
-          text: '会把现在的数据整档换成 ' + day + ' 那一份（今天的改动会丢，但恢复前那一份会自动存回去，可再换回来）。'
-        });
-        if (!go) return;
-        await DB.dailySnap(true);                       /* 先给现状存一份，防恢复错了回不去 */
-        const done = await DB.restoreBackup(day);
-        UI.toast(done ? '已恢复到 ' + day + '，刷新中…' : '这份备份读不出来');
-        if (done) setTimeout(() => location.reload(), 900);
-      }
-    }
 
     /* --- 从旧备份文件里找回图片（她 10-06 提的主意：「可以利用之前的旧备份去导入还原」）---
        备份文件里那些图是内联的真数据，按同一把钥匙（hash）就能对上现在只剩引用的位置——
@@ -33685,7 +33765,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       const key = await UI.actionSheet('数据管理', [
         { key: 'exp-all', label: '导出全部数据' },
         { key: 'imp-all', label: '导入全部数据', danger: true },
-        { key: 'bak', label: '恢复上次自动备份' },
         { key: 'exp-one', label: '导出某联系人数据' },
         { key: 'imp-one', label: '导入某联系人数据' },
         { key: 'exp-msgs', label: '导出聊天记录' },
@@ -33696,7 +33775,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       else if (key === 'imp-one') contactFileInput.value = '', contactFileInput.click();
       else if (key === 'exp-msgs') exportMsgsData();
       else if (key === 'imp-msgs') msgsFileInput.value = '', msgsFileInput.click();
-      else if (key === 'imp-all' || key === 'bak') openLegacyFlow(key);
+      else if (key === 'imp-all') importAllFlow();
     });
     contactFileInput.addEventListener('change', () => {
       const f = contactFileInput.files && contactFileInput.files[0];
@@ -33805,14 +33884,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
 
     /* --- 导入恢复 --- */
     const fileInput = document.getElementById('import-file');
-    function openLegacyFlow(key) {
-      if (key === 'imp-all') importAllFlow();
-      else if (key === 'bak') restoreBakFlow();
-    }
     async function importAllFlow() {
       const ok = await UI.confirmBox({
         title: '导入备份',
-        text: '导入会用备份文件覆盖当前全部数据。导入前会先把现在这一份存好（选错了能在「用某一天备份恢复」里换回来）。确定继续？',
+        text: '导入会用备份文件覆盖当前全部数据。确定继续？',
         danger: true, okText: '选择文件'
       });
       if (!ok) return;
@@ -33840,8 +33915,7 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
           if (back) setTimeout(() => location.reload(), 700);
           return;
         }
-          await DB.snapNow();          /* 整档换血前先把现状存一份（导错能换回来，她 10-14） */
-          await DB.importAllBundle(r.data);
+        await DB.importAllBundle(r.data);
         DB.save();                      // 整档换血立刻落盘：后面任何一步炸了新数据也不丢（她 10-10 实测：崩在渲染，导入白做）
         Theme.apply(DB.state.settings.theme, false);
         /* 09-02 拆全局钩子时 bindMine 里的 renderMine 成了局部函数，这里裸调必炸（她 10-10 实报
@@ -33882,7 +33956,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
         return;
       }
       if (kind === 'all') {
-        await DB.snapNow();            /* 同上：整档换血前先存现状 */
         await DB.importAllBundle(doc);
         DB.save();
         runSafe('import.recheck', () => Media.recheck(document.body));   /* 补回本体后当场重扫（重扫坏了也不能拦导入） */
@@ -33892,26 +33965,6 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
       }
     });
 
-    /* --- 恢复上次自动备份 --- */
-    async function restoreBakFlow() {
-      const info = DB.backupInfo();
-      if (!info || !info.savedAt) { UI.toast('还没有可用的自动备份'); return; }
-      const t = new Date(info.savedAt), p = n => String(n).padStart(2, '0');
-      const ok = await UI.confirmBox({
-        title: '恢复自动备份',
-        text: '将恢复到 ' + t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) +
-          ' ' + p(t.getHours()) + ':' + p(t.getMinutes()) +
-          ' 的状态（会话' + info.convs + '个 · 消息' + info.msgs + '条），当前数据会被覆盖。',
-        danger: true, okText: '恢复'
-      });
-      if (!ok) return;
-      DB.recoverFromBackup();
-      Theme.apply(DB.state.settings.theme, false);
-      /* 同 runImportText：整档换血后重载，不裸调 bindMine 的局部函数（renderMine is not defined） */
-      UI.toast('已恢复到上次备份');
-      setTimeout(() => location.reload(), 700);
-      return;
-    }
     /* 她 10-09 07:06「这个问题不要再犯」：设置页全绑完后立标记 + 暴露重绑口。
      哨兵（模板头）8s 后查这个标记，若页面开了但按钮没接线，弹一条「修复」直接重绑——
      不管哪种设备、哪种原因（init 中途抛错/装载时序），「点不动」都不再是死局。 */
