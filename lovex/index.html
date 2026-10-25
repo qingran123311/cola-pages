@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261025-181321 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261025-200348 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -6871,19 +6871,19 @@ var Quiz = (function () {
       case 'multi': { const k = randI(1, opts.length); return shuffle(opts).slice(0, k); }
       case 'sort': return shuffle(opts);
       case 'rate': { const w = [1, 2, 3, 2, 1]; let s = 0; w.forEach(x => s += x); let r = Math.random() * s; for (let i = 0; i < 5; i++) { r -= w[i]; if (r < 0) return i + 1; } return 3; }
-      case 'text': { const cards = cardPool(ctId); if (!cards.length) return '……'; const n = Math.min(randI(1, 3), cards.length); return shuffle(cards).slice(0, n).join(''); }
+      case 'text': { const cards = cardPool(ctId); if (!cards.length) return '……'; const n = Math.min(randI(1, 3), cards.length); return Engine.cardJoin(shuffle(cards).slice(0, n)); }   /* 她 10-25 20:00：多条字卡之间只空格/逗号，不许无缝插成一句（统一走 Engine.cardJoin） */
       default: return '';
     }
   }
-  /* 字卡 1~3 条拼接+20% emoji/颜文字装饰（她 17:28 口径：评论类支持 EMOJI 拼接），与聊天字卡同管线 */
-  const QZ_SEPS = ['，', '。', '、', '', ''];
+  /* 字卡 1~3 条拼接+20% emoji/颜文字装饰（她 17:28 口径：评论类支持 EMOJI 拼接），与聊天字卡同管线；
+     连接符统一走 Engine.cardJoin（她 10-25 20:00：只空格/逗号，旧那份「、。，＋两个空」已拆） */
   function comboText(ctId, lo, hi) {
     const cards = cardPool(ctId);
     if (!cards.length) return '……';
     const n = Math.min(randI(lo || 1, hi || 3), cards.length);
-    let s = Engine.decorate(pick(cards));
-    for (let i = 1; i < n; i++) s += QZ_SEPS[randI(0, QZ_SEPS.length - 1)] + Engine.decorate(pick(cards));
-    return s;
+    const picked = [];
+    for (let i = 0; i < n; i++) picked.push(pick(cards));
+    return Engine.cardJoin(picked, Engine.decorate);
   }
   function genComment(ctId) {
     return comboText(ctId, 1, 3);
@@ -13933,14 +13933,23 @@ const Engine = (function () {
   /* 拼字卡公共函数（二期P9）：聊天引擎与朋友圈发帖/评论共用（09-02 起朋友圈真的接上了，
      以前这句注释是假的——朋友圈没调过它）。cards=字卡文本池，minN/maxN=抽取条数区间，
      逐位随机间隔符；每条自带 emoji/颜文字装饰（内部走 maybeDecorate） */
-  const COMBO_SEPS = ['', ' ', '，'];   /* 她 10-07 口径演进：三种随机模式——直接拼接 / 空格 / 逗号（10-02 只拍两种，今天她点名补回逗号），等概率逐位抽 */
+  /* 多条字卡之间的连接（她 10-25 20:00 定：只在「空格 / 逗号」里随机，中间不许再无缝糊成一句）。
+     聊天拼卡、朋友圈发帖与评论拼卡、灵魂拷问答题拼卡、自由说话多卡——全都走这两个函数，别再各写一份分隔符表。 */
+  const CARD_SEPS = [' ', '，'];
+  function cardSep() { return CARD_SEPS[Math.floor(Math.random() * CARD_SEPS.length)]; }
+  function cardJoin(list, wrap) {
+    const f = (typeof wrap === 'function') ? wrap : (x => x);
+    let s = '';
+    (list || []).forEach((x, i) => { s += (i ? cardSep() : '') + f(x); });
+    return s;
+  }
   function buildCardCombo(cards, minN, maxN) {
     const lo = Math.max(2, Math.min(minN, maxN));
     const hi = Math.max(lo, maxN);
     const n = lo + Math.floor(Math.random() * (hi - lo + 1));
-    let s = maybeDecorate(pick(cards));
-    for (let i = 1; i < n; i++) s += COMBO_SEPS[Math.floor(Math.random() * COMBO_SEPS.length)] + maybeDecorate(pick(cards));
-    return s;
+    const picked = [];
+    for (let i = 0; i < n; i++) picked.push(pick(cards));
+    return cardJoin(picked, maybeDecorate);
   }
 
   /* AI主动拍一拍落地：全局aiPat库未屏蔽等概率抽取（决策#24）；
@@ -14090,7 +14099,7 @@ const Engine = (function () {
      每轮各管理员独立掷 autoMuteProb%，命中延迟 4~10 秒执行。原先另加的「每 4 分钟
      巡更钟」是我外加的，她不要，拆（2026-10-07） */
 
-  return { onUserMessage, pushRaw, buildCardCombo, maybeProactive, decorate: maybeDecorate, learn,
+  return { onUserMessage, pushRaw, buildCardCombo, cardJoin, cardSep, maybeProactive, decorate: maybeDecorate, learn,
            params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF, emotionLibrary: EMOTION_LIBRARY, pickEmotionTag };
 })();
 
@@ -15417,7 +15426,7 @@ const FreeTalk = (function () {
     rows.forEach(r => { if (Math.random() < 0.85) out.push(pick(r)); });
     if (out.length < 2) return null;
     for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
-    const line = Math.random() < 0.5 ? out.join('') : out.join('，');
+    const line = Engine.cardJoin(out);   /* 她 10-25 20:00：多条字卡之间只空格/逗号，不许再无缝连成一片 */
     if (!line || line.length > 46 || line.indexOf('undefined') >= 0) return null;
     return line;
   }
