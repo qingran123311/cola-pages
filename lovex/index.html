@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261025-200348 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261028-200032 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -1209,7 +1209,7 @@ body:not(.in-stack) #page-mine .nav-back{display:none}
 .msg-img-fade{opacity:0;transition:opacity .3s ease}
 .msg-img-fade.loaded{opacity:1}
 /* TA 自动涂鸦 + 我主动发的涂鸦：方形 SVG 有真实 intrinsic size，预览放大到约屏宽 58%；点击沿用全屏查看器 */
-.msg-img-doodle{display:block;width:min(58vw,228px);max-width:min(58vw,228px);max-height:300px;object-fit:contain;cursor:zoom-in}
+.msg-img-doodle{display:block;width:min(58vw,228px);max-width:min(58vw,228px);aspect-ratio:1;height:auto;object-fit:contain;cursor:zoom-in}
 /* 她 10-04：媒体本体丢失的占位（不画破图；找回口＝个人中心→存储管理→导出备份） */
 .msg-media-missing{font-size:12px;color:var(--t3);background:var(--fill);border-radius:8px;padding:10px 12px;max-width:132px;text-align:center}
 /* 她 10-14：渲染网真取不回本体（那才是真丢了）时给这些位置一个安静的占位，不画破图图标 */
@@ -2458,6 +2458,33 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
   font-weight:600}
 .qzv-a.stars{letter-spacing:2px;color:var(--primary)}
 .qz-card .qz-opt{padding:5px 9px;font-size:12.5px;border-radius:8px;margin-top:5px}
+
+/* ===== 群聊版灵魂叩问（她 10-28 17:10）：选项型按投票摆，选它的人用「小头像 + 名字」标出来 ===== */
+.qz-card-vote .qz-vote-row{display:flex;align-items:flex-start;gap:8px;padding:4px 0}
+.qz-card-vote .qz-vote-opt{flex:none;max-width:50%;font-size:12.5px;color:var(--t1);line-height:1.35;
+  padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:var(--bg)}
+.qz-card-vote .qz-vote-row.empty .qz-vote-opt{color:var(--t3);background:transparent}
+.qz-card-vote .qz-vote-star{flex:none;font-size:10px;letter-spacing:-1px;color:var(--t3);line-height:1.9}
+.qz-card-vote .qz-vote-row:not(.empty) .qz-vote-star{color:var(--primary)}
+.qz-card-vote .qz-vote-who{flex:1;display:flex;flex-wrap:wrap;gap:3px 7px;justify-content:flex-end;min-width:0}
+.qz-voter{display:inline-flex;align-items:center;gap:3px;max-width:86px}
+.qz-voter .qz-vava{width:16px;height:16px;border-radius:50%;overflow:hidden;flex:none;display:block;
+  background:var(--fill);border:1px solid var(--line)}
+.qz-voter .qz-vava img{width:100%;height:100%;object-fit:cover;display:block}
+.qz-voter .qz-vava .ava-txt{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:var(--t2)}
+.qz-voter b{font-size:9.5px;color:var(--t2);font-weight:500;max-width:64px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.qz-voter.mine .qz-vava{border-color:var(--primary)}
+.qz-voter.mine b{color:var(--primary);font-weight:700}
+.qz-card-vote .qz-vote-wait{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:7px;padding-top:6px;
+  border-top:1px dashed var(--line);font-size:10px;color:var(--t3)}
+.qz-card-vote .qz-vote-wait .qz-vava{width:14px;height:14px;border-radius:50%;overflow:hidden;display:block;
+  opacity:.5;background:var(--fill)}
+.qz-card-vote .qz-vote-wait .qz-vava img{width:100%;height:100%;object-fit:cover;display:block}
+.qz-card-vote .qz-vote-mine{margin-top:6px;font-size:10.5px;color:var(--t3)}
+.qz-gline{font-size:12px;color:var(--t2)}
+.qz-gline b{color:var(--t1)}
 .qz-refill{flex:none;display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--primary);
   color:var(--primary);background:none;border-radius:999px;font-size:12.5px;font-weight:600;
   padding:6px 13px;margin-left:auto}
@@ -3433,8 +3460,17 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .sched-addbtn{display:block;width:100%;margin-top:12px;padding:13px;border:1px dashed var(--line);border-radius:12px;background:var(--card);color:var(--t2);font:inherit;font-size:13px;text-align:center;cursor:pointer}
 .sched-addbtn:active{background:var(--fill)}
 .sched-sheet .sched-pick{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 她 10-28 17:10：「我自己定人的时候图片啥的显示不正常，特别扩大了」
+   真因：这一行用的是 .cell-icon（只有 24px 宽、没高、也没 flex:none），
+   Home.avaInner() 抱出来的是一张原尺寸的 <img>，没有任何尺寸约束，于是按原图大小撑满一行。
+   头像自己有尺寸就不要再靠父元素撞运气——这里给头像框定死方形圆框、图铺满裁切。 */
+.sched-sheet .sched-pick-row{padding:8px 12px;gap:12px}
+.sched-sheet .sched-pick-row .cell-icon{width:38px;height:38px;flex:none;border-radius:50%;overflow:hidden;border:1px solid var(--line);background:var(--fill)}
+.sched-sheet .sched-pick-row .cell-icon img{width:100%;height:100%;object-fit:cover;display:block}
+.sched-sheet .sched-pick-row .cell-icon .ava-txt{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:15px;color:var(--t2)}
+.sched-sheet .sched-pick-row .cell-text{font-size:15px}
+.sched-sheet .sched-pick-row .sched-check{width:20px;height:20px;border:1.5px solid var(--line);border-radius:50%;flex:none}
 .sched-sheet .sched-pick-row.on .sched-check{border-color:var(--t1);background:var(--t1)}
-.sched-sheet .sched-pick-row .sched-check{width:16px;height:16px;border:1.5px solid var(--line);border-radius:50%;flex:none}
 .sched-sheet .sched-ok{width:100%;margin-top:10px}
 .sched-sheet .sched-sheet-tip{font-size:10.5px;color:var(--t3);padding:8px 2px 2px;text-align:center}
 .sched-kind-head .sched-day{flex:none;border:0;background:transparent;color:var(--t2);font:inherit;font-size:11px;padding:5px 2px;cursor:pointer;white-space:nowrap}
@@ -3619,7 +3655,6 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .drawpad{background:var(--bg);border-radius:16px;padding:14px;width:min(86vw,360px);display:flex;flex-direction:column;gap:10px}
 .dp-head{display:flex;align-items:center;justify-content:space-between}
 .dp-head b{font-size:var(--fs-body)}
-.dp-canvas{width:100%;aspect-ratio:640/840;border:1px solid var(--line);border-radius:12px;touch-action:none;cursor:crosshair}
 .dp-acts{display:flex;gap:8px}
 .dp-acts .btn{flex:1;padding:8px 0;font-size:var(--fs-aux)}
 .dp-tip{text-align:center;color:var(--t3);font-size:var(--fs-aux)}
@@ -3629,6 +3664,71 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dp-sw.on{border-color:var(--t1);box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--t1)}
 .dp-custom{background:conic-gradient(#D96A5B,#E5C95C,#7FA86B,#5E8FB8,#8F7BB8,#D96A5B);position:relative;overflow:hidden}
 .dp-picker{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+/* 10-28：画板布局/断触修复——画布 3:4，底图与当前笔分层；小屏不把整块顶出视口 */
+.drawpad{width:min(92vw,420px);max-height:92vh;padding:12px;gap:8px;overflow:hidden}
+.drawpad-mask{padding:12px}
+.dp-head{gap:8px}
+.dp-head>b{flex:0 0 auto}
+.dp-album{border:1px solid var(--line);background:var(--card);color:var(--t2);border-radius:999px;
+  padding:4px 9px;font-size:var(--fs-small);cursor:pointer;display:inline-flex;align-items:center;gap:3px}
+.dp-album b{color:var(--t1);font-size:var(--fs-small)}
+.dp-canvas-wrap{position:relative;width:100%;border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;background:#FFFDF6;touch-action:none;flex:0 1 auto;min-height:0}
+.dp-canvas{display:block;width:100%;height:auto;aspect-ratio:3/4;touch-action:none;cursor:crosshair}
+.dp-live{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;touch-action:none}
+.dp-colors{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.dp-colors::-webkit-scrollbar{display:none}
+.dp-pens{display:flex;gap:6px;justify-content:flex-start;padding:2px 2px 0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.dp-pens::-webkit-scrollbar{display:none}
+.dp-pens .btn{padding:4px 10px;flex:0 0 auto}
+@media (max-height:720px){
+  .drawpad{width:min(92vw,360px);padding:10px;gap:6px}
+  .dp-tip{display:none}
+  .dp-pens .btn{padding:3px 8px}
+  .dp-acts .btn{padding:6px 0}
+}
+/* 10-28：涂鸦册 / 单张查看器 */
+.doodle-album-mask{position:fixed;inset:0;z-index:1320;background:rgba(0,0,0,.38);
+  display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .18s}
+.doodle-album-mask.show{opacity:1;pointer-events:auto}
+.doodle-album{width:min(92vw,560px);max-height:88vh;background:var(--bg);border-radius:18px;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.24)}
+.da-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px}
+.da-head b{font-size:var(--fs-title)}
+.da-filters{display:flex;align-items:center;gap:8px;padding:2px 16px 8px}
+.da-tabs{display:flex;gap:2px;background:var(--fill);border-radius:999px;padding:3px;flex:0 0 auto}
+.da-tab{border:0;background:transparent;color:var(--t3);font-size:var(--fs-small);padding:5px 10px;border-radius:999px;cursor:pointer}
+.da-tab.on{background:var(--card);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.da-contact{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;background:var(--card);
+  color:var(--t2);font-size:var(--fs-small);padding:6px 10px;outline:none}
+.da-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow-y:auto;padding:4px 16px 18px}
+.da-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.da-pic{aspect-ratio:1;background:#FFFEF8;display:flex;align-items:center;justify-content:center}
+.da-pic img{width:100%;height:100%;object-fit:contain;display:block}
+.da-meta{display:flex;align-items:center;gap:6px;padding:7px 9px 3px;font-size:var(--fs-small);color:var(--t3)}
+.da-who{color:var(--t1);font-weight:600}
+.da-time{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.da-src{max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t3)}
+.da-acts{display:flex;align-items:center;gap:6px;padding:3px 8px 8px}
+.da-btn{border:1px solid var(--line);background:var(--bg);color:var(--t2);border-radius:999px;
+  padding:4px 9px;font-size:var(--fs-small);cursor:pointer;white-space:nowrap}
+.da-btn:hover{border-color:var(--primary);color:var(--t1)}
+.da-redraw{color:var(--t1);border-color:var(--primary)}
+.da-btn:disabled{opacity:.42;cursor:not-allowed;border-color:var(--line);color:var(--t3)}
+.da-del{margin-left:auto;width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);
+  color:var(--t3);font-size:16px;line-height:1;cursor:pointer}
+.da-empty{padding:38px 16px 48px;text-align:center;color:var(--t3);font-size:var(--fs-aux)}
+.doodle-viewer{position:fixed;inset:0;z-index:1400;background:rgba(18,18,20,.86);
+  display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .18s}
+.doodle-viewer.show{opacity:1;pointer-events:auto}
+.dv-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 18px 8px;min-height:0}
+.dv-stage img{max-width:94vw;max-height:70vh;width:auto;height:auto;background:#FFFEF8;border-radius:14px;display:block}
+.dv-bar{display:flex;gap:10px;justify-content:center;padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
+.dv-bar .da-btn{background:rgba(255,255,255,.94);border-color:transparent;color:#2A2A32;padding:8px 16px}
+.dv-bar .dv-del{color:#B24A4A}
+@media (max-width:420px){.da-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:2px 12px 16px}
+  .da-filters{padding:2px 12px 8px;flex-wrap:wrap}.da-contact{flex:1 1 130px}}
+
 .sku-mid b{font-size:20px;color:var(--t1)}
 .sku-mid small{font-size:var(--fs-small);color:var(--t3)}
 .sku-orig{font-style:normal;font-size:var(--fs-small);color:var(--t3);text-decoration:line-through;margin-left:6px;font-weight:400}
@@ -3754,6 +3854,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .moc-bar i{display:block;height:100%;background:var(--primary);border-radius:2px}
 .moc-eta{font-size:var(--fs-small);color:var(--t2)}
 
+
 /* ===== 检测中心（她 10-12 16:52 口述 / 10-13 08:40 定口径）：两个角色主观感受——掌握感 / 操作负担 ===== */
 /* 右上角【重置感受】（她 10-13 08:40）：清空这套感受、重新随机一套初始值 */
 .dt-reset{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:6px 11px;
@@ -3818,6 +3919,7 @@ html[data-theme="glass"] .mo-cover{background:#DFE5EC}
 .dt-dbtns{display:flex;gap:10px;margin-top:14px}
 .dt-dbtns button{flex:1;padding:11px 0;border:none;border-radius:11px;background:var(--fill);color:var(--t1);font-size:var(--fs-aux)}
 .dt-dbtns .dt-ok{background:var(--primary);color:#fff}
+
 </style>
 </head>
 <body>
@@ -4444,9 +4546,10 @@ const DB = (function () {
         moods: ['心情愉悦', '有点难过', '有点暴躁', '很平静', '超级开心', '好累啊']
       },
       quizLib: { groups: [], questions: [] },   // P34 灵魂拷问题库：groups[{id,name}]；questions[{id,gid,type:'single'|'multi'|'sort'|'rate'|'text',title,options[],ts}]
-      doodleDrafts: {},                // 她 10-12：TA 涂鸦草稿 convId->{ts}（画一半收笔，下次自由选择恢复/弃稿；不在 defaults 会被 deepMerge 剥掉）
       drawDraft: null,                 // 她 10-12：她的画板草稿 {ts,strokes[]}（画一半退出原画保留；同上必须在 defaults）
-      feel: {},                        // 她 10-13 08:40：检测中心那套「掌握感 / 操作负担」（角色主观感受，会自己起伏；键=对象id|板块 —— 不在 defaults 会被 deepMerge 剥掉）
+      feel: {},                        // 她 10-13 08:40：检测中心那套「掌握感 / 操作负担」（键=对象id|板块）
+  doodleAlbum: [],                 // 10-28：涂鸦册（跨会话；{id,msgId,convId,contactId,from,ts,img}，按 msgId 去重，上限 200）
+      doodleAlbumDeleted: [],          // 10-28：从册子里删掉的 msgId 墓碑；聊天记录不动，重开不再自动收回
       quizzes: [],                     // P34 试卷：[{id,title,mode:'normal'|'duet',qids[],targets[],delayMin,status,pending[],answers{},rating,ts}]
       quizTpls: [],                    // P34 出卷模板（V3）：结构同 quizzes 去 answers/status
       bubbleTpls: [],                  // 气泡样式模板库（#39v）：{id,name,css}，供各联系人套用
@@ -4538,6 +4641,10 @@ const DB = (function () {
       unreadableRaw = (raw0 && raw0.length > 2000) ? raw0 : null;
     }
   }
+  /* 10-28：TA 涂鸦续画已下线，旧档里那格不再参与任何逻辑，装载时清掉（检测中心的 feel 不动） */
+  if (state && typeof state === 'object') {
+    delete state.doodleDrafts;
+  }
   /* ============ 她 10-25 17:17：「还是一直在清理我的聊天记录，只要我一刷新，我新聊的全部就都没有了，只有之前的」============
      追到的是一条「静默失败」链，不是谁在清理：
        ① 页面这块存储只有 5MB；图片只要还内联在档里（这台设备上媒体搬不出去时就会这样），两张大图就到底；
@@ -4553,48 +4660,86 @@ const DB = (function () {
       return N.saveMedia(key || '@maindoc', text) === true;
     } catch (e) { return false; }
   }
-  function nativeDocGet() {
+  function nativeDocGet(key) {
     try {
       const N = window.LovexNative;
       if (!N || typeof N.loadMedia !== 'function') return '';
-      return N.loadMedia('@maindoc') || '';
+      return N.loadMedia(key || '@maindoc') || '';
     } catch (e) { return ''; }
+  }
+  /* 一份档「有多少东西」。她 10-28：「全数据全部清零了，直接呈现的最最开始的界面」——
+     以前只比时间戳、不看内容，空的一份只要时间更新就能把有东西的一份顶掉，越顶越空。 */
+  function docWeight(o) {
+    if (!o || typeof o !== 'object') return -1;
+    return countMsgs(o) * 1000
+      + ((o.contacts && o.contacts.length ? o.contacts.length : 0) * 10)
+      + (o.convs && o.convs.length ? o.convs.length : 0)
+      + (o.moments && o.moments.posts && o.moments.posts.length ? o.moments.posts.length * 10 : 0);
+  }
+  function readDocSlot(key) {
+    const t = nativeDocGet(key);
+    if (!t) return null;
+    try { const o = JSON.parse(t); return (o && typeof o === 'object') ? o : null; } catch (e) { return null; }
   }
   /* 存不进去的那段时间里每次保存都想写文件的话，是几 MB 一次地砸盘。
      攒一下：最多 1.5 秒一趟，但最后一趟必须补上（不然最近那几条又漏了）。 */
-  let natDocAt = 0, natDocTimer = null, natDocLast = '';
-  function nativeDocSave(text) {
+  let natDocAt = 0, natDocTimer = null, natDocLast = '', natDocKey = '@maindoc';
+  /* 写文件那一步：手上这份比文件里那份更空时，绝不去盖它（另存 @newdoc，一个都不得丢）。
+     她 10-28 全清零就是这一步造成的：全的一份在文件里，却又被内存里那一刻的空档盖了过去。 */
+  function nativeDocSave(text, key) {
     if (!text) return false;
+    let k = key || '@maindoc';
+    if (k === '@maindoc') {
+      try {
+        const cur = nativeDocGet('@maindoc');
+        if (cur) {
+          const a = JSON.parse(cur);
+          const b = JSON.parse(text);
+          if (docWeight(a) > docWeight(b)) k = '@newdoc';
+        }
+      } catch (e) { /* 文件里那份解不开 / 手上这份拼不出：照常写，不能因为比不出来就不存 */ }
+    }
     natDocLast = text;
+    natDocKey = k;
     const wait = 1500 - (Date.now() - natDocAt);
     if (wait > 0) {
       if (!natDocTimer) natDocTimer = setTimeout(() => {
-        natDocTimer = null; natDocAt = Date.now(); nativeDocPut(natDocLast);
+        natDocTimer = null; natDocAt = Date.now(); nativeDocPut(natDocLast, natDocKey);
       }, wait);
       return false;
     }
     natDocAt = Date.now();
-    return nativeDocPut(text);
+    return nativeDocPut(text, k);
   }
   function countMsgs(s) {
     let n = 0; const m = (s && s.msgs) || {};
     for (const k in m) if (Object.prototype.hasOwnProperty.call(m, k)) n += (m[k] || []).length;
     return n;
   }
-  /* 开页：文件里那份比页面这份新 → 就是它（她上一段聊的全在里面） */
+  /* 开页：从应用自己的文件里挑「最全」的那一份，而不是「时间最新」的那一份。
+     她 10-28：「全数据全部清零……直接呈现最最开始的界面」——
+     原先只看时间戳：文件里那份（哪怕它是空的、哪怕只有一条）时间更新，就把页面这份整个顶掉；
+     而 10-25 我自己加的那个兜底又把空档写进了同一个位置，于是越顶越空，最后就只剩最开始那个界面。
+     现在三个位置全看一遍（主文件 / 出事时扣下来的原文 / 换抽屉时搬走的旧档），谁有东西听谁的，
+     空的一份永远赢不了；比不出来的时候（解不开）就当没这一份，不拿它顶。 */
   let recoveredFromFile = null;
-  try {
-    const nat = nativeDocGet();
-    if (nat) {
-      const o = JSON.parse(nat);
-      const at = +((o && o.savedAt) || 0);
-      if (at && at > (+((state.savedAt) || 0))) {
-        const before = countMsgs(state);
-        state = deepMerge(defaults(), o);
-        recoveredFromFile = { at, msgs: countMsgs(state) - before };
-      }
+  (function pickRichest() {
+    let bestName = '页面', bestDoc = state, bestW = docWeight(state);
+    const slots = ['@maindoc', '@rawrescue', '@oldmain', '@newdoc'];
+    for (const s of slots) {
+      const o = readDocSlot(s);
+      if (!o) continue;
+      const w = docWeight(o);
+      const newer = +(o.savedAt || 0) > +(bestDoc.savedAt || 0);
+      /* 东西更多 → 换；一样多但更新 → 也换；更少 → 无论多新都不换 */
+      if (w > bestW || (w === bestW && w > 0 && newer)) { bestName = s; bestW = w; bestDoc = o; }
     }
-  } catch (e) { /* 文件读坏了就当没有，页面这份照常用 */ }
+    if (bestName !== '页面') {
+      const before = countMsgs(state);
+      state = deepMerge(defaults(), bestDoc);
+      recoveredFromFile = { at: +(bestDoc.savedAt || 0), msgs: Math.max(0, countMsgs(state) - before), slot: bestName };
+    }
+  })();
   /* 库结构归一（#39v附）：旧档/异常档缺 groups/items 键时补齐，
      防 ensurePanelSeed 等消费端直接 .filter 炸掉启动链。
      #39w（清然 14:41 报导入炸）：只归一“单库型”键——白名单制；
@@ -5330,6 +5475,7 @@ const DB = (function () {
       for (const it of media) {
         try {
           if (!it || !it.k || typeof it.v !== 'string') continue;
+          if (/^(@mv|idb:)/.test(it.v)) continue;   // 已经是引用串（本体早就在库里）：别拿它盖真图
           if (it.b) await MS.put(it.k, MS.dataUrlToBlob(it.v));   // 视频/封面：转回 Blob 再入库
           else await MS.put(it.k, it.v);                          // @mv：dataURL 字符串原样
           n++;
@@ -5361,6 +5507,62 @@ const DB = (function () {
       fr.readAsText(b);
     });
   }
+  /* 把一段文本里「整串以 data: 开头的值」挖出来交给 take(url)（它返回要写回去的东西），返回这一段剩下的文本。
+     老格式那份档、新格式里「档」那一段，走的都是这一个函数（以前是两份几乎一样的扫描，改一处漏一处）。 */
+  async function pullInline(s, st, take) {
+    const TAIL = 8;                                  // 块尾留几个字符：「data:」可能被块边界劈成两半
+    let i = 0, out = '';
+    let headAtQuote = !!st.headAtQuote;
+    while (i < s.length) {
+      const at = s.indexOf('data:', i);
+      if (at < 0) {
+        const keep = Math.min(TAIL, s.length - i);
+        out += s.slice(i, s.length - keep);
+        st.carry = s.slice(s.length - keep);
+        st.headAtQuote = (keep >= s.length) ? headAtQuote : (s.charAt(s.length - keep - 1) === '"');
+        return out;
+      }
+      /* 只认「某个字符串值正好以 data: 开头」的那种（内联的图/音/视频都在这种位置）。
+         块边界上（at === 0）用上一块交代的信息判，别把自己的尾巴当成普通文字。 */
+      const atQuote = (at === 0) ? headAtQuote : (s.charAt(at - 1) === '"');
+      if (!atQuote) { out += s.slice(i, at + 5); i = at + 5; continue; }
+      const comma = s.indexOf(';base64,', at);
+      if (comma < 0) {
+        /* 到这里还没有 ';base64,'：要么是刚跨块（正常），要么真不是张图。超过上限就当普通文字接着扫，不把整份导入弄断。 */
+        if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; st.skipped = (st.skipped || 0) + 1; continue; }
+        out += s.slice(i, at); st.carry = s.slice(at); st.headAtQuote = atQuote; return out;
+      }
+      const q = s.indexOf('"', comma + 8);
+      if (q < 0) {
+        if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; st.skipped = (st.skipped || 0) + 1; continue; }
+        out += s.slice(i, at); st.carry = s.slice(at); st.headAtQuote = atQuote; return out;
+      }
+      const url = s.slice(at, q);
+      out += s.slice(i, at);
+      out += await take(url);
+      i = q;
+      if (i > 1024 * 1024) { headAtQuote = (s.charAt(i - 1) === '"'); s = s.slice(i); i = 0; }   // 扫过的别留着占内存
+    }
+    st.carry = '';
+    st.headAtQuote = false;
+    return out;
+  }
+  /* 一张图该怎么落：值得搬的就搬进库里、正文换成引用串；搬不动就原样留着，不丢东西 */
+  function inlineTaker(o, cnt) {
+    const V = (typeof MediaVault !== 'undefined' && MediaVault.hash) ? MediaVault : null;
+    const MS = (typeof MediaStore !== 'undefined') ? MediaStore : null;
+    return async function take(url) {
+      if (!V || !MS || !MS.put || url.length <= 4096) return url;   // 4096 与 MediaVault 那个「值得搬」门槛一致
+      const key = V.hash(url);
+      let ok = false;
+      if (o && o.skipExisting) { try { ok = !!(await MS.get(key)); } catch (e) { ok = false; } }
+      if (!ok) { try { await MS.put(key, url); ok = true; } catch (e) { ok = false; } }
+      if (!ok) return url;
+      cnt.media++;
+      if (url.indexOf('data:video/') === 0) cnt.blobs++;
+      return key;
+    };
+  }
   /* ---- 老格式（图内联在档里、没有 media 区）----
      她 10-14 18:11：「直接说太大了不许我导入，妈的我就这一份备份」。
      以前这条路按 24MB 一刀切，把她唯一那份老备份拦在门外，还反过来叫她「用分片备份」——她根本没有分片。
@@ -5374,69 +5576,22 @@ const DB = (function () {
     if (!canTake && file.size > LEGACY_MAX) {
       throw new Error('这份备份 ' + (file.size / 1048576).toFixed(1) + 'MB，这台设备上搬不动，读不出来');
     }
-    let carry = '', carryAtQuote = false, headAtQuote = false, out = '', off = 0, media = 0, blobs = 0, seen = 0, skipped = 0;
-    const TAIL = 8;                                  // 块尾留几个字符：「data:」可能被块边界劈成两半
+    const st = {};
+    const cnt = { media: 0, blobs: 0 };
+    const take = inlineTaker(o, cnt);
+    let out = '', off = 0, chunks = 0;
     while (off < file.size) {
       const end = Math.min(off + READ_CHUNK, file.size);
-      let s = carry + await sliceText(file.slice(off, end));
+      const s = (st.carry || '') + await sliceText(file.slice(off, end));
+      st.carry = '';
       off = end;
-      carry = '';
-      headAtQuote = carryAtQuote;                    // 这块开头那个字符前面是不是引号（上一块交代下来的）
-      carryAtQuote = false;
-      let i = 0;
-      while (i < s.length) {
-        const at = s.indexOf('data:', i);
-        if (at < 0) {
-          /* 一块扫完没有图：把尾巴几个字符留给下一块（「data:」可能正好被劈成两半），
-             少留几个字不至于把一份大图当成普通文字又吐回档里。 */
-          const keep = Math.min(TAIL, s.length - i);
-          out += s.slice(i, s.length - keep);
-          carry = s.slice(s.length - keep);
-          carryAtQuote = (keep >= s.length) ? headAtQuote : (s.charAt(s.length - keep - 1) === '"');
-          break;
-        }
-        /* 只认「某个字符串值正好以 data: 开头」的那种（内联的图/音/视频都在这种位置）。
-           块边界上（at === 0）用上一块交代的信息判，别把自己的尾巴当成普通文字。 */
-        const atQuote = (at === 0) ? headAtQuote : (s.charAt(at - 1) === '"');
-        if (!atQuote) { out += s.slice(i, at + 5); i = at + 5; continue; }
-        const comma = s.indexOf(';base64,', at);
-        if (comma < 0) {
-          /* 到这里还没有 ';base64,'：要么是刚跨块（正常），要么真不是张图。
-             超过上限就当普通文字接着扫，不把整份导入弄断。 */
-          if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; skipped++; continue; }
-          out += s.slice(i, at); carry = s.slice(at); carryAtQuote = atQuote; break;
-        }
-        const q = s.indexOf('"', comma + 8);
-        if (q < 0) {
-          if (s.length - at > LEGACY_HOLD) { out += s.slice(i, at + 5); i = at + 5; skipped++; continue; }
-          out += s.slice(i, at); carry = s.slice(at); carryAtQuote = atQuote; break;
-        }
-        const url = s.slice(at, q);
-        out += s.slice(i, at);
-        if (url.length > 4096) {                     // 与 MediaVault 一致的「值得搬」门槛
-          const key = V.hash(url);
-          let ok = false;
-          if (o.skipExisting) { try { ok = !!(await MS.get(key)); } catch (e) { ok = false; } }
-          if (!ok) { try { await MS.put(key, url); ok = true; } catch (e) { ok = false; } }
-          if (ok) {
-            media++;
-            if (url.indexOf('data:video/') === 0) blobs++;
-            out += key;
-          } else {
-            out += url;                              // 搬不动就原样留在档里，不丢东西
-          }
-        } else {
-          out += url;
-        }
-        i = q;
-        if (i > 1024 * 1024) { headAtQuote = (s.charAt(i - 1) === '"'); s = s.slice(i); i = 0; }   // 扫过的别留着占内存
-      }
-      seen++;
-      if (o.onProgress && seen % 4 === 0) o.onProgress(media);
+      out += await pullInline(s, st, take);
+      chunks++;
+      if (o && o.onProgress && chunks % 4 === 0) o.onProgress(cnt.media);
       await new Promise(r => setTimeout(r, 0));      // 每块让一拍，界面不僵
     }
-    if (carry) out += carry;
-    if (o.onProgress) o.onProgress(media);      /* 收尾再报一次：小档里那两次节流可能都没轮到 */
+    if (st.carry) out += st.carry;
+    if (o && o.onProgress) o.onProgress(cnt.media);   /* 收尾再报一次：小档里那两次节流可能都没轮到 */
     let kind = 'raw', data = null;
     try {
       const b = await importBundleText(out);
@@ -5445,7 +5600,7 @@ const DB = (function () {
     } catch (e) {
       data = null;                                   // 认不得形状也不影响「把图补回来」：本体已经在库里了
     }
-    return { kind, data, media, blobs, items: media, part: 1, legacy: true, skipped };
+    return { kind, data, media: cnt.media, blobs: cnt.blobs, items: cnt.media, part: 1, legacy: true, skipped: st.skipped || 0 };
   }
   async function importBundleStream(file, opt) {
     const o = opt || {};
@@ -5455,6 +5610,9 @@ const DB = (function () {
       let it = null;
       try { it = JSON.parse(one); } catch (e) { return false; }
       if (!it || !it.k || typeof it.v !== 'string') return false;
+      /* 已经是引用串的（那张图在「档」那一段时已经搬进库里了）不再拿它当本体写一遍，
+         否则会拿一个短短的引用把库里那张家真图盖掉 */
+      if (/^(@mv|idb:)/.test(it.v)) return false;
       if (o.skipExisting) { try { if (await MS.get(it.k)) return false; } catch (e) { /* 查不到就当没有，照写 */ } }
       try {
         if (it.b) await MS.put(it.k, MS.dataUrlToBlob(it.v));
@@ -5464,65 +5622,94 @@ const DB = (function () {
     };
     const head = await sliceText(file.slice(0, 8192));
     if (String(head).indexOf('"LOVEX-BUNDLE"') < 0) return importLegacyStream(file, o);
-    let buf = '';
-    let i = 0, inStr = false, esc = false, depth = 0, start = -1, done = false, seen = false;
-    let doc = null, part = 1, media = 0, offset = 0, kind = 'all', items = 0, blobs = 0;
+    const cnt = { media: 0, blobs: 0 };
+    const take = inlineTaker(o, cnt);
+    let doc = null, part = 1, kind = 'all', offset = 0, seen = false, rest = '';
+    /* ① 先读「档」这一段。她 10-28：84MB 的那份备份走到这里就「读不动」——
+       原先这里只攒不拆，档里还内联着图（媒体搬不出去的设备导出来就是这样）就一直攒到 48MB，
+       然后被一句「档部分太大了」拦下。现在这一段与老格式共用同一把扫描：
+       读到图就搬进库里、正文换成引用串，多大都收。 */
+    const st = {};
+    let out = '', chunks = 0;
+    /* 找到「媒体区」开头就把头+档切出来：末尾补一句让它变成合法 JSON（这段只用来读档） */
+    const headCut = () => {
+      const at = out.indexOf('"media":[');
+      if (at < 0) return false;
+      const meta = JSON.parse(out.slice(0, at) + '"media":[]}');
+      doc = meta && meta.data ? meta.data : null;
+      part = (meta && meta.part) || 1;
+      kind = (meta && meta.kind) || 'all';
+      rest = out.slice(at + 9);
+      out = '';
+      seen = true;
+      return true;
+    };
+    while (offset < file.size && !seen) {
+      const end = Math.min(offset + READ_CHUNK, file.size);
+      const s = (st.carry || '') + await sliceText(file.slice(offset, end));
+      st.carry = '';
+      offset = end;
+      out += await pullInline(s, st, take);
+      headCut();
+      chunks++;
+      if (o.onProgress && chunks % 4 === 0) o.onProgress(cnt.media);
+      await new Promise(r => setTimeout(r, 0));   // 每块让一拍，界面不僵
+    }
+    /* 扫描器会在块尾留几个字符（防「data:」被劈两半），最后那点得补回来再找一次——
+       不然「"media":[」正好落在尾巴上就会误判“找不到媒体区”（10-28 那趟就撞在这） */
+    if (st.carry) {
+      if (seen) rest += st.carry; else out += st.carry;
+      st.carry = '';
+      if (!seen) headCut();
+    }
+    if (!seen) throw new Error('这份备份里找不到媒体区，可能是文件没选对');
+    /* ② 再一条一条切媒体：切一条入库一条、马上丢，峰值只留「当前这一条」 */
+    let buf = rest;
+    let i = 0, inStr = false, esc = false, depth = 0, start = -1, done = false;
+    let media = 0, items = 0, blobs = 0;
     const pending = [];
+    const drain = async () => {
+      while (i < buf.length) {
+        const c = buf.charAt(i);
+        if (inStr) {
+          if (esc) esc = false;
+          else if (c === '\\') esc = true;
+          else if (c === '"') inStr = false;
+          i++; continue;
+        }
+        if (c === '"') { inStr = true; i++; continue; }
+        if (c === '{') { if (depth === 0) start = i; depth++; i++; continue; }
+        if (c === '}') {
+          depth--; i++;
+          if (depth === 0 && start >= 0) { pending.push(buf.slice(start, i)); start = -1; }
+          continue;
+        }
+        if (c === ']' && depth === 0) { done = true; i++; break; }
+        i++;
+      }
+      /* 入库一条丢一条；扫过的部分从 buf 里剪掉，峰值只留「当前这一条」 */
+      if (pending.length) {
+        for (const one of pending) {
+          items++;
+          if (one.indexOf('"b":1') > 0) blobs++;
+          if (await putOne(one)) media++;
+        }
+        pending.length = 0;
+        if (o.onProgress && media && media % 5 === 0) o.onProgress(cnt.media + media);
+      }
+      const trim = start >= 0 ? start : i;
+      if (trim > 256 * 1024) { buf = buf.slice(trim); i -= trim; if (start >= 0) start = 0; }
+    };
+    await drain();
     while (offset < file.size && !done) {
       const end = Math.min(offset + READ_CHUNK, file.size);
       buf += await sliceText(file.slice(offset, end));
       offset = end;
-      if (!seen) {
-        const at = buf.indexOf('"media":[');
-        if (at >= 0) {
-          /* 到 media 之前就是头 + 档；末尾补一句让它变成合法 JSON（不会被误当成数据：这段只用来读档） */
-          const meta = JSON.parse(buf.slice(0, at) + '"media":[]}');
-          doc = meta && meta.data ? meta.data : null;
-          part = (meta && meta.part) || 1;
-          kind = (meta && meta.kind) || 'all';
-          i = at + 9; buf = buf.slice(i); i = 0;
-          seen = true;
-        } else if (buf.length > 48 * 1024 * 1024) {
-          throw new Error('这份备份的档部分太大了，读不动');
-        }
-      }
-      if (seen) {
-        while (i < buf.length) {
-          const c = buf.charAt(i);
-          if (inStr) {
-            if (esc) esc = false;
-            else if (c === '\\') esc = true;
-            else if (c === '"') inStr = false;
-            i++; continue;
-          }
-          if (c === '"') { inStr = true; i++; continue; }
-          if (c === '{') { if (depth === 0) start = i; depth++; i++; continue; }
-          if (c === '}') {
-            depth--; i++;
-            if (depth === 0 && start >= 0) { pending.push(buf.slice(start, i)); start = -1; }
-            continue;
-          }
-          if (c === ']' && depth === 0) { done = true; i++; break; }
-          i++;
-        }
-        /* 入库一条丢一条；扫过的部分从 buf 里剪掉，峰值只留「当前这一条」 */
-        if (pending.length) {
-          for (const one of pending) {
-            items++;
-            if (one.indexOf('"b":1') > 0) blobs++;
-            if (await putOne(one)) media++;
-          }
-          pending.length = 0;
-          if (o.onProgress && media % 5 === 0) o.onProgress(media);
-        }
-        const trim = start >= 0 ? start : i;
-        if (trim > 256 * 1024) { buf = buf.slice(trim); i -= trim; if (start >= 0) start = 0; }
-      }
+      await drain();
       await new Promise(r => setTimeout(r, 0));   // 每块让一拍，界面不僵
     }
-    if (!seen) throw new Error('这份备份里找不到媒体区，可能是文件没选对');
-    if (o.onProgress) o.onProgress(media);      /* 收尾再报一次：小档里那两次节流可能都没轮到 */
-    return { kind, data: doc, media, blobs, items, part, legacy: false };
+    if (o.onProgress) o.onProgress(cnt.media + media);   /* 收尾再报一次：小档里那两次节流可能都没轮到 */
+    return { kind, data: doc, media: cnt.media + media, blobs: cnt.blobs + blobs, items: cnt.media + items, part, legacy: false };
   }
   /* 整档换血。她 10-13 09:21：这里当场把全档媒体铺进内存，导完又 reload 再铺一遍，
      媒体一多的档直接把 WebView 内存顶爆（「导入备份和贴图后直接闪退，怎么也进不去」）。
@@ -6617,11 +6804,16 @@ var Quiz = (function () {
 
   /* ---------------- 出卷 sheet ---------------- */
   let composeMode = 'normal';   // normal | duet（她拍板：非默认，主动选才是双人）
-  function openComposer() {
+  function openComposer(gcv) {
+    /* 群聊版（她 10-28 17:10）：从群里点进来就只能发这一群，不用再选「问谁」
+       ——群里每个人各答一遍，按选项投票展示。默契挑战是两个人的事，群里不摆这一栏。 */
+    const isGroup = !!(gcv && gcv.type === 'group');
+    const members = isGroup ? (Home.membersOf(gcv) || []) : [];
+    if (isGroup && !members.length) { UI.toast('这个群里还没人，考谁呀'); return; }
     /* P34 防御（自测抓到）：curCid 未初始化时会把 null 当收件人发废卷——
        无联系人直接拦下，有则兕底第一个 */
-    if (!DB.state.contacts.length) { UI.toast('先去加个联系人，不然考谁呀'); return; }
-    if (!curCid) curCid = DB.state.contacts[0].id;
+    if (!isGroup && !DB.state.contacts.length) { UI.toast('先去加个联系人，不然考谁呀'); return; }
+    if (!isGroup && !curCid) curCid = DB.state.contacts[0].id;
     /* 她 09-03 11:44：题库空着也得能发卷——现场直接写，不用先跑去题库加 */
     document.querySelectorAll('#dialog-layer > .sheet-mask').forEach(m => m.remove());   // 防叠层：重开前清掉残留（多 actionSheet 叠加会跨 mask 点错按钮）
     composeMode = 'normal';
@@ -6634,20 +6826,24 @@ var Quiz = (function () {
       (DB.state.quizTpls && DB.state.quizTpls.length
         ? '<div class="qz-tpl-row"><button id="qz-c-tpl">' + I('stamp', 12) + ' 从模板套用</button></div>' : '') +
       '<label class="rp-f-row"><span>卷名</span><input id="qz-c-title" type="text" maxlength="20" placeholder="给这份卷子起个名"></label>'
-      + '<div class="rp-f-row"><span>模式</span><div class="chip-row" id="qz-c-mode">' +
+      + (isGroup ? '' : '<div class="rp-f-row"><span>模式</span><div class="chip-row" id="qz-c-mode">' +
         '<button class="grp-chip on" data-mode="normal">普通</button>' +
-        '<button class="grp-chip" data-mode="duet">默契挑战</button></div></div>' +
+        '<button class="grp-chip" data-mode="duet">默契挑战</button></div></div>') +
       '<label class="rp-f-row"><span>交卷延迟（分钟）</span><input id="qz-c-delay" type="number" min="1" step="0.1" value="1"></label>' +
-      '<div class="rp-f-row"><span>问谁</span><div class="chip-row" id="qz-c-targets"></div></div>' +
+      '<div class="rp-f-row"><span>问谁</span>' +
+        (isGroup ? '<div class="qz-gline">这一群 <b>' + members.length + '</b> 人都会答，一人一票</div>'
+                 : '<div class="chip-row" id="qz-c-targets"></div>') + '</div>' +
       '<div class="qz-pick-t">选题 <button class="qz-mini-btn" id="qz-c-add">' + I('plus', 12) + ' 现场写一题</button>' +
         '<em id="qz-c-count">已选 0 题</em></div>' +
       '<div class="qz-pick-list" id="qz-c-qlist"></div>' +
       '<div class="qz-c-btns"><button class="qz-mini2" id="qz-c-savetpl">' + I('download', 12) + ' 存为模板</button>' +
       '<button class="sheet-cancel qz-f-ok">发出去了</button></div></div>';
 
-    /* 接收人 chips：当前联系人默认选中；duet 模式下单选（她拍板：双人对照只对一个人） */
-    let targets = [curCid];
+    /* 接收人 chips：当前联系人默认选中；duet 模式下单选（她拍板：双人对照只对一个人）
+       群里不选人（这一群都答） */
+    let targets = isGroup ? members.map(c => c.id) : [curCid];
     const tbox = mask.querySelector('#qz-c-targets');
+    if (tbox) {
     tbox.innerHTML = DB.state.contacts.map(c =>
       '<button class="grp-chip' + (c.id === curCid ? ' on' : '') + '" data-ct="' + c.id + '">' + esc(Home.displayName(c)) + '</button>').join('');
     tbox.addEventListener('click', e => {
@@ -6664,8 +6860,10 @@ var Quiz = (function () {
       } else targets.push(id);
       tbox.querySelectorAll('[data-ct]').forEach(x => x.classList.toggle('on', targets.includes(x.dataset.ct)));
     });
+    }
     /* 模式切换：duet 提示先自己答一遍 */
-    mask.querySelector('#qz-c-mode').addEventListener('click', e => {
+    const mbox = mask.querySelector('#qz-c-mode');
+    if (mbox) mbox.addEventListener('click', e => {
       const b = e.target.closest('[data-mode]'); if (!b) return;
       composeMode = b.dataset.mode;
       mask.querySelectorAll('#qz-c-mode .grp-chip').forEach(x => x.classList.toggle('on', x === b));
@@ -6743,7 +6941,7 @@ var Quiz = (function () {
       const tIds = targets.slice(), pids = picked.slice(), mode = composeMode;
       mask.remove();
       /* V3.5（她 19:02）：duet 不再当场弹答题 sheet——先落「发起默契挑战」卡，点卡片再作答 */
-      sendQuiz(title || '灵魂拷问', delay, tIds, pids, mode, null);   /* 她 10-02 拍：不写卷名就叫「灵魂拷问」 */
+      sendQuiz(title || '灵魂拷问', delay, tIds, pids, mode, null, isGroup ? gcv : null);   /* 她 10-02 拍：不写卷名就叫「灵魂拷问」 */
       pruneTmp();   // 没收进题库又没被这份卷子用上的，不留尸体
     });
     mask.addEventListener('click', e => { if (e.target === mask) { mask.remove(); pruneTmp(); } });
@@ -6753,7 +6951,7 @@ var Quiz = (function () {
 
   /* 建卷落库：TA 交卷时刻进 pending 存档（计划时刻制），advanceAll 到点兑现。
      她 16:57 三连 + V3：duet 模式先存我自己的答卷（myDuet），TA 交卷后对照 */
-  function sendQuiz(title, delayMin, targetIds, qids, mode, myPer) {
+  function sendQuiz(title, delayMin, targetIds, qids, mode, myPer, gcv) {
     const now = Date.now();
     const style = qids.length <= 2 ? 'card' : 'paper';   // 自动分流：短卷=聊天题卡，长卷=正式问卷
     const z = {
@@ -6766,21 +6964,42 @@ var Quiz = (function () {
     };
     if (myPer) z.myDuet = { per: myPer, ts: now };
     if (z.mode === 'duet') z.by = 'me';   // V3.5：记录发起方，卡片文案「XX向XX」用
+    /* 群聊版（她 10-28 17:10：「我可以给群聊也加灵魂叩问多人版，群里问就可以多选，
+       每个人选类似投票一样，或许也可以头像或者名字来标记」）：
+       一张卷子落在群里，群里每个人各答一遍，卡片按「选项」投票、头像+名字标出谁选了什么。
+       错开几秒交卷，看起来像真的在陆续答；答完一个不会再往群里刷一条卡。 */
+    if (gcv) {
+      z.gid = gcv.id;
+      z.mode = 'normal';
+      z.style = 'group';
+      z.pending = targetIds.map((ct, i) => ({ ctId: ct, at: now + Math.round(delayMin * 60000) + i * 2500 }));
+    }
     DB.state.quizzes.unshift(z);
     /* 发卷落聊天记录：自己的消息不走 Engine.pushRaw（不挂未读/横幅，同 Report.pushMeMsg 语义） */
-    targetIds.forEach(ct => {
-      const conv = convOf(ct);
-      if (!conv) return;
-      const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
+    if (gcv) {
+      const arr = (DB.state.msgs[gcv.id] = DB.state.msgs[gcv.id] || []);
       const m = { id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5), from: 'me', type: 'quiz', quizId: z.id, ts: now };
       let i = arr.length; while (i > 0 && arr[i - 1].ts > m.ts) i--;
       arr.splice(i, 0, m);
-      conv.lastMsg = '[灵魂拷问] ' + title; conv.lastTime = m.ts;
+      gcv.lastMsg = '[灵魂拷问] ' + title; gcv.lastTime = m.ts;
       const visPage = document.querySelector('.page.active');
-      if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
-    });
+      if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === gcv.id) Chat.appendMessage(m);
+    } else {
+      targetIds.forEach(ct => {
+        const conv = convOf(ct);
+        if (!conv) return;
+        const arr = (DB.state.msgs[conv.id] = DB.state.msgs[conv.id] || []);
+        const m = { id: 'm' + now.toString(36) + Math.random().toString(36).slice(2, 5), from: 'me', type: 'quiz', quizId: z.id, ts: now };
+        let i = arr.length; while (i > 0 && arr[i - 1].ts > m.ts) i--;
+        arr.splice(i, 0, m);
+        conv.lastMsg = '[灵魂拷问] ' + title; conv.lastTime = m.ts;
+        const visPage = document.querySelector('.page.active');
+        if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === conv.id) Chat.appendMessage(m);
+      });
+    }
     DB.save();
-    UI.toast(mode === 'duet' ? '挑战书已发出，点聊天里的卡片写下你的答案' : (z.style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交'));
+    UI.toast(gcv ? '题已发到群里，每个人各答一遍'
+      : (mode === 'duet' ? '挑战书已发出，点聊天里的卡片写下你的答案' : (z.style === 'card' ? '题已甩进聊天，等 TA 接招' : '卷子已出，等 TA 来交')));
     render();
   }
 
@@ -6903,6 +7122,13 @@ var Quiz = (function () {
         const per = {};
         q.qids.forEach(id => { const t = qById(id); if (t) per[id] = genByType(t, p.ctId); });
         q.answers[p.ctId] = { per, comment: genComment(p.ctId), ts: p.at };
+        /* 群聊版：答完就往单聊塞卡片就不对了——群里只这一张卡，票实时从那上面读 */
+        if (q.gid) {
+          const visPage = document.querySelector('.page.active');
+          if (visPage && visPage.id === 'page-chat' && Chat.conv && Chat.conv.id === q.gid) Chat.rerender();
+          dirty = true;
+          continue;
+        }
         const conv = convOf(p.ctId);
         if (conv) {
           /* 她 16:57：不再发“答完啦”文本——交卷本身就是一张卡片消息（未读/横幅照常） */
@@ -7009,6 +7235,16 @@ var Quiz = (function () {
     if (!z) return;
     if (!z.myDuet) answerMySheet(z.qids, per => submitDuet(z.id, per));
     else viewQuiz(z.id);
+  }
+
+  /* 群聊版：我自己那一票（她 10-28 17:10）。不跳页，就地重渲群聊，整张卡马上多出一只「我」*/
+  function submitGroupMine(zid, per) {
+    const z = quizById(zid); if (!z) return;
+    z.myDuet = { per, ts: Date.now() };
+    DB.save();
+    try { if (typeof Chat !== 'undefined' && Chat.rerender) Chat.rerender(); } catch (e) {}
+    render();
+    UI.toast('你的那一票投好了，等 TA 们陆续交卷');
   }
 
   /* ---------------- 主页：试卷列表 / 档案室（V3） ---------------- */
@@ -7160,6 +7396,23 @@ var Quiz = (function () {
       /* V3.5（她 19:02 定）：默契挑战只渲染一份卷、双方不同色高亮，不再另出对照卡 */
       html += renderDuetView(z);
     } else {
+    /* 群聊版：我自己那一票也算一份答卷，排在最前面 */
+    if (z.gid) {
+      const my = z.myDuet && z.myDuet.per;
+      html += '<div class="card qzv-paper"><div class="qzv-name">' +
+        '<span class="avatar avatar-sm"><span class="ava-txt">我</span></span><b>我</b>' +
+        '<time>' + (my ? '已答' : '还没答') + '</time></div>';
+      if (my) {
+        let no2 = 0;
+        z.qids.forEach(id => {
+          const t = qById(id); if (!t) return;
+          no2++;
+          html += '<div class="qzv-q"><div class="qzv-q-t"><i class="qz-no">' + ('0' + no2).slice(-2) + '</i>' + esc(t.title) +
+            ' <em>' + typeName(t.type) + '</em></div>' + ansBlock(t, my[id]) + '</div>';
+        });
+      }
+      html += '</div>';
+    }
     z.targets.forEach(ctId => {
       const ct = Home.contactById(ctId);
       const ans = z.answers[ctId];
@@ -7588,7 +7841,7 @@ var Quiz = (function () {
     document.getElementById('qz-lib-add').addEventListener('click', () => editSheet(null));
   }
 
-  return { init, open, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, openDuetCard, sameAns, realQs, tmpQs, pruneTmp, askPool };
+  return { init, open, openComposer, answerMySheet, submitGroupMine, render, renderLib, advanceAll, viewQuiz, qById, starRow, maybeAsk, answerAsk, typeName, openDuetCard, sameAns, realQs, tmpQs, pruneTmp, askPool };
 })();
 
 /* =====================================================
@@ -10841,6 +11094,7 @@ const Chat = (function () {
       listEl.appendChild(dv);
     }
     lastTs = m.ts;
+    if (m.type === 'img' && m.doodle && cur) albumAdd(m, cur);
 
     /* 系统提示（拍一拍/状态切换）：居中三级灰字无气泡（策划 307） */
     if (m.type === 'sys') {
@@ -11211,6 +11465,67 @@ const Chat = (function () {
         bub.querySelector('.qz-pc-mid b').textContent = z.title;
         mountIcons(bub);
         bub.addEventListener('click', () => { Quiz.openDuetCard(z); });
+      } else if (z.gid) {
+        /* 群聊版（她 10-28 17:10）：一张卷落在群里，每个人各答一遍。
+           选项型按「投票」摆——每行一个选项，下面排选它的人（小头像 + 名字）；
+           打分把 1~5 星当选项粗略归堆；排序/填空只报「几人已答」，展开去详情页看。
+           我自己那一票也计在内（带「我」标）。还没答的人只列头像，不占名字行。 */
+        const ids = (z.targets || []).slice();
+        const myPer = (z.myDuet && z.myDuet.per) || null;
+        const answeredN = ids.filter(t => z.answers[t]).length + (myPer ? 1 : 0);
+        const totalN = ids.length + 1;
+        const voter = (uid, label) => '<span class="qz-voter">' +
+          '<span class="qz-vava">' + Home.avaInner(uid) + '</span>' +
+          '<b>' + esc(label) + '</b></span>';
+        let inner = '<div class="qz-card-head">' + I('quiz', 13) + '<b>' + esc(z.title) + '</b><span>' +
+          answeredN + '/' + totalN + ' 已答</span></div>';
+        let no = 0;
+        z.qids.forEach(id => {
+          const t = Quiz.qById(id); if (!t) return; no++;
+          inner += '<div class="qz-card-q"><i class="qz-no">' + ('0' + no).slice(-2) + '</i>' + esc(t.title) + '</div>';
+          const mine = myPer ? myPer[id] : null;
+          const pickers = opt => {
+            let h = '';
+            if (mine != null && (Array.isArray(mine) ? mine.includes(opt) : mine === opt)) {
+              h += '<span class="qz-voter mine"><span class="qz-vava">' + Home.avaInner('me') + '</span><b>我</b></span>';
+            }
+            ids.forEach(u => {
+              const a = z.answers[u] && z.answers[u].per ? z.answers[u].per[id] : null;
+              if (a == null) return;
+              const hit = Array.isArray(a) ? a.includes(opt) : a === opt;
+              if (hit) h += voter(u, Home.uidName(u));
+            });
+            return h;
+          };
+          if (t.type === 'sort' || t.type === 'text') {
+            inner += '<div class="qz-card-hint">' + answeredN + ' 人已答 · 点开看每人怎么答</div>';
+          } else if (t.type === 'rate') {
+            inner += [1, 2, 3, 4, 5].map(n => {
+              const who = pickers(n);
+              return '<div class="qz-vote-row' + (who ? '' : ' empty') + '">' +
+                '<span class="qz-vote-star">' + '★'.repeat(n) + '</span>' +
+                '<span class="qz-vote-who">' + who + '</span></div>';
+            }).join('');
+          } else {
+            inner += (t.options || []).map(o => {
+              const who = pickers(o);
+              return '<div class="qz-vote-row' + (who ? '' : ' empty') + '">' +
+                '<span class="qz-vote-opt">' + esc(o) + '</span>' +
+                '<span class="qz-vote-who">' + who + '</span></div>';
+            }).join('');
+          }
+        });
+        const waiting = ids.filter(t => !z.answers[t]);
+        if (waiting.length) {
+          inner += '<div class="qz-vote-wait">还没答' + waiting.map(u => '<span class="qz-vava">' + Home.avaInner(u) + '</span>').join('') + '</div>';
+        }
+        if (!myPer) inner += '<div class="qz-vote-mine">点一下，先把你自己那票投了</div>';
+        bub.innerHTML = '<div class="qz-card qz-card-vote' + (myPer ? ' done' : '') + '">' + inner + '</div>';
+        mountIcons(bub);
+        bub.addEventListener('click', () => {
+          if (!z.myDuet) Quiz.answerMySheet(z.qids, per => Quiz.submitGroupMine(z.id, per));
+          else Quiz.viewQuiz(z.id);
+        });
       } else if (z.style === 'card') {
         /* 短卷题卡：from me=待答态；from ai=TA 的作答展示 */
         const isMine = m.from === 'me';
@@ -11570,6 +11885,7 @@ const Chat = (function () {
       from: 'me', ts: Date.now()
     }, extra);
     (DB.state.msgs[cv.id] = DB.state.msgs[cv.id] || []).push(m);
+    if (m.type === 'img' && m.doodle) albumAdd(m, cv);
     cv.lastMsg = m.type === 'text' ? m.text
                 : m.type === 'img' ? (m.doodle ? '[涂鸦]' : '[图片]')
                 : m.type === 'video' ? '[视频]'
@@ -11652,16 +11968,249 @@ const Chat = (function () {
      每笔带自己的颜色，撤销/清空照旧；发送走 sendImage 图片管道，撤回/长按/引用全通用 */
   const DP_PAL = ['#3A3A42', '#6B6B74', '#D96A5B', '#E8732E', '#E5C95C', '#7FA86B', '#3F7A5A',
     '#5FA8A0', '#5E8FB8', '#3D5A8F', '#8F7BB8', '#D886AE', '#8A6F5C', '#F2C9A0'];
+  /* ---------------- 涂鸦册（10-28 她定） ----------------
+     全局跨会话；默认筛当前联系人；全部 / 我的 / TA 的；自动收全部涂鸦；
+     不收藏；每张可删（只删册子这份，不动聊天记录）；AI 图可「再画一张」，我的图「去画板」。 */
+  /* 她 10-28：涂鸦册上限 200；超过时只从册子里去掉最老的副本，聊天记录不动。
+     删除的 msgId 记墓碑，重开自动收录时不会再把它收回来。 */
+  const DOODLE_ALBUM_MAX = 200;
+  let albumSaveTimer = null;
+  function albumEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function albumAll() {
+    if (!Array.isArray(DB.state.doodleAlbum)) DB.state.doodleAlbum = [];
+    return DB.state.doodleAlbum;
+  }
+  function albumGone() {
+    if (!Array.isArray(DB.state.doodleAlbumDeleted)) DB.state.doodleAlbumDeleted = [];
+    return DB.state.doodleAlbumDeleted;
+  }
+  function albumSaveSoon() {
+    if (albumSaveTimer) return;
+    albumSaveTimer = setTimeout(() => { albumSaveTimer = null; DB.save(); }, 400);
+  }
+  function albumContactName(id) {
+    if (!id) return '群聊';
+    const c = (typeof Home !== 'undefined' && Home.contactById) ? Home.contactById(id) : null;
+    return c ? Home.displayName(c) : '联系人';
+  }
+  function doodleAllowed(convId) {
+    const cv = (DB.state.convs || []).find(c => c.id === convId);
+    if (!cv) return false;
+    let p = cv.params || {};
+    try { if (typeof Engine !== 'undefined' && Engine.params) p = Engine.params(cv) || p; } catch (e) {}
+    return Math.max(0, Math.round(+p.doodleRate || 0)) > 0;
+  }
+  function albumAdd(m, cv) {
+    if (!m || !m.img || !m.doodle) return false;
+    const list = albumAll();
+    /* 正常按消息 id 去重；老档案里可能没有 id，用会话+时间+发送方兜底，避免每次启动重复收录 */
+    const key = m.id || ((cv ? cv.id : '') + '|' + (m.ts || 0) + '|' + (m.from || ''));
+    if (albumGone().indexOf(key) >= 0) return false;
+    if (list.some(x => x.msgId === key)) return false;
+    const entry = {
+      id: 'da' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      msgId: key, convId: cv ? cv.id : '', contactId: cv && cv.type === 'single' ? cv.peerId : '',
+      from: m.from === 'me' ? 'me' : 'ai', ts: m.ts || Date.now(), img: m.img
+    };
+    list.unshift(entry);
+    list.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (list.length > DOODLE_ALBUM_MAX) list.length = DOODLE_ALBUM_MAX;
+    albumSaveSoon();
+    updateAlbumBadge();
+    return true;
+  }
+  function albumCollectAll() {
+    let changed = false;
+    (DB.state.convs || []).forEach(cv => {
+      (DB.state.msgs[cv.id] || []).forEach(m => { if (albumAdd(m, cv)) changed = true; });
+    });
+    const now = albumAll();
+    if (now.length > DOODLE_ALBUM_MAX) { now.length = DOODLE_ALBUM_MAX; changed = true; }
+    if (changed) DB.save();
+  }
+  function albumFiltered(contactId, who) {
+    return albumAll().filter(x => {
+      if (contactId && x.contactId !== contactId) return false;
+      if (who === 'me' && x.from !== 'me') return false;
+      if (who === 'ai' && x.from !== 'ai') return false;
+      return true;
+    });
+  }
+  function updateAlbumBadge() {
+    document.querySelectorAll('.dp-album b').forEach(b => { b.textContent = albumAll().length; });
+  }
+  function closeDoodleAlbum(mask) {
+    if (!mask) return;
+    mask.classList.remove('show');
+    setTimeout(() => mask.remove(), 160);
+  }
+  function albumCard(entry) {
+    const who = entry.from === 'me' ? '我' : 'TA';
+    const when = new Date(entry.ts || Date.now());
+    const time = (when.getMonth() + 1) + '/' + when.getDate() + ' ' +
+      String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0');
+    const canDraw = entry.from === 'ai' && doodleAllowed(entry.convId);
+    const act = entry.from === 'ai'
+      ? '<button class="da-btn da-redraw" type="button" data-act="redraw"' + (canDraw ? '' : ' disabled') + '>再画一张</button>'
+      : '<button class="da-btn da-redraw" type="button" data-act="pad">去画板</button>';
+    return '<div class="da-card" data-da-id="' + albumEsc(entry.id) + '">' +
+      '<div class="da-pic"><img src="' + albumEsc(mediaSrc(entry.img)) + '" alt="涂鸦" loading="lazy"></div>' +
+      '<div class="da-meta"><span class="da-who">' + who + '</span><span class="da-time">' + time + '</span>' +
+      '<span class="da-src">' + albumEsc(albumContactName(entry.contactId)) + '</span></div>' +
+      '<div class="da-acts"><button class="da-btn da-view" type="button" data-act="view">看看</button>' + act +
+      '<button class="da-del" type="button" data-act="del" aria-label="删除">×</button></div></div>';
+  }
+  function albumDelete(id) {
+    const list = albumAll();
+    const i = list.findIndex(x => x.id === id);
+    if (i < 0) return;
+    const entry = list[i];
+    const key = entry.msgId || ((entry.convId || '') + '|' + (entry.ts || 0) + '|' + (entry.from || ''));
+    const gone = albumGone();
+    if (key && gone.indexOf(key) < 0) {
+      gone.push(key);
+      /* 墓碑也只记不删：删多了以后又把老涂鸦从聊天里自动收回来的话，才是真丢东西 */
+    }
+    list.splice(i, 1);
+    DB.save();
+    document.querySelectorAll('.doodle-viewer').forEach(v => { if (v.dataset.daId === id) v.remove(); });
+    const mask = document.querySelector('.doodle-album-mask');
+    if (mask) albumRenderGrid(mask);
+    updateAlbumBadge();
+    UI.toast('已从涂鸦册删除');
+  }
+  function albumRedraw(entry) {
+    if (!entry) return;
+    if (entry.from === 'ai' && !doodleAllowed(entry.convId)) {
+      UI.toast('TA 的涂鸦率是 0，先调高再画');
+      return;
+    }
+    document.querySelectorAll('.doodle-album-mask,.doodle-viewer').forEach(e => e.remove());
+    /* 册子从画板角落打开时，先关掉画板：不然新画只会在画板底下，用户看不到 */
+    const pad = document.querySelector('.drawpad-mask');
+    if (pad) { const x = pad.querySelector('.dp-x'); if (x) x.click(); else pad.remove(); }
+    if (entry.from === 'ai') {
+      redrawDoodle(entry.convId);
+    } else {
+      open(entry.convId);
+      setTimeout(() => openDrawPad(), 80);
+    }
+  }
+  function albumViewer(entry) {
+    document.querySelectorAll('.doodle-viewer').forEach(e => e.remove());
+    const v = document.createElement('div');
+    v.className = 'doodle-viewer';
+    v.dataset.daId = entry.id;
+    const redraw = entry.from === 'ai' ? '再画一张' : '去画板';
+    const canDraw = entry.from !== 'ai' || doodleAllowed(entry.convId);
+    v.innerHTML = '<div class="dv-stage"><img src="' + albumEsc(mediaSrc(entry.img)) + '" alt="涂鸦"></div>' +
+      '<div class="dv-bar"><button class="da-btn dv-redraw" type="button"' + (canDraw ? '' : ' disabled') + '>' + redraw + '</button>' +
+      '<button class="da-btn dv-del" type="button">删除</button>' +
+      '<button class="da-btn dv-close" type="button">关闭</button></div>';
+    v.addEventListener('click', e => {
+      if (e.target.closest('.dv-stage')) return;
+      if (e.target.closest('.dv-close')) { v.remove(); return; }
+      if (e.target.closest('.dv-del')) { albumDelete(entry.id); return; }
+      if (e.target.closest('.dv-redraw')) { albumRedraw(entry); return; }
+      if (!e.target.closest('.dv-bar')) v.remove();
+    });
+    document.body.appendChild(v);
+    UI.raise(v);
+  }
+  function albumRenderGrid(mask) {
+    const grid = mask.querySelector('.da-grid');
+    const empty = mask.querySelector('.da-empty');
+    if (!grid) return;
+    const contact = mask.dataset.contact || '';
+    const who = mask.dataset.who || 'all';
+    const list = albumFiltered(contact, who);
+    grid.innerHTML = list.map(albumCard).join('');
+    if (empty) empty.hidden = list.length > 0;
+  }
+  function openDoodleAlbum(defaultContactId) {
+    document.querySelectorAll('.doodle-album-mask').forEach(e => e.remove());
+    const contacts = (DB.state.contacts || []).filter(c => c && !c.deleted);
+    const selected = defaultContactId && contacts.some(c => c.id === defaultContactId) ? defaultContactId : '';
+    const opts = '<option value="">全部联系人</option>' + contacts.map(c =>
+      '<option value="' + albumEsc(c.id) + '"' + (c.id === selected ? ' selected' : '') + '>' +
+      albumEsc(Home.displayName(c)) + '</option>').join('');
+    const mask = document.createElement('div');
+    mask.className = 'doodle-album-mask ui-modal';
+    mask.dataset.contact = selected;
+    mask.dataset.who = 'all';
+    mask.innerHTML = '<div class="doodle-album">' +
+      '<div class="da-head"><b>涂鸦册</b><button class="ib-btn da-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
+      '<div class="da-filters"><div class="da-tabs">' +
+        '<button class="da-tab on" type="button" data-who="all">全部</button>' +
+        '<button class="da-tab" type="button" data-who="me">我的</button>' +
+        '<button class="da-tab" type="button" data-who="ai">TA 的</button></div>' +
+        '<select class="da-contact" aria-label="按联系人筛选">' + opts + '</select></div>' +
+      '<div class="da-grid"></div><div class="da-empty" hidden>这里还没有涂鸦</div>' +
+      '</div>';
+    document.body.appendChild(mask);
+    UI.raise(mask);
+    const grid = mask.querySelector('.da-grid');
+    mask.querySelector('.da-x').addEventListener('click', () => closeDoodleAlbum(mask));
+    mask.addEventListener('click', e => { if (e.target === mask) closeDoodleAlbum(mask); });
+    mask.querySelector('.da-tabs').addEventListener('click', e => {
+      const b = e.target.closest('.da-tab'); if (!b) return;
+      mask.dataset.who = b.dataset.who;
+      mask.querySelectorAll('.da-tab').forEach(x => x.classList.toggle('on', x === b));
+      albumRenderGrid(mask);
+    });
+    mask.querySelector('.da-contact').addEventListener('change', e => {
+      mask.dataset.contact = e.target.value;
+      albumRenderGrid(mask);
+    });
+    grid.addEventListener('click', e => {
+      const card = e.target.closest('.da-card'); if (!card) return;
+      const entry = albumAll().find(x => x.id === card.dataset.daId); if (!entry) return;
+      const act = e.target.closest('[data-act]');
+      if (act && act.dataset.act === 'del') { albumDelete(entry.id); return; }
+      if (act && act.dataset.act === 'redraw') { albumRedraw(entry); return; }
+      if (act && act.dataset.act === 'pad') { albumRedraw(entry); return; }
+      albumViewer(entry);
+    });
+    albumRenderGrid(mask);
+    mountIcons(mask);
+  }
+
+  function redrawDoodle(convId) {
+    const cv = DB.state.convs.find(c => c.id === convId);
+    if (!cv) { UI.toast('找不到这个会话'); return; }
+    if (!doodleAllowed(convId)) { UI.toast('TA 的涂鸦率是 0，先调高再画'); return; }
+    const d = (typeof Doodle !== 'undefined') ? Doodle.make() : null;
+    if (!d || !d.dataUrl) { UI.toast('这次没画出来'); return; }
+    const m = { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      from: 'ai', ts: Date.now(), type: 'img', img: d.dataUrl, doodle: true,
+      senderId: cv.type === 'single' ? cv.peerId : null };
+    (DB.state.msgs[cv.id] = DB.state.msgs[cv.id] || []).push(m);
+    cv.lastMsg = '[涂鸦]'; cv.lastTime = m.ts;
+    DB.save();
+    if (cur && cur.id === cv.id) appendMessage(m);
+    else open(cv.id);
+    albumAdd(m, cv);
+    if (typeof Home !== 'undefined' && Home.render) Home.render();
+  }
+
   function openDrawPad() {
     const layer = document.getElementById('dialog-layer') || document.body;
-    const old = layer.querySelector('.drawpad-mask'); if (old) old.remove();
-    const W = 640, H = 840;
+    const old = layer.querySelector('.drawpad-mask');
+    if (old) {
+      /* 走旧画板的关闭逻辑，顺带解绑 window 上的 pointerup/pointercancel，别让旧画板的手势监听留到新画板 */
+      const oldX = old.querySelector('.dp-x');
+      if (oldX) oldX.click(); else old.remove();
+    }
+    const W = 720, H = 960;
     const mask = document.createElement('div');
     mask.className = 'drawpad-mask ui-modal';
     mask.innerHTML =
       '<div class="drawpad">' +
-        '<div class="dp-head"><b>画板</b><button class="ib-btn dp-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
-        '<canvas class="dp-canvas" width="' + W + '" height="' + H + '"></canvas>' +
+        '<div class="dp-head"><button class="dp-album" type="button">涂鸦册 · <b>0</b></button><b>画板</b><button class="ib-btn dp-x" type="button"><i data-icon="x" data-size="16"></i></button></div>' +
+        '<div class="dp-canvas-wrap"><canvas class="dp-canvas" width="' + W + '" height="' + H + '"></canvas>' +
+          '<canvas class="dp-live" width="' + W + '" height="' + H + '"></canvas></div>' +
         '<div class="dp-colors" id="dp-colors">' +
           DP_PAL.map(c => '<button class="dp-sw" data-c="' + c + '" type="button" style="background:' + c + '" aria-label="选颜色"></button>').join('') +
           '<button class="dp-sw dp-custom" type="button" aria-label="调色盘自选"><input class="dp-picker" type="color" value="#3A3A42"></button>' +
@@ -11681,7 +12230,9 @@ const Chat = (function () {
     layer.appendChild(mask);
     UI.raise(mask);
     const cv = mask.querySelector('.dp-canvas');
+    const live = mask.querySelector('.dp-live');
     const c2 = cv.getContext('2d');
+    const cl = live.getContext('2d');
     const strokes = [];
     /* 她 10-12：画板草稿——画一半退出原画保留，再进来接着画；发出去或清空才清稿 */
     if (DB.state.drawDraft && Array.isArray(DB.state.drawDraft.strokes)) {
@@ -11700,42 +12251,83 @@ const Chat = (function () {
     let curColor = '#3A3A42';
     let curW = 6, curStyle = 'round';   /* 她 10-11 14:21：粗细三档 + 笔感三档（圆头/马克/蜡笔） */
     const PAPER = '#FFFDF6';
-    function drawStroke(st) {
-      c2.strokeStyle = st.c; c2.fillStyle = st.c;
-      const line = (lw, alpha, dx, dy) => {
-        c2.lineWidth = lw; c2.globalAlpha = alpha;
+    function drawStroke(ctx, st) {
+      ctx.strokeStyle = st.c; ctx.fillStyle = st.c;
+      const line = (lw, dx, dy) => {
+        ctx.lineWidth = lw;
         const allSame = st.pts.every(p => Math.abs(p[0] - st.pts[0][0]) < 0.5 && Math.abs(p[1] - st.pts[0][1]) < 0.5);
-        c2.beginPath();
-        if (allSame) { c2.arc(st.pts[0][0] + (dx || 0), st.pts[0][1] + (dy || 0), Math.max(1.5, lw / 2), 0, Math.PI * 2); c2.fill(); return; }
-        st.pts.forEach((p, i) => { const X = p[0] + (dx || 0), Y = p[1] + (dy || 0); if (i) c2.lineTo(X, Y); else c2.moveTo(X, Y); });
-        c2.stroke();
+        ctx.beginPath();
+        if (allSame) { ctx.arc(st.pts[0][0] + (dx || 0), st.pts[0][1] + (dy || 0), Math.max(1.5, lw / 2), 0, Math.PI * 2); ctx.fill(); return; }
+        st.pts.forEach((p, i) => { const X = p[0] + (dx || 0), Y = p[1] + (dy || 0); if (i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); });
+        ctx.stroke();
       };
-      c2.lineJoin = 'round';
-      if (st.style === 'marker') { c2.lineCap = 'butt'; line(st.w * 1.5, 0.55); }
+      ctx.lineJoin = 'round';
+      if (st.style === 'marker') { ctx.lineCap = 'butt'; line(st.w * 1.4); }
       else if (st.style === 'crayon') {
-        c2.lineCap = 'round';
-        line(st.w * 0.8, 0.3, 0.8, 0.5); line(st.w, 0.3); line(st.w * 0.6, 0.35, -0.7, -0.4);
-      } else { c2.lineCap = 'round'; line(st.w, 1); }
-      c2.globalAlpha = 1;
+        ctx.lineCap = 'round';
+        line(st.w * 0.82, 0.7, 0.5); line(st.w * 0.5, -0.6, -0.4);
+      } else { ctx.lineCap = 'round'; line(st.w); }
     }
-    function repaint() {
+    function repaintBase() {
       c2.fillStyle = PAPER; c2.fillRect(0, 0, W, H);
-      strokes.concat(curStroke ? [curStroke] : []).forEach(drawStroke);
+      strokes.forEach(st => drawStroke(c2, st));
     }
-    repaint();
+    function repaintLive() {
+      cl.clearRect(0, 0, W, H);
+      if (curStroke) drawStroke(cl, curStroke);
+    }
+    let raf = 0;
+    function scheduleLive() {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; repaintLive(); });
+    }
+    repaintBase();
     function pos(e) {
       const r = cv.getBoundingClientRect();
       return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
     }
-    cv.addEventListener('pointerdown', e => {
-      e.preventDefault(); curStroke = { pts: [pos(e)], c: curColor, w: curW, style: curStyle }; repaint();
+    function addPoint(e) {
+      if (!curStroke) return;
+      curStroke.pts.push(pos(e));
+    }
+    function onDown(e) {
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      curStroke = { pts: [pos(e)], c: curColor, w: curW, style: curStyle };
+      scheduleLive();
       try { cv.setPointerCapture(e.pointerId); } catch (err) {}
-    });
-    cv.addEventListener('pointermove', e => { if (!curStroke) return; e.preventDefault(); curStroke.pts.push(pos(e)); repaint(); });
-    const endStroke = () => { if (curStroke && curStroke.pts.length) { strokes.push(curStroke); saveDraft(); } curStroke = null; repaint(); };
+    }
+    function onMove(e) {
+      if (!curStroke) return;
+      e.preventDefault();
+      const evs = (e.getCoalescedEvents ? e.getCoalescedEvents() : null) || [];
+      if (evs.length) evs.forEach(addPoint); else addPoint(e);
+      scheduleLive();
+    }
+    function endStroke() {
+      if (curStroke && curStroke.pts.length) { strokes.push(curStroke); saveDraft(); }
+      curStroke = null;
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      repaintBase();
+      cl.clearRect(0, 0, W, H);
+    }
+    cv.addEventListener('pointerdown', onDown);
+    cv.addEventListener('pointermove', onMove);
     cv.addEventListener('pointerup', endStroke);
     cv.addEventListener('pointercancel', endStroke);
-    const close = () => { saveDraft(); mask.remove(); };   /* 关画板也存稿：画一半退出不丢 */
+    window.addEventListener('pointerup', endStroke);
+    window.addEventListener('pointercancel', endStroke);
+    const close = () => {
+      if (curStroke) endStroke();
+      saveDraft();
+      window.removeEventListener('pointerup', endStroke);
+      window.removeEventListener('pointercancel', endStroke);
+      mask.remove();
+    };   /* 关画板也存稿：画一半退出不丢 */
+    mask.querySelector('.dp-album').addEventListener('click', () => {
+      openDoodleAlbum(cur && cur.type === 'single' ? cur.peerId : '');
+    });
+    updateAlbumBadge();
     /* 选色：点模板色即换笔色；调色盘 input[type=color] 自选，选中色回填到调色盘铉上 */
     const swBox = mask.querySelector('#dp-colors');
     const customSw = mask.querySelector('.dp-custom');
@@ -11762,13 +12354,15 @@ const Chat = (function () {
     });
     mask.querySelector('.dp-x').addEventListener('click', close);
     mask.addEventListener('click', e => { if (e.target === mask) close(); });
-    mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaint(); saveDraft(); });
-    mask.querySelector('[data-dp="clear"]').addEventListener('click', () => { strokes.length = 0; repaint(); saveDraft(); });
+    mask.querySelector('[data-dp="undo"]').addEventListener('click', () => { strokes.pop(); repaintBase(); repaintLive(); saveDraft(); });
+    mask.querySelector('[data-dp="clear"]').addEventListener('click', () => { strokes.length = 0; repaintBase(); repaintLive(); saveDraft(); });
     mask.querySelector('[data-dp="send"]').addEventListener('click', () => {
+      if (curStroke) endStroke();
       if (!strokes.length) { UI.toast('还没画呢'); return; }
       DB.state.drawDraft = null; DB.save();   /* 发出去稿子就结了 */
-      close();
       sendImage(cv.toDataURL('image/png'), false, true);
+      strokes.length = 0;   /* 别让 close() 里的 saveDraft() 又把刚发出去的画存回草稿 */
+      close();
       UI.toast('已发送');
     });
     mountIcons(mask);
@@ -13231,8 +13825,9 @@ const Chat = (function () {
         if (cur.type !== 'single') UI.toast('报备是两个人之间的事，群聊没有哦');
         else Report.open(cur.peerId);
       }
-      else if (k === 'quiz') {    /* P34：灵魂拷问（她定：入口同在＋号展开栏；群聊拦截） */
-        if (cur.type !== 'single') UI.toast('灵魂拷问是两个人之间的事，群聊没有哦');
+      else if (k === 'quiz') {    /* P34：灵魂拷问（她定：入口同在＋号展开栏）
+         她 10-28 17:10：群聊也开——一群人各答一遍，按选项投票，头像+名字标出谁选了什么 */
+        if (cur.type !== 'single') Quiz.openComposer(cur);
         else Quiz.open(cur.peerId);
       }
       else if (k === 'link') {   /* P36（她 08-27 定）：链接分享，群聊私聊都能发 */
@@ -13274,6 +13869,8 @@ const Chat = (function () {
     document.getElementById('chat-cam-input').addEventListener('change', function () {
       const f = this.files[0]; this.value = ''; ingestPicked(f);
     });
+    /* 10-28：启动时把历史涂鸦收进涂鸦册（按 msgId 去重，只读聊天记录，不改消息） */
+    albumCollectAll();
   }
 
   /* P24：Router 返回刷新钩子用 —— 保留会话上下文的全量重渲（幂等） */
@@ -13288,6 +13885,7 @@ const Chat = (function () {
      lkResolve, fetchLinkMeta,   /* 她 10-07：朋友圈链接大卡要用（b23 解直链 + 抓封面标题） */
     lkActCfg: LK_ACT,   /* 播放器互动全局概率（不按联系人分）；探针可临时改延时，不改概率值 */
     openDrawPad,   /* 她 10-08 17:33：画板入口也给探针用 */
+    openDoodleAlbum, redrawDoodle,   /* 10-28：涂鸦册 / 再画一张 */
     videoGifMode,   /* 她 10-12：动图判定口，探针直测 */
     get conv() { return cur; } };
 })();
@@ -13785,30 +14383,9 @@ const Engine = (function () {
          旧「排表情/图片位后面占气泡」被表情15%+图片20%+自由说话蚕食，拍 100 实际只有约45%
          （verify-1011-涂鸦蚕食.js 实证），改独立掷：掷中本条就是画，掷不中才走原链 */
       if (doodleOK && Math.random() * 100 < doodleProb) {
-        /* 她 10-12：TA 涂鸦草稿——画一半收笔存草稿不发（默认 8% 工程值待拍，参数 doodleDraftRate 可调），
-           下次抽中涂鸦时自由选择：85% 接着画完发（带续画时间），15% 弃稿重画；草稿在会话在才有效 */
-        DB.state.doodleDrafts = DB.state.doodleDrafts || {};
-        const ddP = Math.min(100, Math.max(0, p.doodleDraftRate == null ? 8 : +p.doodleDraftRate));
-        const draft = DB.state.doodleDrafts[conv.id];
-        if (draft) {
-          delete DB.state.doodleDrafts[conv.id];
-          DB.save();
-          const d2 = runSafe('doodle.make.resume', () => Doodle.make());
-          if (d2 && d2.dataUrl) {
-            const dd2 = d2.dataUrl;
-            t += (i === 0 ? 0 : rollDelay(p)) + 2500 + Math.floor(Math.random() * 3500);   /* 续画完再发 */
-            later(conv.id, t, () => pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-              from: 'ai', type: 'img', img: dd2, doodle: true, senderId: ct ? ct.id : null }));
-            continue;
-          }   /* 恢复画砸了照旧落回老链 */
-        }
+        /* 10-28 她定：TA 不再保存半张草稿，抽中就一次画完整，画砸了落回老链。 */
         const d = runSafe('doodle.make', () => Doodle.make());
         if (d && d.dataUrl) {
-          if (Math.random() * 100 < ddP) {
-            DB.state.doodleDrafts[conv.id] = { ts: Date.now() };
-            DB.save();
-            continue;   /* 画一半收笔，本条不发声，气泡位留待下次涂鸦恢复（不硬凑别条补位） */
-          }
           const dd = d.dataUrl;
           t += (i === 0 ? 0 : rollDelay(p));
           later(conv.id, t, () => pushRaw(conv, { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
@@ -14104,24 +14681,15 @@ const Engine = (function () {
 })();
 
 /* =====================================================
-   LOVE♡X · doodle.js —— TA 的随手涂鸦（她 10-08 00:58 定；10-13 08:28 按她的方案重写）
-   · 聊天气泡位独立掷「涂鸦率」（默认 1% 她拍的），掷中发一张 TA 现画的小画
-   · 她 10-13 08:28 的方案（本人原文要点，照着做，不自己发明）：
-     1) 素材池里放的是【独立简笔基础单元】——线条小元素、零件，不是整张成品图；
-        分五类：人物部件 / 生物部件 / 景物部件 / 装饰线条 / 基础画笔。
-     2) AI 自主随机挑元素、随机数量、无强制搭配；每个元素随机缩放、镜像、旋转、平移、轻微扭曲；
-        画笔粗细与颜色随机幅度变化，线条粗细随机浮动，画笔类型随机；
-        摆放位置每次随机、不固定排版；【图层顺序随机】——谁在前谁在后每次不一样。
-     3) 实时拼接、一笔一笔渲染出涂鸦；每次构图都不一样。
-     4) 填涂颜色随机（可能多可能少），【填涂和画笔颜色是两码事】，不会一个做一个不做。
-     5) 局部擦除：随机对部分元素做「擦除」，画面有残缺感，不是完整干净轮廓。
-     6) 多层叠加：允许半透明元素互相重叠、颜色混合。
-     7) 留白控制：可以大面积留白只画一点点，也可以画满画布，两种风格随机切换。
-     8) 画风每次随机。
-     · 她定的元素上限：8 个（原文「上限一定要有的话就 8 个」）。
-     · 不读对话文本、不做关键词识别——AI 自己随性画（她原话「无关键词识别」）。
+   LOVE♡X · doodle.js —— TA 的随手涂鸦（10-28 按她定的新口径重写）
+   · 聊天气泡位独立掷「涂鸦率」（默认 1% 她拍的），掷中发一张 TA 现画的小画。
+   · 画风混合：可爱 45% / 场景 30% / 抽象 15% / 纯随机 10%。
+   · 每张先画一个完整主体：56 个母题，占画布 45%~65%，基本正放（±8°），
+     永远在最上层；墨线勾边 + 一块实色浅填，不透明、不混色、不擦除、不被盖。
+   · 主体之外只放小零件做背景；位置、数量、颜色、笔感随机，但不抢主体。
+   · 不读对话文本、不做关键词识别——AI 自己随性画（她原话「无关键词识别」）。
    · 渲染全走既有图片管道（m.type='img' + m.doodle 标记）：撤回/长按/引用/摘要一条不漏；
-     摘要显示「[涂鸦]」不冒充图片。纸底奶白 + 墨线，单张 2~6KB 内联，不碰网络、不占媒体库。
+     摘要显示「[涂鸦]」不冒充图片。纸底奶白 + 纸框固定，单张内联，不碰网络、不占媒体库。
    ===================================================== */
 const Doodle = (function () {
 
@@ -14392,139 +14960,499 @@ const Doodle = (function () {
   const TOTAL = PERSON.length + LIFE.length + SCENE.length + DECO.length + BRUSH.length;
   const CATS = KINDS.map(k => k.n);
 
-  /* ================= 组合引擎 ================= */
-  /* 她 10-13 08:28：随机挑元素、数量随机、无强制搭配 → 自己拼出一张画；每次构图都不一样 */
-  function make() {
-    /* 画风（画笔类型）每次随机 */
-    const style = pick(['round', 'round', 'marker', 'crayon', 'pencil']);
-    const penBase = rnd(0.8, 1.5);            // 整张的笔粗基准（线条粗细还会逐笔浮动）
+  /* ================= 完整主体层（10-28 她定：先有能认出来的东西，再谈随机） =================
+     主体是完整图案，不是零件；主体占画布 45%~65%，基本正放（±8°），永远在随机零件最上层。
+     主体只用墨线勾边 + 一块实色浅填，不透明、不混色、不擦除、不被盖。 */
+  function mixHex(a, b, t) {
+    const pa = a.replace('#', ''), pb = b.replace('#', '');
+    const ai = parseInt(pa, 16), bi = parseInt(pb, 16);
+    const ar = (ai >> 16) & 255, ag = (ai >> 8) & 255, ab = ai & 255;
+    const br = (bi >> 16) & 255, bg = (bi >> 8) & 255, bb = bi & 255;
+    const c = v => Math.round(v).toString(16).padStart(2, '0');
+    return '#' + c(ar + (br - ar) * t) + c(ag + (bg - ag) * t) + c(ab + (bb - ab) * t);
+  }
+  const tint = (hex, t) => mixHex(hex, PAPER, t == null ? 0.62 : t);
+  const S = (pts, w, f, fc) => ({ pts, c: 'ink', w: w || 2.5, f: !!f, fc: fc || '' });
+  const dotAt = (x, y, w, fc) => S(dot(x, y), w || 3.2, false, fc);
+  const lineAt = (a, b, w) => S(J([a, b], 0.45), w || 2.4);
+  const poly = (pts, w, f, fc) => S(J(pts, 0.45), w || 2.5, !!f, fc);
+  const circle = (x, y, rx, ry, w, f, fc) => S(J(E(x, y, rx, ry, true), 0.45), w || 2.5, f !== false, fc);
+  const arc = (x, y, rx, ry, a0, a1, w) => S(J(E(x, y, rx, ry, false, a0, a1, 12), 0.45), w || 2.3);
 
-    /* 两套色互相独立（她：「填涂和画笔颜色是两码事，不会一个做一个不做」）：
-       画笔色 = 这一张用的马克笔；填涂色 = 另外单独掷一次，可能一支都不填、也可能填好几块 */
-    /* 画笔色：这一张用哪几支彩笔（她 10-13 08:48「不同颜色的彩线咋这么少」：原来只给 2~3 支、
-       且所有零件都往同一支上取，整张画就只剩一种颜色） */
-    /* 她 10-13 11:16：「每张画就是 1~6 色就差不多」——一张画里的颜色总数就定在 1~6。
-       她 11:13 要的「画笔色多一些」指的是可选色本身：色盘从 9 支扩到 15 支。 */
-    const strokeA = shuffle(PAL).slice(0, 1 + Math.floor(Math.random() * 6));   // 1~6 支
-    const fillA = strokeA.length > 1 ? shuffle(strokeA).slice(0, Math.random() < 0.3 ? 0 : (Math.random() < 0.6 ? 1 : Math.min(3, strokeA.length))) : [];
-    const A = { a: strokeA };
+  const SUBJECTS = [
+    { n: '猫猫', k: 'cute', f: () => [
+      circle(0, 2, 19, 17), poly([[-15, -10], [-20, -25], [-5, -17]], 2.5),
+      poly([[15, -10], [20, -25], [5, -17]], 2.5), poly([[-13, -13], [-16, -22], [-7, -17]], 1.7, true, '#F6C9D0'),
+      poly([[13, -13], [16, -22], [7, -17]], 1.7, true, '#F6C9D0'),
+      dotAt(-7, -2, 3.8), dotAt(7, -2, 3.8), poly([[-3, 7], [3, 7], [0, 10], [-3, 7]], 2, true, '#D886AE'),
+      lineAt([0, 10], [0, 13], 2), lineAt([0, 13], [-5, 16], 2), lineAt([0, 13], [5, 16], 2),
+      lineAt([-12, 9], [-24, 6], 1.8), lineAt([-12, 13], [-24, 14], 1.8),
+      lineAt([12, 9], [24, 6], 1.8), lineAt([12, 13], [24, 14], 1.8),
+      circle(-13, 8, 2.6, 1.8, 1.8, true, '#F6C9D0'), circle(13, 8, 2.6, 1.8, 1.8, true, '#F6C9D0')
+    ] },
+    { n: '小狗', k: 'cute', f: () => [
+      circle(0, 1, 18, 17), poly([[-13, -10], [-24, -4], [-23, 13], [-15, 15], [-10, 3]], 2.4, true, '#E8C39E'),
+      poly([[13, -10], [24, -4], [23, 13], [15, 15], [10, 3]], 2.4, true, '#E8C39E'),
+      dotAt(-7, -3, 3.6), dotAt(7, -3, 3.6), circle(0, 7, 5, 4, 2.2, true, '#8A6F5C'),
+      lineAt([0, 11], [0, 14], 2), lineAt([0, 14], [-5, 16], 2), lineAt([0, 14], [5, 16], 2),
+      poly([[-4, 16], [0, 22], [4, 16]], 1.8, true, '#E88A9A'),
+      circle(-13, 7, 2.8, 1.8, 1.8, true, '#F6C9D0'), circle(13, 7, 2.8, 1.8, 1.8, true, '#F6C9D0')
+    ] },
+    { n: '兔兔', k: 'cute', f: () => [
+      circle(0, 4, 17, 16), poly([[-8, -8], [-11, -30], [-2, -27], [-1, -10]], 2.4, true, '#F6C9D0'),
+      poly([[8, -8], [11, -30], [2, -27], [1, -10]], 2.4, true, '#F6C9D0'),
+      dotAt(-6, 0, 3.6), dotAt(6, 0, 3.6), poly([[-3, 8], [3, 8], [0, 11], [-3, 8]], 2, true, '#D886AE'),
+      lineAt([0, 11], [0, 14], 2), lineAt([0, 14], [-4, 16], 2), lineAt([0, 14], [4, 16], 2),
+      circle(-12, 8, 2.8, 1.8, 1.8, true, '#F6C9D0'), circle(12, 8, 2.8, 1.8, 1.8, true, '#F6C9D0'),
+      lineAt([-16, 4], [-25, 2], 1.6), lineAt([16, 4], [25, 2], 1.6)
+    ] },
+    { n: '小熊', k: 'cute', f: () => [
+      circle(0, 2, 19, 18), circle(-15, -13, 7, 7, 2.4, true, '#E8C39E'), circle(15, -13, 7, 7, 2.4, true, '#E8C39E'),
+      dotAt(-7, -2, 3.6), dotAt(7, -2, 3.6), circle(0, 7, 5, 4, 2.2, true, '#8A6F5C'),
+      lineAt([0, 11], [0, 14], 2), lineAt([0, 14], [-5, 16], 2), lineAt([0, 14], [5, 16], 2),
+      circle(-12, 7, 2.8, 1.8, 1.8, true, '#F6C9D0'), circle(12, 7, 2.8, 1.8, 1.8, true, '#F6C9D0')
+    ] },
+    { n: '小人', k: 'cute', f: () => [
+      circle(0, -7, 15, 16), arc(0, -9, 16, 13, Math.PI * 1.02, Math.PI * 1.98, 2.5),
+      dotAt(-5, -7, 3.2), dotAt(5, -7, 3.2), lineAt([-2, 1], [2, 1], 2),
+      lineAt([0, 9], [0, 15], 2.4), lineAt([-13, 16], [13, 16], 2.6),
+      lineAt([-9, 9], [-17, 15], 2.2), lineAt([9, 9], [17, 15], 2.2),
+      circle(-10, 0, 2.4, 1.6, 1.7, true, '#F6C9D0'), circle(10, 0, 2.4, 1.6, 1.7, true, '#F6C9D0')
+    ] },
+    { n: '小鱼', k: 'cute', f: () => [
+      circle(0, 0, 20, 12), poly([[-17, 0], [-28, -11], [-28, 11], [-17, 0]], 2.4, true, '#9FD3D8'),
+      poly([[-4, -10], [5, -19], [9, -10]], 2.2, true, '#9FD3D8'),
+      dotAt(7, -2, 3.2), lineAt([-8, 2], [-2, 2], 1.8), lineAt([-8, 6], [-3, 6], 1.8),
+      circle(16, -9, 2.5, 2.5, 1.8), circle(22, -16, 1.8, 1.8, 1.6)
+    ] },
+    { n: '蝴蝶', k: 'abstract', f: () => [
+      circle(-9, -4, 10, 13, 2.4, true, '#D8C4E8'), circle(9, -4, 10, 13, 2.4, true, '#D8C4E8'),
+      circle(-7, 9, 7, 9, 2.2, true, '#F2C9D8'), circle(7, 9, 7, 9, 2.2, true, '#F2C9D8'),
+      lineAt([0, -17], [0, 19], 2.6), lineAt([0, -17], [-6, -24], 1.8), lineAt([0, -17], [6, -24], 1.8),
+      dotAt(-9, -4, 2.8), dotAt(9, -4, 2.8), dotAt(-7, 9, 2.4), dotAt(7, 9, 2.4)
+    ] },
+    { n: '花花', k: 'abstract', f: () => [
+      circle(0, -6, 8, 8, 2.2, true, '#F6D98A'),
+      circle(0, -21, 8, 10, 2.3, true, '#F2C9D8'), circle(0, 9, 8, 10, 2.3, true, '#F2C9D8'),
+      circle(-15, -6, 10, 8, 2.3, true, '#F2C9D8'), circle(15, -6, 10, 8, 2.3, true, '#F2C9D8'),
+      lineAt([0, 2], [0, 26], 2.6), poly([[-1, 14], [-10, 9], [-9, 17], [-1, 20]], 2.1, true, '#BFD8A8'),
+      poly([[1, 19], [10, 14], [9, 22], [1, 25]], 2.1, true, '#BFD8A8')
+    ] },
+    { n: '蘑菇', k: 'cute', f: () => [
+      poly([[-22, 2], [-15, -17], [0, -24], [15, -17], [22, 2], [0, 7], [-22, 2]], 2.5, true, '#E8A6A0'),
+      poly([[-7, 5], [-8, 24], [8, 24], [7, 5]], 2.4, true, '#F2DFC4'),
+      circle(-10, -8, 3, 2.5, 1.8, true, '#FFF4E0'), circle(8, -12, 2.5, 2, 1.8, true, '#FFF4E0'),
+      lineAt([-12, 24], [-18, 27], 2), lineAt([12, 24], [18, 27], 2)
+    ] },
+    { n: '蛋糕', k: 'cute', f: () => [
+      poly([[-22, 6], [-22, 19], [22, 19], [22, 6]], 2.5, true, '#F2C9A0'),
+      poly([[-22, 6], [-18, 0], [18, 0], [22, 6]], 2.4, true, '#F6D98A'),
+      poly([[-4, -1], [-4, -20], [4, -20], [4, -1]], 2.2, true, '#F2C9D8'),
+      poly([[-4, -20], [0, -27], [4, -20]], 2.2, true, '#F6D98A'),
+      lineAt([-18, 12], [18, 12], 1.8), dotAt(-10, 16, 2.4), dotAt(0, 16, 2.4), dotAt(10, 16, 2.4)
+    ] },
+    { n: '杯子', k: 'cute', f: () => [
+      poly([[-15, -10], [-12, 18], [12, 18], [15, -10]], 2.5, true, '#BFD8E8'),
+      arc(17, 2, 9, 9, Math.PI * 1.45, Math.PI * 0.55, 2.4),
+      lineAt([-20, 20], [20, 20], 2.6), lineAt([-9, -17], [-7, -25], 1.8), lineAt([0, -17], [2, -26], 1.8),
+      lineAt([9, -17], [11, -25], 1.8)
+    ] },
+    { n: '小房子', k: 'scene', f: () => [
+      poly([[-22, 2], [22, 2], [22, 24], [-22, 24], [-22, 2]], 2.5, true, '#F2DFC4'),
+      poly([[-27, 3], [0, -22], [27, 3], [-27, 3]], 2.6, true, '#D8A08A'),
+      poly([[-6, 8], [-6, 24], [6, 24], [6, 8]], 2.2, true, '#B98A6A'),
+      poly([[-18, 8], [-10, 8], [-10, 16], [-18, 16], [-18, 8]], 2, true, '#BFD8E8'),
+      poly([[10, 8], [18, 8], [18, 16], [10, 16], [10, 8]], 2, true, '#BFD8E8'),
+      lineAt([16, -10], [16, -22], 2.4), lineAt([16, -22], [22, -22], 2.2)
+    ] },
+    { n: '大树', k: 'scene', f: () => [
+      poly([[-5, 26], [-7, -2], [7, -2], [5, 26]], 2.5, true, '#C9A27A'),
+      poly([[-25, 0], [-18, -19], [0, -27], [18, -19], [25, 0], [16, 12], [0, 15], [-16, 12], [-25, 0]], 2.6, true, '#BFD8A8'),
+      circle(-10, -6, 3, 3, 1.8, true, '#E8A6A0'), circle(8, -12, 3, 3, 1.8, true, '#E8A6A0'),
+      circle(12, 1, 3, 3, 1.8, true, '#E8A6A0'), lineAt([0, 15], [0, 26], 2)
+    ] },
+    { n: '太阳', k: 'scene', f: () => [
+      circle(0, 0, 18, 18), ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+        const a = Math.PI * 2 * i / 8;
+        return lineAt([Math.cos(a) * 24, Math.sin(a) * 24], [Math.cos(a) * 31, Math.sin(a) * 31], 2.2);
+      }),
+      dotAt(-6, -3, 3), dotAt(6, -3, 3), arc(0, 3, 7, 6, 0.15 * Math.PI, 0.85 * Math.PI, 2.2)
+    ] },
+    { n: '月亮', k: 'scene', f: () => [
+      poly([[6, -22], [-5, -15], [-12, -3], [-10, 11], [0, 21], [12, 18], [3, 12], [-2, 2], [0, -9], [8, -17], [6, -22]], 2.5, true, '#F6E2A8'),
+      dotAt(-16, -18, 2.2), dotAt(18, -10, 2.6), dotAt(20, 12, 2), dotAt(-18, 14, 1.8)
+    ] },
+    { n: '云朵', k: 'scene', f: () => [
+      poly([[-24, 4], [-18, -7], [-7, -9], [0, -17], [11, -10], [21, -6], [25, 4], [18, 14], [0, 16], [-16, 14], [-24, 4]], 2.6, true, '#D8E6F2'),
+      dotAt(-8, 2, 3), dotAt(8, 2, 3), arc(0, 6, 6, 5, 0.15 * Math.PI, 0.85 * Math.PI, 2.1),
+      lineAt([-12, 22], [-16, 29], 2), lineAt([0, 22], [-4, 30], 2), lineAt([12, 22], [8, 29], 2)
+    ] },
+    { n: '爱心', k: 'abstract', f: () => [
+      poly([[0, 25], [-20, 7], [-23, -7], [-15, -18], [-3, -18], [0, -8], [3, -18], [15, -18], [23, -7], [20, 7], [0, 25]], 2.6, true, '#F2B8C6'),
+      lineAt([-13, -7], [-8, -12], 2), lineAt([8, -7], [13, -12], 2)
+    ] },
+    { n: '星星', k: 'abstract', f: () => [
+      poly([[0, -26], [7, -8], [26, -8], [11, 4], [17, 23], [0, 12], [-17, 23], [-11, 4], [-26, -8], [-7, -8], [0, -26]], 2.6, true, '#F6D98A'),
+      dotAt(-7, 0, 3), dotAt(7, 0, 3), arc(0, 5, 6, 5, 0.15 * Math.PI, 0.85 * Math.PI, 2)
+    ] },
+    { n: '小鸭', k: 'cute', f: () => [
+      circle(0, 4, 20, 14, 2.5, true, '#F6D98A'), circle(13, -10, 11, 10, 2.4, true, '#F6D98A'),
+      poly([[22, -10], [32, -7], [22, -3]], 2.2, true, '#E8A33D'), dotAt(16, -13, 3),
+      poly([[-2, 1], [8, -4], [10, 5], [-2, 8]], 2, true, '#F2DFC4'),
+      lineAt([-12, 18], [-16, 25], 2), lineAt([8, 18], [12, 25], 2)
+    ] },
+    { n: '小鸟', k: 'cute', f: () => [
+      circle(0, 4, 16, 12), circle(11, -7, 8, 7), poly([[18, -8], [28, -4], [18, 0]], 2.2, true, '#E8A33D'),
+      dotAt(13, -9, 2.8), poly([[-12, 3], [-24, -2], [-15, 12]], 2.2, true, '#9FD3D8'),
+      lineAt([-7, 15], [-10, 22], 2), lineAt([7, 15], [10, 22], 2),
+      lineAt([-12, 8], [-20, 10], 1.8), lineAt([12, 8], [20, 10], 1.8)
+    ] },
+    { n: '企鹅', k: 'cute', f: () => [
+      circle(0, 3, 18, 22, 2.6, true, '#3A3A42'), circle(0, 7, 12, 14, 2.2, true, '#F2DFC4'),
+      dotAt(-6, -7, 3), dotAt(6, -7, 3), poly([[-4, -1], [4, -1], [0, 4], [-4, -1]], 2, true, '#E8A33D'),
+      lineAt([-10, 22], [-16, 27], 2.2), lineAt([10, 22], [16, 27], 2.2)
+    ] },
+    { n: '机器人', k: 'cute', f: () => [
+      poly([[-17, -16], [17, -16], [17, 10], [-17, 10], [-17, -16]], 2.5, true, '#BFD8E8'),
+      circle(-7, -3, 3, 3, 1.8, true, '#3A3A42'), circle(7, -3, 3, 3, 1.8, true, '#3A3A42'),
+      lineAt([-7, 5], [7, 5], 2), lineAt([0, -16], [0, -26], 2.2), circle(0, -29, 3, 3, 1.8, true, '#F6D98A'),
+      lineAt([-17, -8], [-25, -2], 2.2), lineAt([17, -8], [25, -2], 2.2),
+      lineAt([-10, 10], [-10, 20], 2.2), lineAt([10, 10], [10, 20], 2.2)
+    ] },
+    /* —— 她 10-08：「什么各种图案，种类，生物不同的，物品啥的都可以，颜色也都可以，各种丰富」
+       主体只润到 22 种、只剩三个类目，比当初定的「五类、五十多种」薄了一大截（10-28 自查补回）。
+       下面按食物 / 物品 / 萌物 / 自然 / 图案五类补到 56 种，画法沿用同一套笔。 —— */
+    { n: '苹果', k: 'food', f: () => [
+      circle(0, 5, 20, 18, 2.5, true, '#F2A6A0'),
+      lineAt([0, -13], [2, -24], 2.2), poly([[2, -22], [12, -26], [8, -17], [2, -19]], 2, true, '#BFD8A8'),
+      lineAt([-8, 1], [-6, 9], 1.8)
+    ] },
+    { n: '草莓', k: 'food', f: () => [
+      poly([[0, 26], [-17, 6], [-16, -8], [0, -14], [16, -8], [17, 6], [0, 26]], 2.5, true, '#F08A8A'),
+      poly([[-13, -12], [-6, -20], [0, -14], [6, -20], [13, -12], [0, -8], [-13, -12]], 2.3, true, '#7FA86B'),
+      dotAt(-7, 2, 1.8), dotAt(6, 4, 1.8), dotAt(0, 12, 1.8), dotAt(-3, -3, 1.8), dotAt(8, -3, 1.8)
+    ] },
+    { n: '冰淇淋', k: 'food', f: () => [
+      poly([[-13, -6], [0, 28], [13, -6], [-13, -6]], 2.4, true, '#F2DFC4'),
+      circle(-6, -14, 9, 9, 2.3, true, '#F2C9D8'), circle(6, -14, 9, 9, 2.3, true, '#F6D98A'),
+      circle(0, -22, 9, 9, 2.3, true, '#BFD8E8'), lineAt([-9, 2], [9, 2], 1.6)
+    ] },
+    { n: '面包', k: 'food', f: () => [
+      poly([[-20, 4], [-15, -14], [0, -20], [15, -14], [20, 4], [16, 16], [-16, 16], [-20, 4]], 2.5, true, '#E8C39E'),
+      arc(0, 2, 12, 10, Math.PI * 1.08, Math.PI * 1.92, 2), lineAt([-6, 8], [6, 8], 1.8), lineAt([-8, 13], [8, 13], 1.8)
+    ] },
+    { n: '西瓜', k: 'food', f: () => [
+      poly([[-24, -8], [0, 22], [24, -8], [-24, -8]], 2.5, true, '#F08A8A'),
+      poly([[-24, -8], [-19, -12], [19, -12], [24, -8]], 2.3, true, '#7FA86B'),
+      lineAt([-12, -2], [-6, 10], 1.8), lineAt([0, -6], [3, 12], 1.8), lineAt([12, -2], [7, 10], 1.8)
+    ] },
+    { n: '棒棒糖', k: 'food', f: () => [
+      circle(0, -8, 16, 16, 2.5, true, '#F2C9D8'), S(spiral(0, -8, 3, 14, 2.2), 2),
+      lineAt([0, 8], [2, 28], 2.4)
+    ] },
+    { n: '煎蛋', k: 'food', f: () => [
+      poly([[-22, 0], [-16, -14], [-2, -19], [13, -15], [22, -3], [18, 12], [2, 18], [-14, 13], [-22, 0]], 2.5, true, '#FCF6EC'),
+      circle(3, -1, 8, 8, 2.2, true, '#F6D98A')
+    ] },
+    { n: '寿司', k: 'food', f: () => [
+      poly([[-20, 2], [-16, -12], [16, -12], [20, 2], [16, 16], [-16, 16], [-20, 2]], 2.5, true, '#FCF6EC'),
+      poly([[-16, -12], [-14, -20], [14, -20], [16, -12]], 2.3, true, '#F08A8A'),
+      lineAt([-10, 2], [10, 2], 1.6), dotAt(-4, 8, 1.8), dotAt(5, 8, 1.8)
+    ] },
+    { n: '气球', k: 'thing', f: () => [
+      circle(0, -8, 15, 17, 2.5, true, '#D886AE'),
+      poly([[-4, 9], [4, 9], [0, 14], [-4, 9]], 2, true, '#D886AE'),
+      S(wave(0, 14, 4, 30, 2.5, 4), 2), lineAt([-9, -16], [-13, -21], 1.8)
+    ] },
+    { n: '礼物盒', k: 'thing', f: () => [
+      poly([[-18, -4], [18, -4], [18, 18], [-18, 18], [-18, -4]], 2.5, true, '#F2C9D8'),
+      poly([[-20, -16], [20, -16], [20, -4], [-20, -4], [-20, -16]], 2.3, true, '#F6D98A'),
+      lineAt([0, -16], [0, 18], 2.2), poly([[-8, -18], [-2, -25], [0, -16], [-8, -16]], 2, true, '#F6D98A'),
+      poly([[8, -18], [2, -25], [0, -16], [8, -16]], 2, true, '#F6D98A')
+    ] },
+    { n: '书本', k: 'thing', f: () => [
+      poly([[-20, -14], [0, -18], [20, -14], [20, 16], [0, 20], [-20, 16], [-20, -14]], 2.5, true, '#BFD8E8'),
+      lineAt([0, -18], [0, 20], 2.2), lineAt([-14, -8], [-5, -6], 1.8), lineAt([5, -6], [14, -8], 1.8),
+      lineAt([-14, 0], [-5, 2], 1.8), lineAt([5, 2], [14, 0], 1.8)
+    ] },
+    { n: '铅笔', k: 'thing', f: () => [
+      poly([[-6, -22], [6, -22], [6, 14], [-6, 14], [-6, -22]], 2.4, true, '#F6D98A'),
+      poly([[-6, 14], [6, 14], [0, 26], [-6, 14]], 2.3, true, '#E8C39E'),
+      lineAt([-4, 20], [0, 25], 1.6), poly([[-6, -22], [6, -22], [6, -28], [-6, -28]], 2.2, true, '#F2A6A0'),
+      lineAt([-6, 2], [6, 2], 1.8), lineAt([-6, -6], [6, -6], 1.8)
+    ] },
+    { n: '灯泡', k: 'thing', f: () => [
+      circle(0, -4, 15, 16, 2.5, true, '#F6E2A8'),
+      poly([[-7, 12], [7, 12], [6, 20], [-6, 20], [-7, 12]], 2.3, true, '#D8D2C4'),
+      lineAt([-4, 15], [4, 15], 1.6), lineAt([-4, 18], [4, 18], 1.6),
+      ...[0, 1, 2, 3, 4, 5].map(i => {
+        const a = Math.PI * (0.8 + i * 0.28);
+        return lineAt([Math.cos(a) * 20, -4 + Math.sin(a) * 21], [Math.cos(a) * 26, -4 + Math.sin(a) * 27], 1.8);
+      })
+    ] },
+    { n: '小雨伞', k: 'thing', f: () => [
+      arc(0, 0, 22, 18, Math.PI, Math.PI * 2, 2.6),
+      poly([[-22, 0], [22, 0], [22, 3], [-22, 3], [-22, 0]], 2.2, true, '#D886AE'),
+      lineAt([0, 3], [0, 22], 2.4), arc(-5, 22, 5, 4, 0, Math.PI, 2.2)
+    ] },
+    { n: '时钟', k: 'thing', f: () => [
+      circle(0, 0, 22, 22, 2.6, true, '#FCF6EC'),
+      dotAt(0, -16, 2.2), dotAt(16, 0, 2.2), dotAt(0, 16, 2.2), dotAt(-16, 0, 2.2),
+      lineAt([0, 0], [0, -13], 2.2), lineAt([0, 0], [9, 5], 2.2)
+    ] },
+    { n: '风筝', k: 'thing', f: () => [
+      poly([[0, -24], [18, -4], [0, 16], [-18, -4], [0, -24]], 2.5, true, '#BFD8E8'),
+      lineAt([0, -24], [0, 16], 1.8), lineAt([-18, -4], [18, -4], 1.8),
+      S(wave(0, 16, 6, 30, 3, 4), 2)
+    ] },
+    { n: '青蛙', k: 'cute', f: () => [
+      circle(0, 6, 20, 16, 2.5, true, '#BFD8A8'), circle(-11, -12, 8, 8, 2.4, true, '#BFD8A8'), circle(11, -12, 8, 8, 2.4, true, '#BFD8A8'),
+      dotAt(-11, -13, 3.4), dotAt(11, -13, 3.4), arc(0, 6, 10, 7, 0.12 * Math.PI, 0.88 * Math.PI, 2.2),
+      lineAt([-16, 20], [-20, 26], 2), lineAt([16, 20], [20, 26], 2)
+    ] },
+    { n: '蜗牛', k: 'cute', f: () => [
+      circle(-2, -2, 15, 14, 2.5, true, '#E8C39E'), S(spiral(-2, -2, 2, 12, 2), 2),
+      poly([[-2, 12], [16, 14], [20, 20], [-6, 20], [-2, 12]], 2.3, true, '#BFD8A8'),
+      lineAt([14, 8], [18, -4], 1.8), lineAt([8, 10], [10, -2], 1.8), dotAt(18, -6, 2.4), dotAt(10, -4, 2.4)
+    ] },
+    { n: '刺猬', k: 'cute', f: () => [
+      poly([[-20, 6], [-14, -8], [-2, -14], [10, -10], [18, 0], [20, 8], [0, 14], [-20, 6]], 2.5, true, '#C9A27A'),
+      ...[0, 1, 2, 3, 4, 5, 6].map(i => {
+        const a = Math.PI * (0.95 + i * 0.16);
+        return lineAt([Math.cos(a) * 16, 2 + Math.sin(a) * 14], [Math.cos(a) * 24, 2 + Math.sin(a) * 21], 1.8);
+      }),
+      dotAt(12, 2, 2.6), circle(18, 6, 2.2, 1.8, 1.6, true, '#E8A6A0'), lineAt([10, 10], [16, 12], 1.6)
+    ] },
+    { n: '小狐狸', k: 'cute', f: () => [
+      poly([[0, 20], [-20, 2], [-16, -18], [-4, -12], [4, -12], [16, -18], [20, 2], [0, 20]], 2.5, true, '#E8A33D'),
+      dotAt(-7, -1, 3.2), dotAt(7, -1, 3.2), poly([[-3, 8], [3, 8], [0, 11], [-3, 8]], 2, true, '#8A6F5C'),
+      lineAt([-14, -8], [-18, -16], 1.8), lineAt([14, -8], [18, -16], 1.8)
+    ] },
+    { n: '小鲸鱼', k: 'cute', f: () => [
+      poly([[-24, 2], [-14, -12], [8, -14], [22, -4], [18, 8], [0, 14], [-16, 12], [-24, 2]], 2.5, true, '#9FD3D8'),
+      poly([[-24, 2], [-32, -6], [-30, 8], [-24, 2]], 2.3, true, '#9FD3D8'),
+      dotAt(6, -2, 3), arc(10, 2, 6, 5, 0.15 * Math.PI, 0.85 * Math.PI, 2),
+      S(wave(-6, -20, 2, -30, 3, 4), 2)
+    ] },
+    { n: '小猪', k: 'cute', f: () => [
+      circle(0, 2, 19, 17, 2.5, true, '#F2C9D8'),
+      poly([[-15, -12], [-22, -20], [-8, -16]], 2.2, true, '#F2C9D8'), poly([[15, -12], [22, -20], [8, -16]], 2.2, true, '#F2C9D8'),
+      dotAt(-7, -2, 3.4), dotAt(7, -2, 3.4), circle(0, 7, 7, 5, 2.2, true, '#F0AFC0'), dotAt(-3, 7, 1.8), dotAt(3, 7, 1.8),
+      lineAt([-17, 6], [-24, 4], 1.8), lineAt([17, 6], [24, 4], 1.8)
+    ] },
+    { n: '彩虹', k: 'scene', f: () => [
+      arc(0, 20, 26, 26, Math.PI, Math.PI * 2, 3.4), arc(0, 20, 21, 21, Math.PI, Math.PI * 2, 3),
+      arc(0, 20, 16, 16, Math.PI, Math.PI * 2, 3), arc(0, 20, 11, 11, Math.PI, Math.PI * 2, 3),
+      circle(-25, 18, 5, 3, 2.2, true, '#D8E6F2'), circle(25, 18, 5, 3, 2.2, true, '#D8E6F2')
+    ] },
+    { n: '小山', k: 'scene', f: () => [
+      poly([[-26, 18], [-8, -12], [8, 16], [-26, 18]], 2.5, true, '#BFD8A8'),
+      poly([[-2, 18], [12, -6], [26, 18], [-2, 18]], 2.5, true, '#A8C99A'),
+      circle(14, -14, 6, 6, 2.2, true, '#F6E2A8'), lineAt([-26, 20], [26, 20], 2.2)
+    ] },
+    { n: '仙人掌', k: 'scene', f: () => [
+      poly([[-7, 24], [-7, -12], [-2, -18], [3, -12], [3, 24], [-7, 24]], 2.4, true, '#7FA86B'),
+      poly([[-7, 4], [-16, 2], [-16, -6], [-11, -6], [-9, 0], [-7, 0]], 2.2, true, '#7FA86B'),
+      poly([[3, 10], [12, 8], [12, 0], [7, 0], [5, 6], [3, 6]], 2.2, true, '#7FA86B'),
+      dotAt(0, -10, 1.6), lineAt([-14, 26], [12, 26], 2)
+    ] },
+    { n: '小雪人', k: 'scene', f: () => [
+      circle(0, 12, 18, 15, 2.5, true, '#FCF6EC'), circle(0, -10, 13, 13, 2.4, true, '#FCF6EC'),
+      dotAt(-5, -13, 2.6), dotAt(5, -13, 2.6), poly([[-3, -6], [3, -6], [0, -3], [-3, -6]], 2, true, '#E8A33D'),
+      lineAt([-14, 10], [-26, 4], 2), lineAt([14, 10], [26, 4], 2), dotAt(0, 12, 1.8), dotAt(0, 18, 1.8)
+    ] },
+    { n: '草丛', k: 'scene', f: () => [
+      ...[0, 1, 2, 3, 4, 5].map(i => {
+        const x = -22 + i * 9;
+        return lineAt([x, 20], [x - 3, 4 + (i % 2) * 6], 2);
+      }),
+      lineAt([-24, 21], [24, 21], 2.2), dotAt(-14, 6, 2.6), dotAt(6, 4, 2.6), dotAt(16, 8, 2.2)
+    ] },
+    { n: '下雨', k: 'scene', f: () => [
+      poly([[-20, -8], [-12, -18], [2, -20], [16, -14], [20, -4], [8, 2], [-10, 2], [-20, -8]], 2.5, true, '#D8E6F2'),
+      lineAt([-12, 8], [-16, 20], 2), lineAt([-2, 8], [-6, 22], 2), lineAt([8, 8], [4, 20], 2), lineAt([16, 6], [12, 18], 2)
+    ] },
+    { n: '雪花', k: 'abstract', f: () => [
+      ...[0, 1, 2].map(i => {
+        const a = Math.PI * i / 3;
+        return lineAt([Math.cos(a + Math.PI) * 24, Math.sin(a + Math.PI) * 24], [Math.cos(a) * 24, Math.sin(a) * 24], 2.4);
+      }),
+      ...[0, 1, 2, 3, 4, 5].map(i => {
+        const a = Math.PI * i / 3;
+        return lineAt([Math.cos(a) * 14, Math.sin(a) * 14], [Math.cos(a) * 22, Math.sin(a) * 22], 1.8);
+      })
+    ] },
+    { n: '闪电', k: 'abstract', f: () => [
+      poly([[4, -26], [-14, 2], [-2, 2], [-8, 26], [16, -6], [4, -6], [12, -26], [4, -26]], 2.5, true, '#F6D98A')
+    ] },
+    { n: '靶心', k: 'abstract', f: () => [
+      circle(0, 0, 24, 24, 2.5, true, '#F2A6A0'), circle(0, 0, 16, 16, 2.2, false), circle(0, 0, 8, 8, 2, true, '#F2A6A0'),
+      dotAt(0, 0, 3)
+    ] },
+    { n: '波浪', k: 'abstract', f: () => [
+      S(wave(-26, -12, 26, -12, 5, 5), 2.4), S(wave(-26, 0, 26, 0, 5, 5), 2.4), S(wave(-26, 12, 26, 12, 5, 5), 2.4)
+    ] },
+    { n: '花环', k: 'abstract', f: () => [
+      circle(0, 0, 22, 22, 2.2, false),
+      ...[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+        const a = Math.PI * 2 * i / 8;
+        return circle(Math.cos(a) * 22, Math.sin(a) * 22, 5, 5, 1.8, true, '#F2C9D8');
+      })
+    ] },
+    { n: '气泡', k: 'abstract', f: () => [
+      circle(-8, 6, 12, 12, 2.4, false), circle(12, -4, 8, 8, 2.2, false), circle(6, 16, 5, 5, 2, false),
+      circle(-14, -12, 6, 6, 1.8, false), lineAt([-12, 2], [-6, -2], 1.6)
+    ] }
+  ];
 
-    /* 构图：大面积留白 ↔ 画满，随机切换；元素数量跟着走，硬上限 8（她定的） */
-    const roll = Math.random();
-    const mode = roll < 0.26 ? 'sparse' : (roll < 0.72 ? 'normal' : 'dense');
-    const n = mode === 'sparse' ? 1 + Math.floor(Math.random() * 2)
-      : mode === 'normal' ? 2 + Math.floor(Math.random() * 4)
-        : Math.min(8, 6 + Math.floor(Math.random() * 3));
-
-    /* 抽元素（五大类等概率，允许重复——她说无强制搭配） */
-    const items = [];
-    for (let i = 0; i < n; i++) {
-      const kind = pick(KINDS);
-      const part = pick(kind.parts);
-      A.a = shuffle(strokeA);                            // 每个零件拿到的主色都不同（不然一张画同色）
-      let strokes = [];
-      try { strokes = part.f(A) || []; } catch (e) { strokes = []; }
-      if (!strokes.length) continue;
-      const scope = mode === 'sparse' ? rnd(1.25, 1.95) : (mode === 'normal' ? rnd(0.6, 1.2) : rnd(0.42, 0.86));
-      /* 先量出这个零件自己多大（含自身旋转/扭曲/拉伸的余量）——
-         她 10-13 08:40：「图案都飘出画布纸张了，那能看见啥」：
-         以前是先定缩放、瞎撒点，零件一被放大就出框。现在先量体再决定放多大、能离中心多远。 */
-      let er = 0;
-      strokes.forEach(s => s.pts.forEach(p => { const r = Math.sqrt(p[0] * p[0] + p[1] * p[1]); if (r > er) er = r; }));
-      const sx = rnd(0.9, 1.12), sy = rnd(0.9, 1.12);
-      const penM = 2.6 * penBase;                        // 笔宽占的边（线越粗越占地方）
-      er = er * 1.15 * Math.max(sx, sy);
-      /* 放不下就缩小：允许描线到达的半幅是 44（6~94，再留整体倾斜的余量） */
-      let sc = Math.min(scope * rnd(0.9, 1.12), (44 - penM) / Math.max(0.001, er));
-      sc = Math.max(sc, 0.26);
-      const reach = Math.max(0, 44 - (er * sc + penM));  // 这个零件允许偏离中心多远（量越大越居中）
-      items.push({
-        name: part.n, kind: kind.n, strokes,
-        px: 50 + rnd(-reach, reach),
-        py: 50 + rnd(-reach, reach),
-        sc: sc,
-        mir: Math.random() < 0.5 ? -1 : 1,                 // 镜像
-        rot: rnd(-180, 180),                               // 旋转
-        sx: sx, sy: sy,                                    // 轻微拉伸（扭曲的一半）
-        warp: rnd(0.3, 1.15),                              // 轻微扭曲
-        op: rnd(0.74, 1)                                   // 半透明 → 允许互相重叠、颜色混合
-      });
+  function drawSolid(d, col, w, style) {
+    const cap = style === 'marker' ? 'butt' : 'round';
+    if (style === 'crayon') {
+      return '<path data-ps="crayon" d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.9).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path data-ps="crayon" d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.45).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" transform="translate(0.6 0.5)"/>';
     }
-    shuffle(items);                                        // 图层顺序随机：谁在前谁在后每次不一样
+    const ww = style === 'pencil' ? Math.max(1.1, w * 0.72) : (style === 'marker' ? w * 1.15 : w);
+    return '<path data-ps="' + style + '" d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + ww.toFixed(1) + '" stroke-linecap="' + cap + '" stroke-linejoin="round"/>';
+  }
 
-    /* 逐笔画渲染：一笔一笔画出来（每条 path 单独一根线，笔粗逐笔浮动） */
-    const body = [];
-    const fills = [];
-    items.forEach(it => {
-      const tf = 'translate(' + it.px.toFixed(1) + ' ' + it.py.toFixed(1) + ') rotate(' + it.rot.toFixed(1) + ') scale(' +
-        (it.mir * it.sc * it.sx).toFixed(3) + ' ' + (it.sc * it.sy).toFixed(3) + ')';
-      /* 填涂层：闭形状按概率垫色——用【填涂色】那一套（跟画笔色不是一回事） */
-      it.strokes.forEach(s => {
-        if (!s.f || !fillA.length) return;
-        if (Math.random() > 0.42) return;
-        const pts = J(s.pts.map(p => [p[0], p[1]]), it.warp);
-        fills.push('<path d="' + smooth(pts) + '" fill="' + pick(fillA) + '" fill-opacity="' + rnd(0.16, 0.44).toFixed(2) +
-          '" stroke="none" opacity="' + it.op.toFixed(2) + '"' + blend() + ' transform="' + tf + '"/>');
+  function subjectSvg(subj, style, strokeA) {
+    const strokes = subj.f() || [];
+    /* 按主体真实外接框定大小：主方向占画布 45%~65%，居中；宽扁的鱼/蝴蝶也不会缩成一小团 */
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    strokes.forEach(s => {
+      /* 主体外接框按「线条中心 + 半个线宽」算，和浏览器实际渲染的 bbox 对齐；
+         这样旋转/缩放后主体仍落在画布中央，不会因为粗线偏上或偏左。 */
+      const pad = (s.w || 2.5) / 2;
+      s.pts.forEach(p => {
+        if (p[0] - pad < minX) minX = p[0] - pad; if (p[0] + pad > maxX) maxX = p[0] + pad;
+        if (p[1] - pad < minY) minY = p[1] - pad; if (p[1] + pad > maxY) maxY = p[1] + pad;
       });
-      /* 本元素的描线：整组套一个 transform —— 位置、缩放、旋转、镜像全靠它。
-         〔10-13 08:40 她报「图案都飘出画布纸张了」的根因〕原来这里直接把 path 塞进 body、
-         没套 transform，所有描线都落在坐标原点（画到纸外面去了）；填色和擦除带了，描线没带。 */
-      const pieces = [];
-      it.strokes.forEach(s => {
-        let pts = s.pts.map(p => [p[0], p[1]]);
-        pts = J(pts, it.warp);                             // 轻微扭曲
-        const w = Math.max(0.8, (s.w || rnd(1.9, 3.1)) * penBase * rnd(0.82, 1.24));   // 粗细随机浮动
-        /* 取色：零件说的彩色就是【颜色值本身】。以前拿它当 strokeA 的下标去查（strokeA['#D96A5B']
-           → undefined → 全落回墨色），这就是「彩线咋这么少」的根因；再给墨线留一条上彩的路。 */
-        const col = (typeof s.c === 'string' && s.c.charAt(0) === '#')
-          ? s.c
-          : (Math.random() < 0.55 ? pick(strokeA) : INK);
-        pieces.push(pathFor(style, smooth(pts), col, w, s.soft ? 0.44 : it.op));
-      });
-      /* 局部擦除：随到它就用纸色回描一截 → 画面有残缺感（她方案第 5 条） */
-      if (it.strokes.length >= 2 && Math.random() < 0.16) {
-        const s = pick(it.strokes);
-        const cut = s.pts.slice(0, Math.max(2, Math.round(s.pts.length * rnd(0.2, 0.55))));
-        pieces.push('<path d="' + smooth(J(cut, it.warp)) + '" fill="none" stroke="' + PAPER + '" stroke-width="' +
-          (Math.max(2.6, (s.w || 2.4) * penBase * 3.4)).toFixed(1) + '" stroke-linecap="round" opacity="0.96"/>');
-      }
-      body.push('<g transform="' + tf + '">' + pieces.join('') + '</g>');
     });
+    if (!Number.isFinite(minX)) { minX = -10; maxX = 10; minY = -10; maxY = 10; }
+    const bw = Math.max(1, maxX - minX);
+    const bh = Math.max(1, maxY - minY);
+    const target = rnd(58, 59.5);
+    /* 小主体也按目标尺寸放大，不设上限；线宽按缩放反算，放大后不会变成一团粗线 */
+    const sc = Math.max(0.7, target / Math.max(bw, bh));
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const px = 50 + rnd(-1.5, 1.5), py = 50 + rnd(-1.5, 1.5);
+    /* 外层纸面还有 ±2.5° 的倾斜；主体自身收在 ±5.5°，合起来仍不超过 ±8° */
+    const rot = rnd(-5.5, 5.5);
+    const fill = tint(pick(strokeA), rnd(0.56, 0.68));
+    const tf = 'translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ') rotate(' + rot.toFixed(1) + ') scale(' + sc.toFixed(3) + ') translate(' + (-cx).toFixed(2) + ' ' + (-cy).toFixed(2) + ')';
+    let fills = '', lines = '';
+    strokes.forEach(s => {
+      const d = smooth(J(s.pts, 0.35));
+      if (s.f) fills += '<path d="' + d + '" fill="' + (s.fc || fill) + '" stroke="none"/>';
+      lines += drawSolid(d, INK, (s.w || 2.5) / sc, style);
+    });
+    return { svg: '<g transform="' + tf + '">' + fills + lines + '</g>', name: subj.n, kind: subj.k, n: 1 };
+  }
 
-    const name = items.length ? items.map(i => i.name).join(' + ') : '随笔';
-    const cat = items.length ? items[0].kind : '基础画笔';
-    const rot = rnd(-3, 3).toFixed(1);
-    const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">' +
+  function supportSvg(part, style, strokeA, opts) {
+    let strokes = [];
+    try { strokes = part.f({ a: shuffle(strokeA) }) || []; } catch (e) { strokes = []; }
+    if (!strokes.length) return null;
+    let er = 1;
+    strokes.forEach(s => s.pts.forEach(p => { const r = Math.sqrt(p[0] * p[0] + p[1] * p[1]) + (s.w || 2); if (r > er) er = r; }));
+    const sc = Math.max(0.2, Math.min(opts.sc || 0.5, 30 / er));
+    const px = opts.x, py = opts.y, rot = opts.rot == null ? rnd(-18, 18) : opts.rot;
+    const tf = 'translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ') rotate(' + rot.toFixed(1) + ') scale(' + sc.toFixed(3) + ')';
+    const fill = tint(pick(strokeA), 0.6);
+    let fills = '', lines = '';
+    strokes.forEach(s => {
+      const d = smooth(J(s.pts, 0.55));
+      if (s.f) fills += '<path d="' + d + '" fill="' + (s.fc || fill) + '" stroke="none"/>';
+      const col = (typeof s.c === 'string' && s.c.charAt(0) === '#') ? s.c : (Math.random() < 0.5 ? pick(strokeA) : INK);
+      lines += drawSolid(d, col, s.w || 2.2, style);
+    });
+    return '<g transform="' + tf + '">' + fills + lines + '</g>';
+  }
+
+  function supportPick(kind) {
+    if (kind === 'cute') {
+      return DECO.filter(p => ['心形', '星形', '圆点组', '半圆', '弧线', '光斑'].indexOf(p.n) >= 0)
+        .concat(SCENE.filter(p => ['花瓣', '太阳', '云朵'].indexOf(p.n) >= 0));
+    }
+    if (kind === 'food') {
+      return DECO.filter(p => ['星形', '圆点组', '弧线', '短线', '光斑'].indexOf(p.n) >= 0)
+        .concat(SCENE.filter(p => ['花瓣', '波纹'].indexOf(p.n) >= 0));
+    }
+    if (kind === 'thing') {
+      return DECO.filter(p => ['星形', '圆点组', '弧线', '小圈', '短线'].indexOf(p.n) >= 0)
+        .concat(BRUSH.filter(p => ['长弧', '点阵'].indexOf(p.n) >= 0));
+    }
+    if (kind === 'scene') {
+      return SCENE.filter(p => ['云朵', '太阳', '草丛', '小山轮廓', '树桩', '波纹', '风线', '湖面反光'].indexOf(p.n) >= 0);
+    }
+    if (kind === 'abstract') {
+      return DECO.concat(BRUSH.filter(p => ['长弧', '大回环', '点阵', '断续线', '平行细线'].indexOf(p.n) >= 0));
+    }
+    return KINDS.reduce((a, k) => a.concat(k.parts), []);
+  }
+
+  /* 主体类目（她 10-08 定五类：生物萌物 / 食物 / 物品 / 自然 / 图案） */
+  const SUBJ_KINDS = ['cute', 'food', 'thing', 'scene', 'abstract'];
+
+  /* 一张画上几幅（她 10-13 08:28 新方案）：1~6 幅，由随机拼，1~2 幅常见、5~6 幅少。
+     部件＝1 个主体 + 0~5 个背景小件；名字用「 + 」拼起来（探针/存档都认这个写法）。 */
+  function pieceCount() {
+    const r = Math.random();
+    return 1 + Math.floor(Math.pow(r, 1.55) * 6);   // 1..6，偏 1
+  }
+
+  function make() {
+    /* 风格配比按她定的：可爱 45% / 场景 30% / 抽象 15% / 纯随机 10%。
+       食物、物品归在可爱风里一起抽，56 个主体都能出场；纯随机再全池抽。 */
+    const roll = Math.random();
+    const style = roll < 0.45 ? 'cute' : (roll < 0.75 ? 'scene' : (roll < 0.90 ? 'abstract' : 'random'));
+    const strokeA = shuffle(PAL).slice(0, 2 + Math.floor(Math.random() * 3));
+    const pool = style === 'cute'
+      ? SUBJECTS.filter(s => s.k === 'cute' || s.k === 'food' || s.k === 'thing')
+      : style === 'random' ? SUBJECTS : SUBJECTS.filter(s => s.k === style);
+    const subj = pick(pool.length ? pool : SUBJECTS);
+    const subject = subjectSvg(subj, pick(['round', 'round', 'marker', 'crayon', 'pencil']), strokeA);
+    const supports = supportPick(style);
+    const want = Math.min(5, Math.max(0, pieceCount() - 1));
+    const bg = [];
+    for (let i = 0; i < want; i++) {
+      const part = pick(supports);
+      if (!part) break;
+      let x, y;
+      if (style === 'cute') {
+        const a = rnd(0, Math.PI * 2);
+        x = 50 + Math.cos(a) * rnd(32, 41); y = 50 + Math.sin(a) * rnd(32, 41);
+      } else if (style === 'scene') {
+        x = rnd(12, 88); y = rnd(14, 78);
+      } else {
+        x = rnd(12, 88); y = rnd(12, 88);
+      }
+      const s = supportSvg(part, pick(['round', 'marker', 'crayon']), strokeA, { x, y, sc: rnd(0.28, 0.55) });
+      if (s) bg.push({ svg: s, name: part.n });
+    }
+    /* 场景类给一条地面线，主体仍然压在最上面 */
+    const ground = style === 'scene'
+      ? '<path d="' + smooth(J([[6, 82], [94, 82]], 0.6)) + '" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round"/>'
+      : '';
+    const rot = rnd(-2.5, 2.5).toFixed(1);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 100 100">' +
       '<rect x="2" y="2" width="96" height="96" rx="7" fill="' + PAPER + '"/>' +
-      '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="' + INK + '" stroke-width="1.1" opacity="0.55"/>' +
+      '<rect x="3.2" y="3.2" width="93.6" height="93.6" rx="6" fill="none" stroke="#C9C5B8" stroke-width="1.1"/>' +
       '<defs><clipPath id="lxdc"><rect x="4" y="4" width="92" height="92" rx="5.4"/></clipPath></defs>' +
       '<g clip-path="url(#lxdc)"><g transform="rotate(' + rot + ' 50 50)">' +
-      fills.join('') + body.join('') +
-      '</g></g></svg>';
+      ground + bg.map(b => b.svg).join('') + subject.svg + '</g></g></svg>';
+    const names = [subject.name].concat(bg.map(b => b.name));
     return {
       dataUrl: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg),
-      name: name, cat: cat, style: style, mode: mode, n: items.length
+      name: names.join(' + '), cat: subject.kind, style: style, mode: style, n: names.length
     };
-  }
-  /* 半透明元素互相叠的时候就让它混色（她方案第 6 条） */
-  function blend() { return Math.random() < 0.5 ? ' style="mix-blend-mode:multiply"' : ''; }
-  /* 每种笔感给一笔一个 data-ps 记号（只给验收看，不影响渲染）：
-     —— 之前探针靠“opacity=0.5 这种写死的数值”认笔感，我一调数值它就假红（10-13 回归实测）。
-     记号按【笔感】本身打，以后调粗细/透明度都不会再连坐。 */
-  function pathFor(style, d, col, w, op) {
-    const o = (op == null ? 1 : op).toFixed(2);
-    if (style === 'marker') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 1.3).toFixed(1) + '" stroke-linecap="butt" stroke-linejoin="round" opacity="' + o + '" data-ps="marker"' + blend() + '/>';
-    if (style === 'crayon') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.9).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + o + '" data-ps="crayon"' + blend() + '/>' +
-      '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w * 0.5).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + (Math.min(1, (op * 0.8) + 0.1)).toFixed(2) + '" data-ps="crayon"' + blend() + '/>';
-    if (style === 'pencil') return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + Math.max(0.7, w * 0.62).toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + (Math.min(1, op * 0.86)).toFixed(2) + '" data-ps="pencil"' + blend() + '/>';
-    return '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w.toFixed(1) + '" stroke-linecap="round" stroke-linejoin="round" opacity="' + o + '" data-ps="round"' + blend() + '/>';
   }
 
   /* 只读口：探针验收用（部件池规模/类目/逐单元自检） */
   return {
     make, count: TOTAL, allCount: TOTAL, cats: CATS, kinds: KINDS,
     persons: PERSON.length, lifes: LIFE.length, scenes: SCENE.length, decos: DECO.length, brushes: BRUSH.length,
+    subjects: SUBJECTS.length, subjectNames: SUBJECTS.map(s => s.n), styles: ['cute', 'scene', 'abstract', 'random'], subjectKinds: SUBJ_KINDS,
     parts: KINDS.reduce((a, k) => a.concat(k.parts), []),
     poses: STICK_POSES.length
   };
@@ -16540,7 +17468,7 @@ const Library = (function () {
       .map(it => it.text);
   }
   function learnedCount(ctId) { const lib = (DB.state.libs.learned || {})[ctId]; return lib ? lib.items.length : 0; }
-  /* 她 10-12 23:18：检测中心要看「TA 自己组出来的话攒了多少」——自由组句分组单独数 */
+  /* 她 10-12 23:18：检测中心要看「TA 自己组出来的话攒了多少」——自由组句分组单独数（10-28 恢复） */
   function ftCount(ctId) {
     const lib = (DB.state.libs.learned || {})[ctId];
     if (!lib) return 0;
@@ -33322,7 +34250,7 @@ Router.register('report', () => Report.render());   /* P25 */
   runSafe('init.library', () => Library.init());    /* 学舌库：存量 ct.learned → libs.learned 幂等迁移（她 10-03 二批） */
   runSafe('init.games', () => Games.init());    /* P40 游戏板块：大厅/对局/发言/悬浮窗/战绩/转盘 */
   runSafe('init.schedule', () => Schedule.init()); /* 排班表（她 10-03）：页面事件绑定 */
-runSafe('init.detect', () => Detect.init()); /* 检测中心（她 10-12 16:52）：个人中心入口 */
+runSafe('init.detect', () => Detect.init());   /* 检测中心（她 10-12 16:52）：个人中心入口 */
   runSafe('init.mall', () => Mall.init());     /* P64 商城与外卖：页面事件绑定 + 20s 心跳（节点推进/ETA 刷新） */
 Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳过） */
   /* 她 10-06：主题美化（全局 CSS / 气泡样式 / 头像框）开机就套上 */
