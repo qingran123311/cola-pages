@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="gray">
 <head>
 <meta charset="UTF-8">
-<!-- lovex-build:20261028-200032 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
+<!-- lovex-build:20261028-213454 构建版本戳（build.ps1 按 src 最新改动时间注入）：安卓壳热更新比新旧用它，别删 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>LOVE♡X</title>
 <script>
@@ -13932,6 +13932,48 @@ const Engine = (function () {
     } catch (e) { logErr('engine.learn ' + ((e && e.message) || e)); return false; }
   }
 
+  /* 她 10-28 P71 词扩批：自由说话词典的开机回填 + 字卡全量开采。
+     她 10-28 拍板「词典没有上限、字卡里全部的字都可以被对方用来组合」——
+     开机后（界面起来、__LX_BOOT_DONE 之后）由 app 挂钩调起，这里分批让拍：
+     ① 她的历史消息（from==='me' 的 text 消息）喂 feed——历史重来不丢，刷新不归零；
+     ② 全部字卡库（共辞/私叙/荟萃各分组，拒过的条目跳过）逐条 mineText 拆词开采。
+     纯字符串操作、内存 KB 级；单批限时 ~24ms，批间 setTimeout(16) 让拍；
+     查重（Set）/拆词（首字索引）都在 freetalk 侧钉死，两万条合成消息也要毫秒级过 */
+  function seedFreeTalk() {
+    if (typeof FreeTalk === 'undefined' || !FreeTalk.feed || !FreeTalk.mineText) return;
+    const texts = [], seen = new Set();
+    try {
+      const all = (DB.state && DB.state.msgs) || {};
+      Object.keys(all).forEach(cid => {
+        (all[cid] || []).forEach(m => {
+          if (m && m.from === 'me' && m.type === 'text' && m.text) {
+            const t = String(m.text);
+            if (!seen.has(t)) { seen.add(t); texts.push(t); }
+          }
+        });
+      });
+    } catch (e) { logErr('seed.msgs ' + ((e && e.message) || e)); }
+    const cardTexts = [];
+    try {
+      const libs = (DB.state && DB.state.libs) || {};
+      const collect = lib => { (lib && lib.items || []).forEach(it => {
+        if (it && it.text && !it.denied && !it.blocked) cardTexts.push(String(it.text));
+      }); };
+      collect(libs.globalCards);
+      Object.keys(libs.contactCards || {}).forEach(k => collect(libs.contactCards[k]));
+      Object.keys(libs.learned || {}).forEach(k => collect(libs.learned[k]));
+    } catch (e) { logErr('seed.libs ' + ((e && e.message) || e)); }
+    let ti = 0, ci = 0;
+    const step = () => {
+      const t0 = Date.now();
+      while (ti < texts.length && Date.now() - t0 < 24) { try { FreeTalk.feed(texts[ti]); } catch (e) {} ti++; }
+      if (ti < texts.length) { setTimeout(step, 16); return; }
+      while (ci < cardTexts.length && Date.now() - t0 < 24) { try { FreeTalk.mineText(cardTexts[ci]); } catch (e) {} ci++; }
+      if (ci < cardTexts.length) setTimeout(step, 16);
+    };
+    setTimeout(step, 16);
+  }
+
   /* 自由组话的称呼料：TA 名/我的名/身份称呼（有就用，没有就退化为不带人的短句） */
   function talkCtx(ct) {
     return {
@@ -14676,7 +14718,7 @@ const Engine = (function () {
      每轮各管理员独立掷 autoMuteProb%，命中延迟 4~10 秒执行。原先另加的「每 4 分钟
      巡更钟」是我外加的，她不要，拆（2026-10-07） */
 
-  return { onUserMessage, pushRaw, buildCardCombo, cardJoin, cardSep, maybeProactive, decorate: maybeDecorate, learn,
+  return { onUserMessage, pushRaw, buildCardCombo, cardJoin, cardSep, maybeProactive, decorate: maybeDecorate, learn, seedFreeTalk,
            params, pickCount, rollDelay, roundGen: gen, inFlight, interrupt, REPLY_DEF, emotionLibrary: EMOTION_LIBRARY, pickEmotionTag };
 })();
 
@@ -15459,6 +15501,18 @@ const Doodle = (function () {
 })();
 
 /* =====================================================
+   LOVE♡X · pinyin-full.js —— 全音节表（P71 词扩批 · 她 10-28：词典无上限+字卡全量开采，选字/检索要能兜住任何常用字）
+   数据：mozillazg/pinyin-data（Unihan 读法）× GB2312 汉字全集（6763 字 / 400 音节），构建期离线生成，运行期零解析开销
+   口径：
+   - 每音节内的字序＝GB2312 字序（一级字按拼音/笔画排、二级字垫后）——通用字序，不是编造的频度；
+   - 无声调（「声调多看一眼」的时间痕迹在 freetalk.js 里按概率另算，不靠这表）；
+   - ü 记作 v（跟 PY_EXTRA 的 lv 口径一致）；
+   - 只进 sylIndex 第三层（检索/选字时间），不进 HOMO_WORDS 同音别字表；
+   - GB2312 表外的生僻字照旧 null 兜底（freetalk.js pinyinOf 既有口径）。
+   ===================================================== */
+const PY_FULL = 'a:啊阿嗄锕|ai:埃挨哎唉哀皑癌蔼矮艾碍爱隘捱嗳嗌嫒瑷暧砹锿霭|an:鞍氨安俺按暗岸胺案谙埯揞犴庵桉铵鹌黯|ang:肮昂盎|ao:凹敖熬翱袄傲奥懊澳坳拗嗷岙廒遨媪骜獒聱螯鏊鳌鏖|ba:芭捌扒叭吧笆八疤巴拔跋靶把耙坝霸罢爸茇菝岜灞钯粑鲅魃|bai:白柏百摆佰败拜稗捭掰擘|ban:斑班搬扳般颁板版扮拌伴瓣半办绊阪坂钣瘢癍舨|bang:邦帮梆榜膀绑棒磅蚌镑傍谤蒡浜|bao:苞胞包褒薄雹保堡饱宝抱报暴豹鲍爆勹葆孢煲鸨褓趵龅|bei:杯碑悲卑北辈背贝钡倍狈备惫焙被孛陂邶蓓呗悖碚鹎褙鐾鞴|ben:奔苯本笨畚坌贲锛|beng:崩绷甭泵蹦迸嘣甏|bi:逼鼻比鄙笔彼碧蓖蔽毕毙毖币庇痹闭敝弊必壁臂避陛匕俾荜荸萆薜吡哔狴庳愎滗濞弼妣婢嬖璧畀铋秕裨筚箅篦舭襞跸髀|bian:鞭边编贬扁便变卞辨辩辫遍匾弁苄忭汴缏煸砭碥窆褊蝙笾鳊|biao:标彪膘表婊骠杓飑飙飚灬镖镳瘭裱鳔髟|bie:鳖憋别瘪蹩|bin:彬斌濒滨宾摈傧豳缤玢槟殡膑镔髌鬓|bing:兵冰柄丙秉饼炳病并禀冫邴摒|bo:剥玻菠播拨钵波博勃搏铂箔伯帛舶脖膊渤驳卜亳啵饽檗礴钹鹁簸跛踣|bu:捕哺补埠不布步簿部怖卟逋瓿晡钚钸醭|ca:擦嚓礤|cai:猜裁材才财睬踩采彩菜蔡|can:餐参蚕残惭惨灿掺孱骖璨粲黪|cang:苍舱仓沧藏伧|cao:操糙槽曹草艹嘈漕螬艚|ce:厕策侧册测恻|cen:岑涔|ceng:层蹭曾噌|cha:插叉茬茶查碴搽察岔差诧猹馇汊姹杈槎檫锸镲衩|chai:拆柴豺侪钗瘥虿|chan:搀蝉馋谗缠铲产阐颤冁谄蒇廛忏潺澶羼婵骣觇禅镡蟾躔|chang:昌猖场尝常偿肠厂敞畅唱倡伥鬯苌菖徜怅惝阊娼嫦昶氅鲳|chao:超抄钞朝嘲潮巢吵炒怊晁焯耖|che:车扯撤掣彻澈坼屮砗|chen:郴臣辰尘晨忱沉陈趁衬谌谶抻嗔宸琛榇碜龀|cheng:撑称城橙成呈乘程惩澄诚承逞骋秤丞埕枨柽晟塍瞠铖裎蛏酲|chi:吃痴持池迟弛驰耻齿侈尺赤翅斥炽傺坻墀茌叱哧啻嗤彳饬媸敕眵鸱瘛褫蚩螭笞篪踟魑|chong:充冲虫崇宠茺忡憧铳舂艟|chou:抽酬畴踌稠愁筹仇绸瞅丑臭俦帱惆瘳雠|chu:初出橱厨躇锄雏滁除楚础储矗搐触处畜亍刍怵憷绌杵楮樗褚蜍蹰黜|chuai:揣搋啜嘬膪踹|chuan:川穿椽传船喘串舛遄巛氚钏舡|chuang:疮窗幢床闯创怆|chui:吹炊捶锤垂椎陲棰槌|chun:春椿醇唇淳纯蠢莼鹑蝽|chuo:戳绰辶辍踔龊|ci:疵茨磁雌辞慈瓷词此刺赐次伺茈呲祠鹚糍|cong:聪葱囱匆从丛苁淙骢琮璁枞|cou:凑辏腠|cu:粗醋簇促蔟徂猝殂酢蹙蹴|cuan:蹿篡窜汆撺爨镩|cui:摧崔催脆瘁粹淬翠萃啐悴璀榱毳|cun:村存寸忖皴|cuo:磋撮搓措挫错厝嵯脞锉矬痤鹾蹉|da:搭达答瘩打大耷哒嗒怛妲沓褡笪靼鞑|dai:呆歹傣戴带殆代贷袋待逮怠埭甙呔岱迨骀绐玳黛|dan:耽担丹单郸掸胆旦氮但惮淡诞弹蛋儋萏啖澹殚赕眈疸瘅聃箪|dang:当挡党荡档谠凼菪宕砀铛裆|dao:刀捣蹈倒岛祷导到稻悼道盗刂叨忉氘焘纛|de:德得的锝|deng:蹬灯登等瞪凳邓噔嶝戥磴镫簦|di:堤低滴迪敌笛狄涤翟嫡抵底地蒂第帝弟递缔氐籴诋谛邸荻嘀娣柢棣觌砥碲睇镝羝骶|dian:颠掂滇碘点典靛垫电佃甸店惦奠淀殿阽坫巅玷钿癜癫簟踮|diao:碉叼雕凋刁掉吊钓调铞铫貂鲷|die:跌爹碟蝶迭谍叠垤堞揲喋嗲牒瓞耋蹀鲽|ding:丁盯叮钉顶鼎锭定订仃啶玎腚碇铤疔耵酊|diu:丢铥|dong:东冬董懂动栋侗恫冻洞垌咚岽峒氡胨胴硐鸫|dou:兜抖斗陡豆逗痘都蔸窦蚪篼|du:督毒犊独读堵睹赌杜镀肚度渡妒芏嘟渎椟牍碡蠹笃髑黩|duan:端短锻段断缎椴煅簖|dui:堆兑队对怼憝碓镦|dun:墩吨蹲敦顿囤钝盾遁沌炖砘礅盹趸|duo:掇哆多夺垛躲朵跺舵剁惰堕咄哚缍柁铎裰踱|e:蛾峨鹅俄额讹娥恶厄扼遏鄂饿噩谔垩苊莪萼呃愕阏屙婀轭腭锇锷鹗颚鳄|ei:诶|en:恩蒽摁|er:而儿耳尔饵洱二贰佴迩珥铒鸸鲕|fa:发罚筏伐乏阀法珐垡砝|fan:藩帆番翻樊矾钒繁凡烦反返范贩犯饭泛蕃蘩幡梵燔畈蹯|fang:坊芳方肪房防妨仿访纺放匚邡枋钫舫鲂|fei:菲非啡飞肥匪诽吠肺废沸费芾狒悱淝妃绯榧腓斐扉镄痱蜚篚翡霏鲱|fen:芬酚吩氛分纷坟焚汾粉奋份忿愤粪偾瀵棼鲼鼢|feng:丰封枫蜂峰锋风疯烽逢冯缝讽奉凤俸酆葑唪沣砜|fou:否缶|fu:佛夫敷肤孵扶拂辐幅氟符伏俘服浮涪福袱弗甫抚辅俯釜斧腑府腐赴副覆赋复傅付阜父腹负富讣附妇缚咐匐凫阝郛芙苻茯莩菔拊呋幞怫滏艴孚驸绂绋桴赙祓砩黻黼罘稃馥蚨蜉蝠蝮麸趺跗鲋鳆|ga:噶嘎伽尬呷尕尜旮钆|gai:该改概钙盖溉丐陔垓戤赅|gan:干甘杆柑竿肝赶感秆敢赣坩苷尴擀泔淦澉绀橄旰矸疳酐|gang:冈刚钢缸肛纲岗港杠戆罡筻|gao:篙皋高膏羔糕搞镐稿告睾诰郜藁缟槔槁杲锆|ge:哥歌搁戈鸽胳疙割革葛格阁隔铬个各咯鬲仡哿圪塥嗝纥搿膈硌镉袼虼舸骼|gei:给|gen:根跟亘茛哏艮|geng:耕更庚羹埂耿梗哽赓绠鲠|gong:工攻功恭龚供躬公宫弓巩汞拱贡共廾珙肱蚣觥|gou:钩勾沟苟狗垢构购够佝诟岣遘媾缑枸觏彀笱篝鞲|gu:辜菇咕箍估沽孤姑鼓古蛊骨谷股故顾固雇嘏诂菰呱崮汩梏轱牯牿臌毂瞽罟钴锢鸪鹄痼蛄酤觚鲴鹘|gua:刮瓜剐寡挂褂卦诖栝胍鸹聒|guai:乖拐怪掴|guan:棺关官冠观管馆罐惯灌贯倌莞掼涫盥鹳鳏|guang:光广逛咣犷桄胱|gui:瑰规圭硅归龟闺轨鬼诡癸桂柜跪贵刽傀匦刿庋宄妫桧晷皈簋鲑鳜|gun:辊滚棍丨衮绲磙鲧|guo:锅郭国果裹过馘埚呙帼崞猓椁虢蜾蝈|ha:蛤哈铪|hai:骸孩海氦亥害骇还嗨胲醢|han:酣憨邯韩含涵寒函喊罕翰撼捍旱憾悍焊汗汉邗菡撖阚瀚晗焓顸颔蚶鼾|hang:夯杭航沆绗珩颃|hao:壕嚎豪毫郝好耗号浩貉蒿薅嗥嚆濠灏昊皓颢蚝|he:呵喝荷菏核禾和何合盒阂河涸赫褐鹤贺诃劾壑嗬阖曷盍颌蚵翮|hei:嘿黑|hen:痕很狠恨|heng:哼亨横衡恒蘅桁|hong:轰哄烘虹鸿洪宏弘红黉訇讧荭蕻薨闳泓|hou:喉侯猴吼厚候后堠後逅瘊篌糇鲎骺|hu:呼乎忽瑚壶葫胡蝴狐糊湖弧虎唬护互沪户冱唿囫岵猢怙惚浒滹琥槲轷觳烀煳戽扈祜瓠鹕鹱虍笏醐斛|hua:花哗华猾滑画划化话骅桦铧|huai:槐徊怀淮坏踝|huan:欢环桓缓换患唤痪豢焕涣宦幻郇奂萑擐圜獾洹浣漶寰逭缳锾鲩鬟|huang:荒慌黄磺蝗簧皇凰惶煌晃幌恍谎隍徨湟潢遑璜肓癀蟥篁鳇|hui:灰挥辉徽恢蛔回毁悔慧卉惠晦贿秽会烩汇讳诲绘诙茴荟蕙咴哕喙隳洄浍彗缋珲晖恚虺蟪麾|hun:荤昏婚魂浑混诨馄阍溷|huo:豁活伙火获或惑霍货祸劐藿攉嚯夥砉钬锪镬耠蠖|ji:击圾基机畸稽积箕肌饥迹激讥鸡姬绩缉吉极棘辑籍集及急疾汲即嫉级挤几脊己蓟技冀季伎祭剂悸济寄寂计记既忌际妓继纪藉丌亟乩剞佶偈诘墼芨芰荠蒺蕺掎叽咭哜唧岌嵴洎彐屐骥畿玑楫殛戟戢赍觊犄齑矶羁嵇稷瘠虮笈笄暨跻跽霁鲚鲫髻麂|jia:嘉枷夹佳家加荚颊贾甲钾假稼价架驾嫁茄郏葭岬浃迦珈戛胛恝铗镓痂瘕袷蛱笳袈跏|jian:歼监坚尖笺间煎兼肩艰奸缄茧检柬碱硷拣捡简俭剪减荐鉴践贱见键箭件健舰剑饯渐溅涧建僭谏谫菅蒹搛囝湔蹇謇缣枧楗戋戬牮犍毽腱睑锏鹣裥笕翦趼踺鲣鞯|jiang:僵姜将浆江疆蒋桨奖讲匠酱降茳洚绛缰犟礓耩糨豇|jiao:蕉椒礁焦胶交郊浇骄娇搅铰矫侥脚狡角饺缴绞剿教酵轿较叫窖佼僬艽茭挢噍峤徼湫姣敫皎鹪蛟醮跤鲛|jie:揭接皆秸街阶截劫节杰捷睫竭洁结解姐戒芥界借介疥诫届讦卩拮喈嗟婕孑桀碣疖颉蚧羯鲒骱|jin:巾筋斤金今津襟紧锦仅谨进靳晋禁近烬浸尽劲卺荩堇噤馑廑妗缙瑾槿赆觐钅衿矜|jing:荆兢茎睛晶鲸京惊精粳经井警景颈静境敬镜径痉靖竟竞净刭儆阱菁獍憬泾迳弪婧肼胫腈旌靓|jiong:炯窘冂迥炅扃|jiu:揪究纠玖韭久灸九酒厩救旧臼舅咎就疚僦啾阄柩桕鸠鹫赳鬏|ju:桔鞠拘狙疽居驹菊局咀矩举沮聚拒据巨具距踞锯俱句惧炬剧倨讵苣苴莒菹掬遽屦琚椐榘榉橘犋飓钜锔窭裾趄醵踽龃雎鞫|juan:捐鹃娟倦眷卷绢鄄狷涓桊蠲锩镌隽|jue:嚼撅攫抉掘倔爵觉决诀绝厥劂谲矍蕨噘噱崛獗孓珏桷橛爝镢蹶觖|jun:均菌钧军君峻俊竣浚郡骏捃皲麇|ka:喀咖卡佧咔胩|kai:开揩楷凯慨剀垲蒈忾恺铠锎锴|kan:槛刊堪勘坎砍看侃莰戡龛瞰|kang:康慷糠扛抗亢炕伉闶钪|kao:考拷烤靠尻栲犒铐|ke:坷苛柯棵磕颗科壳咳可渴克刻客课嗑岢恪溘骒缂珂轲氪瞌钶锞稞疴窠颏蝌髁|ken:肯啃垦恳裉龈|keng:坑吭铿|kong:空恐孔控倥崆箜|kou:抠口扣寇芤蔻叩眍筘|ku:枯哭窟苦酷库裤刳堀喾绔骷|kua:夸垮挎跨胯侉|kuai:块筷侩快蒯郐哙狯脍|kuan:宽款髋|kuang:匡筐狂框矿眶旷况诓诳邝圹夼哐纩贶|kui:亏盔岿窥葵奎魁馈愧溃馗匮夔隗蒉揆喹喟悝愦逵暌睽聩蝰篑跬|kun:坤昆捆困悃阃琨锟醌鲲髡|kuo:括扩廓阔蛞|la:垃拉喇蜡腊辣啦剌邋旯砬瘌|lai:莱来赖崃徕涞濑赉睐铼癞籁|lan:蓝婪栏拦篮阑兰澜谰揽览懒缆烂滥岚漤榄斓罱镧褴|lang:琅榔狼廊郎朗浪莨蒗啷阆锒稂螂|lao:捞劳牢老佬姥酪烙涝潦唠崂栳铑铹痨耢醪|le:乐肋了仂叻泐鳓|lei:勒雷镭蕾磊累儡垒擂类泪羸诔嘞嫘缧檑耒酹|leng:棱楞冷塄愣|li:厘梨犁黎篱狸离漓理李里鲤礼莉荔吏栗丽厉励砾历利傈例俐痢立粒沥隶力璃哩俪俚郦坜苈莅蓠藜呖唳喱猁溧澧逦娌嫠骊缡枥栎轹戾砺詈罹锂鹂疠疬蛎蜊蠡笠篥粝醴跞雳鲡鳢黧|lia:俩|lian:联莲连镰廉怜涟帘敛脸链恋炼练蔹奁潋濂琏楝殓臁裢裣蠊鲢|liang:粮凉梁粱良两辆量晾亮谅墚椋踉魉|liao:撩聊僚疗燎寥辽撂镣廖料蓼尥嘹獠寮缭钌鹩|lie:列裂烈劣猎冽埒捩咧洌趔躐鬣|lin:琳林磷霖临邻鳞淋凛赁吝拎蔺啉嶙廪懔遴檩辚膦瞵粼躏麟|ling:玲菱零龄铃伶羚凌灵陵岭领另令酃苓呤囹泠绫柃棂瓴聆蛉翎鲮|liu:溜琉榴硫馏留刘瘤流柳六浏遛骝绺旒熘锍镏鹨鎏|long:龙聋咙笼窿隆垄拢陇垅茏泷珑栊胧砻癃|lou:楼娄搂篓漏陋偻蒌喽嵝镂瘘耧蝼髅|lu:芦卢颅庐炉掳卤虏鲁麓碌露路赂鹿潞禄录陆戮垆撸噜泸渌漉逯璐栌橹轳辂辘氇胪镥鸬鹭簏舻鲈|luan:峦挛孪滦卵乱脔娈栾鸾銮|lun:抡轮伦仑沦纶论囵|luo:萝螺罗逻锣箩骡裸落洛骆络倮蠃荦摞猡泺漯珞椤脶镙瘰雒|lv:驴吕铝侣旅履屡缕虑氯律率滤绿捋闾榈膂稆褛|lve:掠略锊|ma:妈麻玛码蚂马骂嘛吗唛犸嬷杩蟆|mai:埋买麦卖迈脉劢荬霾|man:瞒馒蛮满蔓曼慢漫谩墁幔缦熳镘颟螨鳗鞔|mang:芒茫盲氓忙莽邙漭硭蟒|mao:猫茅锚毛矛铆卯茂冒帽貌贸袤茆峁泖瑁昴牦耄旄懋瞀蝥蟊髦|me:么|mei:玫枚梅酶霉煤没眉媒镁每美昧寐妹媚莓嵋猸浼湄楣镅鹛袂魅|men:门闷们扪焖懑钔|meng:萌蒙檬盟锰猛梦孟勐甍瞢懵朦礞虻蜢蠓艋艨|mi:眯醚靡糜迷谜弥米秘觅泌蜜密幂芈冖谧蘼咪嘧猕汨宓弭脒祢敉糸縻麋|mian:棉眠绵冕免勉娩缅面沔渑湎宀腼眄|miao:苗描瞄藐秒渺庙妙喵邈缈杪淼眇鹋|mie:蔑灭乜咩蠛篾|min:民抿皿敏悯闽苠岷闵泯缗珉愍黾鳘|ming:明螟鸣铭名命冥茗溟暝瞑酩|miu:谬|mo:摸摹蘑模膜磨摩魔抹末莫墨默沫漠寞陌谟茉蓦馍嫫殁镆秣瘼耱貊貘麽|mou:谋牟某侔哞缪眸蛑鍪|mu:拇牡亩姆母墓暮幕募慕木目睦牧穆仫坶苜沐毪钼|n:嗯|na:拿哪呐钠那娜纳捺肭镎衲|nai:氖乃奶耐奈鼐艿萘柰|nan:南男难喃囡楠腩蝻赧|nang:囊攮囔馕曩|nao:挠脑恼闹淖孬垴呶猱瑙硇铙蛲|ne:呢讷疒|nei:馁内|nen:嫩恁|neng:能|ni:妮霓倪泥尼拟你匿腻逆溺伲坭猊怩昵旎睨铌鲵|nian:蔫拈年碾撵捻念辗廿埝辇黏鲇鲶|niang:娘酿|niao:鸟尿茑嬲脲袅|nie:捏聂孽啮镊镍涅陧蘖嗫颞臬蹑|nin:您|ning:柠狞凝宁拧泞佞咛甯聍|niu:牛扭钮纽狃忸妞|nong:脓浓农弄侬哝|nou:耨|nu:奴努怒弩胬孥驽|nuan:暖|nuo:挪懦糯诺傩搦喏锘|nv:女恧钕衄|nve:虐疟|o:哦喔噢|ou:欧鸥殴藕呕偶沤讴怄瓯耦|pa:啪趴爬帕怕琶葩杷筢|pai:拍排牌徘湃派俳蒎哌|pan:攀潘盘磐盼畔判叛拚爿泮袢襻蟠蹒|pang:乓庞旁耪胖彷滂逄螃|pao:抛咆刨炮袍跑泡匏狍庖脬疱|pei:呸胚培裴赔陪配佩沛辔帔旆锫醅霈|pen:喷盆湓|peng:砰抨烹澎彭蓬棚硼篷膨朋鹏捧碰堋嘭怦蟛|pi:辟坯砒霹批披劈琵毗啤脾疲皮匹痞僻屁譬丕仳陴邳郫圮埤鼙芘擗噼庀淠媲纰枇甓睥罴铍癖疋蚍蜱貔|pian:篇偏片骗谝骈犏胼翩蹁|piao:飘漂瓢票剽嘌嫖缥殍瞟螵|pie:撇瞥丿苤氕|pin:拼频贫品聘姘嫔榀牝颦|ping:乒坪苹萍平凭瓶评屏俜娉枰鲆|po:泊坡泼颇婆破魄迫粕叵鄱珀钋钷皤笸|pou:剖裒掊|pu:脯扑铺仆莆葡菩蒲埔朴圃普浦谱曝瀑匍噗溥濮璞攴氆攵镤镨蹼|qi:期欺栖戚妻七凄漆柒沏其棋奇歧畦崎脐齐旗祈祁骑起岂乞企启契砌器气迄弃汽泣讫亓俟圻芑芪萁萋葺蕲嘁屺岐汔淇骐绮琪琦杞桤槭耆祺憩碛颀蛴蜞綦綮蹊鳍麒|qia:掐恰洽葜髂|qian:牵扦钎铅千迁签仟谦乾黔钱钳前潜遣浅谴堑嵌欠歉倩佥阡凵芊芡茜掮岍悭慊骞搴褰缱椠肷愆钤虔箝|qiang:枪呛腔羌墙蔷强抢丬戕嫱樯戗炝锖锵镪襁蜣羟跄|qiao:橇锹敲悄桥瞧乔侨巧鞘撬翘峭俏窍劁诮谯荞愀憔缲樵硗跷鞒|qie:切且怯窃郄惬妾挈锲箧|qin:钦侵亲秦琴勤芹擒禽寝沁芩揿吣嗪噙溱檎锓螓衾|qing:青轻氢倾卿清擎晴氰情顷请庆苘圊檠磬蜻罄箐謦鲭黥|qiong:琼穷邛芎茕穹蛩筇跫銎|qiu:秋丘邱球求囚酋泅俅巯犰逑遒楸赇虬蚯蝤裘糗鳅鼽|qu:趋区蛆曲躯屈驱渠取娶龋趣去诎劬蕖蘧岖衢阒璩觑氍朐祛磲鸲癯蛐蠼麴瞿黢|quan:圈颧权醛泉全痊拳犬券劝诠荃犭悛绻辁畎铨蜷筌鬈|que:缺炔瘸却鹊榷确雀阕阙悫|qun:裙群逡|ran:然燃冉染苒蚺髯|rang:瓤壤攘嚷让禳穰|rao:饶扰绕荛娆桡|re:惹热|ren:壬仁人忍韧任认刃妊纫亻仞荏葚饪轫稔衽|reng:扔仍|ri:日|rong:戎茸蓉荣融熔溶容绒冗嵘狨榕肜蝾|rou:揉柔肉糅蹂鞣|ru:茹蠕儒孺如辱乳汝入褥蓐薷嚅洳溽濡缛铷襦颥|ruan:软阮朊|rui:蕊瑞锐芮蕤枘睿蚋|run:闰润|ruo:若弱偌箬|sa:撒洒萨卅仨挲脎飒|sai:腮鳃塞赛噻|san:三叁伞散馓毵糁|sang:桑嗓丧搡磉颡|sao:搔骚扫嫂埽缫臊瘙鳋|se:瑟色涩啬铯穑|sen:森|seng:僧|sha:莎砂杀刹沙纱傻啥煞厦唼歃铩痧裟霎鲨|shai:筛晒酾|shan:珊苫杉山删煽衫闪陕擅赡膳善汕扇缮剡讪鄯埏芟彡潸姗嬗骟膻钐疝蟮舢跚鳝|shang:墒伤商赏晌上尚裳垧绱殇熵觞|shao:梢捎稍烧芍勺韶少哨邵绍劭苕潲蛸筲艄|she:奢赊蛇舌舍赦摄射慑涉社设厍佘猞滠歙畲麝|shen:砷申呻伸身深娠绅神沈审婶甚肾慎渗什诜谂莘哂渖椹胂矧蜃|sheng:声生甥牲升绳省盛剩胜圣嵊眚笙|shi:匙师失狮施湿诗尸虱十石拾时食蚀实识史矢使屎驶始式示士世柿事拭誓逝势是嗜噬适仕侍释饰氏市恃室视试似谥埘莳蓍弑饣轼贳炻礻铈螫舐筮豉豕鲥鲺|shou:收手首守寿授售受瘦兽扌狩绶艏|shu:蔬枢梳殊抒输叔舒淑疏书赎孰熟薯暑曙署蜀黍鼠属术述树束戍竖墅庶数漱恕倏塾菽摅沭澍姝纾毹腧殳秫|shua:刷耍唰|shuai:摔衰甩帅蟀|shuan:栓拴闩涮|shuang:霜双爽孀|shui:谁水睡税氵|shun:吮瞬顺舜|shuo:说硕朔烁蒴搠妁槊铄|si:斯撕嘶思私司丝死肆寺嗣四饲巳厮兕厶咝汜泗澌姒驷纟缌祀锶鸶耜蛳笥|song:松耸怂颂送宋讼诵凇菘崧嵩忪悚淞竦|sou:搜艘擞嗽叟薮嗖嗾馊溲飕瞍锼螋|su:苏酥俗素速粟僳塑溯宿诉肃夙谡蔌嗉愫涑簌觫稣|suan:酸蒜算狻|sui:虽隋随绥髓碎岁穗遂隧祟谇荽濉邃燧眭睢|sun:孙损笋荪狲飧榫隼|suo:蓑梭唆缩琐索锁所唢嗦嗍娑桫睃羧|ta:塌他它她塔獭挞蹋踏闼溻遢榻铊趿鳎|tai:胎苔抬台泰酞太态汰邰薹肽炱钛跆鲐|tan:坍摊贪瘫滩坛檀痰潭谭谈坦毯袒碳探叹炭郯昙忐钽锬覃|tang:汤塘搪堂棠膛唐糖倘躺淌趟烫傥帑饧溏瑭樘铴镗耥螗螳羰醣|tao:掏涛滔绦萄桃逃淘陶讨套鼗啕洮韬饕|te:特忒忑慝铽|teng:藤腾疼誊滕|ti:梯剔踢锑提题蹄啼体替嚏惕涕剃屉倜荑悌逖绨缇鹈裼醍|tian:天添填田甜恬舔腆掭忝阗殄畋|tiao:挑条迢眺跳佻祧窕蜩笤粜龆鲦髫|tie:贴铁帖萜餮|ting:厅听烃汀廷停亭庭挺艇莛葶婷梃町蜓霆|tong:通桐酮瞳同铜彤童桶捅筒统痛佟僮仝茼嗵恸潼砼|tou:偷投头透亠钭骰|tu:凸秃突图徒途涂屠土吐兔堍荼菟钍酴|tuan:湍团抟彖疃|tui:推颓腿蜕褪退煺|tun:吞屯臀氽饨暾豚|tuo:拖托脱鸵陀驮驼椭妥拓唾乇佗坨庹沲沱柝橐砣箨酡跎鼍|wa:挖哇蛙洼娃瓦袜佤娲腽|wai:歪外崴|wan:豌弯湾玩顽丸烷完碗挽晚皖惋宛婉万腕剜芄菀纨绾琬脘畹蜿|wang:汪王亡枉网往旺望忘妄罔惘辋魍|wei:威巍微危韦违桅围唯惟为潍维苇萎委伟伪尾纬未蔚味畏胃喂魏位渭谓尉慰卫偎诿隈圩葳薇囗帏帷嵬猥猬闱沩洧涠逶娓玮韪軎炜煨痿艉鲔|wen:瘟温蚊文闻纹吻稳紊问刎阌汶玟璺雯|weng:嗡翁瓮蓊蕹|wo:挝蜗涡窝我斡卧握沃倭莴幄渥肟硪龌|wu:巫呜钨乌污诬屋无芜梧吾吴毋武五捂午舞伍侮坞戊雾晤物勿务悟误兀仵阢邬圬芴呒唔庑怃忤浯寤迕妩婺骛杌牾焐鹉鹜痦蜈鋈鼯|xi:昔熙析西硒矽晰嘻吸锡牺稀息希悉膝夕惜熄烯溪汐犀檄袭席习媳喜铣洗系隙戏细僖兮隰郗菥葸蓰奚唏徙饩阋浠淅屣嬉玺樨曦觋欷熹禊禧皙穸蜥螅蟋舄舾羲粞翕醯鼷|xia:瞎虾匣霞辖暇峡侠狭下夏吓狎遐瑕柙硖罅黠|xian:掀锨先仙鲜纤咸贤衔舷闲涎弦嫌显险现献县腺馅羡宪陷限线冼苋莶藓岘猃暹娴氙燹祆鹇痫蚬筅籼酰跣跹霰|xiang:相厢镶香箱襄湘乡翔祥详想响享项巷橡像向象芗葙饷庠骧缃蟓鲞飨|xiao:萧硝霄哮嚣销消宵淆晓小孝校肖啸笑效哓崤潇逍骁绡枭枵筱箫魈|xie:楔些歇蝎鞋协挟携邪斜胁谐写械卸蟹懈泄泻谢屑偕亵勰燮薤撷獬廨渫瀣邂绁缬榭榍躞|xin:薪芯锌欣辛新忻心信衅囟馨忄昕歆鑫|xing:星腥猩惺兴刑型形邢行醒幸杏性姓陉荇荥擤悻硎|xiong:兄凶胸匈汹雄熊|xiu:休修羞朽嗅锈秀袖绣咻岫馐庥溴鸺貅髹|xu:墟戌需虚嘘须徐许蓄酗叙旭序恤絮婿绪续吁诩勖蓿洫溆顼栩煦盱胥糈醑|xuan:轩喧宣悬旋玄选癣眩绚儇谖萱揎泫渲漩璇楦暄炫煊碹铉镟痃|xue:削靴薛学穴雪血谑泶踅鳕|xun:勋熏循旬询寻驯巡殉汛训讯逊迅巽埙荀荨蕈薰峋徇獯恂洵浔曛窨醺鲟|ya:压押鸦鸭呀丫芽牙蚜崖衙涯雅哑亚讶轧伢垭揠吖岈迓娅琊桠氩砑睚痖|yan:焉咽阉烟淹盐严研蜒岩延言颜阎炎沿奄掩眼衍演艳堰燕厌砚雁唁彦焰宴谚验厣赝俨偃兖讠谳郾鄢芫菸崦恹闫湮滟妍嫣琰檐晏胭腌焱罨筵酽魇餍鼹|yang:殃央鸯秧杨扬佯疡羊洋阳氧仰痒养样漾徉怏泱炀烊恙蛘鞅|yao:邀腰妖瑶摇尧遥窑谣姚咬舀药要耀钥夭爻吆崾徭幺珧杳轺曜肴鹞窈繇鳐|ye:椰噎耶爷野冶也页掖业叶曳腋夜液靥谒邺揶晔烨铘|yi:一壹医揖铱依伊衣颐夷遗移仪胰疑沂宜姨彝椅蚁倚已乙矣以艺抑易邑屹亿役臆逸肄疫亦裔意毅忆义益溢诣议谊译异翼翌绎刈劓佚佾诒圯埸懿苡薏弈奕挹弋呓咦咿噫峄嶷猗饴怿怡悒漪迤驿缢殪轶贻欹旖熠眙钇镒镱痍瘗癔翊衤蜴舣羿翳酏黟|yin:茵荫因殷音阴姻吟银淫寅饮尹引隐印胤鄞廴垠堙茚吲喑狺夤洇氤铟瘾蚓霪|ying:英樱婴鹰应缨莹萤营荧蝇迎赢盈影颖硬映嬴郢茔莺萦蓥撄嘤膺滢潆瀛瑛璎楹媵鹦瘿颍罂|yo:哟唷|yong:拥佣臃痈庸雍踊蛹咏泳涌永恿勇用俑壅墉喁慵邕镛甬鳙饔|you:幽优悠忧尤由邮铀犹油游酉有友右佑釉诱又幼卣攸侑莠莜莸尢呦囿宥柚猷牖铕疣蚰蚴蝣鱿黝鼬|yu:迂淤于盂榆虞愚舆余俞逾鱼愉渝渔隅予娱雨与屿禹宇语羽玉域芋郁遇喻峪御愈欲狱育誉浴寓裕预豫驭禺毓伛俣谀谕萸蓣揄圄圉嵛狳饫馀庾阈鬻妪妤纡瑜昱觎腴欤於煜燠肀聿钰鹆鹬瘐瘀窬窳蜮蝓竽臾舁雩龉|yuan:鸳渊冤元垣袁原援辕园员圆猿源缘远苑愿怨院垸塬掾沅媛瑗橼爰眢鸢螈箢鼋|yue:曰约越跃岳粤月悦阅龠瀹樾刖钺|yun:耘云郧匀陨允运蕴酝晕韵孕郓芸狁恽愠纭韫殒昀氲熨筠|za:匝砸杂咋拶咂|zai:栽哉灾宰载再在仔崽甾|zan:咱攒暂赞瓒昝簪糌趱錾|zang:赃脏葬奘驵臧|zao:遭糟凿藻枣早澡蚤躁噪造皂灶燥唣|ze:责择则泽仄赜啧帻迮昃笮箦舴|zei:贼|zen:怎谮|zeng:增憎赠缯甑罾锃|zha:扎喳渣札铡闸眨栅榨乍炸诈柞揸吒咤哳楂砟痄蚱齄|zhai:摘斋宅窄债寨砦瘵|zhan:瞻毡詹粘沾盏斩崭展蘸栈占战站湛绽谵搌旃|zhang:长樟章彰漳张掌涨杖丈帐账仗胀瘴障仉鄣幛嶂獐嫜璋蟑|zhao:招昭找沼赵照罩兆肇召爪诏啁棹钊笊|zhe:遮折哲蛰辙者锗蔗这浙着谪摺柘辄磔鹧褶蜇赭|zhen:珍斟真甄砧臻贞针侦枕疹诊震振镇阵帧圳蓁浈缜桢榛轸赈胗朕祯畛稹鸩箴|zheng:蒸挣睁征狰争怔整拯正政症郑证诤峥徵钲铮筝|zhi:芝枝支吱蜘知肢脂汁之织职直植殖执值侄址指止趾只旨纸志挚掷至致置帜峙制智秩稚质炙痔滞治窒卮陟郅埴芷摭帙夂忮彘咫骘栉枳栀桎轵轾贽胝膣祉祗黹雉鸷痣蛭絷酯跖踬踯豸觯|zhong:中盅忠钟衷终种肿重仲众冢锺螽舯踵|zhou:舟周州洲诌粥轴肘帚咒皱宙昼骤荮妯纣绉胄籀酎|zhu:珠株蛛朱猪诸诛逐竹烛煮拄瞩嘱主著柱助蛀贮铸筑住注祝驻丶伫侏邾苎茱洙渚潴杼槠橥炷铢疰瘃竺箸舳翥躅麈|zhua:抓|zhuai:拽|zhuan:专砖转撰赚篆啭馔颛|zhuang:桩庄装妆撞壮状|zhui:锥追赘坠缀惴骓缒隹|zhun:谆准肫窀|zhuo:捉拙卓桌茁酌啄灼浊倬诼擢浞涿濯禚斫镯|zi:兹咨资姿滋淄孜紫籽滓子自渍字谘嵫姊孳缁梓辎赀恣眦锱秭耔笫粢趑觜訾龇鲻髭|zong:鬃棕踪宗综总纵偬腙粽|zou:邹走奏揍诹陬鄹驺楱鲰|zu:租足卒族祖诅阻组俎镞|zuan:钻纂攥缵躜|zui:嘴醉最罪蕞|zun:尊遵撙樽鳟|zuo:琢昨左佐做作坐座阼唑怍胙祚';
+
+/* =====================================================
    LOVE♡X · freetalk.js —— TA 自由组话（她叫「对方自由说话」）
    她 10-03 给方向、10-04 拍板试试；09:41/09:45 要「最大程度自由」：
    不是只加她举的例子，而是按汉语六成分铺满——
@@ -15505,7 +15559,27 @@ const FreeTalk = (function () {
       { t: '在晒', obj: ['scenery'] }, { t: '等', obj: ['scenery'] },
       /* 她 10-10 14:27：及物/不及物区分——tr:0 不及物，不带宾语也能独立成谓 */
       { t: '在散步', tr: 0 }, { t: '在发呆', tr: 0 }, { t: '在打盹', tr: 0 },
-      { t: '刚睡醒', tr: 0 }, { t: '在赖床', tr: 0 }, { t: '睡不着', tr: 0 }, { t: '醒得早', tr: 0 }
+      { t: '刚睡醒', tr: 0 }, { t: '在赖床', tr: 0 }, { t: '睡不着', tr: 0 }, { t: '醒得早', tr: 0 },
+      /* 她 10-28 P71 词扩批：生活面加宽——不及物情境块照旧零搭配风险；及物的新词走窄配
+         （obj 只对到下面名词册新加的 tag 簇，配不上就不出，不硬凑） */
+      { t: '在加班', tr: 0 }, { t: '刚下班', tr: 0 }, { t: '在挤地铁', tr: 0 }, { t: '在排队', tr: 0 },
+      { t: '在开会', tr: 0 }, { t: '在摸鱼', tr: 0 }, { t: '在走神', tr: 0 }, { t: '在泡脚', tr: 0 },
+      { t: '在搬砖', tr: 0 }, { t: '刚到家', tr: 0 }, { t: '在蹲快递', tr: 0 }, { t: '在剪视频', tr: 0 },
+      { t: '在背单词', tr: 0 }, { t: '在写周报', tr: 0 }, { t: '刚洗完澡', tr: 0 }, { t: '在敷面膜', tr: 0 },
+      { t: '在晾衣服', tr: 0 }, { t: '在等外卖', tr: 0 },
+      { t: '撸了', obj: ['animal'] }, { t: '抱了', obj: ['animal'] }, { t: '摸了', obj: ['animal'] },
+      { t: '囤了', obj: ['food', 'thing'] }, { t: '煮了', obj: ['food'] }, { t: '定了', obj: ['food', 'hobby'] },
+      { t: '试了', obj: ['food', 'thing'] }, { t: '泡了', obj: ['drink'] },
+      { t: '抢了', obj: ['thing'] }, { t: '想拆', obj: ['thing'] }, { t: '洗了', obj: ['thing'] },
+      { t: '擦了', obj: ['thing'] }, { t: '修了', obj: ['thing'] }, { t: '弄丢', obj: ['thing'] },
+      { t: '用坏了', obj: ['thing'] }, { t: '逛了', obj: ['place'] }, { t: '想逛', obj: ['place'] },
+      { t: '打卡了', obj: ['place'] }, { t: '拍了', obj: ['scenery'] }, { t: '想拍', obj: ['scenery'] },
+      { t: '想补', obj: ['media'] }, { t: '刷了', obj: ['media'] }, { t: '想听', obj: ['media'] },
+      { t: '学了', obj: ['hobby'] },
+      /* 她 10-28 P71 十八题选 B（意愿槽）：许愿不是承诺——只是撒娇话，不发照片不承诺行为；
+         「我+词」要连读成立（弃掉 想让你/带我去/快出现/陪我去 这类配「我」不成话的） */
+      { t: '想见你', tr: 0 }, { t: '好想你', tr: 0 }, { t: '等你', tr: 0 }, { t: '陪你聊', tr: 0 },
+      { t: '想出去玩', tr: 0 }, { t: '等你回来', tr: 0 }, { t: '想抱抱你', tr: 0 }, { t: '盼你消息', tr: 0 }
     ],
     /* 名词：tag=搭配标签（食物/饮品/水果/动物/物品/地点/内容/人物） */
     noun: [
@@ -15554,28 +15628,62 @@ const FreeTalk = (function () {
       { t: '同事', tag: 'person' }, { t: '我妈', tag: 'person' }, { t: '室友', tag: 'person' },
       { t: '店员', tag: 'person' }, { t: '外卖小哥', tag: 'person' }, { t: '食堂阿姨', tag: 'person' },
       { t: '辅导员', tag: 'person' }, { t: '快递员', tag: 'person' }, { t: '前台小姐姐', tag: 'person' },
-      { t: '表姐', tag: 'person' }, { t: '表哥', tag: 'person' }, { t: '邻居家的猫', tag: 'animal' }
+      { t: '表姐', tag: 'person' }, { t: '表哥', tag: 'person' }, { t: '邻居家的猫', tag: 'animal' },
+      /* 她 10-28 P71 词扩批：生活面再铺一层（词多多）——按面分簇，全部走搭配标签 */
+      { t: '蛋挞', tag: 'food' }, { t: '手抓饼', tag: 'food' }, { t: '糖葫芦', tag: 'food' },
+      { t: '蛋炒饭', tag: 'food' }, { t: '酸辣粉', tag: 'food' }, { t: '锅贴', tag: 'food' },
+      { t: '小笼包', tag: 'food' }, { t: '冰粉', tag: 'food' }, { t: '糖炒栗子', tag: 'food' },
+      { t: '养乐多', tag: 'drink' }, { t: '冰美式', tag: 'drink' }, { t: '热可可', tag: 'drink' },
+      { t: '乌龙茶', tag: 'drink' }, { t: '椰汁', tag: 'drink' }, { t: '豆浆', tag: 'drink' },
+      { t: '矿泉水', tag: 'drink' },
+      { t: '作业', tag: 'thing' }, { t: '试卷', tag: 'thing' }, { t: '周报', tag: 'thing' },
+      { t: '单词本', tag: 'thing' }, { t: '课表', tag: 'thing' }, { t: '笔袋', tag: 'thing' },
+      { t: '荧光笔', tag: 'thing' }, { t: '便利贴', tag: 'thing' }, { t: '计算器', tag: 'thing' },
+      { t: '工牌', tag: 'thing' }, { t: '简历', tag: 'thing' }, { t: '键盘', tag: 'thing' },
+      { t: '洗衣机', tag: 'thing' }, { t: '垃圾袋', tag: 'thing' },
+      { t: '地铁', tag: 'place' }, { t: '电梯', tag: 'place' }, { t: '快递柜', tag: 'place' },
+      { t: '商场', tag: 'place' }, { t: '夜市', tag: 'place' }, { t: '电影院', tag: 'place' },
+      { t: '奶茶店', tag: 'place' }, { t: '甜品店', tag: 'place' }, { t: '宿舍', tag: 'place' },
+      { t: '操场', tag: 'place' }, { t: '教室', tag: 'place' }, { t: '车站', tag: 'place' },
+      { t: '狗子', tag: 'animal' }, { t: '奶猫', tag: 'animal' }, { t: '橘猫', tag: 'animal' },
+      { t: '布偶猫', tag: 'animal' }, { t: '麻雀', tag: 'animal' }, { t: '刺猬', tag: 'animal' },
+      { t: '松鼠', tag: 'animal' }, { t: '蜗牛', tag: 'animal' },
+      { t: '秋风', tag: 'scenery' }, { t: '桂花', tag: 'scenery' }, { t: '银杏', tag: 'scenery' },
+      { t: '荷花', tag: 'scenery' }, { t: '烟花', tag: 'scenery' },
+      { t: '红包', tag: 'thing' }, { t: '对联', tag: 'thing' }, { t: '月饼', tag: 'thing' }, { t: '粽子', tag: 'thing' },
+      { t: '短剧', tag: 'media' }, { t: '脱口秀', tag: 'media' }, { t: '纪录片', tag: 'media' },
+      { t: '恋综', tag: 'media' }, { t: '弹幕', tag: 'media' }, { t: '热搜', tag: 'media' },
+      { t: '壁纸', tag: 'media' }, { t: '头像', tag: 'media' },
+      { t: '班长', tag: 'person' }, { t: '组长', tag: 'person' }, { t: '领导', tag: 'person' },
+      { t: '客服', tag: 'person' }, { t: '门卫大叔', tag: 'person' },
+      { t: '演唱会', tag: 'thing' }, { t: '门票', tag: 'thing' }, { t: '花束', tag: 'thing' },
+      { t: '盆栽', tag: 'thing' }, { t: '多肉', tag: 'thing' }, { t: '手机壳', tag: 'thing' },
+      { t: '充电宝', tag: 'thing' }, { t: '围巾', tag: 'thing' }, { t: '手套', tag: 'thing' },
+      { t: '保温杯', tag: 'thing' }, { t: '菜谱', tag: 'thing' }, { t: '闹钟', tag: 'thing' },
+      { t: '体重秤', tag: 'thing' }, { t: '面膜', tag: 'thing' }, { t: '泡泡机', tag: 'thing' },
+      { t: '吹风机', tag: 'thing' }, { t: '小风扇', tag: 'thing' }
     ],
     /* 形容词（表感觉/情绪/评价/天气感） */
     adj: [
       '累', '热', '冷', '无聊', '充实', '开心', '困', '饿', '饱', '烦', '爽',
       '舒服', '难受', '委屈', '激动', '紧张', '放松', '清醒', '迷糊', '馋', '懒', '乖', '香', '吵',
-      '蔫', '丧', '上头', '破防', '飘'
+      '蔫', '丧', '上头', '破防', '飘',
+      '渴', '撑', '闲', '慌', '甜', '软', '脆', '胖', '瘦', '松弛', '下头', '呆', '稳', '虚'
     ],
-    adjC: ['好看', '温柔', '可爱', '厉害', '贴心', '有趣', '聪明', '暖', '乖'],
+    adjC: ['好看', '温柔', '可爱', '厉害', '贴心', '有趣', '聪明', '暖', '乖', '靠谱', '棒', '讲究', '治愈', '萌'],
     /* 状语多类（她 09:45：不要只做时间状语） */
-    advC:  ['好', '真', '超', '太', '有点', '特别', '贼', '巨', '超级', '格外'],          // 程度
-    advT:  ['刚', '刚才', '马上', '已经', '还', '又', '才', '一直', '终于', '突然'],      // 时间
-    advP:  ['在家', '在床上', '在公司', '在外面', '在楼下', '在路上', '在厨房', '在被窝里', '在阳台'],  // 地点
-    advM:  ['偷偷', '悄悄', '慢慢', '使劲', '随便', '认真', '乖乖', '瞎'],               // 方式
-    advY:  ['真的', '其实', '反正', '好像', '大概', '应该', '居然', '确定'],             // 语气
-    time:  ['今天', '明天', '后天', '昨天', '每天', '晚上', '半夜', '一大早', '周末', '放假', '刚才', '等下', '下周', '月底'],
-    conj:  ['不过', '但是', '可是', '然后', '对了', '其实', '话说', '突然', '反正', '就是说', '结果', '而且', '后来', '所以'],
+    advC:  ['好', '真', '超', '太', '有点', '特别', '贼', '巨', '超级', '格外', '无敌', '暴', '相当'],          // 程度
+    advT:  ['刚', '刚才', '马上', '已经', '还', '又', '才', '一直', '终于', '突然', '早就', '先', '都', '这才'],      // 时间
+    advP:  ['在家', '在床上', '在公司', '在外面', '在楼下', '在路上', '在厨房', '在被窝里', '在阳台', '在车上', '在门口', '在窗边', '在客厅', '在地铁'],  // 地点
+    advM:  ['偷偷', '悄悄', '慢慢', '使劲', '随便', '认真', '乖乖', '瞎', '随手', '顺手', '光速', '直接'],               // 方式
+    advY:  ['真的', '其实', '反正', '好像', '大概', '应该', '居然', '确定', '万一', '说不定', '到底', '不知道为啥'],             // 语气
+    time:  ['今天', '明天', '后天', '昨天', '每天', '晚上', '半夜', '一大早', '周末', '放假', '刚才', '等下', '下周', '月底', '中午', '下午', '早上', '前天', '年底', '双十一'],
+    conj:  ['不过', '但是', '可是', '然后', '对了', '其实', '话说', '突然', '反正', '就是说', '结果', '而且', '后来', '所以', '再说了', '主要', '好在', '话说回来'],
     join2: ['，', '，', '，', ' ', '，然后', '，不过', '，而且', '，就是', '，后来', '，结果'],
-  preT:  ['那', '嗯嗯', '诶', '哈', '哦对', '话说', '我跟你讲', '欸', '刚刚', '突然', '怎么说呢', '说起来'],
-  sigh:  ['哇', '诶', '哎', '嘶', '呜', '噢', '啊这', '好家伙', '救命', '麻了', '绝了', '无语住了', '笑不活了', '绷不住了', '服了', '离谱'],
-    weather: ['下雨了', '起风了', '好冷', '好晒', '闷得很', '降温了', '打雷了', '出太阳了', '月亮好圆'],
-    quit:  ['熬夜', '生气', '难过', '乱想', '不吃早饭', '一直玩手机', '瞎想', '喝冰的'],
+  preT:  ['那', '嗯嗯', '诶', '哈', '哦对', '话说', '我跟你讲', '欸', '刚刚', '突然', '怎么说呢', '说起来', '跟你说', '告诉你个事', '忘了说', '补一句'],
+  sigh:  ['哇', '诶', '哎', '嘶', '呜', '噢', '啊这', '好家伙', '救命', '麻了', '绝了', '无语住了', '笑不活了', '绷不住了', '服了', '离谱', '破大防', '蚌埠住了', '天塌了', '溜了溜了'],
+    weather: ['下雨了', '起风了', '好冷', '好晒', '闷得很', '降温了', '打雷了', '出太阳了', '月亮好圆', '起雾了', '下雪了', '风好大', '回南天了'],
+    quit:  ['熬夜', '生气', '难过', '乱想', '不吃早饭', '一直玩手机', '瞎想', '喝冰的', '乱花钱', '较劲', '拖到半夜'],
     /* 她 09:45：口语化表达/长短句/单词句/叠词叠句；dup=可整句重复，who=可带称呼尾巴 */
     short: [
       { t: '困困' }, { t: '饿饿' }, { t: '好困好困' }, { t: '嘿嘿', dup: true }, { t: '呜呜' },
@@ -15588,31 +15696,41 @@ const FreeTalk = (function () {
       { t: '晚安' }, { t: '早安' }, { t: '想吃东西' }, { t: '好无聊啊' }, { t: '不想动' },
       { t: '快来陪我聊天' }, { t: '讲个故事呗' }, { t: '亲亲抱抱举高高', who: true }, { t: '在干嘛' },
       { t: '夜猫子实锤' }, { t: '干饭人干饭魂' }, { t: '社恐发作' }, { t: '电量告急' },
-      { t: '求安慰', who: true }, { t: '推荐点好吃的' }, { t: '好想吃夜宵' }, { t: '谁懂啊' }
+      { t: '求安慰', who: true }, { t: '推荐点好吃的' }, { t: '好想吃夜宵' }, { t: '谁懂啊' },
+      { t: '再躺五分钟' }, { t: '起不来真的' }, { t: '全靠外卖续命' }, { t: '今日份快乐达成' },
+      { t: '加完班了' }, { t: '作业写不动了' }, { t: '快递到了快来接我' }, { t: '空调救我一命' },
+      { t: '热成狗' }, { t: '朋友圈刷完了' }, { t: '热搜好好笑' }, { t: '新番更新了' },
+      { t: '冰箱空了' }, { t: '体重秤藏起来了' }, { t: '又该大扫除了' }, { t: '拖地拖到怀疑人生' },
+      { t: '洗衣机开好了' }, { t: '默默背单词' }, { t: '早八人的命也是命' }, { t: '救命怎么还上班' },
+      { t: '睡前一眼手机' }, { t: '明天一定早睡经典' }, { t: '周报不想写了' }
     ],
     /* 口语整句素材（陈述/抱怨/撒娇），供省略主语与长句用 */
     collo: [
       '好想睡觉啊', '不想上班', '想出门玩', '好无聊啊', '不想动', '睡不醒',
       '想吃点好的', '今天什么都不想干', '只想躺着', '想出去走走', '肚子好饿',
-      '好想喝奶茶', '不想说话', '又emo了', '终于忙完了', '快撑不住了'
+      '好想喝奶茶', '不想说话', '又emo了', '终于忙完了', '快撑不住了',
+      '晚饭要吃点热乎的', '今天的班就上到这', '明天的事明天再说', '一到周五就精神',
+      '周末好难安排', '减肥从明天开始', '一降温就想吃火锅', '上班使人清醒',
+      '下班是最幸福的词', '睡前必须刷会儿手机', '躺下就只想躺着', '天冷了记得加衣服'
     ],
     /* 被动式（中文里常见的「被…」口语块） */
-    passive: ['被闹钟吵醒', '被电话吵醒', '被雨淋了', '被快递吵醒', '被老板说了', '被门口的猫拦住了', '被奶茶烫到了', '被蚊子咬了'],
+    passive: ['被闹钟吵醒', '被电话吵醒', '被雨淋了', '被快递吵醒', '被老板说了', '被门口的猫拦住了', '被奶茶烫到了', '被蚊子咬了',
+      '被猫踩了一脸', '被雨追着跑', '被楼上的装修吵了一晚', '被快递电话叫醒', '被地铁挤成纸片', '被闹钟大战三回合'],
     /* 判断句素材：…是真的… */
-    judge: ['好看', '好喝', '好吃', '好听', '上头', '离谱', '绝'],
+    judge: ['好看', '好喝', '好吃', '好听', '上头', '离谱', '绝', '下饭', '解压', '治愈', '带感'],
     /* 疑问词（特指问） */
-    whq: ['啥时候', '去哪', '为什么', '怎么', '跟谁'],
+    whq: ['啥时候', '去哪', '为什么', '怎么', '跟谁', '几点', '在哪儿'],
     /* 她 09:45：二十六字母层——真实网络字母词也能成句 */
-    letterSlang: ['xswl', 'yyds', 'nsdd', 'u1s1', 'awsl', 'zqsg', 'dddd', 'gkd'],
+    letterSlang: ['xswl', 'yyds', 'nsdd', 'u1s1', 'awsl', 'zqsg', 'dddd', 'gkd', 'xdm', 'hxd', 'pyq'],
     /* 声母×韵母（含前鼻音 n / 后鼻音 ng 两套）——拼打字延迟的内部手感，不上屏 */
     initials: ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'],
     finals: ['a', 'o', 'e', 'i', 'u', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'ong', 'ia', 'ie', 'iu', 'uan', 'un', 'ing', 'iang', 'iong', 'uang'],
     /* 称呼组词：她 09:41——名字不只用她的名字，也能百家姓/爱称现组。
        她 10-08 16:42：百家姓少出——先她的名字字，再爱称，姓氏垫底（工程值 0.72/0.8） */
     namePre: ['小', '阿', '老', '大'],
-    nameSuf: ['宝', '宝儿', '崽', '崽崽', '乖', '乖乖', '酱', '喵', '球', '团子'],
-    surname: ['王', '李', '张', '刘', '陈', '杨', '黄', '赵', '吴', '周', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '苏', '顾', '沈', '许'],
-    redup: ['毛毛', '糖糖', '球球', '豆豆', '圆圆', '胖胖', '墩墩', '布丁', '糯米', '汤圆', '年糕', '麻薯'],
+    nameSuf: ['宝', '宝儿', '崽', '崽崽', '乖', '乖乖', '酱', '喵', '球', '团子', '咪', '仔'],
+    surname: ['王', '李', '张', '刘', '陈', '杨', '黄', '赵', '吴', '周', '徐', '孙', '马', '朱', '胡', '林', '何', '高', '苏', '顾', '沈', '许', '郑', '梁', '谢', '宋', '唐', '韩'],
+    redup: ['毛毛', '糖糖', '球球', '豆豆', '圆圆', '胖胖', '墩墩', '布丁', '糯米', '汤圆', '年糕', '麻薯', '果冻', '芋泥', '奶黄包'],
     /* 她 10-08 16:42：同音字表——TA“打字”选词选错的痕迹（真机拼音输入法最常见的同音别字）。
        命中率联系人独立可调（资料卡「同音字概率」，默认 3% 工程值，0=关） */
     homo: { '在':'再','再':'在','做':'坐','坐':'做','的':'得','得':'的','地':'的',
@@ -15625,13 +15743,15 @@ const FreeTalk = (function () {
     pron: ['我', '你', '我们', '人家', '自己'],
     /* 她 10-10 14:27：情绪本（emo 也算词库） */
     emo: ['emo了', '破防了', '被治愈到了', '突然emo', '绷不住了', '原地复活', '满血复活',
-      '电量满格', '有点郁闷', '心情美丽', '多云转晴', '丧丧的', '超开心', '泪目了', '麻中带笑'],
+      '电量满格', '有点郁闷', '心情美丽', '多云转晴', '丧丧的', '超开心', '泪目了', '麻中带笑',
+      '幸福到冒泡', '被暖到了', '电量回升', '心情过山车', '烦恼扔掉了', '今日元气满格', '一键重启了', '心态稳住了'],
     /* 她 10-10 14:27：修辞层——比喻/拟人整句素材（{a} 从形容/感觉词里填） */
     metaphor: ['今天{a}得像条咸鱼', '被窝像个大拥抱，不想出来', '外面冷得像冰箱',
       '脑子{a}得像浆糊', '这天气{a}得像蒸笼', '困得像只冬眠的熊', '饿得能吃下一头牛',
-      '累得像刚跑完八百米'],
+      '累得像刚跑完八百米', '今天{a}得像块石头', '脑子{a}得像没开机', '{a}得像刚搬完家', '周末短得像一个眨眼'],
     personify: ['太阳晒得人发懒', '月亮还在加班', '风一直敲窗户', '闹钟天天跟我作对',
-      '床在喊我名字', '胃在抗议了', '周末过得飞快，根本追不上'],
+      '床在喊我名字', '胃在抗议了', '周末过得飞快，根本追不上',
+      '手机在手里长出了根', '床像有引力，越躺越往下沉', '周一像一个固定闹铃', '太阳比我先下班'],
     /* 她 10-10 14:27：近义词圈——组完小概率换着说（带选词时间痕迹） */
     syn: [
       ['累', '乏', '疲惫', '累摊'],
@@ -15643,7 +15763,12 @@ const FreeTalk = (function () {
       ['紧张', '慌', '心慌'],
       ['无聊', '闲得慌', '没事干'],
       ['好看', '耐看', '顺眼'],
-      ['想你了', '想你啦', '惦记你了']
+      ['想你了', '想你啦', '惦记你了'],
+      ['摆烂', '躺平', '不想动'],
+      ['emo', '丧', '提不起劲'],
+      ['解压', '放松', '喘口气'],
+      ['忙', '连轴转', '脚不沾地'],
+      ['攒', '囤', '备']
     ]
   };
   /* 她 10-12：词典搜索层——TA 选词也会在词典里「搜」：模糊匹配、同音容错、拼音检索主题词卡。
@@ -15708,15 +15833,27 @@ const FreeTalk = (function () {
     'gai': ['该', '改', '盖'], 'ga': ['尬', '嘎'],
     'huan': ['换', '环', '还'], 'huang': ['黄', '荒', '晃'],
     'heng': ['横', '衡'], 'hu': ['湖', '虎', '糊', '户'],
-    'ka': ['卡', '咖']
+    'ka': ['卡', '咖'],
+    /* 她 10-28 P71：欸（ê/ēi）不在 GB2312 全表里，检索/选字层在这补上 */
+    'ei': ['欸']
   };
   function sylIndex() {           /* HOMO_SYL 声明在后面，惰性建索引防 TDZ */
     if (!SYL_OF) {
       SYL_OF = {};
+      /* 她 10-28 P71：三层音节索引——HOMO_SYL（选字频度序，最权威）→ PY_EXTRA（检索补充）
+         → PY_FULL（GB2312 全音节表，pinyin-full.js 模块，兜住「字卡里全部的字」）。
+         模板接线顺序：pinyin-full.js 在 freetalk.js 之前。同字先到先得：
+         HOMO_SYL 里有的字保持原候选序，全表只补表外字 */
       Object.keys(HOMO_SYL).forEach(sy => HOMO_SYL[sy].forEach(c => { if (!(c in SYL_OF)) SYL_OF[c] = sy; }));
       Object.keys(PY_EXTRA).forEach(sy => {
         const cs = PY_EXTRA[sy];
         if (Array.isArray(cs)) cs.forEach(c => { if (!(c in SYL_OF)) SYL_OF[c] = sy; });
+      });
+      PY_FULL.split('|').forEach(cell => {
+        const i = cell.indexOf(':');
+        if (i <= 0) return;
+        const sy = cell.slice(0, i), cs = cell.slice(i + 1);
+        for (let k = 0; k < cs.length; k++) { if (!(cs[k] in SYL_OF)) SYL_OF[cs[k]] = sy; }
       });
     }
     return SYL_OF;
@@ -15731,8 +15868,24 @@ const FreeTalk = (function () {
     }
     return out.length ? out : null;
   }
+  /* 她 10-28 P71：拼音检索容错加宽——平翘舌（zh↔z、ch↔c、sh↔s）与前后鼻音（an↔ang、en↔eng、
+     in↔ing、uan↔uang、ian↔iang）打混也能搜到（真人拼音检索最常见的打混），命中记 how=2 排后 */
+  const PY_MIX_INITIAL = [['zh', 'z'], ['ch', 'c'], ['sh', 's'], ['z', 'zh'], ['c', 'ch'], ['s', 'sh']];
+  const PY_MIX_FINAL = { an: 'ang', ang: 'an', en: 'eng', eng: 'en', in: 'ing', ing: 'in', uan: 'uang', uang: 'uan', ian: 'iang', iang: 'ian' };
+  function pyNearSet(sy) {
+    const out = {}; out[sy] = 1;
+    for (let i = 0; i < PY_MIX_INITIAL.length; i++) {   /* 长声母优先：zhu 只展开 zh→z，不再折回去 */
+      const kv = PY_MIX_INITIAL[i];
+      if (sy.indexOf(kv[0]) === 0) { out[kv[1] + sy.slice(kv[0].length)] = 1; break; }
+    }
+    for (const k in PY_MIX_FINAL) {
+      if (sy.length > k.length && sy.slice(-k.length) === k) out[sy.slice(0, sy.length - k.length) + PY_MIX_FINAL[k]] = 1;
+    }
+    return Object.keys(out);
+  }
+  function pyNear(a, b) { return pyNearSet(a).indexOf(b) >= 0; }
   /* dicSearch(q)：q 可以是汉字串（模糊/同音容错）或拼音串（xiangchi / xiang chi）。
-     how：0=直中（全拼全中/词含整串） 1=全字命中（含同音展开） 2=音节前缀/部分字模糊 3=相邻同音。
+     how：0=直中（全拼全中/词含整串） 1=全字命中（含同音展开） 2=音节前缀/部分字模糊/邻位打混 3=相邻同音。
      返回按命中质序排的 [{t,tag,how}]；搜不到返回 []。供组话检索选词与探针用 */
   function dicSearch(q) {
     const s = String(q || '').trim().toLowerCase();
@@ -15741,13 +15894,17 @@ const FreeTalk = (function () {
     const isPy = !hasHan && /^[a-z\s']+$/.test(s);
     const qj = s.replace(/[\s']+/g, '');
     const qSyls = isPy ? qj.length ? s.split(/[\s']+/).filter(Boolean) : [] : [];
-    /* 同音展开集：真机搜字最常见路径——搜「羊」也能捎出「阳/杨/洋」 */
+    /* 同音展开集：真机搜字最常见路径——搜「羊」也能捎出「阳/杨/洋」。
+       P71：全音节表进了 idx，按字缓存防逐词重复展开扫全表 */
     const idx = sylIndex();
+    const expandCache = {};
     const expand = c => {
+      if (expandCache[c]) return expandCache[c];
       const set = [c];
       Object.keys(idx).forEach(sy => {
         if (idx[sy].indexOf(c) >= 0) idx[sy].forEach(x => { if (x !== c && set.indexOf(x) < 0) set.push(x); });
       });
+      expandCache[c] = set;
       return set;
     };
     const out = [];
@@ -15772,15 +15929,56 @@ const FreeTalk = (function () {
         const py = pinyinOf(n.t);
         if (!py) return;
         if (py.join('') === qj) return push(n.t, n.tag, 0);           /* 全拼全中 */
-        if (py.length === qSyls.length && qSyls.length &&
-            py.every((p, i) => p.indexOf(qSyls[i]) === 0)) return push(n.t, n.tag, 1);   /* 少打字母也搜到 */
+        if (py.length === qSyls.length && qSyls.length) {
+          if (py.every((p, i) => p.indexOf(qSyls[i]) === 0)) return push(n.t, n.tag, 1);   /* 少打字母也搜到 */
+          /* 她 10-28 P71：平翘舌/前后鼻音打混也搜到（how=2 排后） */
+          if (py.every((p, i) => pyNear(p, qSyls[i]))) push(n.t, n.tag, 2);
+        }
         if (qj.length >= 2 && py.join('').indexOf(qj) === 0) push(n.t, n.tag, 2);        /* 连打前缀 */
+        else if (qj.length >= 2) {
+          /* 她 10-28 P71：连打也容邻位打混（zoubao→周报、cafei→咖啡）——候选全拼逐音节出
+             平翘舌/前后鼻音变体再查前缀；变体 2^音节数封顶 64 防爆 */
+          let vars = [''];
+          for (let i = 0; i < py.length && vars.length <= 64; i++) {
+            const nexts = {}, near = pyNearSet(py[i]);
+            vars.forEach(b => near.forEach(v => { nexts[b + v] = 1; }));
+            vars = Object.keys(nexts);
+          }
+          if (vars.some(v => v.indexOf(qj) === 0)) push(n.t, n.tag, 2);
+        }
       }
     });
     return out.sort((a, b) => a.how - b.how);
   }
 
-  const DIC_CAP = 160;          // 每词类条目上限：防历史消息把词典撑成垃圾场
+  /* 她 10-28 P71 词扩批（她拍板「词典没有上限，多多的、覆盖面广广的」）：每词类 160 条的
+     挤旧上限（DIC_CAP）整段拆除——词典只进不出：自带词 + 她的历史消息 feed + 字卡全量开采 +
+     荟萃自组句回流。查重换 Set 索引：词典大了以后线性 some 扫描会拖慢回填，O(1) 钉死。 */
+  const WORD_IDX = { verb: new Set(), noun: new Set(), adj: new Set(), short: new Set() };
+  let dicVer = 0;               // 词典每进一词 +1：splitChunks 的首字索引按版本惰性重建
+  DIC.verb.forEach(v => { if (v && v.t) WORD_IDX.verb.add(v.t); });
+  DIC.noun.forEach(n => { if (n && n.t) WORD_IDX.noun.add(n.t); });
+  DIC.adj.forEach(a => { if (a) WORD_IDX.adj.add(a); });
+  (DIC.short || []).forEach(s => { if (s && s.t) WORD_IDX.short.add(s.t); });
+  function regWord(book, t) {   // 查重＋登记；返回 false=已有（等概率口径不受影响，只是不重复进）
+    if (!t || WORD_IDX[book].has(t)) return false;
+    WORD_IDX[book].add(t); dicVer++;
+    return true;
+  }
+  /* splitChunks 的首字词块索引：从「整本词典逐词 indexOf」改成「按扫描位首字直查」，
+     同位长词优先（跟老口径一致：最左命中、同位取更长）。词典无上限后必须靠它保持毫秒级。 */
+  let CHUNK_IDX = null, CHUNK_VER = -1;
+  function chunkIdx() {
+    if (CHUNK_IDX && CHUNK_VER === dicVer) return CHUNK_IDX;
+    const m = {};
+    DIC.noun.concat(DIC.verb).concat((DIC.short || []).map(x => ({ t: x.t }))).forEach(x => {
+      const w = x.t; if (!w || w.length < 2) return;
+      (m[w[0]] = m[w[0]] || []).push(w);
+    });
+    Object.keys(m).forEach(c => m[c].sort((a, b) => b.length - a.length));
+    CHUNK_IDX = m; CHUNK_VER = dicVer;
+    return m;
+  }
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function pickObj(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -15793,6 +15991,13 @@ const FreeTalk = (function () {
     if (!vs.length) return null;
     const v = pick(vs);
     return { v: v.t, n: n.t };
+  }
+  /* 接在「想 / 不想 / 难道」后面的动词要脱掉体标记和「在」前缀：
+     不然会组出「我不想在追播客」「难道我想学了桌游吗」这种叠加病句（词扩后「在洗/在追」这类块多了才露出来） */
+  function bareV(v) {
+    return String(v || '')
+      .replace(/^(在|想|刚|刚才|已经|一直)/, '')
+      .replace(/[了过着完]$/, '');
   }
   function svbCore() {
     const p = voPair();
@@ -15834,7 +16039,7 @@ const FreeTalk = (function () {
         const v = pick(vs);
         return '我' + v.t + n.t + v.suffix;
       } },
-    { id: 'negv', make() { const p = voPair(); return p ? '我不想' + p.v.replace(/^想/, '') + p.n : null; } },  // 否定：我不想吃火锅
+    { id: 'negv', make() { const p = voPair(); return p ? '我不想' + bareV(p.v) + p.n : null; } },  // 否定：我不想吃火锅
     { id: 'ellip', make() { const p = voPair(); return p ? p.v + p.n + (Math.random() < 0.5 ? pick(DIC.tail) : '') : null; } },  // 省略主语：想吃火锅呀
     { id: 'inv', make() { const p = voPair(); const c = svbCore();                      // 倒装：好困啊我 / 想吃火锅我
         if (Math.random() < 0.5 && p) return p.v + p.n + '，我';
@@ -15844,7 +16049,7 @@ const FreeTalk = (function () {
     { id: 'adjP', make() { return pick(DIC.advP) + pick(DIC.advC) + pick(DIC.adj); } }, // 地点状语：在床上好舒服
     { id: 'adjM', make() { const p = voPair(); return p ? pick(DIC.advM) + p.v + p.n : null; } },  // 方式状语：偷偷想吃火锅→偷偷吃火锅
     { id: 'adjT', make() { const p = voPair(); return p ? pick(DIC.advT) + p.v + p.n : null; } },  // 时间状语：刚吃完火锅
-    { id: 'adjY', make() { const p = voPair(); return p ? pick(DIC.advY) + '想' + p.v + p.n : null; } }, // 语气状语：其实想吃火锅
+    { id: 'adjY', make() { const p = voPair(); return p ? pick(DIC.advY) + '想' + bareV(p.v) + p.n : null; } }, // 语气状语：其实想吃火锅
     { id: 'compl', make(ctx) {                                                          // 感叹＋称呼尾巴
         const j = pick(DIC.adjC);
         const tm = Math.random() < 0.5 ? '今天' : pick(DIC.time);
@@ -15859,7 +16064,7 @@ const FreeTalk = (function () {
         return n ? n.t + '是真的' + pick(DIC.judge) : pick(DIC.collo);
       } },
     { id: 'rhet', make() { const p = voPair();                                          // 反问：难道我不想吃火锅吗
-        return p ? (Math.random() < 0.5 ? '难道我想' + p.v.replace(/^想/, '') + p.n + '吗' : '不是吧，' + pick(DIC.short).t) : null; } },
+        return p ? (Math.random() < 0.5 ? '难道我想' + bareV(p.v) + p.n + '吗' : '不是吧，' + pick(DIC.short).t) : null; } },
     { id: 'whq', make() { const p = voPair(); return p ? pick(DIC.whq) + p.v.replace(/^想/, '') + p.n : null; } },  // 特指问：啥时候吃火锅
     { id: 'sighc', make() { const c = Math.random() < 0.5 ? svbCore() : pick(DIC.collo); return c ? pick(DIC.sigh) + '，' + c : null; } },  // 叹词开头：哇，我想吃火锅
     { id: 'conjq', make() { const c = Math.random() < 0.6 ? svbCore() : pick(DIC.time) + pick(DIC.advC) + pick(DIC.adj); return c ? pick(DIC.conj) + c : null; } },  // 转折开头
@@ -15920,7 +16125,9 @@ const FreeTalk = (function () {
     { id: 'pronV', make() { const p = voPair(); return p ? pick(DIC.pron) + p.v + p.n : null; } },
     /* 自报家门（她 10-10：百家姓唯一的出场场景；她 10-13 00:57：百家姓还可以跟在「我叫 / 叫我」后面） */
     { id: 'selfIntro', make() {
-      const sn = pick(DIC.surname), pre = pick(DIC.namePre);
+      const sn = pick(DIC.surname);
+      /* 「大」只适合跟名字字（大美/大强），跟姓会出「我是大顾」；自报家门只取小/阿/老 */
+      const pre = pick(['小', '阿', '老']);
       const b = pick(['wo-shi', 'wo-xing', 'wo-jiao', 'jiao-wo']);
       if (b === 'wo-xing') return '我姓' + sn + (Math.random() < 0.4 ? '，' + pick(DIC.short).t : '');
       if (b === 'wo-jiao') return '我叫' + pre + sn;
@@ -16075,13 +16282,28 @@ const FreeTalk = (function () {
   Object.keys(HOMO_SYL).forEach(s => HOMO_SYL[s].forEach((c, i) => {
     if (!(c in CHAR_SYL)) CHAR_SYL[c] = { rank: i, n: HOMO_SYL[s].length };
   }));
+  /* 她 10-28 P71：全音节表的字也进选字时间层——HOMO_SYL 没有的字按全表同音节里的字序
+     （GB2312 序＝通用字序）取位次；全表新字位次封顶 6（拍板口径：真按位次翻页一个字
+     要翻几十秒，不合理）；候选总数照记（翻页多的音节多花时间）。HOMO_SYL 老字（rank≤9）行为不变 */
+  try {
+    if (typeof PY_FULL === 'string' && PY_FULL.length > 100) {
+      PY_FULL.split('|').forEach(cell => {
+        const i = cell.indexOf(':');
+        if (i <= 0) return;
+        const cs = cell.slice(i + 1);
+        for (let k = 0; k < cs.length; k++) {
+          if (!(cs[k] in CHAR_SYL)) CHAR_SYL[cs[k]] = { rank: Math.min(k, 6), n: cs.length };
+        }
+      });
+    }
+  } catch (eTDZ) { /* PY_FULL 未就绪（模块顺序异常）：选字时间层退回只认 HOMO_SYL，检索层 sylIndex 惰性补 */ }
   /* 单字选字时间：起手翻候选；目标字位次越靠后（越低频）翻得越久；候选多的音节多翻页；
-     18% 先拿错再看一眼换回来 */
+     18% 先拿错再看一眼换回来。P71：rank 封顶 10（全表新字位次动辄几十，不封顶会拖到天荒地老） */
   function charSelectMs(c) {
     const e = CHAR_SYL[c];
     if (!e) return 0;
     let ms = 180 + Math.random() * 220;
-    ms += e.rank * (200 + Math.random() * 220);
+    ms += Math.min(e.rank, 10) * (200 + Math.random() * 220);
     if (e.n >= 8) ms += 260 + Math.random() * 320;
     if (e.n >= 10) ms += 200 + Math.random() * 260;   /* 候选上百的音节：多翻几页，挑准再上屏 */
     if (Math.random() < 0.18) ms += 400 + Math.random() * 600;
@@ -16125,7 +16347,21 @@ const FreeTalk = (function () {
   const WT_OPS = [
     { p: 0.14, ok: t => !/^[我你哦嗯诶哇哈那话说]/.test(t), go: t => pick(DIC.preT) + '，' + t },
     { p: 0.18, ok: t => !/[呀呢哦啦嘛鸭哟~…？?]$/.test(t), go: t => t + pick(DIC.tail.concat(['鸭', '哟', '……'])) },
-    { p: 0.15, ok: t => DIC.verb.some(v => t.indexOf(v.t) >= 0), go: t => { const v = pick(DIC.verb.filter(v => t.indexOf(v.t) >= 0)); return t.replace(v.t, pick(ADV_INS) + v.t); } },
+    { p: 0.15, ok: t => DIC.verb.some(v => t.indexOf(v.t) >= 0 && !/[了过着完]$/.test(v.t) && !/^(在|刚|刚才|已经|一直)/.test(v.t)),
+      go: t => { const vs = DIC.verb.filter(v => t.indexOf(v.t) >= 0 && !/[了过着完]$/.test(v.t) && !/^(在|刚|刚才|已经|一直)/.test(v.t));
+        if (!vs.length) return null; const v = pick(vs); return t.replace(v.t, pick(ADV_INS) + v.t); } },
+    /* 她 10-12 / 10-28：句中插入——不只在首尾，能在句子中间插程度副词；
+       两个插词算子合并成一个：名词前面紧贴动词时插到动词前，否则才插在名词前。
+       不这样会组出「我在啃好外卖」「我好用坏了课表」这种动宾被拆开的病句 */
+    { p: 0.22, ok: t => DIC.noun.some(n => n.t && t.indexOf(n.t) > 0),
+      go: t => { const ns = DIC.noun.filter(n => n.t && t.indexOf(n.t) > 0); if (!ns.length) return null;
+        const n = pick(ns); const i = t.indexOf(n.t);
+        const pre = t.slice(0, i);
+        const vb = DIC.verb.filter(v => v.t && v.t.length <= 3 && pre.slice(-v.t.length) === v.t)[0];
+        if (vb && /[了过着完]$/.test(vb.t)) return null;   /* 带体标记的动词前面不加程度副词（别出「我贼洗了抱枕」） */
+        const at = vb ? i - vb.t.length : i;
+        const ins = pick(['真', '好', '超', '特别', '贼', '有点']);
+        return t.slice(0, at) + ins + t.slice(at); } },
     { p: 0.12, ok: t => DIC.noun.some(n => n.t && t.indexOf(n.t) > 0), go: t => { const n = pick(DIC.noun.filter(n => n.t && t.indexOf(n.t) > 0)); return t.replace(n.t, pick(DIC.adjC) + '的' + n.t); } },
     { p: 0.14, ok: t => !/[？?]/.test(t), go: t => t.replace(/[。！～~]*$/, '') + pick(QT2) },
     { p: 0.15, ok: t => (/^我们?/.test(t) && t.length > 4) || /^(真的|其实|反正|好像|大概|应该)/.test(t) || /[，,]/.test(t),
@@ -16134,10 +16370,6 @@ const FreeTalk = (function () {
         : t.split(/[，,]/).pop() },
     { p: 0.12, ok: t => DIC.verb.some(v => t.indexOf(v.t) === 0), go: t => '我' + t },
     { p: 0.10, ok: t => t.indexOf('我') === 0 && t.length > 3 && !/^我们/.test(t), go: t => t.replace('我', '人家') },   /* 「我们」不进换说（会变人家们） */
-    /* 她 10-12：句中插入——字卡追加不只在首尾，能在句子中间插词（在句中某个词前插联想词） */
-    { p: 0.12, ok: t => DIC.noun.some(n => n.t && t.indexOf(n.t) > 0),
-      go: t => { const ns = DIC.noun.filter(n => n.t && t.indexOf(n.t) > 0); const n = pick(ns); const i = t.indexOf(n.t);
-        const ins = pick(DIC.advT.concat(['超', '好', '特别'])); return t.slice(0, i) + ins + t.slice(i); } },
     { p: 0.10, ok: () => true, go: t => pick(DIC.sigh) + '，' + t },
     { p: 0.10, ok: t => WT_REDUP.test(t) && !/(.)\1/.test(t), go: t => t.replace(WT_REDUP, '$&$&') },
     { p: 0.10, ok: t => /^(我们|我|你|他|她)/.test(t) && t.length > 5, go: t => t.replace(/^(我们|我|你|他|她)/, m => m + pick(['就', '还', '又', '才', '都'])) },
@@ -16222,16 +16454,25 @@ const FreeTalk = (function () {
     }
     return null;
   }
-  /* 打字本身的时间：按拼音按键数估（沿用二十六字母层手感，含声母/韵母位数） */
+  /* 打字本身的时间（她 10-28 P71 改节奏曲线）：按词块一顿一顿——块内连打（拼音键位
+     90~140ms/键）、块间选词停顿 200~500ms、8% 块内删掉重打、句尾标点后多停一拍（发送前看一遍）；
+     总时长跟老公式同级（老：400 + 键数×110~170），分布更像真人敲键盘 */
   function strokeTime(text) {
-    const n = Math.max(2, String(text || '').length);
-    let keys = 0;
-    for (let i = 0; i < n; i++) {
-      const ini = Math.random() < 0.82 ? pick(DIC.initials).length : 0;
-      const fin = pick(DIC.finals).length;
-      keys += ini + fin;
-    }
-    return 400 + keys * (110 + Math.random() * 60);
+    const s = String(text || '');
+    const words = splitChunks(s);
+    const list = words.length ? words : [s];
+    let ms = 300 + Math.random() * 200;                         /* 起手 */
+    list.forEach((w, i) => {
+      let keys = 0;
+      for (let k = 0; k < w.length; k++) {
+        keys += (Math.random() < 0.82 ? pick(DIC.initials).length : 0) + pick(DIC.finals).length;
+      }
+      ms += keys * (90 + Math.random() * 50);                   /* 块内连打 */
+      if (i < list.length - 1) ms += 200 + Math.random() * 300; /* 块间选词停顿 */
+      if (Math.random() < 0.08) ms += 150 + Math.random() * 250;/* 块内删掉重打 */
+    });
+    if (/[。！？!?…]/.test(s)) ms += 300 + Math.random() * 400; /* 句尾停一拍 */
+    return Math.round(ms);
   }
 
   /* 详细版组话：{ text, extraMs }。她 10-08 17:33：重调不设次数上限，
@@ -16320,24 +16561,36 @@ const FreeTalk = (function () {
     const pol = (Math.random() < 0.72) ? polish(line, ctx) : null;
     if (pol) { text = pol.text; ms += pol.extraMs; }
     ms += deliberate(text);                                     /* 打拼音 + 翻同音候选选字的时间 */
+    /* 她 10-28 P71：混打容错（10-12 她提过的「前后鼻音、平翘舌」筛查，10-28 拍板做，11 声调并入这层不单开）——
+       方言手最真的痕迹：18% 声母平翘舌打混（zh↔z / ch↔c / sh↔s）、15% 前后鼻音打混（n↔ng），
+       打成错音→候选不对→清掉重打（+600~1400ms）；8% 声调邻字多看一眼再翻回（+450~750ms）。
+       全是过程时间，上屏永远是打对的那个字（她 10-08 口径：乱字不上屏） */
+    if (Math.random() < 0.18) ms += 600 + Math.random() * 800;
+    if (Math.random() < 0.15) ms += 600 + Math.random() * 800;
+    if (Math.random() < 0.08) ms += 450 + Math.random() * 300;
     if (Math.random() < 0.25) ms += 400 + Math.random() * 800;  /* 候选挑错一眼再换回来 */
     return { text, extraMs: Math.round(strokeTime(text) + ms) };
   }
-  /* 拆词块：先按标点切分句，再把分句拆成词（词典里认得的词 + 剩下的碎块） */
-  function splitChunks(s) {
+  /* 拆词块：先按标点切分句，再把分句拆成词（词典里认得的词 + 剩下的碎块）。
+     她 10-28 P71：逐词 indexOf 全扫 → 首字索引直查（chunkIdx，词典无上限后必须）；
+     语义同老口径：最左命中、同位取更长。idx 可传 mineText 预建好的索引省一次查 */
+  function splitChunks(s, idx) {
     const t = String(s || '').trim();
     if (!t) return [];
-    const dict = DIC.noun.concat(DIC.verb).concat((DIC.short || []).map(x => ({ t: x.t })))
-      .map(x => x.t).filter(w => w && w.length >= 2);
+    const dict = idx || chunkIdx();
     const out = [];
     t.split(/[，,。！？!?…]+/).map(x => x.trim()).filter(Boolean).forEach(seg => {
       let rest = seg, guard = 0;
-      while (rest && guard++ < 12) {
+      while (rest && guard++ < 24) {
         let hit = null, at = -1;
-        dict.forEach(w => {
-          const i = rest.indexOf(w);
-          if (i >= 0 && (at < 0 || i < at || (i === at && hit && w.length > hit.length))) { hit = w; at = i; }
-        });
+        for (let i = 0; i < rest.length; i++) {
+          const cands = dict[rest[i]];
+          if (!cands) continue;
+          for (let k = 0; k < cands.length; k++) {
+            if (rest.indexOf(cands[k]) === i) { hit = cands[k]; break; }   /* 同位长词优先：建索引时按长度降序 */
+          }
+          if (hit) { at = i; break; }
+        }
         if (!hit) { out.push(rest); break; }
         if (at > 0) out.push(rest.slice(0, at));
         out.push(hit);
@@ -16454,16 +16707,27 @@ const FreeTalk = (function () {
     return Math.round(ms);
   }
 
-  /* 她的历史消息自动供词（轻量版）：只认十来个高频结构，抽名词进词典。
-     新词等概率进池（她 09:45：成分等概率，不再记权重）；超上限挤掉最旧的临时词。
+  /* 她的历史消息自动供词（轻量版）：只认高频结构，抽词进词典。
+     她 10-28 P71 词扩批：4 组 → 9 组，名词五个 tag 全收 + 新开形容词收词路（光会名词学不会
+     她的累/馋/烦）；命中后尾字「了的地得吗呢吧啊呀哦啦嘛哟」修掉再入库（老代码含尾字即整词拒绝）；
+     查重走 Set、词典无上限只进不出（新词等概率进池，她 09:45 口径不变）。
      金额/地址同 learn 拦截。 */
   const FEED_BAD = /\d+\s*(元|块)|[¥￥]\s*\d+|\d+\s*(号|栋|幢|单元|室|号楼)|\d+\s*(路|街|巷|道|大道)/;
   const FEED_PATS = [
-    { re: /(?:想吃|想喝|在吃|去吃|点了|叫了|买了)([\u4e00-\u9fa5]{1,4})/, tag: 'food' },
-    { re: /(?:在看|在追|看完|追完)([\u4e00-\u9fa5]{1,6})/, tag: 'media' },
-    { re: /(?:在整理|在收拾|拆了)([\u4e00-\u9fa5]{1,4})/, tag: 'thing' },
-    { re: /(?:去了|路过|在)(?:超市|公园|书店|健身房|公司|学校)/, tag: null }
+    { re: /(?:想吃|在吃|去吃|煮了|烤了|点了|叫了|吃个|吃份)([\u4e00-\u9fa5]{1,4})/, tag: 'food' },
+    { re: /(?:想喝|在喝|泡了|喝杯|来杯)([\u4e00-\u9fa5]{1,4})/, tag: 'drink' },
+    { re: /(?:在看|在追|看完|追完|想补|看个)([\u4e00-\u9fa5]{1,6})/, tag: 'media' },
+    { re: /(?:在玩|去打|报了|约了|玩个)([\u4e00-\u9fa5]{1,4})/, tag: 'hobby' },
+    { re: /(?:在撸|想养|喂了|抱了|摸了)([\u4e00-\u9fa5]{1,4})/, tag: 'animal' },
+    { re: /(?:想买|买了|拆了|在洗|在整理|在收拾)([\u4e00-\u9fa5]{1,4})/, tag: 'thing' },
+    { re: /(?:想去|路过|在逛|逛了)([\u4e00-\u9fa5]{1,4})/, tag: 'place' },
+    { re: /(?:喜欢|讨厌|害怕)([\u4e00-\u9fa5]{1,4})/, tag: 'thing' },   /* 词类推不出：thing 兜底，搭配检兜着（配不上就不出，不硬凑） */
+    /* 形容词收词路：须带时间/程度前缀（今天/真的/感觉…好/太/超/特别/有点…），
+       且捕获里含动词意图字（想吃喝玩去要买看听走说等）时拒绝——「好想吃」不是形容词 */
+    { re: /(?:今天|昨天|现在|刚刚|真的|感觉)(?:好|太|超|特别|有点|超级)([\u4e00-\u9fa5]{1,3})/, book: 'adj' }
   ];
+  const FEED_TAIL = /[了的地得吗呢吧啊呀哦啦嘛哟]+$/;
+  const FEED_VERBISH = /[想吃喝玩去要买看听走说等]/;
   function feed(text) {
     try {
       const t = String(text || '').trim();
@@ -16471,25 +16735,60 @@ const FreeTalk = (function () {
       let hit = false;
       FEED_PATS.forEach(p => {
         const m = t.match(p.re);
-        if (!m || !m[1] || !p.tag) return;
-        const w0 = m[1];
-        if (w0.length < 2 || /了|的|吗|呢|吧/.test(w0)) return;
-        let arr = DIC.noun;
-        if (arr.some(x => x.t === w0)) { hit = true; return; }
-        /* 挤掉同 tag 里最早进的临时词（自带词不挤），词典有界不腐烂 */
-        if (arr.length >= DIC_CAP) {
-          let lo = -1;
-          arr.forEach((x, i) => { if (x.tmp && (lo < 0 || i < lo)) lo = i; });
-          if (lo >= 0) arr.splice(lo, 1); else return;
+        if (!m || !m[1]) return;
+        const w0 = m[1].replace(FEED_TAIL, '');              /* 尾字修掉再入库：「想吃火锅了」学的是火锅 */
+        if (!w0 || (p.book !== 'adj' && w0.length < 2)) return;   /* 形容词单字也收（累/馋），名词至少两字 */
+        if (/了|的|吗|呢|吧/.test(w0)) return;
+        if (p.book === 'adj') {
+          if (FEED_VERBISH.test(w0)) return;                 /* 形容词路别把动词捞进来 */
+          if (regWord('adj', w0)) DIC.adj.push(w0);
+          hit = true;
+          return;
         }
-        arr.push({ t: w0, tag: p.tag, tmp: true });
+        if (regWord('noun', w0)) DIC.noun.push({ t: w0, tag: p.tag, tmp: true });
+        hit = true;
+      });
+      return hit;
+    } catch (e) { return false; }
+  }
+  /* 她 10-28 P71：字卡全量开采——她拍板「字卡里全部的字都可以被对方用来组合」。
+     A/B 两条造句路跟字卡库打通：开机把全部字卡库（共辞/私叙/荟萃各分组）逐条拆词块
+     （splitChunks 现成），认不得的 2~6 字块按语境推词类，推不出 thing 兜底——搭配检兜着：
+     推错的词只是配不上那个动词、组不出就不出，不硬凑怪句。 */
+  const MINE_TAG = [
+    { re: /(想吃|在吃|去吃|煮了|烤了|点了|叫了|吃个|吃份)$/, tag: 'food' },
+    { re: /(想喝|在喝|泡了|喝杯|来杯)$/, tag: 'drink' },
+    { re: /(在看|在追|看完|追完|想补|看个)$/, tag: 'media' },
+    { re: /(在玩|去打|报了|约了|玩个)$/, tag: 'hobby' },
+    { re: /(在撸|想养|喂了|抱了|摸了)$/, tag: 'animal' },
+    { re: /(想买|买了|拆了|在洗|在整理|在收拾)$/, tag: 'thing' },
+    { re: /(想去|路过|在逛|逛了)$/, tag: 'place' }
+  ];
+  const MINE_JUNK = /^[嗯哦噢呃诶哈嘿呀喂啊嘛吧呢哟欸哇哈在刚想好太被把别没不都已就还才又]/;
+  const MINE_VERBBOOK = /[了着过]/;
+  function mineText(text) {
+    try {
+      const t = String(text || '').trim();
+      if (!t || t.length > 60 || FEED_BAD.test(t)) return false;
+      const idx = chunkIdx();
+      let hit = false;
+      splitChunks(t, idx).forEach(w => {
+        if (w.length < 2 || w.length > 6) return;
+        if (/[的地得吗呢吧啊呀哦啦嘛哟哈，。！？~]/.test(w)) return;
+        if (MINE_JUNK.test(w) || MINE_VERBBOOK.test(w)) return;  /* 助词/语气头尾、带体标记的动词块：不进名词册 */
+        if (WORD_IDX.noun.has(w) || WORD_IDX.verb.has(w) || WORD_IDX.adj.has(w) || WORD_IDX.short.has(w)) { hit = true; return; }
+        const i = t.indexOf(w);
+        const before = i > 0 ? t.slice(0, i) : '';
+        let tag = 'thing';
+        for (let k = 0; k < MINE_TAG.length; k++) { if (MINE_TAG[k].re.test(before)) { tag = MINE_TAG[k].tag; break; } }
+        if (regWord('noun', w)) DIC.noun.push({ t: w, tag: tag, tmp: true, mined: true });
         hit = true;
       });
       return hit;
     } catch (e) { return false; }
   }
 
-  return { compose, remake, typingDelay, feed, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, polish, applyPol, makeLine, splitChunks, blendCards, typeFree, pinyinFree, cardFree, HOMO_SYL, HOMO_WORDS, charSelectMs, longLine: longSample, dicSearch, pinyinOf };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序；10-12 加词典检索/拼音口；10-13 三模式（typeFree/pinyinFree/cardFree）+ 三模式共用的加工层 polish */
+  return { compose, remake, typingDelay, feed, mineText, makeNickname, homoOf, composeDetailed, remakeDetailed, homoRank, wordTransform, polish, applyPol, makeLine, splitChunks, blendCards, typeFree, pinyinFree, cardFree, HOMO_SYL, HOMO_WORDS, DIC, charSelectMs, longLine: longSample, dicSearch, pinyinOf };   /* makeNickname 供探针抽权重；Detailed 版给引擎走时间窗；homoRank 供探针验同音候选频度序；10-12 加词典检索/拼音口；10-13 三模式（typeFree/pinyinFree/cardFree）+ 三模式共用的加工层 polish；10-28 P71 加 mineText 字卡开采口＋DIC 全本只读出口（形容词/动词册的探针断言用） */
   /* 单字在同音候选里的位次（0=最高频）与该音节候选总数，只读，不上屏 */
   function homoRank(c) { const e = CHAR_SYL[c]; return e ? { rank: e.rank, n: e.n } : null; }
   /* long2/long3 的连接方式多样化探针口：抽一句长句给探针统计连接符 */
@@ -34282,6 +34581,10 @@ Notify.registerSW(); /* P17：HTTPS 下注册通知中转 SW（file:// 自动跳
     window.__LX_BOOT_DONE = true;   /* 启动自检条看这个（模板头部的内联哨兵） */
     /* 真起来了：抹掉「本次启动」标记（下次开页不再走省内存模式），顺便看还有多少媒体没铺 */
     try { DB.bootOk(); } catch (e) { /* 抹标记失败只影响下次是否保守启动，不拦界面 */ }
+    /* 她 10-28 P71 词扩批：自由说话词典开机回填（她的历史消息喂 feed + 全部字卡库逐条
+       拆词开采）——界面起来之后再跑：引擎侧分批让拍、查重走 Set、拆词走首字索引，
+       一步都不挡开机；喂词失败也不影响界面（只影响 TA 今天词汇量多少） */
+    setTimeout(() => { runSafe('freetalk.seed', () => { try { Engine.seedFreeTalk(); } catch (e) { /* 回填不成最多是词典薄一截 */ } }); }, 400);
   }
 
   /* 她 10-13 11:13：看不到图会以为丢了——不再摆「加载更多图片」按钮（那一下又是一整批进内存，
